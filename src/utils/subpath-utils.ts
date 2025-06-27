@@ -97,6 +97,25 @@ export function getAllSubPaths(paths: SVGPath[]): Array<{ path: SVGPath; subPath
 }
 
 /**
+ * Finds a command by its ID across all paths and sub-paths.
+ */
+export function findCommandById(paths: SVGPath[], commandId: string): { command: SVGCommand; pathId: string; subPathId: string } | null {
+  for (const path of paths) {
+    for (const subPath of path.subPaths) {
+      const command = subPath.commands.find(cmd => cmd.id === commandId);
+      if (command) {
+        return { 
+          command, 
+          pathId: path.id, 
+          subPathId: subPath.id 
+        };
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * Creates a new path with a single sub-path containing a move command.
  */
 export function createNewPath(x: number = 100, y: number = 100): SVGPath {

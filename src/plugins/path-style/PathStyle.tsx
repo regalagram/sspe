@@ -40,14 +40,6 @@ export const PathStyleControls: React.FC<PathStyleControlsProps> = ({
   pathStyle,
   onStyleChange,
 }) => {
-  if (!hasSelection) {
-    return (
-      <div style={{ padding: '10px', color: '#666' }}>
-        Select a path to edit its style
-      </div>
-    );
-  }
-
   return (
     <div className="path-style-controls" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -254,6 +246,11 @@ export const PathStyleComponent: React.FC = () => {
   }
   const path = pathId ? paths.find(p => p.id === pathId) : null;
   const hasSelection = !!pathId;
+  
+  // Only show the panel when there's a selection
+  if (!hasSelection) {
+    return null;
+  }
   
   // Force re-render when selection changes by creating a key that changes
   const renderKey = `${pathId}-${selectedSubPath}-${selection.selectedCommands.join(',')}-${selection.selectedSubPaths.join(',')}-${JSON.stringify(path?.style)}`;

@@ -15,6 +15,7 @@ import { MouseInteractionPlugin, useMouseInteraction } from '../plugins/mouse-in
 import { RectSelectionPlugin, useRectSelection } from '../plugins/rect-selection/RectSelection';
 import { PathRendererPlugin } from '../plugins/path-renderer/PathRenderer';
 import { CommandPointsRendererPlugin } from '../plugins/command-points-renderer/CommandPointsRenderer';
+import { CommandPlugin } from '../plugins/command/Command';
 import { GlobalKeyboardPlugin } from '../plugins/global-keyboard/GlobalKeyboard';
 import { CreationModePlugin } from '../plugins/creation-mode/CreationMode';
 
@@ -25,6 +26,7 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(RectSelectionPlugin);
   pluginManager.registerPlugin(PathRendererPlugin);
   pluginManager.registerPlugin(CommandPointsRendererPlugin);
+  pluginManager.registerPlugin(CommandPlugin);
   pluginManager.registerPlugin(CreationModePlugin);
   pluginManager.registerPlugin(GlobalKeyboardPlugin);
   pluginManager.registerPlugin(ZoomPlugin);
