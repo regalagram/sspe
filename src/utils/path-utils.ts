@@ -68,20 +68,62 @@ export const subPathToStringInContext = (subPath: SVGSubPath, allSubPaths: SVGSu
 
 // Function to find which subpath contains a given point
 export const findSubPathAtPoint = (path: SVGPath, point: Point, tolerance: number = 15): SVGSubPath | null => {
-  let closestSubPath = null;
-  let minDistance = Infinity;
+  // Collect all candidates with their distances and additional info
+  const candidates: Array<{
+    subPath: SVGSubPath;
+    distance: number;
+    contourDistance: number;
+    isInside: boolean;
+  }> = [];
 
   for (const subPath of path.subPaths) {
-    // Calculate the distance from the point to this subpath
+    const contourDistance = getDistanceToSubPathContour(subPath, point);
+    const isInside = isPointInsideSubPath(subPath, point, 'nonzero', path.subPaths);
     const distance = getDistanceToSubPath(subPath, point, path.subPaths);
     
-    if (distance < tolerance && distance < minDistance) {
-      minDistance = distance;
-      closestSubPath = subPath;
+    // Only consider subpaths within tolerance or inside
+    if (distance < tolerance || isInside) {
+      candidates.push({
+        subPath,
+        distance,
+        contourDistance,
+        isInside
+      });
     }
   }
 
-  return closestSubPath;
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  // Sort candidates by priority:
+  // 1. Closest to edge (contour distance)
+  // 2. Inside candidates with smallest contour distance (innermost)
+  // 3. General distance
+  candidates.sort((a, b) => {
+    // If both are very close to edge (< 5px), choose the closest
+    if (a.contourDistance < 5 && b.contourDistance < 5) {
+      return a.contourDistance - b.contourDistance;
+    }
+    
+    // If one is close to edge and other is inside, prefer edge
+    if (a.contourDistance < 5 && b.contourDistance >= 5) return -1;
+    if (b.contourDistance < 5 && a.contourDistance >= 5) return 1;
+    
+    // If both are inside, choose the one with smallest contour distance (innermost)
+    if (a.isInside && b.isInside) {
+      return a.contourDistance - b.contourDistance;
+    }
+    
+    // If one is inside and other is not, prefer inside
+    if (a.isInside && !b.isInside) return -1;
+    if (b.isInside && !a.isInside) return 1;
+    
+    // Default: closest distance
+    return a.distance - b.distance;
+  });
+
+  return candidates[0].subPath;
 };
 
 // Enhanced version of findSubPathAtPoint with configurable behavior
@@ -213,16 +255,27 @@ const calculateSubPathArea = (subPath: SVGSubPath, allSubPaths?: SVGSubPath[]): 
 
 // Helper function to calculate distance from a point to a subpath
 const getDistanceToSubPath = (subPath: SVGSubPath, point: Point, allSubPaths?: SVGSubPath[]): number => {
-  // Check if the point is inside the filled area (if closed)
+  // First priority: Check distance to contour/stroke for all subpaths
+  const contourDistance = getDistanceToSubPathContour(subPath, point);
+  
+  // Second priority: Check if the point is inside the filled area (if closed)
   const isInside = isPointInsideSubPath(subPath, point, 'nonzero', allSubPaths);
   
-  // If inside a filled area, return 0 for immediate selection
-  if (isInside) {
-    return 0;
+  // Strategy: Prioritize stroke/edge detection, then fill detection
+  // This ensures nested subpaths work correctly and respects fill rules
+  
+  if (contourDistance < 5) {
+    // Very close to edge - immediate selection with slight preference
+    return contourDistance * 0.5; // Give edge detection higher priority
   }
   
-  // Otherwise, calculate distance to contour
-  return getDistanceToSubPathContour(subPath, point);
+  if (isInside) {
+    // Inside filled area - good match but lower priority than very close edges
+    return 10; // Fixed moderate distance for inside points
+  }
+  
+  // Outside or far from edge - return actual distance
+  return contourDistance;
 };
 
 // Separated contour-only distance calculation
