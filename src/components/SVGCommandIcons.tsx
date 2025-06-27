@@ -20,23 +20,12 @@ const SVGCommandIcon: React.FC<SVGCommandIconProps> = ({
     display: 'block',
   };
 
-  // Check if command is relative (lowercase)
-  const isRelative = command === command.toLowerCase() && command !== 'z';
-  
-  // Base commands - we'll modify appearance for relative versions
+  // Base commands - we'll use the uppercase version for display
   const baseCommand = command.toUpperCase() as SVGCommandType;
   
-  // Color adjustment for relative commands
-  const commandColor = isRelative ? '#007bff' : color; // Blue for relative
-  const strokeWidth = isRelative ? '2.5' : '2'; // Slightly thicker for relative
-  
-  // Additional decoration for relative commands
-  const RelativeIndicator = isRelative ? (
-    <g>
-      <circle cx="20" cy="4" r="2" fill={commandColor} opacity="0.7"/>
-      <text x="20" y="6" fontSize="5" fill="white" textAnchor="middle" fontWeight="bold">r</text>
-    </g>
-  ) : null;
+  // Use the original color and stroke width regardless of relative/absolute
+  const commandColor = color;
+  const strokeWidth = '2';
 
   switch (baseCommand) {
     case 'M':
@@ -55,7 +44,6 @@ const SVGCommandIcon: React.FC<SVGCommandIconProps> = ({
         >
           <circle cx="12" cy="12" r="3"/>
           <path d="M12 9v-6M12 21v-6M21 12h-6M9 12H3"/>
-          {RelativeIndicator}
         </svg>
       );
 
@@ -95,7 +83,6 @@ const SVGCommandIcon: React.FC<SVGCommandIconProps> = ({
           <line x1="6" y1="18" x2="18" y2="6"/>
           <circle cx="6" cy="18" r="2"/>
           <circle cx="18" cy="6" r="2"/>
-          {RelativeIndicator}
         </svg>
       );
 
@@ -116,7 +103,6 @@ const SVGCommandIcon: React.FC<SVGCommandIconProps> = ({
           <line x1="6" y1="12" x2="18" y2="12"/>
           <circle cx="6" cy="12" r="2"/>
           <circle cx="18" cy="12" r="2"/>
-          {RelativeIndicator}
         </svg>
       );
 
@@ -137,7 +123,6 @@ const SVGCommandIcon: React.FC<SVGCommandIconProps> = ({
           <line x1="12" y1="6" x2="12" y2="18"/>
           <circle cx="12" cy="6" r="2"/>
           <circle cx="12" cy="18" r="2"/>
-          {RelativeIndicator}
         </svg>
       );
 
@@ -162,7 +147,6 @@ const SVGCommandIcon: React.FC<SVGCommandIconProps> = ({
           <line x1="20" y1="4" x2="16" y2="20" strokeDasharray="2,2" opacity="0.5"/>
           <circle cx="8" cy="4" r="1" fill={commandColor}/>
           <circle cx="16" cy="20" r="1" fill={commandColor}/>
-          {RelativeIndicator}
         </svg>
       );
 
@@ -188,7 +172,6 @@ const SVGCommandIcon: React.FC<SVGCommandIconProps> = ({
           <line x1="20" y1="16" x2="16" y2="8" strokeDasharray="2,2" opacity="0.5"/>
           <circle cx="8" cy="8" r="1" fill={commandColor} opacity="0.7"/>
           <circle cx="16" cy="8" r="1" fill={commandColor} opacity="0.7"/>
-          {RelativeIndicator}
         </svg>
       );
 
@@ -212,7 +195,6 @@ const SVGCommandIcon: React.FC<SVGCommandIconProps> = ({
           <line x1="5" y1="18" x2="12" y2="6" strokeDasharray="2,2" opacity="0.5"/>
           <line x1="19" y1="18" x2="12" y2="6" strokeDasharray="2,2" opacity="0.5"/>
           <circle cx="12" cy="6" r="1" fill={commandColor}/>
-          {RelativeIndicator}
         </svg>
       );
 
@@ -235,7 +217,6 @@ const SVGCommandIcon: React.FC<SVGCommandIconProps> = ({
           <circle cx="20" cy="12" r="2"/>
           <circle cx="12" cy="12" r="1" fill={commandColor}/>
           <line x1="8" y1="4" x2="16" y2="20" strokeDasharray="1,3" opacity="0.4"/>
-          {RelativeIndicator}
         </svg>
       );
 
@@ -258,7 +239,6 @@ const SVGCommandIcon: React.FC<SVGCommandIconProps> = ({
           <circle cx="18" cy="6" r="2"/>
           <circle cx="12" cy="12" r="1" fill={commandColor} opacity="0.5"/>
           <circle cx="12" cy="12" r="8" fill="none" strokeDasharray="1,4" opacity="0.3"/>
-          {RelativeIndicator}
         </svg>
       );
 
@@ -268,8 +248,8 @@ const SVGCommandIcon: React.FC<SVGCommandIconProps> = ({
         <div 
           style={{
             ...iconStyle,
-            backgroundColor: isRelative ? '#e3f2fd' : '#f0f0f0',
-            border: `1px solid ${isRelative ? '#2196f3' : '#ccc'}`,
+            backgroundColor: '#f0f0f0',
+            border: '1px solid #ccc',
             borderRadius: '2px',
             display: 'flex',
             alignItems: 'center',
