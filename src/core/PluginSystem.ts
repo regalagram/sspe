@@ -1,4 +1,23 @@
-import React from 'react';
+import React, { MouseEvent, WheelEvent } from 'react';
+
+export interface SVGPoint {
+  x: number;
+  y: number;
+}
+
+export interface MouseEventHandler {
+  onMouseDown?: (e: MouseEvent<SVGElement>, context: MouseEventContext) => boolean;
+  onMouseMove?: (e: MouseEvent<SVGElement>, context: MouseEventContext) => boolean;
+  onMouseUp?: (e: MouseEvent<SVGElement>, context: MouseEventContext) => boolean;
+  onWheel?: (e: WheelEvent<SVGElement>, context: MouseEventContext) => boolean;
+}
+
+export interface MouseEventContext {
+  svgPoint: SVGPoint;
+  svgRef: React.RefObject<SVGSVGElement | null>;
+  commandId?: string;
+  controlPoint?: 'x1y1' | 'x2y2';
+}
 
 export interface Plugin {
   id: string;
@@ -13,6 +32,7 @@ export interface Plugin {
   tools?: ToolDefinition[];
   shortcuts?: ShortcutDefinition[];
   ui?: UIComponentDefinition[];
+  mouseHandlers?: MouseEventHandler;
 }
 
 export interface ToolDefinition {
@@ -36,7 +56,7 @@ export interface ShortcutDefinition {
 export interface UIComponentDefinition {
   id: string;
   component: React.ComponentType<any>;
-  position: 'toolbar' | 'sidebar' | 'statusbar' | 'contextmenu';
+  position: 'toolbar' | 'sidebar' | 'statusbar' | 'contextmenu' | 'svg-content';
   order?: number;
 }
 
@@ -44,6 +64,72 @@ export class PluginManager {
   private plugins: Map<string, Plugin> = new Map();
   private activeTools: Set<string> = new Set();
   private shortcuts: Map<string, ShortcutDefinition> = new Map();
+  private svgRef: React.RefObject<SVGSVGElement | null> | null = null;
+  private editorStore: any = null;
+  
+  setSVGRef(ref: React.RefObject<SVGSVGElement | null>): void {
+    this.svgRef = ref;
+  }
+
+  setEditorStore(store: any): void {
+    this.editorStore = store;
+  }
+
+  getEditorStore(): any {
+    return this.editorStore;
+  }
+
+  getSVGPoint(e: MouseEvent<SVGElement>): SVGPoint {
+    if (!this.svgRef?.current) return { x: 0, y: 0 };
+    
+    const svg = this.svgRef.current;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgPoint = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+    
+    // Note: Viewport transformation will be handled by individual plugins
+    return { x: svgPoint.x, y: svgPoint.y };
+  }
+
+  handleMouseEvent(
+    eventType: 'mouseDown' | 'mouseMove' | 'mouseUp' | 'wheel',
+    e: MouseEvent<SVGElement> | WheelEvent<SVGElement>,
+    commandId?: string,
+    controlPoint?: 'x1y1' | 'x2y2'
+  ): boolean {
+    const context: MouseEventContext = {
+      svgPoint: this.getSVGPoint(e as MouseEvent<SVGElement>),
+      svgRef: this.svgRef!,
+      commandId,
+      controlPoint
+    };
+
+    // Process plugins in order, stop if any plugin handles the event
+    for (const plugin of this.getEnabledPlugins()) {
+      if (!plugin.mouseHandlers) continue;
+
+      let handled = false;
+      switch (eventType) {
+        case 'mouseDown':
+          handled = plugin.mouseHandlers.onMouseDown?.(e as MouseEvent<SVGElement>, context) || false;
+          break;
+        case 'mouseMove':
+          handled = plugin.mouseHandlers.onMouseMove?.(e as MouseEvent<SVGElement>, context) || false;
+          break;
+        case 'mouseUp':
+          handled = plugin.mouseHandlers.onMouseUp?.(e as MouseEvent<SVGElement>, context) || false;
+          break;
+        case 'wheel':
+          handled = plugin.mouseHandlers.onWheel?.(e as WheelEvent<SVGElement>, context) || false;
+          break;
+      }
+
+      if (handled) return true;
+    }
+
+    return false;
+  }
   
   registerPlugin(plugin: Plugin): void {
     this.plugins.set(plugin.id, plugin);

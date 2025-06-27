@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { MouseEvent } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
+import { getCommandPosition } from '../../utils/path-utils';
 
 interface ControlPointsProps {
   enabled: boolean;
@@ -40,6 +41,120 @@ export const ControlPointsControls: React.FC<ControlPointsProps> = ({
         {enabled ? '✅ Control points are visible for curves' : '❌ Control points are hidden'}
       </div>
     </div>
+  );
+};
+
+export const ControlPointsRenderer: React.FC = () => {
+  const { paths, enabledFeatures, viewport } = useEditorStore();
+
+  if (!enabledFeatures.has('control-points')) return null;
+
+  return (
+    <>
+      {paths.map((path) => 
+        path.subPaths.map((subPath) => 
+          subPath.commands.map((command, commandIndex) => {
+            const position = getCommandPosition(command);
+            if (!position) return null;
+            
+            const radius = Math.max(6 / viewport.zoom, 6); // Minimum 6px for visibility
+            
+            // Find previous command position for connecting control points
+            const prevCommand = commandIndex > 0 ? subPath.commands[commandIndex - 1] : null;
+            const prevPosition = prevCommand ? getCommandPosition(prevCommand) : null;
+            
+            return (
+              <g key={`control-${command.id}`}>
+                {/* Render control points for cubic curves */}
+                {(command.command === 'C' || command.command === 'c') && (
+                  <>
+                    {/* First control point connects to previous command position */}
+                    {command.x1 !== undefined && command.y1 !== undefined && prevPosition && (
+                      <>
+                        <line
+                          x1={prevPosition.x}
+                          y1={prevPosition.y}
+                          x2={command.x1}
+                          y2={command.y1}
+                          stroke="#999"
+                          strokeWidth={1 / viewport.zoom}
+                          strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
+                          pointerEvents="none"
+                        />
+                        <circle
+                          cx={command.x1}
+                          cy={command.y1}
+                          r={radius * 0.7}
+                          fill="#999"
+                          stroke="#666"
+                          strokeWidth={1 / viewport.zoom}
+                          style={{ cursor: 'grab' }}
+                          data-command-id={command.id}
+                          data-control-point="x1y1"
+                        />
+                      </>
+                    )}
+                    {/* Second control point connects to current command position */}
+                    {command.x2 !== undefined && command.y2 !== undefined && (
+                      <>
+                        <line
+                          x1={position.x}
+                          y1={position.y}
+                          x2={command.x2}
+                          y2={command.y2}
+                          stroke="#999"
+                          strokeWidth={1 / viewport.zoom}
+                          strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
+                          pointerEvents="none"
+                        />
+                        <circle
+                          cx={command.x2}
+                          cy={command.y2}
+                          r={radius * 0.7}
+                          fill="#999"
+                          stroke="#666"
+                          strokeWidth={1 / viewport.zoom}
+                          style={{ cursor: 'grab' }}
+                          data-command-id={command.id}
+                          data-control-point="x2y2"
+                        />
+                      </>
+                    )}
+                  </>
+                )}
+                
+                {/* Render control point for quadratic curves */}
+                {(command.command === 'Q' || command.command === 'q') && command.x1 !== undefined && command.y1 !== undefined && (
+                  <>
+                    <line
+                      x1={position.x}
+                      y1={position.y}
+                      x2={command.x1}
+                      y2={command.y1}
+                      stroke="#999"
+                      strokeWidth={1 / viewport.zoom}
+                      strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
+                      pointerEvents="none"
+                    />
+                    <circle
+                      cx={command.x1}
+                      cy={command.y1}
+                      r={radius * 0.7}
+                      fill="#999"
+                      stroke="#666"
+                      strokeWidth={1 / viewport.zoom}
+                      style={{ cursor: 'grab' }}
+                      data-command-id={command.id}
+                      data-control-point="x1y1"
+                    />
+                  </>
+                )}
+              </g>
+            );
+          })
+        )
+      )}
+    </>
   );
 };
 
@@ -84,6 +199,12 @@ export const ControlPointsPlugin: Plugin = {
       component: ControlPointsComponent,
       position: 'sidebar',
       order: 3
+    },
+    {
+      id: 'control-points-renderer',
+      component: ControlPointsRenderer,
+      position: 'svg-content',
+      order: 20, // Render between paths and command points
     }
   ]
 };
