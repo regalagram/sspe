@@ -1461,3 +1461,72 @@ export const getSelectedElementsBounds = (paths: SVGPath[], selectedCommandIds: 
     height: maxY - minY
   };
 };
+
+export const getSubPathBounds = (subPath: SVGSubPath, allSubPaths?: SVGSubPath[]): BoundingBox | null => {
+  if (subPath.commands.length === 0) return null;
+  
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let hasValidBounds = false;
+  
+  subPath.commands.forEach(command => {
+    // Get absolute position considering subpath context
+    const position = getAbsoluteCommandPosition(command, subPath, allSubPaths);
+    if (position) {
+      minX = Math.min(minX, position.x);
+      maxX = Math.max(maxX, position.x);
+      minY = Math.min(minY, position.y);
+      maxY = Math.max(maxY, position.y);
+      hasValidBounds = true;
+    }
+    
+    // Also check control points
+    const controlPoints = getAbsoluteControlPoints(command, subPath, allSubPaths);
+    controlPoints.forEach(cp => {
+      minX = Math.min(minX, cp.x);
+      maxX = Math.max(maxX, cp.x);
+      minY = Math.min(minY, cp.y);
+      maxY = Math.max(maxY, cp.y);
+      hasValidBounds = true;
+    });
+  });
+  
+  if (!hasValidBounds) return null;
+  
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY
+  };
+};
+
+export const getSelectedSubPathsBounds = (paths: SVGPath[], selectedSubPathIds: string[]): BoundingBox | null => {
+  if (selectedSubPathIds.length === 0) return null;
+  
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let hasValidBounds = false;
+  
+  for (const path of paths) {
+    for (const subPath of path.subPaths) {
+      if (selectedSubPathIds.includes(subPath.id)) {
+        const bounds = getSubPathBounds(subPath, path.subPaths);
+        if (bounds && bounds.width > 0 && bounds.height > 0) {
+          minX = Math.min(minX, bounds.x);
+          minY = Math.min(minY, bounds.y);
+          maxX = Math.max(maxX, bounds.x + bounds.width);
+          maxY = Math.max(maxY, bounds.y + bounds.height);
+          hasValidBounds = true;
+        }
+      }
+    }
+  }
+  
+  if (!hasValidBounds) return null;
+  
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY
+  };
+};

@@ -5,7 +5,7 @@ import { generateId } from '../utils/id-utils.js';
 import { loadPreferences, savePreferences, UserPreferences } from '../utils/persistence';
 import { decomposeIntoSubPaths, createNewPath, findSubPathContainingCommand } from '../utils/subpath-utils';
 import { parseSVGToSubPaths } from '../utils/svg-parser';
-import { findSubPathAtPoint, snapToGrid, getAllPathsBounds, getSelectedElementsBounds } from '../utils/path-utils';
+import { findSubPathAtPoint, snapToGrid, getAllPathsBounds, getSelectedElementsBounds, getSelectedSubPathsBounds } from '../utils/path-utils';
 
 interface EditorActions {
   // Selection actions
@@ -35,6 +35,7 @@ interface EditorActions {
   zoomOut: (center?: Point) => void;
   zoomToFit: () => void;
   zoomToSelection: () => void;
+  zoomToSubPath: () => void;
   pan: (delta: Point) => void;
   setPan: (pan: Point) => void;
   resetView: () => void;
@@ -727,6 +728,107 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       // Validate pan calculation
       if (!isFinite(newPanX) || !isFinite(newPanY)) {
         console.warn('Invalid pan calculation in zoomToSelection:', newPanX, newPanY);
+        return;
+      }
+      
+      set({
+        viewport: validateViewport({
+          ...viewport,
+          zoom: newZoom,
+          pan: { x: newPanX, y: newPanY },
+        }),
+      });
+    },
+    
+    zoomToSubPath: () => {
+      const state = get();
+      const { paths, viewport, selection } = state;
+      
+      // Get bounding box of selected sub-paths
+      const bounds = getSelectedSubPathsBounds(paths, selection.selectedSubPaths);
+      
+      console.log('ZoomToSubPath - bounds:', bounds);
+      
+      if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
+        console.log('No valid sub-path selection to zoom to');
+        return;
+      }
+      
+      // Try to get actual SVG dimensions from DOM
+      let viewportWidth = 800; // fallback width
+      let viewportHeight = 600; // fallback height
+      
+      // Try to get real dimensions from the DOM if available
+      const svgElement = document.querySelector('svg');
+      if (svgElement) {
+        const rect = svgElement.getBoundingClientRect();
+        console.log('ZoomToSubPath - SVG getBoundingClientRect:', rect);
+        if (rect.width > 100 && rect.height > 100) { // Ensure reasonable minimum size
+          viewportWidth = rect.width;
+          viewportHeight = rect.height;
+        }
+      }
+      
+      // If DOM dimensions are still not available, try to get from viewport
+      if (viewportWidth < 100 || viewportHeight < 100) {
+        // Use window dimensions as last resort
+        viewportWidth = window.innerWidth * 0.8; // 80% of window width
+        viewportHeight = window.innerHeight * 0.8; // 80% of window height
+      }
+      
+      console.log('ZoomToSubPath - viewport dimensions:', viewportWidth, viewportHeight);
+      console.log('ZoomToSubPath - subpath bounds:', bounds);
+      
+      // Use the subpath bounds directly
+      const subPathWidth = Math.max(bounds.width, 1);
+      const subPathHeight = Math.max(bounds.height, 1);
+      
+      console.log('ZoomToSubPath - subpath dimensions:', subPathWidth, subPathHeight);
+      
+      // Calculate zoom to fit subpath in viewport (with some padding)
+      const padding = 40; // 40px padding on each side for better visibility
+      const availableWidth = Math.max(viewportWidth - padding * 2, 50);
+      const availableHeight = Math.max(viewportHeight - padding * 2, 50);
+      
+      const zoomX = availableWidth / subPathWidth;
+      const zoomY = availableHeight / subPathHeight;
+      
+      let newZoom = Math.min(zoomX, zoomY);
+      
+      console.log('ZoomToSubPath - zoom calculations:', { zoomX, zoomY, newZoom, availableWidth, availableHeight });
+      
+      // Validate zoom calculation
+      if (!isFinite(newZoom) || newZoom <= 0) {
+        console.warn('Invalid zoom calculation in zoomToSubPath:', newZoom);
+        return;
+      }
+      
+      // Apply zoom limits: between 0.1x and 20x (higher for sub-path)
+      newZoom = Math.max(0.1, Math.min(newZoom, 20));
+      
+      // Calculate the subpath center in SVG coordinates
+      const subPathCenterX = bounds.x + bounds.width / 2;
+      const subPathCenterY = bounds.y + bounds.height / 2;
+      
+      // Validate subpath center
+      if (!isFinite(subPathCenterX) || !isFinite(subPathCenterY)) {
+        console.warn('Invalid subpath center:', subPathCenterX, subPathCenterY);
+        return;
+      }
+      
+      // Calculate where we want this center to appear in screen coordinates
+      const viewportCenterX = viewportWidth / 2;
+      const viewportCenterY = viewportHeight / 2;
+      
+      // For the SVG transform: translate(pan) scale(zoom)
+      // Screen coordinate = SVG coordinate * zoom + pan
+      // So: pan = screen coordinate - SVG coordinate * zoom
+      const newPanX = viewportCenterX - subPathCenterX * newZoom;
+      const newPanY = viewportCenterY - subPathCenterY * newZoom;
+      
+      // Validate pan calculation
+      if (!isFinite(newPanX) || !isFinite(newPanY)) {
+        console.warn('Invalid pan calculation in zoomToSubPath:', newPanX, newPanY);
         return;
       }
       

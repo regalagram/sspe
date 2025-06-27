@@ -9,9 +9,11 @@ interface ZoomControlsProps {
   onZoomOut: () => void;
   onZoomToFit: () => void;
   onZoomToSelection: () => void;
+  onZoomToSubPath: () => void;
   onResetView: () => void;
   currentZoom: number;
   hasSelection: boolean;
+  hasSubPathSelection: boolean;
 }
 
 export const ZoomControls: React.FC<ZoomControlsProps> = ({
@@ -19,9 +21,11 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
   onZoomOut,
   onZoomToFit,
   onZoomToSelection,
+  onZoomToSubPath,
   onResetView,
   currentZoom,
   hasSelection,
+  hasSubPathSelection,
 }) => {
   const buttonStyle: React.CSSProperties = {
     padding: '8px 12px',
@@ -73,6 +77,17 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
           <Target size={16} /> Fit Selection
         </button>
       )}
+      {hasSubPathSelection && (
+        <button 
+          onClick={onZoomToSubPath} 
+          title="Zoom to Selected SubPath (Ctrl+Shift+S)"
+          style={buttonStyle}
+          onMouseEnter={(e) => e.currentTarget.style.background = '#e9ecef'}
+          onMouseLeave={(e) => e.currentTarget.style.background = '#f8f9fa'}
+        >
+          <Target size={16} /> Fit SubPath
+        </button>
+      )}
       <button 
         onClick={onResetView} 
         title="Reset View (Ctrl+R)"
@@ -97,7 +112,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
 };
 
 export const Zoom: React.FC = () => {
-  const { viewport, selection, zoomIn, zoomOut, zoomToFit, zoomToSelection, resetView } = useEditorStore();
+  const { viewport, selection, zoomIn, zoomOut, zoomToFit, zoomToSelection, zoomToSubPath, resetView } = useEditorStore();
 
   return (
     <DraggablePanel 
@@ -110,9 +125,11 @@ export const Zoom: React.FC = () => {
         onZoomOut={zoomOut}
         onZoomToFit={zoomToFit}
         onZoomToSelection={zoomToSelection}
+        onZoomToSubPath={zoomToSubPath}
         onResetView={resetView}
         currentZoom={viewport.zoom}
         hasSelection={selection.selectedCommands.length > 0}
+        hasSubPathSelection={selection.selectedSubPaths.length > 0}
       />
     </DraggablePanel>
   );
@@ -173,6 +190,17 @@ export const ZoomPlugin: Plugin = {
         const store = useEditorStore.getState();
         if (store.selection.selectedCommands.length > 0) {
           store.zoomToSelection();
+        }
+      }
+    },
+    {
+      key: 's',
+      modifiers: ['ctrl', 'shift'],
+      description: 'Zoom to Selected SubPath',
+      action: () => {
+        const store = useEditorStore.getState();
+        if (store.selection.selectedSubPaths.length > 0) {
+          store.zoomToSubPath();
         }
       }
     }

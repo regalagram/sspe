@@ -49,7 +49,7 @@ initializePlugins();
 
 export const SvgEditor: React.FC = () => {
   const editorStore = useEditorStore();
-  const { grid, isFullscreen } = editorStore;
+  const { isFullscreen } = editorStore;
   const svgRef = useRef<SVGSVGElement>(null);
   
   // Get cursor from plugins
