@@ -217,7 +217,8 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       const path = state.paths.find(p => p.id === pathId);
       if (!path) return;
 
-      const foundSubPath = findSubPathAtPoint(path, point);
+      // Use the enhanced selection algorithm - modified existing function
+      const foundSubPath = findSubPathAtPoint(path, point, 15);
 
       if (foundSubPath) {
         set((state) => ({

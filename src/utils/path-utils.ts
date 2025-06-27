@@ -73,7 +73,7 @@ export const findSubPathAtPoint = (path: SVGPath, point: Point, tolerance: numbe
 
   for (const subPath of path.subPaths) {
     // Calculate the distance from the point to this subpath
-    const distance = getDistanceToSubPath(subPath, point);
+    const distance = getDistanceToSubPath(subPath, point, path.subPaths);
     
     if (distance < tolerance && distance < minDistance) {
       minDistance = distance;
@@ -84,52 +84,243 @@ export const findSubPathAtPoint = (path: SVGPath, point: Point, tolerance: numbe
   return closestSubPath;
 };
 
-// Helper function to calculate distance from a point to a subpath
-const getDistanceToSubPath = (subPath: SVGSubPath, point: Point): number => {
+// Enhanced version of findSubPathAtPoint with configurable behavior
+export const findSubPathAtPointAdvanced = (
+  path: SVGPath, 
+  point: Point, 
+  options: {
+    tolerance?: number;
+    fillRule?: 'nonzero' | 'evenodd';
+    includeStroke?: boolean;
+    includeFill?: boolean;
+  } = {}
+): SVGSubPath | null => {
+  const { 
+    tolerance = 15, 
+    fillRule = 'nonzero', 
+    includeStroke = true, 
+    includeFill = true 
+  } = options;
+  
+  let closestSubPath = null;
   let minDistance = Infinity;
 
-  // Calculate distance to each command point in the subpath
+  for (const subPath of path.subPaths) {
+    let distance = Infinity;
+    
+    // Check if point is inside the filled area (if enabled and subpath is closed)
+    const isInside = includeFill && isPointInsideSubPath(subPath, point, fillRule, path.subPaths);
+    
+    if (isInside) {
+      // Even if inside, calculate distance to contour for proper comparison
+      // This ensures we select the innermost/closest subpath when nested
+      distance = getDistanceToSubPathContour(subPath, point);
+      
+      // Give slight preference to filled areas by reducing distance slightly
+      // This ensures filled detection still works but allows proper ordering
+      distance = distance * 0.8; // 20% preference for filled areas
+    } 
+    // Check distance to stroke/contour (if enabled)
+    else if (includeStroke) {
+      distance = getDistanceToSubPathContour(subPath, point);
+    }
+    
+    if (distance < tolerance && distance < minDistance) {
+      minDistance = distance;
+      closestSubPath = subPath;
+    }
+  }
+
+  return closestSubPath;
+};
+
+// Advanced function that prioritizes innermost subpaths for nested cases
+export const findInnermostSubPathAtPoint = (path: SVGPath, point: Point, tolerance: number = 15): SVGSubPath | null => {
+  // Get all subpaths that contain the point or are within tolerance
+  const candidates: Array<{ subPath: SVGSubPath; distance: number; isInside: boolean }> = [];
+  
+  for (const subPath of path.subPaths) {
+    const isInside = isPointInsideSubPath(subPath, point, 'nonzero', path.subPaths);
+    const distance = getDistanceToSubPathContour(subPath, point);
+    
+    if (isInside || distance < tolerance) {
+      candidates.push({
+        subPath,
+        distance,
+        isInside
+      });
+    }
+  }
+  
+  if (candidates.length === 0) {
+    return null;
+  }
+  
+  // If multiple candidates are "inside", we need to find the innermost one
+  const insideCandidates = candidates.filter(c => c.isInside);
+  
+  if (insideCandidates.length > 1) {
+    // For nested subpaths, the innermost one typically has the smallest area
+    // or the closest contour to the click point
+    return insideCandidates.reduce((closest, current) => {
+      if (current.distance < closest.distance) {
+        return current;
+      }
+      // If distances are very close, prefer the one with smaller area
+      if (Math.abs(current.distance - closest.distance) < 1) {
+        const currentArea = calculateSubPathArea(current.subPath);
+        const closestArea = calculateSubPathArea(closest.subPath);
+        return currentArea < closestArea ? current : closest;
+      }
+      return closest;
+    }).subPath;
+  }
+  
+  // If only one inside or none inside, return the closest one
+  return candidates.reduce((closest, current) => {
+    // Prioritize inside candidates
+    if (current.isInside && !closest.isInside) return current;
+    if (!current.isInside && closest.isInside) return closest;
+    
+    // Among same type (both inside or both outside), choose closest
+    return current.distance < closest.distance ? current : closest;
+  }).subPath;
+};
+
+// Calculate approximate area of a subpath (for nested subpath detection)
+const calculateSubPathArea = (subPath: SVGSubPath, allSubPaths?: SVGSubPath[]): number => {
+  if (!isSubPathClosed(subPath, allSubPaths)) {
+    return 0;
+  }
+  
+  const polygonPoints = getSubPathPolygonPoints(subPath, allSubPaths);
+  if (polygonPoints.length < 3) {
+    return 0;
+  }
+  
+  // Use shoelace formula to calculate polygon area
+  let area = 0;
+  const n = polygonPoints.length;
+  
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    area += polygonPoints[i].x * polygonPoints[j].y;
+    area -= polygonPoints[j].x * polygonPoints[i].y;
+  }
+  
+  return Math.abs(area) / 2;
+};
+
+// Helper function to calculate distance from a point to a subpath
+const getDistanceToSubPath = (subPath: SVGSubPath, point: Point, allSubPaths?: SVGSubPath[]): number => {
+  // Check if the point is inside the filled area (if closed)
+  const isInside = isPointInsideSubPath(subPath, point, 'nonzero', allSubPaths);
+  
+  // If inside a filled area, return 0 for immediate selection
+  if (isInside) {
+    return 0;
+  }
+  
+  // Otherwise, calculate distance to contour
+  return getDistanceToSubPathContour(subPath, point);
+};
+
+// Separated contour-only distance calculation
+const getDistanceToSubPathContour = (subPath: SVGSubPath, point: Point): number => {
+  let minDistance = Infinity;
+  let currentPoint: Point = { x: 0, y: 0 };
+
+  // Process each command in the subpath for contour detection only
   for (let i = 0; i < subPath.commands.length; i++) {
     const command = subPath.commands[i];
     
-    // Distance to main command point
-    if (command.x !== undefined && command.y !== undefined) {
-      const distance = Math.sqrt(
-        Math.pow(point.x - command.x, 2) + 
-        Math.pow(point.y - command.y, 2)
-      );
-      minDistance = Math.min(minDistance, distance);
-    }
+    // Get absolute position for this command
+    const absolutePos = getAbsoluteCommandPosition(command, subPath);
     
-    // Distance to control points for curves
-    if (command.x1 !== undefined && command.y1 !== undefined) {
-      const distance = Math.sqrt(
-        Math.pow(point.x - command.x1, 2) + 
-        Math.pow(point.y - command.y1, 2)
-      );
-      minDistance = Math.min(minDistance, distance);
-    }
-    
-    if (command.x2 !== undefined && command.y2 !== undefined) {
-      const distance = Math.sqrt(
-        Math.pow(point.x - command.x2, 2) + 
-        Math.pow(point.y - command.y2, 2)
-      );
-      minDistance = Math.min(minDistance, distance);
-    }
-
-    // For line segments, also check distance to the line between consecutive points
-    if (i > 0) {
-      const prevCommand = subPath.commands[i - 1];
-      if (prevCommand.x !== undefined && prevCommand.y !== undefined &&
-          command.x !== undefined && command.y !== undefined) {
-        const lineDistance = distanceToLineSegment(
-          point,
-          { x: prevCommand.x, y: prevCommand.y },
-          { x: command.x, y: command.y }
-        );
-        minDistance = Math.min(minDistance, lineDistance);
+    if (absolutePos) {
+      // Distance to the endpoint of the command
+      const endPointDistance = distance(point, absolutePos);
+      minDistance = Math.min(minDistance, endPointDistance);
+      
+      // Calculate distance to the actual curve/path segment
+      if (i > 0) {
+        let segmentDistance = Infinity;
+        
+        switch (command.command.toUpperCase()) {
+          case 'L':
+          case 'H':
+          case 'V':
+            segmentDistance = distanceToLineSegment(point, currentPoint, absolutePos);
+            break;
+            
+          case 'C':
+            // Cubic Bézier curve
+            if (command.x1 !== undefined && command.y1 !== undefined &&
+                command.x2 !== undefined && command.y2 !== undefined) {
+              const controlPoints = getAbsoluteControlPoints(command, subPath);
+              if (controlPoints.length >= 2) {
+                segmentDistance = distanceToCubicBezier(
+                  point, currentPoint, controlPoints[0], controlPoints[1], absolutePos
+                );
+              }
+            }
+            break;
+            
+          case 'S':
+            // Smooth cubic Bézier
+            if (command.x2 !== undefined && command.y2 !== undefined) {
+              const controlPoints = getAbsoluteControlPoints(command, subPath);
+              if (controlPoints.length >= 1) {
+                const reflectedCP1 = getReflectedControlPoint(subPath.commands, i, currentPoint);
+                segmentDistance = distanceToCubicBezier(
+                  point, currentPoint, reflectedCP1, controlPoints[0], absolutePos
+                );
+              }
+            }
+            break;
+            
+          case 'Q':
+            // Quadratic Bézier curve
+            if (command.x1 !== undefined && command.y1 !== undefined) {
+              const controlPoints = getAbsoluteControlPoints(command, subPath);
+              if (controlPoints.length >= 1) {
+                segmentDistance = distanceToQuadraticBezier(
+                  point, currentPoint, controlPoints[0], absolutePos
+                );
+              }
+            }
+            break;
+            
+          case 'T':
+            // Smooth quadratic Bézier
+            const reflectedCP = getReflectedControlPoint(subPath.commands, i, currentPoint);
+            segmentDistance = distanceToQuadraticBezier(
+              point, currentPoint, reflectedCP, absolutePos
+            );
+            break;
+            
+          case 'A':
+            // Arc
+            if (command.rx !== undefined && command.ry !== undefined) {
+              segmentDistance = distanceToArc(
+                point, currentPoint, absolutePos,
+                command.rx, command.ry,
+                command.xAxisRotation || 0,
+                command.largeArcFlag || 0,
+                command.sweepFlag || 0
+              );
+            }
+            break;
+            
+          default:
+            // For other commands, fall back to line segment
+            segmentDistance = distanceToLineSegment(point, currentPoint, absolutePos);
+        }
+        
+        minDistance = Math.min(minDistance, segmentDistance);
       }
+      
+      currentPoint = absolutePos;
     }
   }
 
@@ -659,4 +850,479 @@ export const getAbsoluteControlPoints = (command: SVGCommand, subPath: SVGSubPat
   }
 
   return controlPoints;
+};
+
+// Helper function to calculate distance from a point to a cubic Bézier curve
+const distanceToCubicBezier = (point: Point, p0: Point, p1: Point, p2: Point, p3: Point): number => {
+  let minDistance = Infinity;
+  const steps = 50; // Number of points to sample along the curve
+  
+  for (let t = 0; t <= 1; t += 1 / steps) {
+    // Calculate point on Bézier curve using De Casteljau's algorithm
+    const curvePoint = cubicBezierPoint(p0, p1, p2, p3, t);
+    const dist = distance(point, curvePoint);
+    minDistance = Math.min(minDistance, dist);
+  }
+  
+  return minDistance;
+};
+
+// Helper function to calculate distance from a point to a quadratic Bézier curve
+const distanceToQuadraticBezier = (point: Point, p0: Point, p1: Point, p2: Point): number => {
+  let minDistance = Infinity;
+  const steps = 50; // Number of points to sample along the curve
+  
+  for (let t = 0; t <= 1; t += 1 / steps) {
+    // Calculate point on quadratic Bézier curve
+    const curvePoint = quadraticBezierPoint(p0, p1, p2, t);
+    const dist = distance(point, curvePoint);
+    minDistance = Math.min(minDistance, dist);
+  }
+  
+  return minDistance;
+};
+
+// Helper function to calculate distance from a point to an arc
+const distanceToArc = (
+  point: Point, 
+  start: Point, 
+  end: Point, 
+  rx: number, 
+  ry: number, 
+  xAxisRotation: number, 
+  largeArcFlag: number, 
+  sweepFlag: number
+): number => {
+  let minDistance = Infinity;
+  const steps = 50; // Number of points to sample along the arc
+  
+  // Convert SVG arc parameters to center parameterization
+  const arcParams = convertToArcCenter(start, end, rx, ry, xAxisRotation, largeArcFlag, sweepFlag);
+  
+  if (!arcParams) {
+    // Fallback to line segment if arc conversion fails
+    return distanceToLineSegment(point, start, end);
+  }
+  
+  const { cx, cy, startAngle, endAngle, rx: actualRx, ry: actualRy } = arcParams;
+  
+  // Sample points along the arc
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    let angle;
+    
+    if (sweepFlag === 1) {
+      // Positive direction
+      angle = startAngle + t * (endAngle - startAngle);
+    } else {
+      // Negative direction
+      angle = startAngle - t * (startAngle - endAngle);
+    }
+    
+    // Calculate point on ellipse
+    const cos_angle = Math.cos(angle);
+    const sin_angle = Math.sin(angle);
+    const cos_rotation = Math.cos(xAxisRotation * Math.PI / 180);
+    const sin_rotation = Math.sin(xAxisRotation * Math.PI / 180);
+    
+    const x = cx + actualRx * cos_angle * cos_rotation - actualRy * sin_angle * sin_rotation;
+    const y = cy + actualRx * cos_angle * sin_rotation + actualRy * sin_angle * cos_rotation;
+    
+    const arcPoint = { x, y };
+    const dist = distance(point, arcPoint);
+    minDistance = Math.min(minDistance, dist);
+  }
+  
+  return minDistance;
+};
+
+// Convert SVG arc parameters to center parameterization
+const convertToArcCenter = (
+  start: Point, 
+  end: Point, 
+  rx: number, 
+  ry: number, 
+  xAxisRotation: number, 
+  largeArcFlag: number, 
+  sweepFlag: number
+): { cx: number; cy: number; startAngle: number; endAngle: number; rx: number; ry: number } | null => {
+  // Handle degenerate cases
+  if (rx === 0 || ry === 0) return null;
+  if (start.x === end.x && start.y === end.y) return null;
+  
+  const phi = xAxisRotation * Math.PI / 180;
+  const cos_phi = Math.cos(phi);
+  const sin_phi = Math.sin(phi);
+  
+  // Step 1: Compute (x1', y1')
+  const dx = (start.x - end.x) / 2;
+  const dy = (start.y - end.y) / 2;
+  const x1_prime = cos_phi * dx + sin_phi * dy;
+  const y1_prime = -sin_phi * dx + cos_phi * dy;
+  
+  // Ensure radii are large enough
+  const rx_sq = rx * rx;
+  const ry_sq = ry * ry;
+  const x1_prime_sq = x1_prime * x1_prime;
+  const y1_prime_sq = y1_prime * y1_prime;
+  
+  const lambda = x1_prime_sq / rx_sq + y1_prime_sq / ry_sq;
+  if (lambda > 1) {
+    const sqrt_lambda = Math.sqrt(lambda);
+    rx *= sqrt_lambda;
+    ry *= sqrt_lambda;
+  }
+  
+  // Step 2: Compute (cx', cy')
+  const sign = largeArcFlag === sweepFlag ? -1 : 1;
+  const sq = Math.max(0, (rx_sq * ry_sq - rx_sq * y1_prime_sq - ry_sq * x1_prime_sq) / (rx_sq * y1_prime_sq + ry_sq * x1_prime_sq));
+  const coeff = sign * Math.sqrt(sq);
+  const cx_prime = coeff * (rx * y1_prime / ry);
+  const cy_prime = coeff * -(ry * x1_prime / rx);
+  
+  // Step 3: Compute (cx, cy)
+  const cx = cos_phi * cx_prime - sin_phi * cy_prime + (start.x + end.x) / 2;
+  const cy = sin_phi * cx_prime + cos_phi * cy_prime + (start.y + end.y) / 2;
+  
+  // Step 4: Compute angles
+  const startAngle = Math.atan2((y1_prime - cy_prime) / ry, (x1_prime - cx_prime) / rx);
+  const endAngle = Math.atan2((-y1_prime - cy_prime) / ry, (-x1_prime - cx_prime) / rx);
+  
+  return {
+    cx,
+    cy,
+    startAngle,
+    endAngle,
+    rx,
+    ry
+  };
+};
+
+// Calculate a point on a cubic Bézier curve at parameter t
+const cubicBezierPoint = (p0: Point, p1: Point, p2: Point, p3: Point, t: number): Point => {
+  const mt = 1 - t;
+  const mt2 = mt * mt;
+  const mt3 = mt2 * mt;
+  const t2 = t * t;
+  const t3 = t2 * t;
+  
+  return {
+    x: mt3 * p0.x + 3 * mt2 * t * p1.x + 3 * mt * t2 * p2.x + t3 * p3.x,
+    y: mt3 * p0.y + 3 * mt2 * t * p1.y + 3 * mt * t2 * p2.y + t3 * p3.y
+  };
+};
+
+// Calculate a point on a quadratic Bézier curve at parameter t
+const quadraticBezierPoint = (p0: Point, p1: Point, p2: Point, t: number): Point => {
+  const mt = 1 - t;
+  const mt2 = mt * mt;
+  const t2 = t * t;
+  
+  return {
+    x: mt2 * p0.x + 2 * mt * t * p1.x + t2 * p2.x,
+    y: mt2 * p0.y + 2 * mt * t * p1.y + t2 * p2.y
+  };
+};
+
+// Get reflected control point for smooth curves (S and T commands)
+const getReflectedControlPoint = (commands: SVGCommand[], currentIndex: number, currentPoint: Point): Point => {
+  if (currentIndex <= 0) {
+    return currentPoint;
+  }
+  
+  const prevCommand = commands[currentIndex - 1];
+  const prevCommandType = prevCommand.command.toUpperCase();
+  
+  // For S command, reflect the second control point of the previous C command
+  if (prevCommandType === 'C' && prevCommand.x2 !== undefined && prevCommand.y2 !== undefined) {
+    const prevAbsolutePos = getAbsoluteCommandPosition(prevCommand, { commands, id: '' });
+    if (prevAbsolutePos) {
+      return {
+        x: 2 * prevAbsolutePos.x - prevCommand.x2,
+        y: 2 * prevAbsolutePos.y - prevCommand.y2
+      };
+    }
+  }
+  
+  // For T command, reflect the control point of the previous Q command
+  if (prevCommandType === 'Q' && prevCommand.x1 !== undefined && prevCommand.y1 !== undefined) {
+    const prevAbsolutePos = getAbsoluteCommandPosition(prevCommand, { commands, id: '' });
+    if (prevAbsolutePos) {
+      return {
+        x: 2 * prevAbsolutePos.x - prevCommand.x1,
+        y: 2 * prevAbsolutePos.y - prevCommand.y1
+      };
+    }
+  }
+  
+  return currentPoint;
+};
+
+// Helper function to check if a point is inside a subpath using fill rules
+const isPointInsideSubPath = (subPath: SVGSubPath, point: Point, fillRule: 'nonzero' | 'evenodd' = 'nonzero', allSubPaths?: SVGSubPath[]): boolean => {
+  // First, check if the subpath is closed (has a Z command or ends where it starts)
+  const isClosed = isSubPathClosed(subPath, allSubPaths);
+  
+  // If not closed, only use contour detection
+  if (!isClosed) {
+    return false;
+  }
+  
+  // Get all points that form the polygon
+  const polygonPoints = getSubPathPolygonPoints(subPath, allSubPaths);
+  
+  if (polygonPoints.length < 3) {
+    return false; // Need at least 3 points to form an area
+  }
+  
+  // Use the appropriate fill rule algorithm
+  let result;
+  if (fillRule === 'evenodd') {
+    result = isPointInsidePolygonEvenOdd(point, polygonPoints);
+  } else {
+    result = isPointInsidePolygonNonZero(point, polygonPoints);
+  }
+  
+  return result;
+};
+
+// Check if a subpath is closed
+const isSubPathClosed = (subPath: SVGSubPath, allSubPaths?: SVGSubPath[]): boolean => {
+  if (subPath.commands.length === 0) return false;
+  
+  // Check for explicit Z command
+  const lastCommand = subPath.commands[subPath.commands.length - 1];
+  if (lastCommand.command.toLowerCase() === 'z') {
+    return true;
+  }
+  
+  // Check if the path ends where it starts
+  const firstCommand = subPath.commands[0];
+  const lastPosition = getAbsoluteCommandPosition(lastCommand, subPath, allSubPaths);
+  const firstPosition = getAbsoluteCommandPosition(firstCommand, subPath, allSubPaths);
+  
+  if (firstPosition && lastPosition) {
+    const threshold = 1; // Allow small tolerance for floating point errors
+    return distance(firstPosition, lastPosition) < threshold;
+  }
+  
+  return false;
+};
+
+// Extract polygon points from a subpath (approximating curves)
+const getSubPathPolygonPoints = (subPath: SVGSubPath, allSubPaths?: SVGSubPath[]): Point[] => {
+  const points: Point[] = [];
+  let currentPoint: Point = { x: 0, y: 0 };
+  
+  for (let i = 0; i < subPath.commands.length; i++) {
+    const command = subPath.commands[i];
+    const absolutePos = getAbsoluteCommandPosition(command, subPath, allSubPaths);
+    
+    if (!absolutePos) continue;
+    
+    switch (command.command.toUpperCase()) {
+      case 'M':
+      case 'L':
+      case 'H':
+      case 'V':
+        points.push(absolutePos);
+        break;
+        
+      case 'C':
+        // For cubic Bézier, sample points along the curve
+        if (command.x1 !== undefined && command.y1 !== undefined &&
+            command.x2 !== undefined && command.y2 !== undefined) {
+          const controlPoints = getAbsoluteControlPoints(command, subPath);
+          if (controlPoints.length >= 2) {
+            const curvePoints = sampleCubicBezier(currentPoint, controlPoints[0], controlPoints[1], absolutePos, 10);
+            points.push(...curvePoints);
+          }
+        }
+        break;
+        
+      case 'S':
+        // Smooth cubic Bézier
+        if (command.x2 !== undefined && command.y2 !== undefined) {
+          const controlPoints = getAbsoluteControlPoints(command, subPath);
+          if (controlPoints.length >= 1) {
+            const reflectedCP1 = getReflectedControlPoint(subPath.commands, i, currentPoint);
+            const curvePoints = sampleCubicBezier(currentPoint, reflectedCP1, controlPoints[0], absolutePos, 10);
+            points.push(...curvePoints);
+          }
+        }
+        break;
+        
+      case 'Q':
+        // Quadratic Bézier
+        if (command.x1 !== undefined && command.y1 !== undefined) {
+          const controlPoints = getAbsoluteControlPoints(command, subPath);
+          if (controlPoints.length >= 1) {
+            const curvePoints = sampleQuadraticBezier(currentPoint, controlPoints[0], absolutePos, 10);
+            points.push(...curvePoints);
+          }
+        }
+        break;
+        
+      case 'T':
+        // Smooth quadratic Bézier
+        const reflectedCP = getReflectedControlPoint(subPath.commands, i, currentPoint);
+        const curvePoints = sampleQuadraticBezier(currentPoint, reflectedCP, absolutePos, 10);
+        points.push(...curvePoints);
+        break;
+        
+      case 'A':
+        // Arc - sample points along the arc
+        if (command.rx !== undefined && command.ry !== undefined) {
+          const arcPoints = sampleArc(
+            currentPoint, 
+            absolutePos, 
+            command.rx, 
+            command.ry, 
+            command.xAxisRotation || 0, 
+            command.largeArcFlag || 0, 
+            command.sweepFlag || 0, 
+            10
+          );
+          points.push(...arcPoints);
+        }
+        break;
+        
+      case 'Z':
+        // Close path - don't add point as it should connect to start
+        break;
+    }
+    
+    currentPoint = absolutePos;
+  }
+  
+  return points;
+};
+
+// Sample points along a cubic Bézier curve
+const sampleCubicBezier = (p0: Point, p1: Point, p2: Point, p3: Point, steps: number): Point[] => {
+  const points: Point[] = [];
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    points.push(cubicBezierPoint(p0, p1, p2, p3, t));
+  }
+  return points;
+};
+
+// Sample points along a quadratic Bézier curve
+const sampleQuadraticBezier = (p0: Point, p1: Point, p2: Point, steps: number): Point[] => {
+  const points: Point[] = [];
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    points.push(quadraticBezierPoint(p0, p1, p2, t));
+  }
+  return points;
+};
+
+// Sample points along an arc
+const sampleArc = (
+  start: Point, 
+  end: Point, 
+  rx: number, 
+  ry: number, 
+  xAxisRotation: number, 
+  largeArcFlag: number, 
+  sweepFlag: number, 
+  steps: number
+): Point[] => {
+  const points: Point[] = [];
+  const arcParams = convertToArcCenter(start, end, rx, ry, xAxisRotation, largeArcFlag, sweepFlag);
+  
+  if (!arcParams) {
+    // Fallback to linear interpolation
+    for (let i = 1; i <= steps; i++) {
+      const t = i / steps;
+      points.push({
+        x: start.x + (end.x - start.x) * t,
+        y: start.y + (end.y - start.y) * t
+      });
+    }
+    return points;
+  }
+  
+  const { cx, cy, startAngle, endAngle, rx: actualRx, ry: actualRy } = arcParams;
+  const cos_rotation = Math.cos(xAxisRotation * Math.PI / 180);
+  const sin_rotation = Math.sin(xAxisRotation * Math.PI / 180);
+  
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    let angle;
+    
+    if (sweepFlag === 1) {
+      angle = startAngle + t * (endAngle - startAngle);
+    } else {
+      angle = startAngle - t * (startAngle - endAngle);
+    }
+    
+    const cos_angle = Math.cos(angle);
+    const sin_angle = Math.sin(angle);
+    
+    const x = cx + actualRx * cos_angle * cos_rotation - actualRy * sin_angle * sin_rotation;
+    const y = cy + actualRx * cos_angle * sin_rotation + actualRy * sin_angle * cos_rotation;
+    
+    points.push({ x, y });
+  }
+  
+  return points;
+};
+
+// Point-in-polygon test using even-odd rule
+const isPointInsidePolygonEvenOdd = (point: Point, polygon: Point[]): boolean => {
+  let inside = false;
+  const n = polygon.length;
+  
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const xi = polygon[i].x;
+    const yi = polygon[i].y;
+    const xj = polygon[j].x;
+    const yj = polygon[j].y;
+    
+    if (((yi > point.y) !== (yj > point.y)) &&
+        (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi)) {
+      inside = !inside;
+    }
+  }
+  
+  return inside;
+};
+
+// Point-in-polygon test using non-zero winding rule
+const isPointInsidePolygonNonZero = (point: Point, polygon: Point[]): boolean => {
+  let winding = 0;
+  const n = polygon.length;
+  
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    const xi = polygon[i].x;
+    const yi = polygon[i].y;
+    const xj = polygon[j].x;
+    const yj = polygon[j].y;
+    
+    if (yi <= point.y) {
+      if (yj > point.y) {
+        // Upward crossing
+        if (isLeft(polygon[i], polygon[j], point) > 0) {
+          winding++;
+        }
+      }
+    } else {
+      if (yj <= point.y) {
+        // Downward crossing
+        if (isLeft(polygon[i], polygon[j], point) < 0) {
+          winding--;
+        }
+      }
+    }
+  }
+  
+  return winding !== 0;
+};
+
+// Helper function to determine if point is left of line
+const isLeft = (p0: Point, p1: Point, p2: Point): number => {
+  return (p1.x - p0.x) * (p2.y - p0.y) - (p2.x - p0.x) * (p1.y - p0.y);
 };
