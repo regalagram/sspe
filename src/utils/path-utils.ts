@@ -38,6 +38,7 @@ export const commandToString = (command: SVGCommand): string => {
       return `${cmd} ${params.x1} ${params.y1} ${params.x2} ${params.y2} ${params.x} ${params.y}`;
     case 'S':
     case 's':
+      return `${cmd} ${params.x2} ${params.y2} ${params.x} ${params.y}`;
     case 'Q':
     case 'q':
       return `${cmd} ${params.x1} ${params.y1} ${params.x} ${params.y}`;

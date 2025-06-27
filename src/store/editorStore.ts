@@ -4,6 +4,7 @@ import { EditorState, SVGCommand, SVGSubPath, SVGPath, Point, SVGCommandType, Pa
 import { generateId } from '../utils/id-utils.js';
 import { loadPreferences, savePreferences, UserPreferences } from '../utils/persistence';
 import { decomposeIntoSubPaths, createNewPath, findSubPathContainingCommand } from '../utils/subpath-utils';
+import { parseSVGToSubPaths } from '../utils/svg-parser';
 
 interface EditorActions {
   // Selection actions
@@ -62,49 +63,32 @@ interface EditorActions {
 const preferences = loadPreferences();
 
 const createInitialState = (): EditorState => {
+  // Hardcoded SVG to load as initial state
+  const hardcodedSVG = `
+    <svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+      <path d="M 50 50 C 62 37 140 40 150 50 C 160 60 162 137 150 150 C 137 163 36 188 26 178 C 15 167 37 63 50 50 M 10 210 L 90 210 L 90 290 L 10 290 L 10 210 M 20 220 L 20 280 L 80 280 L 80 220 L 20 220 M 110 210 V 290 H 190 A 50 30 0 0 0 110 210 M 200 10 C 200 100 225 100 250 100 S 275 30 300 30 Q 320 100 350 100 T 400 10 Z" 
+            fill="rgba(0, 120, 204, 0.2)" 
+            stroke="#007acc" 
+            stroke-width="3"/>
+      <path d="M 200 200 C 200 150 300 150 400 100 C 450 100 500 150 400 200 Z" 
+            fill="rgba(255, 107, 107, 0.2)" 
+            stroke="#ff6b6b" 
+            stroke-width="2"/>
+    </svg>
+  `;
+
+  let initialPaths: SVGPath[] = [];
+  
+  try {
+    // Parse the hardcoded SVG into the app's format
+    initialPaths = parseSVGToSubPaths(hardcodedSVG);
+  } catch (error) {
+    console.warn('Failed to parse hardcoded SVG, falling back to empty paths:', error);
+    initialPaths = [];
+  }
+
   return {
-    paths: [
-      {
-        id: generateId(),
-        subPaths: [
-          {
-            id: generateId(),
-            commands: [
-              { id: generateId(), command: 'M' as SVGCommandType, x: 200, y: 200 },
-              { id: generateId(), command: 'L' as SVGCommandType, x: 300, y: 200 },
-              { id: generateId(), command: 'L' as SVGCommandType, x: 350, y: 300 },
-              { id: generateId(), command: 'L' as SVGCommandType, x: 250, y: 350 },
-              { id: generateId(), command: 'L' as SVGCommandType, x: 150, y: 300 },
-              { id: generateId(), command: 'Z' as SVGCommandType },
-            ],
-          }
-        ],
-        style: {
-          fill: 'rgba(0, 120, 204, 0.2)',
-          stroke: '#007acc',
-          strokeWidth: 3,
-        }
-      },
-      {
-        id: generateId(),
-        subPaths: [
-          {
-            id: generateId(),
-            commands: [
-              { id: generateId(), command: 'M' as SVGCommandType, x: 100, y: 100 },
-              { id: generateId(), command: 'C' as SVGCommandType, x: 400, y: 100, x1: 450, y1: 50, x2: 300, y2: 50 },
-              { id: generateId(), command: 'C' as SVGCommandType, x: 400, y: 200, x1: 450, y1: 200, x2: 400, y2: 250 },
-              { id: generateId(), command: 'Z' as SVGCommandType },
-            ],
-          }
-        ],
-        style: {
-          fill: 'rgba(255, 107, 107, 0.2)',
-          stroke: '#ff6b6b',
-          strokeWidth: 2,
-        }
-      }
-    ],
+    paths: initialPaths,
     selection: {
       selectedPaths: [],
       selectedSubPaths: [],
