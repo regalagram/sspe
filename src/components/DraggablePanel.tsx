@@ -148,6 +148,7 @@ export const DraggablePanel: React.FC<DraggablePanelProps> = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
+              bringToFront();
               togglePin();
             }}
             title={panelState.isPinned ? 'Unpin panel' : 'Pin panel position'}
@@ -180,6 +181,7 @@ export const DraggablePanel: React.FC<DraggablePanelProps> = ({
           <button
             onClick={(e) => {
               e.stopPropagation();
+              bringToFront();
               toggleCollapse();
             }}
             title={panelState.isCollapsed ? 'Expand panel' : 'Collapse panel'}
