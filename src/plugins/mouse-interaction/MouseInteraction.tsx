@@ -7,6 +7,7 @@ interface MouseInteractionState {
   draggingCommand: string | null;
   draggingControlPoint: { commandId: string; point: 'x1y1' | 'x2y2' } | null;
   isPanning: boolean;
+  isSpacePressed: boolean;
   lastMousePosition: { x: number; y: number };
   dragStartPositions: { [id: string]: { x: number; y: number } };
   dragOrigin: { x: number; y: number } | null;
@@ -17,6 +18,7 @@ class MouseInteractionManager {
     draggingCommand: null,
     draggingControlPoint: null,
     isPanning: false,
+    isSpacePressed: false,
     lastMousePosition: { x: 0, y: 0 },
     dragStartPositions: {},
     dragOrigin: null,
@@ -26,6 +28,43 @@ class MouseInteractionManager {
 
   constructor() {
     // This will be set when the plugin is initialized
+    this.setupKeyboardListeners();
+  }
+
+  private setupKeyboardListeners() {
+    // Listen for spacebar press/release globally
+    document.addEventListener('keydown', this.handleKeyDown);
+    document.addEventListener('keyup', this.handleKeyUp);
+  }
+
+  private handleKeyDown = (e: KeyboardEvent) => {
+    if (e.code === 'Space' && !e.repeat) {
+      e.preventDefault();
+      this.state.isSpacePressed = true;
+      // Update cursor for all SVG elements
+      this.updateCursorForSpaceMode(true);
+    }
+  };
+
+  private handleKeyUp = (e: KeyboardEvent) => {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      this.state.isSpacePressed = false;
+      this.state.isPanning = false; // Stop panning if space is released
+      // Update cursor for all SVG elements
+      this.updateCursorForSpaceMode(false);
+    }
+  };
+
+  private updateCursorForSpaceMode(isSpacePressed: boolean) {
+    const svgElements = document.querySelectorAll('svg');
+    svgElements.forEach(svg => {
+      if (isSpacePressed) {
+        svg.style.cursor = 'grab';
+      } else {
+        svg.style.cursor = 'default';
+      }
+    });
   }
 
   setEditorStore(store: any) {
@@ -65,18 +104,28 @@ class MouseInteractionManager {
 
     e.stopPropagation();
     
-    if (e.button === 1) { // Middle mouse button for panning
+    // Space + Left Mouse Button for panning (Mac-friendly)
+    if (this.state.isSpacePressed && e.button === 0) {
+      this.state.isPanning = true;
+      this.state.lastMousePosition = { x: e.clientX, y: e.clientY };
+      // Update cursor to grabbing
+      const svg = (e.target as Element).closest('svg');
+      if (svg) svg.style.cursor = 'grabbing';
+      return true;
+    }
+    
+    if (e.button === 1) { // Middle mouse button for panning (for mice that have it)
       this.state.isPanning = true;
       this.state.lastMousePosition = { x: e.clientX, y: e.clientY };
       return true;
     }
 
-    if (commandId && controlPoint) {
+    if (commandId && controlPoint && !this.state.isSpacePressed) {
       // Dragging control point
       this.state.draggingControlPoint = { commandId, point: controlPoint };
       pushToHistory();
       return true;
-    } else if (commandId) {
+    } else if (commandId && !this.state.isSpacePressed) {
       // Selecting/dragging a command point
       let finalSelectedIds: string[] = [];
       
@@ -123,13 +172,13 @@ class MouseInteractionManager {
       this.state.dragOrigin = this.getSVGPoint(e, context.svgRef);
       pushToHistory();
       return true;
-    } else if (mode.current === 'create' && mode.createMode) {
+    } else if (mode.current === 'create' && mode.createMode && !this.state.isSpacePressed) {
       // Let creation mode plugin handle this
       return false;
-    } else if (!commandId && !controlPoint && e.button === 0 && !(e.ctrlKey || e.metaKey)) {
+    } else if (!commandId && !controlPoint && e.button === 0 && !(e.ctrlKey || e.metaKey) && !this.state.isSpacePressed) {
       // Let rect selection plugin handle this  
       return false;
-    } else if (!commandId && !controlPoint) {
+    } else if (!commandId && !controlPoint && !this.state.isSpacePressed) {
       // Clear selection only if clicking on empty space (no command, no control point)
       clearSelection();
       return true;
@@ -201,6 +250,12 @@ class MouseInteractionManager {
     this.state.dragStartPositions = {};
     this.state.dragOrigin = null;
 
+    // Reset cursor if space is still pressed but not panning
+    if (this.state.isSpacePressed) {
+      const svg = (e.target as Element).closest('svg');
+      if (svg) svg.style.cursor = 'grab';
+    }
+
     return wasHandling;
   };
 
@@ -216,8 +271,14 @@ class MouseInteractionManager {
 
   getCursor(): string {
     if (this.state.isPanning) return 'grabbing';
+    if (this.state.isSpacePressed) return 'grab';
     if (this.state.draggingCommand || this.state.draggingControlPoint) return 'grabbing';
     return 'default';
+  }
+
+  cleanup() {
+    document.removeEventListener('keydown', this.handleKeyDown);
+    document.removeEventListener('keyup', this.handleKeyUp);
   }
 }
 
