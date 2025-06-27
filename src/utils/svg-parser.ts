@@ -33,9 +33,9 @@ export function parsePathData(pathData: string): SVGCommand[] {
           
           commands.push({
             id: generateId(),
-            command: 'M',
-            x,
-            y,
+            command: isRelative ? 'm' : 'M',
+            x: isRelative ? numbers[0] : x,
+            y: isRelative ? numbers[1] : y,
           });
           
           currentX = x;
@@ -50,9 +50,9 @@ export function parsePathData(pathData: string): SVGCommand[] {
           
           commands.push({
             id: generateId(),
-            command: 'L',
-            x,
-            y,
+            command: isRelative ? 'l' : 'L',
+            x: isRelative ? numbers[0] : x,
+            y: isRelative ? numbers[1] : y,
           });
           
           currentX = x;
@@ -66,9 +66,8 @@ export function parsePathData(pathData: string): SVGCommand[] {
           
           commands.push({
             id: generateId(),
-            command: 'L',
-            x,
-            y: currentY,
+            command: isRelative ? 'h' : 'H',
+            x: isRelative ? numbers[0] : x,
           });
           
           currentX = x;
@@ -81,9 +80,8 @@ export function parsePathData(pathData: string): SVGCommand[] {
           
           commands.push({
             id: generateId(),
-            command: 'L',
-            x: currentX,
-            y,
+            command: isRelative ? 'v' : 'V',
+            y: isRelative ? numbers[0] : y,
           });
           
           currentY = y;
@@ -101,13 +99,13 @@ export function parsePathData(pathData: string): SVGCommand[] {
           
           commands.push({
             id: generateId(),
-            command: 'C',
-            x1,
-            y1,
-            x2,
-            y2,
-            x,
-            y,
+            command: isRelative ? 'c' : 'C',
+            x1: isRelative ? numbers[0] : x1,
+            y1: isRelative ? numbers[1] : y1,
+            x2: isRelative ? numbers[2] : x2,
+            y2: isRelative ? numbers[3] : y2,
+            x: isRelative ? numbers[4] : x,
+            y: isRelative ? numbers[5] : y,
           });
           
           currentX = x;
@@ -124,11 +122,11 @@ export function parsePathData(pathData: string): SVGCommand[] {
           
           commands.push({
             id: generateId(),
-            command: 'S',
-            x2,
-            y2,
-            x,
-            y,
+            command: isRelative ? 's' : 'S',
+            x2: isRelative ? numbers[0] : x2,
+            y2: isRelative ? numbers[1] : y2,
+            x: isRelative ? numbers[2] : x,
+            y: isRelative ? numbers[3] : y,
           });
           
           currentX = x;
@@ -145,11 +143,11 @@ export function parsePathData(pathData: string): SVGCommand[] {
           
           commands.push({
             id: generateId(),
-            command: 'Q',
-            x1,
-            y1,
-            x,
-            y,
+            command: isRelative ? 'q' : 'Q',
+            x1: isRelative ? numbers[0] : x1,
+            y1: isRelative ? numbers[1] : y1,
+            x: isRelative ? numbers[2] : x,
+            y: isRelative ? numbers[3] : y,
           });
           
           currentX = x;
@@ -164,9 +162,9 @@ export function parsePathData(pathData: string): SVGCommand[] {
           
           commands.push({
             id: generateId(),
-            command: 'T',
-            x,
-            y,
+            command: isRelative ? 't' : 'T',
+            x: isRelative ? numbers[0] : x,
+            y: isRelative ? numbers[1] : y,
           });
           
           currentX = x;
@@ -181,14 +179,14 @@ export function parsePathData(pathData: string): SVGCommand[] {
           
           commands.push({
             id: generateId(),
-            command: 'A',
+            command: isRelative ? 'a' : 'A',
             rx: numbers[0],
             ry: numbers[1],
             xAxisRotation: numbers[2],
             largeArcFlag: numbers[3],
             sweepFlag: numbers[4],
-            x,
-            y,
+            x: isRelative ? numbers[5] : x,
+            y: isRelative ? numbers[6] : y,
           });
           
           currentX = x;
@@ -199,7 +197,7 @@ export function parsePathData(pathData: string): SVGCommand[] {
       case 'Z': // Close path
         commands.push({
           id: generateId(),
-          command: 'Z',
+          command: isRelative ? 'z' : 'Z',
         });
         break;
     }

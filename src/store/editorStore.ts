@@ -60,6 +60,9 @@ interface EditorActions {
   
   // Fullscreen
   toggleFullscreen: () => void;
+  
+  // Render control
+  forceRender: () => void;
 }
 
 // Load preferences from localStorage
@@ -123,6 +126,7 @@ const createInitialState = (): EditorState => {
       ...(preferences.showCommandPoints ? ['command-points'] : []),
       ...(preferences.showControlPoints ? ['control-points'] : [])
     ]),
+    renderVersion: 0,
   };
 };
 
@@ -712,6 +716,12 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     toggleFullscreen: () =>
       set((state) => ({
         isFullscreen: !state.isFullscreen,
+      })),
+    
+    // Render control  
+    forceRender: () =>
+      set((state) => ({
+        renderVersion: state.renderVersion + 1,
       })),
   }))
 );

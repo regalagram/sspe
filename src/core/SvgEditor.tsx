@@ -18,6 +18,7 @@ import { CommandPointsRendererPlugin } from '../plugins/command-points-renderer/
 import { CommandPlugin } from '../plugins/command/Command';
 import { GlobalKeyboardPlugin } from '../plugins/global-keyboard/GlobalKeyboard';
 import { CreationModePlugin } from '../plugins/creation-mode/CreationMode';
+import { RelativeToolsPlugin } from '../plugins/relative-tools/RelativeTools';
 
 // Register plugins immediately during module loading
 const initializePlugins = () => {
@@ -39,6 +40,7 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(SelectionToolsPlugin);
   pluginManager.registerPlugin(SVGPlugin);
   pluginManager.registerPlugin(SubPathListPlugin);
+  pluginManager.registerPlugin(RelativeToolsPlugin);
 };
 
 // Initialize plugins during module load

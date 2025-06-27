@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { getCommandPosition } from '../../utils/path-utils';
+import { getCommandPosition, getAbsoluteCommandPosition } from '../../utils/path-utils';
 import { DraggablePanel } from '../../components/DraggablePanel';
 
 interface CommandPointsControlsProps {
@@ -35,7 +35,7 @@ export const CommandPointsControls: React.FC<CommandPointsControlsProps> = ({
 }
 
 export const CommandPointsRenderer: React.FC = () => {
-  const { paths, selection, viewport, enabledFeatures } = useEditorStore();
+  const { paths, selection, viewport, enabledFeatures, renderVersion } = useEditorStore();
 
   if (!paths || paths.length === 0) {
     return null;
@@ -61,7 +61,16 @@ export const CommandPointsRenderer: React.FC = () => {
           const shouldShowSubPath = enabledFeatures.has('command-points') || isSubPathSelected;
           
           return subPath.commands.map((command) => {
-            const position = getCommandPosition(command);
+            // Use the new function that correctly handles relative commands with path context
+            const position = getAbsoluteCommandPosition(command, subPath, path.subPaths);
+            
+            // Temporary detailed debug for conversion issues
+            const subPathIndex = path.subPaths.findIndex(sp => sp.id === subPath.id);
+            if (position && command.command.toLowerCase() === 'm' && subPathIndex > 0) {
+              console.log(`POTENTIAL ISSUE: SubPath[${subPathIndex}] Command ${command.command} ${command.x},${command.y} -> Position: (${position.x}, ${position.y})`);
+              console.log('Path context:', path.subPaths.map((sp, i) => `SP${i}: ${sp.commands[0]?.command} ${sp.commands[0]?.x},${sp.commands[0]?.y}`));
+            }
+            
             if (!position) return null;
 
             const isCommandSelected = selection.selectedCommands.includes(command.id);
@@ -78,7 +87,7 @@ export const CommandPointsRenderer: React.FC = () => {
 
             return (
               <circle
-                key={`command-${command.id}`}
+                key={`command-${command.id}-v${renderVersion}`}
                 cx={position.x}
                 cy={position.y}
                 r={radius}

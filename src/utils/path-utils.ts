@@ -1,4 +1,5 @@
 import { SVGPath, SVGCommand, SVGSubPath, Point, BoundingBox } from "../types";
+import { getSubPathFinalPosition } from "./relative-utils";
 
 export const pathToString = (path: SVGPath): string => {
   return path.subPaths
@@ -16,6 +17,53 @@ export const subPathToString = (subPath: SVGSubPath): string => {
   return subPath.commands
     .map((command) => commandToString(command))
     .join(' ');
+};
+
+// Generate subpath string with context - for proper visual feedback rendering
+export const subPathToStringInContext = (subPath: SVGSubPath, allSubPaths: SVGSubPath[]): string => {
+  // Find the index of this subpath
+  const subPathIndex = allSubPaths.findIndex(sp => sp.id === subPath.id);
+  if (subPathIndex === -1) {
+    // Fallback to regular string if not found in array
+    return subPathToString(subPath);
+  }
+
+  // Calculate the starting position for this subpath based on previous subpaths
+  let startingPosition: Point = { x: 0, y: 0 };
+  for (let i = 0; i < subPathIndex; i++) {
+    startingPosition = getSubPathFinalPosition(allSubPaths[i], startingPosition);
+  }
+
+  // Generate the commands string with proper context
+  let currentPosition = startingPosition;
+  
+  return subPath.commands.map((command, index) => {
+    const position = getAbsoluteCommandPosition(command, subPath, allSubPaths);
+    
+    if (!position) {
+      return commandToString(command);
+    }
+
+    // For the first command of a subpath that's not the first subpath,
+    // we need to ensure proper positioning
+    if (index === 0 && subPathIndex > 0) {
+      // If it's a relative 'm' command at the start of a non-first subpath,
+      // convert it to absolute coordinates for proper rendering
+      if (command.command === 'm') {
+        const absoluteCommand = {
+          ...command,
+          command: 'M' as const,
+          x: position.x,
+          y: position.y
+        };
+        currentPosition = position;
+        return commandToString(absoluteCommand);
+      }
+    }
+    
+    currentPosition = position;
+    return commandToString(command);
+  }).join(' ');
 };
 
 // Function to find which subpath contains a given point
@@ -441,16 +489,174 @@ export const getCommandPosition = (command: SVGCommand): Point | null => {
   return null;
 };
 
-export const transformPoint = (point: Point, zoom: number, pan: Point): Point => {
-  return {
-    x: (point.x - pan.x) * zoom,
-    y: (point.y - pan.y) * zoom,
-  };
+/**
+ * Gets the absolute position of a command within its subpath context
+ * This correctly handles relative commands by calculating cumulative positions
+ * Now also considers the subpath's position within the full path
+ */
+export const getAbsoluteCommandPosition = (command: SVGCommand, subPath: SVGSubPath, allSubPaths?: SVGSubPath[]): Point | null => {
+  if (command.x === undefined || command.y === undefined) {
+    return null;
+  }
+
+  // Find the index of this command in the subpath
+  const commandIndex = subPath.commands.findIndex(cmd => cmd.id === command.id);
+  if (commandIndex === -1) {
+    return null;
+  }
+
+  // Calculate the starting position of this subpath within the full path
+  let pathStartPosition: { x: number, y: number } = { x: 0, y: 0 };
+  
+  if (allSubPaths) {
+    const subPathIndex = allSubPaths.findIndex(sp => sp.id === subPath.id);
+    if (subPathIndex > 0) {
+      // Calculate cumulative position from all previous subpaths
+      for (let i = 0; i < subPathIndex; i++) {
+        pathStartPosition = getSubPathFinalPosition(allSubPaths[i], pathStartPosition);
+      }
+    }
+  }
+
+  // Calculate absolute position by tracking through all previous commands in this subpath
+  let currentX = pathStartPosition.x;
+  let currentY = pathStartPosition.y;
+
+  for (let i = 0; i <= commandIndex; i++) {
+    const cmd = subPath.commands[i];
+    const isRelative = cmd.command === cmd.command.toLowerCase() && cmd.command !== 'z';
+
+    if (cmd.x !== undefined && cmd.y !== undefined) {
+      if (cmd.command === 'M' || cmd.command === 'm') {
+        // Special handling for M/m commands
+        if (i === 0) {
+          // First command in subpath - m is relative to pathStartPosition
+          if (isRelative) {
+            currentX = pathStartPosition.x + cmd.x;
+            currentY = pathStartPosition.y + cmd.y;
+          } else {
+            currentX = cmd.x;
+            currentY = cmd.y;
+          }
+        } else {
+          // Subsequent M/m commands within the same subpath
+          if (isRelative) {
+            currentX += cmd.x;
+            currentY += cmd.y;
+          } else {
+            currentX = cmd.x;
+            currentY = cmd.y;
+          }
+        }
+      } else {
+        // Other commands (L, C, Q, etc.)
+        if (isRelative) {
+          currentX += cmd.x;
+          currentY += cmd.y;
+        } else {
+          currentX = cmd.x;
+          currentY = cmd.y;
+        }
+      }
+    } else if (cmd.command === 'H' || cmd.command === 'h') {
+      // Horizontal line
+      if (cmd.x !== undefined) {
+        if (isRelative) {
+          currentX += cmd.x;
+        } else {
+          currentX = cmd.x;
+        }
+      }
+    } else if (cmd.command === 'V' || cmd.command === 'v') {
+      // Vertical line
+      if (cmd.y !== undefined) {
+        if (isRelative) {
+          currentY += cmd.y;
+        } else {
+          currentY = cmd.y;
+        }
+      }
+    }
+  }
+
+  return { x: currentX, y: currentY };
 };
 
-export const inverseTransformPoint = (point: Point, zoom: number, pan: Point): Point => {
-  return {
-    x: point.x / zoom + pan.x,
-    y: point.y / zoom + pan.y,
-  };
+/**
+ * Gets all absolute control point positions for a command within its subpath context
+ * Now also considers the subpath's position within the full path
+ */
+export const getAbsoluteControlPoints = (command: SVGCommand, subPath: SVGSubPath, allSubPaths?: SVGSubPath[]): Point[] => {
+  const controlPoints: Point[] = [];
+  
+  // First get the absolute position of the current command
+  const commandIndex = subPath.commands.findIndex(cmd => cmd.id === command.id);
+  if (commandIndex === -1) {
+    return controlPoints;
+  }
+
+  // Calculate the starting position of this subpath within the full path
+  let pathStartPosition: { x: number, y: number } = { x: 0, y: 0 };
+  
+  if (allSubPaths) {
+    const subPathIndex = allSubPaths.findIndex(sp => sp.id === subPath.id);
+    if (subPathIndex > 0) {
+      // Calculate cumulative position from all previous subpaths
+      for (let i = 0; i < subPathIndex; i++) {
+        pathStartPosition = getSubPathFinalPosition(allSubPaths[i], pathStartPosition);
+      }
+    }
+  }
+
+  // Calculate the current absolute position (position before this command)
+  let currentX = pathStartPosition.x;
+  let currentY = pathStartPosition.y;
+
+  for (let i = 0; i < commandIndex; i++) {
+    const cmd = subPath.commands[i];
+    const isRelative = cmd.command === cmd.command.toLowerCase();
+
+    if (cmd.x !== undefined && cmd.y !== undefined) {
+      if (isRelative && i > 0) {
+        currentX += cmd.x;
+        currentY += cmd.y;
+      } else {
+        currentX = cmd.x;
+        currentY = cmd.y;
+      }
+    } else if (cmd.command === 'H' || cmd.command === 'h') {
+      if (cmd.x !== undefined) {
+        if (isRelative) {
+          currentX += cmd.x;
+        } else {
+          currentX = cmd.x;
+        }
+      }
+    } else if (cmd.command === 'V' || cmd.command === 'v') {
+      if (cmd.y !== undefined) {
+        if (isRelative) {
+          currentY += cmd.y;
+        } else {
+          currentY = cmd.y;
+        }
+      }
+    }
+  }
+
+  const isRelative = command.command === command.command.toLowerCase();
+
+  // Add control points based on command type
+  if (command.x1 !== undefined && command.y1 !== undefined) {
+    const x1 = isRelative ? currentX + command.x1 : command.x1;
+    const y1 = isRelative ? currentY + command.y1 : command.y1;
+    controlPoints.push({ x: x1, y: y1 });
+  }
+
+  if (command.x2 !== undefined && command.y2 !== undefined) {
+    const x2 = isRelative ? currentX + command.x2 : command.x2;
+    const y2 = isRelative ? currentY + command.y2 : command.y2;
+    controlPoints.push({ x: x2, y: y2 });
+  }
+
+  return controlPoints;
 };

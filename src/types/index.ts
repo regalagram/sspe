@@ -100,4 +100,5 @@ export interface EditorState {
   history: HistoryState;
   isFullscreen: boolean;
   enabledFeatures: Set<string>;
+  renderVersion: number; // For forcing re-renders after coordinate conversions
 }

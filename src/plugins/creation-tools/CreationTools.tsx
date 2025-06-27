@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { SVGCommandType } from '../../types';
@@ -64,7 +64,9 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
   onSelectTool,
   onExitCreateMode,
 }) => {
-  const tools: Array<{ command: SVGCommandType; label: string; category: string }> = [
+  const [useRelativeCommands, setUseRelativeCommands] = useState(false);
+
+  const baseTools: Array<{ command: SVGCommandType; label: string; category: string }> = [
     { command: 'M', label: 'Move To', category: 'Start & End' },
     { command: 'Z', label: 'Close Path', category: 'Start & End' },
     { command: 'L', label: 'Line To', category: 'Lines' },
@@ -77,10 +79,59 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
     { command: 'A', label: 'Arc', category: 'Arcs' },
   ];
 
+  // Convert commands to relative if toggle is enabled
+  const tools = baseTools.map(tool => ({
+    ...tool,
+    command: (useRelativeCommands && tool.command !== 'Z') 
+      ? tool.command.toLowerCase() as SVGCommandType 
+      : tool.command,
+    label: (useRelativeCommands && tool.command !== 'Z') 
+      ? `${tool.label} (relative)` 
+      : `${tool.label} (absolute)`
+  }));
+
   const categories = ['Start & End', 'Lines', 'Curves', 'Arcs'];
 
   return (
     <div className="creation-tools" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* Relative/Absolute Toggle */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '8px',
+        padding: '8px',
+        background: '#f8f9fa',
+        borderRadius: '4px',
+        border: '1px solid #dee2e6'
+      }}>
+        <input
+          type="checkbox"
+          id="relative-commands"
+          checked={useRelativeCommands}
+          onChange={(e) => setUseRelativeCommands(e.target.checked)}
+          style={{ cursor: 'pointer' }}
+        />
+        <label 
+          htmlFor="relative-commands" 
+          style={{ 
+            fontSize: '12px', 
+            color: '#495057', 
+            fontWeight: '500',
+            cursor: 'pointer',
+            userSelect: 'none'
+          }}
+        >
+          Use Relative Commands
+        </label>
+        <div style={{ 
+          fontSize: '10px', 
+          color: '#6c757d',
+          marginLeft: 'auto'
+        }}>
+          {useRelativeCommands ? 'lowercase' : 'UPPERCASE'}
+        </div>
+      </div>
+
       {categories.map(category => (
         <div key={category} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>

@@ -1,10 +1,10 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { subPathToString, getContrastColor } from '../../utils/path-utils';
+import { subPathToString, getContrastColor, subPathToStringInContext } from '../../utils/path-utils';
 
 export const PathRenderer: React.FC = () => {
-  const { paths, selection, viewport, selectSubPathByPoint, moveSubPath, pushToHistory } = useEditorStore();
+  const { paths, selection, viewport, selectSubPathByPoint, moveSubPath, pushToHistory, renderVersion } = useEditorStore();
   const svgRef = useRef<SVGSVGElement>(null);
   
   // Drag state
@@ -164,7 +164,8 @@ export const PathRenderer: React.FC = () => {
           const isSelected = selection.selectedSubPaths.includes(subPath.id);
           if (!isSelected) return null;
 
-          const d = subPathToString(subPath);
+          // Use context-aware string generation for proper visual feedback
+          const d = subPathToStringInContext(subPath, path.subPaths);
           
           // Determine the primary color of this path for contrast calculation
           const pathStroke = path.style.stroke || '#000000';
@@ -177,7 +178,7 @@ export const PathRenderer: React.FC = () => {
           const contrastColor = getContrastColor(primaryColor);
           
           return (
-            <g key={`selected-subpath-${subPath.id}`}>
+            <g key={`selected-subpath-${subPath.id}-v${renderVersion}`}>
               {/* Background glow */}
               <path
                 d={d}
