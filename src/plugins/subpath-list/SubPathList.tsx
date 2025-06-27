@@ -130,19 +130,6 @@ export const SubPathListComponent: React.FC = () => {
           />
         ))}
       </div>
-      
-      <div style={{ 
-        fontSize: '11px', 
-        color: '#999', 
-        lineHeight: '1.3',
-        padding: '8px 4px 0',
-        borderTop: '1px solid #e0e0e0'
-      }}>
-        <strong>Tips:</strong>
-        <br />• Click to select/deselect sub-path
-        <br />• Sub-paths start with 'M' command
-        <br />• Each path can have multiple sub-paths
-      </div>
     </div>
   );
 };
