@@ -1,0 +1,242 @@
+import React, { useState } from 'react';
+import { Plugin } from '../../core/PluginSystem';
+import { useEditorStore } from '../../store/editorStore';
+import { DraggablePanel } from '../../components/DraggablePanel';
+import { Minimize2 } from 'lucide-react';
+import { 
+  simplifySegmentWithPointsOnPath, 
+  areCommandsInSameSubPath, 
+  generateSegmentString,
+  generateSubpathString
+} from '../../utils/path-simplification-utils';
+
+export const PathSimplificationControls: React.FC = () => {
+  const { 
+    selection, 
+    paths, 
+    grid,
+    replaceSubPathCommands
+  } = useEditorStore();
+
+  // Tolerance settings for simplification
+  const [simplifyTolerance, setSimplifyTolerance] = useState(0.1);
+  const [simplifyDistance, setSimplifyDistance] = useState(10);
+
+  const { selectedCommands } = selection;
+  
+  // Check if selected commands are in the same subpath
+  const analysisResult = areCommandsInSameSubPath(selectedCommands, paths);
+  const { sameSubPath, subPath, pathId, commands: sortedCommands, startIndex, endIndex } = analysisResult;
+  
+  const canSimplify = selectedCommands.length >= 2 && sameSubPath && sortedCommands && sortedCommands.length >= 2;
+
+  const handleSimplify = () => {
+    if (!canSimplify || !subPath || !pathId || !sortedCommands || startIndex === undefined || endIndex === undefined) return;
+
+    // CRITICAL: Commands are already sorted by path order (not selection order)
+    // This guarantees that sortedCommands[0] is the first command in the path sequence
+    console.log('Simplification - sorted commands by path order:', sortedCommands.map(c => `${c.command}(${c.x},${c.y})`));
+    console.log('Simplification - startIndex:', startIndex, 'endIndex:', endIndex);
+
+    // Check if the selection starts with the subpath's M command
+    const isStartingFromM = startIndex === 0 && sortedCommands[0].command === 'M';
+    
+    // Determine commands to process
+    let commandsToSimplify = [...sortedCommands];
+    let needsContextM = false;
+    
+    // If we're not starting from M, we need M for context
+    if (!isStartingFromM) {
+      const subpathMCommand = subPath.commands[0]; // First command should be M
+      if (subpathMCommand && subpathMCommand.command === 'M') {
+        commandsToSimplify.unshift(subpathMCommand);
+        needsContextM = true;
+        console.log('Added M for context:', subpathMCommand);
+      }
+    }
+
+    // Use points-on-path algorithm for simplification (Ramer-Douglas-Peucker)
+    const simplifiedCommands = simplifySegmentWithPointsOnPath(
+      commandsToSimplify, 
+      simplifyTolerance, 
+      simplifyDistance, 
+      grid.size
+    );
+
+    if (simplifiedCommands.length === 0) return;
+    console.log('Simplified commands:', simplifiedCommands.map(c => `${c.command}(${c.x},${c.y})`));
+
+    // Create the new commands array for the entire subpath
+    let newSubPathCommands = [...subPath.commands];
+    
+    // Determine what commands to use for replacement
+    let commandsToReplace = simplifiedCommands;
+    
+    // If we added M for context and it's still there, handle it properly
+    if (needsContextM && simplifiedCommands.length > 0 && simplifiedCommands[0].command === 'M') {
+      // We added M for context, so skip it in the replacement since it's not part of selection
+      commandsToReplace = simplifiedCommands.slice(1);
+      console.log('Skipping context M, replacement commands:', commandsToReplace.map(c => `${c.command}(${c.x},${c.y})`));
+    }
+    
+    // Replace the selected range with simplified commands
+    console.log('Replacing range [', startIndex, ',', endIndex, '] with', commandsToReplace.length, 'commands');
+    newSubPathCommands.splice(startIndex, endIndex - startIndex + 1, ...commandsToReplace);
+    
+    // CRITICAL: Ensure the subpath ALWAYS starts with M
+    if (newSubPathCommands.length > 0 && newSubPathCommands[0].command !== 'M') {
+      console.warn('First command is not M, converting:', newSubPathCommands[0]);
+      const firstCmd = newSubPathCommands[0];
+      if ('x' in firstCmd && 'y' in firstCmd) {
+        newSubPathCommands[0] = {
+          ...firstCmd,
+          command: 'M'
+        };
+      }
+    }
+
+    console.log('Final subpath commands:', newSubPathCommands.map(c => `${c.command}(${c.x},${c.y})`));
+    
+    // Replace all commands in the subpath
+    replaceSubPathCommands(subPath.id, newSubPathCommands);
+  };
+
+  const buttonStyle: React.CSSProperties = {
+    padding: '8px 12px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    cursor: canSimplify ? 'pointer' : 'not-allowed',
+    fontSize: '14px',
+    transition: 'all 0.2s ease',
+    width: '100%',
+    background: canSimplify ? '#007acc' : '#f5f5f5',
+    color: canSimplify ? 'white' : '#999',
+    opacity: canSimplify ? 1 : 0.6,
+  };
+
+  const infoStyle: React.CSSProperties = {
+    fontSize: '12px',
+    color: '#666',
+    textAlign: 'center',
+    padding: '8px',
+    background: '#f8f9fa',
+    borderRadius: '4px',
+    border: '1px solid #e9ecef',
+  };
+
+  const controlStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    marginBottom: '8px',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: '11px',
+    color: '#666',
+    fontWeight: 'bold',
+  };
+
+  const inputStyle: React.CSSProperties = {
+    padding: '4px 8px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '12px',
+  };
+
+  return (
+    <DraggablePanel
+      title="Path Simplification"
+      id="path-simplification"
+      initialPosition={{ x: 980, y: 300 }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '220px' }}>
+        <div style={infoStyle}>
+          {selectedCommands.length === 0 && 'Select commands to simplify'}
+          {selectedCommands.length === 1 && 'Select at least 2 commands'}
+          {selectedCommands.length >= 2 && !sameSubPath && 'Commands must be in same subpath'}
+          {canSimplify && `${selectedCommands.length} commands selected`}
+        </div>
+
+        {/* Tolerance Controls */}
+        <div style={controlStyle}>
+          <label style={labelStyle}>
+            Tolerance: {simplifyTolerance}
+          </label>
+          <input
+            type="range"
+            min="0.01"
+            max="1"
+            step="0.01"
+            value={simplifyTolerance}
+            onChange={(e) => setSimplifyTolerance(parseFloat(e.target.value))}
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={controlStyle}>
+          <label style={labelStyle}>
+            Distance: {simplifyDistance}px
+          </label>
+          <input
+            type="range"
+            min="1"
+            max="50"
+            step="1"
+            value={simplifyDistance}
+            onChange={(e) => setSimplifyDistance(parseInt(e.target.value))}
+            style={inputStyle}
+          />
+        </div>
+
+        <button
+          onClick={handleSimplify}
+          disabled={!canSimplify}
+          style={buttonStyle}
+          title={canSimplify ? 'Simplify selected commands using Ramer-Douglas-Peucker algorithm' : 'Select 2+ commands in same subpath'}
+        >
+          <Minimize2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+          Simplify Path
+        </button>
+
+        {canSimplify && (
+          <div style={{ ...infoStyle, background: '#e8f5e8' }}>
+            ✓ Ready to simplify {selectedCommands.length} commands
+          </div>
+        )}
+
+        <div style={{ ...infoStyle, fontSize: '10px' }}>
+          Uses Ramer-Douglas-Peucker algorithm to reduce points while preserving shape.
+        </div>
+      </div>
+    </DraggablePanel>
+  );
+};
+
+export const pathSimplificationPlugin: Plugin = {
+  id: 'path-simplification',
+  name: 'Path Simplification',
+  version: '1.0.0',
+  enabled: true,
+  dependencies: ['selection-tools'],
+  ui: [
+    {
+      id: 'path-simplification-controls',
+      component: PathSimplificationControls,
+      position: 'sidebar',
+      order: 15,
+    },
+  ],
+  shortcuts: [
+    {
+      key: 'i',
+      modifiers: ['ctrl'],
+      description: 'Simplify selected commands',
+      action: () => {
+        // This will be handled by the component's logic
+        const event = new CustomEvent('path-simplification-trigger');
+        document.dispatchEvent(event);
+      },
+    },
+  ],
+};

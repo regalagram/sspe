@@ -4,6 +4,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -13,6 +15,7 @@
   "dependencies": {
     "lucide-react": "^0.523.0",
     "path-data-parser": "^0.1.0",
+    "points-on-path": "^0.2.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "zustand": "^5.0.5"

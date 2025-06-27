@@ -14,9 +14,34 @@ export const pathsToString = (paths: SVGPath[]): string => {
 };
 
 export const subPathToString = (subPath: SVGSubPath): string => {
-  return subPath.commands
+  if (!subPath.commands || subPath.commands.length === 0) {
+    return '';
+  }
+  
+  const commands = subPath.commands
     .map((command) => commandToString(command))
-    .join(' ');
+    .join(' ')
+    .trim();
+  
+  // Ensure the path always starts with a MoveTo command
+  if (commands && !commands.startsWith('M') && !commands.startsWith('m')) {
+    // If the first command is not MoveTo, we need to fix this
+    console.warn('SubPath does not start with MoveTo command:', commands);
+    
+    // Try to extract the first coordinates and convert to MoveTo
+    const firstCommand = subPath.commands[0];
+    if (firstCommand && 'x' in firstCommand && 'y' in firstCommand && 
+        firstCommand.x !== undefined && firstCommand.y !== undefined) {
+      // Replace the first command with MoveTo and keep the rest
+      const firstCoords = `M ${firstCommand.x} ${firstCommand.y}`;
+      const restCommands = subPath.commands.slice(1)
+        .map((command) => commandToString(command))
+        .join(' ');
+      return (firstCoords + ' ' + restCommands).trim();
+    }
+  }
+  
+  return commands;
 };
 
 // Generate subpath string with context - for proper visual feedback rendering

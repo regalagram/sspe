@@ -20,6 +20,8 @@ import { CommandPlugin } from '../plugins/command/Command';
 import { GlobalKeyboardPlugin } from '../plugins/global-keyboard/GlobalKeyboard';
 import { CreationModePlugin } from '../plugins/creation-mode/CreationMode';
 import { RelativeToolsPlugin } from '../plugins/relative-tools/RelativeTools';
+import { pathSimplificationPlugin } from '../plugins/path-simplification';
+import { pathSmoothingPlugin } from '../plugins/path-smoothing';
 
 // Register plugins immediately during module loading
 const initializePlugins = () => {
@@ -42,6 +44,10 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(SVGPlugin);
   pluginManager.registerPlugin(SubPathListPlugin);
   pluginManager.registerPlugin(RelativeToolsPlugin);
+  pluginManager.registerPlugin(pathSimplificationPlugin);
+  pluginManager.registerPlugin(pathSmoothingPlugin);
+  pluginManager.registerPlugin(pathSimplificationPlugin);
+  pluginManager.registerPlugin(pathSmoothingPlugin);
 };
 
 // Initialize plugins during module load

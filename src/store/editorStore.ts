@@ -26,6 +26,7 @@ interface EditorActions {
   updateCommand: (commandId: string, updates: Partial<SVGCommand>) => void;
   removeCommand: (commandId: string) => void;
   moveCommand: (commandId: string, position: Point) => void;
+  replaceSubPathCommands: (subPathId: string, commands: Omit<SVGCommand, 'id'>[]) => void;
   updatePathStyle: (pathId: string, style: Partial<PathStyle>) => void;
   replacePaths: (newPaths: SVGPath[]) => void;
   
@@ -459,6 +460,29 @@ export const useEditorStore = create<EditorState & EditorActions>()(
           })),
         })),
       })),
+
+    replaceSubPathCommands: (subPathId, newCommands) => {
+      set((state) => ({
+        paths: state.paths.map((path) => ({
+          ...path,
+          subPaths: path.subPaths.map((subPath) =>
+            subPath.id === subPathId
+              ? {
+                  ...subPath,
+                  commands: newCommands.map((cmd, index) => ({
+                    ...cmd,
+                    id: generateId(),
+                  })),
+                }
+              : subPath
+          ),
+        })),
+        selection: {
+          ...state.selection,
+          selectedCommands: [], // Clear command selection after replacement
+        },
+      }));
+    },
     
     updatePathStyle: (pathId, styleUpdates) =>
       set((state) => ({

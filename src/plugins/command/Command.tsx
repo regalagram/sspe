@@ -39,7 +39,7 @@ const CommandPanel: React.FC<CommandPanelProps> = ({ command, pathId, subPathId 
   };
 
   const renderCommandProperties = (cmd: SVGCommand) => {
-    const properties: JSX.Element[] = [];
+    const properties: React.ReactElement[] = [];
 
     // Always show command type
     properties.push(
