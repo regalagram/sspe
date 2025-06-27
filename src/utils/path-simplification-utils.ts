@@ -186,8 +186,8 @@ export const simplifySegmentWithPointsOnPath = (
 };
 
 /**
- * Smoothing using getPointSmooth function (converts lines to curves)
- * Based on reference implementation - correctly handles M and Z commands
+ * Enhanced smoothing that converts ALL segments to cubic Bézier curves (C commands)
+ * Based on reference implementation - ensures smoothed paths use only C commands
  */
 export const generateSmoothPath = (
   subpathSegment: SVGCommand[],
@@ -205,47 +205,136 @@ export const generateSmoothPath = (
   // Normalize Z commands to L commands for proper smoothing
   const normalizedSegment = normalizeZCommandsForSmoothing(subpathSegment);
   
-  // Apply smoothing
-  let smoothedSegment = getPointSmooth(normalizedSegment);
+  // Convert ALL segments to cubic Bézier curves
+  const smoothedCommands: SVGCommand[] = [];
+  const smoothingFactor = 0.25;
   
-  // Apply grid snapping to all coordinates
-  smoothedSegment = smoothedSegment.map((cmd) => {
-    const snappedCmd = { ...cmd };
-    if ('x' in snappedCmd && snappedCmd.x !== undefined) snappedCmd.x = snapToGridValue(snappedCmd.x, gridSize);
-    if ('y' in snappedCmd && snappedCmd.y !== undefined) snappedCmd.y = snapToGridValue(snappedCmd.y, gridSize);
-    if ('x1' in snappedCmd && snappedCmd.x1 !== undefined) snappedCmd.x1 = snapToGridValue(snappedCmd.x1, gridSize);
-    if ('y1' in snappedCmd && snappedCmd.y1 !== undefined) snappedCmd.y1 = snapToGridValue(snappedCmd.y1, gridSize);
-    if ('x2' in snappedCmd && snappedCmd.x2 !== undefined) snappedCmd.x2 = snapToGridValue(snappedCmd.x2, gridSize);
-    if ('y2' in snappedCmd && snappedCmd.y2 !== undefined) snappedCmd.y2 = snapToGridValue(snappedCmd.y2, gridSize);
-    return snappedCmd;
-  });
-  
-  // Ensure the first command is M (critical for valid SVG paths)
-  if (smoothedSegment.length > 0) {
-    const firstSmoothed = smoothedSegment[0];
-    if (firstSmoothed.command !== 'M') {
-      // If original was M, ensure the smoothed path starts with M
-      if (originalFirstCommand.command === 'M') {
-        firstSmoothed.command = 'M';
-      } else {
-        // If original wasn't M but we need M to start the path, insert one
-        smoothedSegment.unshift({
-          ...originalFirstCommand,
-          command: 'M',
-          x: snapToGridValue(originalFirstCommand.x || 0, gridSize),
-          y: snapToGridValue(originalFirstCommand.y || 0, gridSize)
-        });
-      }
+  for (let i = 0; i < normalizedSegment.length; i++) {
+    const current = normalizedSegment[i];
+    
+    // Always preserve the first M command
+    if (i === 0) {
+      smoothedCommands.push({
+        ...current,
+        id: `${current.id || 'smooth'}-${i}`,
+        command: 'M',
+        x: snapToGridValue(current.x || 0, gridSize),
+        y: snapToGridValue(current.y || 0, gridSize)
+      });
+      continue;
     }
+    
+    // Get previous point for curve calculation
+    const prev = normalizedSegment[i - 1];
+    if (!prev || !('x' in prev) || !('y' in prev) || !('x' in current) || !('y' in current)) {
+      // Fallback: preserve as-is if we can't get coordinates
+      smoothedCommands.push({ ...current });
+      continue;
+    }
+    
+    const prevX = prev.x!;
+    const prevY = prev.y!;
+    const currX = current.x!;
+    const currY = current.y!;
+    
+    // Calculate segment vector
+    const segVecX = currX - prevX;
+    const segVecY = currY - prevY;
+    const segLength = Math.sqrt(segVecX * segVecX + segVecY * segVecY);
+    
+    // Skip if segment is too short (degenerate case)
+    if (segLength < 1e-6) {
+      continue; // Skip degenerate segments
+    }
+    
+    // Get next point to calculate smooth control points (if available)
+    const next = i < normalizedSegment.length - 1 ? normalizedSegment[i + 1] : null;
+    
+    let cp1X, cp1Y, cp2X, cp2Y;
+    
+    if (next && 'x' in next && 'y' in next) {
+      // We have a next point - use it for intelligent smoothing
+      const nextX = next.x!;
+      const nextY = next.y!;
+      
+      // Input vector (from previous to current)
+      const inVecX = currX - prevX;
+      const inVecY = currY - prevY;
+      const inLength = Math.sqrt(inVecX * inVecX + inVecY * inVecY);
+      
+      // Output vector (from current to next)
+      const outVecX = nextX - currX;
+      const outVecY = nextY - currY;
+      const outLength = Math.sqrt(outVecX * outVecX + outVecY * outVecY);
+      
+      if (inLength > 1e-6 && outLength > 1e-6) {
+        // Calculate smooth tangent
+        const inNormX = inVecX / inLength;
+        const inNormY = inVecY / inLength;
+        const outNormX = outVecX / outLength;
+        const outNormY = outVecY / outLength;
+        
+        // Average tangent direction for smooth transitions
+        const tangentX = (inNormX + outNormX) * 0.5;
+        const tangentY = (inNormY + outNormY) * 0.5;
+        const tangentLength = Math.sqrt(tangentX * tangentX + tangentY * tangentY);
+        
+        if (tangentLength > 1e-6) {
+          const normTangentX = tangentX / tangentLength;
+          const normTangentY = tangentY / tangentLength;
+          
+          const controlDistance = Math.min(inLength, outLength) * smoothingFactor;
+          
+          // Place control points along the smooth tangent
+          cp1X = prevX + normTangentX * controlDistance;
+          cp1Y = prevY + normTangentY * controlDistance;
+          cp2X = currX - normTangentX * controlDistance;
+          cp2Y = currY - normTangentY * controlDistance;
+        } else {
+          // Fallback to simple control points
+          const controlDistance = segLength * smoothingFactor;
+          cp1X = prevX + segVecX * smoothingFactor;
+          cp1Y = prevY + segVecY * smoothingFactor;
+          cp2X = currX - segVecX * smoothingFactor;
+          cp2Y = currY - segVecY * smoothingFactor;
+        }
+      } else {
+        // Fallback to linear control points
+        const controlDistance = segLength * smoothingFactor;
+        cp1X = prevX + segVecX * smoothingFactor;
+        cp1Y = prevY + segVecY * smoothingFactor;
+        cp2X = currX - segVecX * smoothingFactor;
+        cp2Y = currY - segVecY * smoothingFactor;
+      }
+    } else {
+      // Last segment or no next point - use simple control points
+      const controlDistance = segLength * smoothingFactor;
+      cp1X = prevX + segVecX * smoothingFactor;
+      cp1Y = prevY + segVecY * smoothingFactor;
+      cp2X = currX - segVecX * smoothingFactor;
+      cp2Y = currY - segVecY * smoothingFactor;
+    }
+    
+    // Create cubic Bézier curve command (ALL smoothed segments become C commands)
+    smoothedCommands.push({
+      id: `${current.id || 'smooth'}-${i}`,
+      command: 'C',
+      x1: snapToGridValue(cp1X, gridSize),
+      y1: snapToGridValue(cp1Y, gridSize),
+      x2: snapToGridValue(cp2X, gridSize),
+      y2: snapToGridValue(cp2Y, gridSize),
+      x: snapToGridValue(currX, gridSize),
+      y: snapToGridValue(currY, gridSize)
+    });
   }
   
   // Handle Z command restoration for closed paths
-  // Following reference implementation - add explicit line instead of Z for better smoothing
-  if (originalEndsWithZ && smoothedSegment.length > 0) {
-    const firstCmd = smoothedSegment[0];
-    const lastCmd = smoothedSegment[smoothedSegment.length - 1];
+  // Following reference implementation - add explicit C curve instead of Z for better smoothing
+  if (originalEndsWithZ && smoothedCommands.length > 1) {
+    const firstCmd = smoothedCommands[0];
+    const lastCmd = smoothedCommands[smoothedCommands.length - 1];
     
-    // Only add closing line if endpoints don't match
+    // Only add closing curve if endpoints don't match
     if (firstCmd && lastCmd && 
         'x' in firstCmd && 'y' in firstCmd && 
         'x' in lastCmd && 'y' in lastCmd) {
@@ -253,31 +342,37 @@ export const generateSmoothPath = (
       const tolerance = gridSize * 0.5;
       if (Math.abs(lastCmd.x! - firstCmd.x!) > tolerance || 
           Math.abs(lastCmd.y! - firstCmd.y!) > tolerance) {
-        // Add explicit line to close path (better for smoothing than Z)
-        smoothedSegment.push({
-          id: `${lastCmd.id || 'smooth'}-close`,
-          command: 'L',
-          x: firstCmd.x,
-          y: firstCmd.y
-        });
+        
+        // Calculate smooth closing curve
+        const closeVecX = firstCmd.x! - lastCmd.x!;
+        const closeVecY = firstCmd.y! - lastCmd.y!;
+        const closeLength = Math.sqrt(closeVecX * closeVecX + closeVecY * closeVecY);
+        
+        if (closeLength > 1e-6) {
+          const controlDistance = closeLength * smoothingFactor;
+          const cp1X = lastCmd.x! + closeVecX * smoothingFactor;
+          const cp1Y = lastCmd.y! + closeVecY * smoothingFactor;
+          const cp2X = firstCmd.x! - closeVecX * smoothingFactor;
+          const cp2Y = firstCmd.y! - closeVecY * smoothingFactor;
+          
+          // Add smooth closing curve (C command, not Z)
+          smoothedCommands.push({
+            id: `${lastCmd.id || 'smooth'}-close`,
+            command: 'C',
+            x1: snapToGridValue(cp1X, gridSize),
+            y1: snapToGridValue(cp1Y, gridSize),
+            x2: snapToGridValue(cp2X, gridSize),
+            y2: snapToGridValue(cp2Y, gridSize),
+            x: firstCmd.x,
+            y: firstCmd.y
+          });
+        }
       }
       // Note: Following reference, we don't add Z here for better smoothing results
     }
   }
-  
-  // Remove duplicate consecutive points at the beginning
-  if (smoothedSegment.length > 1) {
-    const first = smoothedSegment[0];
-    const second = smoothedSegment[1];
-    
-    if (first.command === 'M' && second.command === 'L' &&
-        'x' in first && 'y' in first && 'x' in second && 'y' in second &&
-        Math.abs(first.x! - second.x!) < 1e-6 && Math.abs(first.y! - second.y!) < 1e-6) {
-      smoothedSegment.splice(1, 1);
-    }
-  }
 
-  return smoothedSegment;
+  return smoothedCommands;
 };
 
 /**
