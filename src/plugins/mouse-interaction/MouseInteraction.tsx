@@ -2,6 +2,7 @@ import React, { useState, MouseEvent, WheelEvent } from 'react';
 import { Plugin, MouseEventHandler, MouseEventContext } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { snapToGrid, getCommandPosition } from '../../utils/path-utils';
+import { getSVGPoint } from '../../utils/transform-utils';
 
 interface MouseInteractionState {
   draggingCommand: string | null;
@@ -72,20 +73,7 @@ class MouseInteractionManager {
   }
 
   getSVGPoint(e: MouseEvent<SVGElement>, svgRef: React.RefObject<SVGSVGElement | null>): { x: number; y: number } {
-    if (!svgRef.current) return { x: 0, y: 0 };
-    
-    const svg = svgRef.current;
-    const pt = svg.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
-    const svgPoint = pt.matrixTransform(svg.getScreenCTM()?.inverse());
-    
-    // Transform point to account for zoom and pan
-    const { viewport } = this.editorStore;
-    return {
-      x: (svgPoint.x - viewport.pan.x) / viewport.zoom,
-      y: (svgPoint.y - viewport.pan.y) / viewport.zoom,
-    };
+    return getSVGPoint(e, svgRef, this.editorStore.viewport);
   }
 
   handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useEditorStore } from '../store/editorStore';
 import { pluginManager } from './PluginSystem';
+import { getSafeTransform } from '../utils/transform-utils';
 import { ZoomPlugin } from '../plugins/zoom/Zoom';
 import { GridPlugin } from '../plugins/grid/Grid';
 import { UndoRedoPlugin } from '../plugins/undo-redo/UndoRedo';
@@ -50,22 +51,6 @@ export const SvgEditor: React.FC = () => {
   const editorStore = useEditorStore();
   const { grid, isFullscreen } = editorStore;
   const svgRef = useRef<SVGSVGElement>(null);
-  
-  // Helper function to create safe transform string
-  const getSafeTransform = () => {
-    const { viewport } = editorStore;
-    const safeX = isFinite(viewport.pan.x) ? viewport.pan.x : 0;
-    const safeY = isFinite(viewport.pan.y) ? viewport.pan.y : 0;
-    const safeZoom = isFinite(viewport.zoom) && viewport.zoom > 0 ? viewport.zoom : 1;
-    
-    // Debug logging if we encounter invalid values
-    if (!isFinite(viewport.pan.x) || !isFinite(viewport.pan.y) || !isFinite(viewport.zoom) || viewport.zoom <= 0) {
-      console.warn('Invalid viewport values detected:', viewport);
-      console.trace('Stack trace for invalid viewport');
-    }
-    
-    return `translate(${safeX}, ${safeY}) scale(${safeZoom})`;
-  };
   
   // Get cursor from plugins
   const mouseInteraction = useMouseInteraction();
@@ -168,7 +153,7 @@ export const SvgEditor: React.FC = () => {
         onMouseLeave={handleMouseUp}
         onWheel={handleWheel}
       >
-        <g transform={getSafeTransform()}>
+        <g transform={getSafeTransform(editorStore.viewport)}>
           {/* Render SVG content through plugins */}
           {renderPluginUI('svg-content')}
         </g>

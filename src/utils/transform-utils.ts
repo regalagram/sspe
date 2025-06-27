@@ -2,6 +2,8 @@
  * Utility functions for SVG transform parsing and manipulation
  */
 
+import { ViewportState } from '../types';
+
 export interface TransformMatrix {
   a: number;
   b: number;
@@ -143,4 +145,65 @@ export function transformPoint(x: number, y: number, matrix: TransformMatrix): {
  */
 export function matrixToString(matrix: TransformMatrix): string {
   return `matrix(${matrix.a},${matrix.b},${matrix.c},${matrix.d},${matrix.e},${matrix.f})`;
+}
+
+/**
+ * Creates a safe transform string for SVG viewport
+ * Validates viewport values and provides fallbacks for invalid values
+ */
+export function getSafeTransform(viewport: ViewportState): string {
+  const safeX = isFinite(viewport.pan.x) ? viewport.pan.x : 0;
+  const safeY = isFinite(viewport.pan.y) ? viewport.pan.y : 0;
+  const safeZoom = isFinite(viewport.zoom) && viewport.zoom > 0 ? viewport.zoom : 1;
+  
+  // Debug logging if we encounter invalid values
+  if (!isFinite(viewport.pan.x) || !isFinite(viewport.pan.y) || !isFinite(viewport.zoom) || viewport.zoom <= 0) {
+    console.warn('Invalid viewport values detected:', viewport);
+    console.trace('Stack trace for invalid viewport');
+  }
+  
+  return `translate(${safeX}, ${safeY}) scale(${safeZoom})`;
+}
+
+/**
+ * Converts screen coordinates to SVG coordinates considering viewport transformation
+ * This is the standard implementation that should be used across all plugins
+ */
+export function getSVGPoint(
+  e: MouseEvent | React.MouseEvent<SVGElement>, 
+  svgRef: React.RefObject<SVGSVGElement | null>,
+  viewport: ViewportState
+): { x: number; y: number } {
+  if (!svgRef.current) return { x: 0, y: 0 };
+  
+  const svg = svgRef.current;
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX;
+  pt.y = e.clientY;
+  const svgPoint = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+  
+  // Transform point to account for zoom and pan
+  return {
+    x: (svgPoint.x - viewport.pan.x) / viewport.zoom,
+    y: (svgPoint.y - viewport.pan.y) / viewport.zoom,
+  };
+}
+
+/**
+ * Alternative implementation for plugins that need raw SVG coordinates
+ * (without viewport transformation applied)
+ */
+export function getRawSVGPoint(
+  e: MouseEvent | React.MouseEvent<SVGElement>,
+  svgRef: React.RefObject<SVGSVGElement | null>
+): { x: number; y: number } {
+  if (!svgRef.current) return { x: 0, y: 0 };
+  
+  const svg = svgRef.current;
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX;
+  pt.y = e.clientY;
+  const svgPoint = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+  
+  return { x: svgPoint.x, y: svgPoint.y };
 }

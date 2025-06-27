@@ -1,4 +1,5 @@
 import React, { MouseEvent, WheelEvent } from 'react';
+import { getRawSVGPoint } from '../utils/transform-utils';
 
 export interface SVGPoint {
   x: number;
@@ -80,16 +81,8 @@ export class PluginManager {
   }
 
   getSVGPoint(e: MouseEvent<SVGElement>): SVGPoint {
-    if (!this.svgRef?.current) return { x: 0, y: 0 };
-    
-    const svg = this.svgRef.current;
-    const pt = svg.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
-    const svgPoint = pt.matrixTransform(svg.getScreenCTM()?.inverse());
-    
-    // Note: Viewport transformation will be handled by individual plugins
-    return { x: svgPoint.x, y: svgPoint.y };
+    if (!this.svgRef) return { x: 0, y: 0 };
+    return getRawSVGPoint(e, this.svgRef);
   }
 
   handleMouseEvent(

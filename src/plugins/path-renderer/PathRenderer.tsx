@@ -2,6 +2,7 @@ import React, { useRef, useState, useCallback } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { subPathToString, getContrastColor, subPathToStringInContext, findSubPathAtPoint } from '../../utils/path-utils';
+import { getSVGPoint } from '../../utils/transform-utils';
 
 export const PathRenderer: React.FC = () => {
   const { paths, selection, viewport, selectSubPathByPoint, moveSubPath, pushToHistory, renderVersion } = useEditorStore();
@@ -22,29 +23,19 @@ export const PathRenderer: React.FC = () => {
     svgElement: null,
   });
 
-  const getSVGPoint = (e: React.MouseEvent, svgElement: SVGSVGElement) => {
-    const rect = svgElement.getBoundingClientRect();
-    
-    // Get mouse position relative to SVG element
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    // Apply inverse transform: first inverse scale, then inverse translate
-    // The SVG transform is: translate(pan.x, pan.y) scale(zoom)
-    // So inverse is: scale(1/zoom) translate(-pan.x, -pan.y)
-    return {
-      x: x / viewport.zoom - viewport.pan.x,
-      y: y / viewport.zoom - viewport.pan.y,
-    };
+  const getTransformedPoint = (e: React.MouseEvent<SVGElement>, svgElement: SVGSVGElement) => {
+    // Create a fake ref object for compatibility with the utility function
+    const svgRef = { current: svgElement };
+    return getSVGPoint(e, svgRef, viewport);
   };
 
   // Handle mouse down on selected subpath for dragging
-  const handleSubPathMouseDown = useCallback((e: React.MouseEvent, subPathId: string) => {
+  const handleSubPathMouseDown = useCallback((e: React.MouseEvent<SVGElement>, subPathId: string) => {
     e.stopPropagation();
     
     const svgElement = (e.target as SVGPathElement).closest('svg');
     if (svgElement) {
-      const point = getSVGPoint(e, svgElement);
+      const point = getTransformedPoint(e, svgElement);
       setDragState({
         isDragging: true,
         subPathId,
@@ -59,10 +50,10 @@ export const PathRenderer: React.FC = () => {
   }, [pushToHistory]);
 
   // Handle mouse move for dragging
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((e: React.MouseEvent<SVGElement>) => {
     if (!dragState.isDragging || !dragState.subPathId || !dragState.lastPoint || !dragState.svgElement) return;
     
-    const currentPoint = getSVGPoint(e, dragState.svgElement);
+    const currentPoint = getTransformedPoint(e, dragState.svgElement);
     const delta = {
       x: currentPoint.x - dragState.lastPoint.x,
       y: currentPoint.y - dragState.lastPoint.y,
@@ -150,7 +141,7 @@ export const PathRenderer: React.FC = () => {
               // Get the SVG element from the path's parent
               const svgElement = (e.target as SVGPathElement).closest('svg');
               if (svgElement) {
-                const point = getSVGPoint(e, svgElement);
+                const point = getTransformedPoint(e as React.MouseEvent<SVGElement>, svgElement);
                 selectSubPathByPoint(path.id, point);
               }
             }}
@@ -207,7 +198,7 @@ export const PathRenderer: React.FC = () => {
                   // Check if this is a potential drag operation
                   const svgElement = (e.target as SVGPathElement).closest('svg');
                   if (svgElement) {
-                    const point = getSVGPoint(e, svgElement);
+                    const point = getTransformedPoint(e as React.MouseEvent<SVGElement>, svgElement);
                     
                     // Try to find if there's a different subpath at this point that should be selected
                     const foundSubPath = findSubPathAtPoint(path, point, 15);
