@@ -146,6 +146,18 @@ const saveCurrentPreferences = (state: EditorState) => {
   savePreferences(preferences);
 };
 
+// Helper function to ensure valid viewport values
+const validateViewport = (viewport: any) => {
+  return {
+    ...viewport,
+    zoom: isFinite(viewport.zoom) && viewport.zoom > 0 ? viewport.zoom : 1,
+    pan: {
+      x: isFinite(viewport.pan.x) ? viewport.pan.x : 0,
+      y: isFinite(viewport.pan.y) ? viewport.pan.y : 0,
+    },
+  };
+};
+
 export const useEditorStore = create<EditorState & EditorActions>()(
   subscribeWithSelector((set, get) => ({
     ...initialState,
@@ -470,20 +482,32 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     // Viewport actions
     setZoom: (zoom, center) =>
       set((state) => {
-        let newPan = state.viewport.pan;
-        if (center) {
-          const zoomRatio = zoom / state.viewport.zoom;
-          newPan = {
-            x: center.x - (center.x - state.viewport.pan.x) * zoomRatio,
-            y: center.y - (center.y - state.viewport.pan.y) * zoomRatio,
-          };
+        // Validate input
+        if (!isFinite(zoom) || zoom <= 0) {
+          console.warn('Invalid zoom value:', zoom);
+          return state; // Return unchanged state
         }
+        
+        let newPan = state.viewport.pan;
+        if (center && isFinite(center.x) && isFinite(center.y)) {
+          const zoomRatio = zoom / state.viewport.zoom;
+          if (isFinite(zoomRatio)) {
+            newPan = {
+              x: center.x - (center.x - state.viewport.pan.x) * zoomRatio,
+              y: center.y - (center.y - state.viewport.pan.y) * zoomRatio,
+            };
+          }
+        }
+        
+        // Validate the new viewport
+        const newViewport = validateViewport({
+          ...state.viewport,
+          zoom: Math.max(0.1, Math.min(10, zoom)),
+          pan: newPan,
+        });
+        
         const newState = {
-          viewport: {
-            ...state.viewport,
-            zoom: Math.max(0.1, Math.min(10, zoom)),
-            pan: newPan,
-          },
+          viewport: newViewport,
         };
         
         // Save preferences after updating zoom
@@ -509,63 +533,109 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       // Get bounding box of all paths
       const bounds = getAllPathsBounds(paths);
       
+      console.log('ZoomToFit - bounds:', bounds);
+      
       if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
         // If no valid content, reset to default view
         set({
-          viewport: {
+          viewport: validateViewport({
             ...viewport,
             zoom: 1,
             pan: { x: 0, y: 0 },
-          },
+          }),
         });
         return;
       }
       
       // Try to get actual SVG dimensions from DOM
-      let viewportWidth = viewport.viewBox.width;
-      let viewportHeight = viewport.viewBox.height;
+      let viewportWidth = 800; // fallback width
+      let viewportHeight = 600; // fallback height
       
       // Try to get real dimensions from the DOM if available
       const svgElement = document.querySelector('svg');
       if (svgElement) {
         const rect = svgElement.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
+        console.log('SVG getBoundingClientRect:', rect);
+        if (rect.width > 100 && rect.height > 100) { // Ensure reasonable minimum size
           viewportWidth = rect.width;
           viewportHeight = rect.height;
         }
       }
       
-      // Add some padding around the content (10% on each side)
-      const padding = 0.1;
-      const paddedWidth = Math.max(bounds.width * (1 + padding * 2), 1); // Minimum 1px
-      const paddedHeight = Math.max(bounds.height * (1 + padding * 2), 1); // Minimum 1px
+      // If DOM dimensions are still not available, try to get from viewport
+      if (viewportWidth < 100 || viewportHeight < 100) {
+        // Use window dimensions as last resort
+        viewportWidth = window.innerWidth * 0.8; // 80% of window width
+        viewportHeight = window.innerHeight * 0.8; // 80% of window height
+      }
       
-      // Calculate zoom to fit content in viewport
-      const zoomX = viewportWidth / paddedWidth;
-      const zoomY = viewportHeight / paddedHeight;
+      console.log('ZoomToFit - viewport dimensions:', viewportWidth, viewportHeight);
+      console.log('ZoomToFit - content bounds:', bounds);
+      
+      // Validate viewport dimensions
+      if (!isFinite(viewportWidth) || !isFinite(viewportHeight) || viewportWidth <= 0 || viewportHeight <= 0) {
+        console.warn('Invalid viewport dimensions:', viewportWidth, viewportHeight);
+        return;
+      }
+      
+      // Use the content bounds directly without excessive padding
+      const contentWidth = Math.max(bounds.width, 1);
+      const contentHeight = Math.max(bounds.height, 1);
+      
+      console.log('ZoomToFit - content dimensions:', contentWidth, contentHeight);
+      
+      // Calculate zoom to fit content in viewport (with some padding)
+      const padding = 20; // 20px padding on each side
+      const availableWidth = Math.max(viewportWidth - padding * 2, 50);
+      const availableHeight = Math.max(viewportHeight - padding * 2, 50);
+      
+      const zoomX = availableWidth / contentWidth;
+      const zoomY = availableHeight / contentHeight;
       let newZoom = Math.min(zoomX, zoomY);
+      
+      console.log('ZoomToFit - zoom calculations:', { zoomX, zoomY, newZoom, availableWidth, availableHeight });
+      
+      // Validate zoom calculation
+      if (!isFinite(newZoom) || newZoom <= 0) {
+        console.warn('Invalid zoom calculation:', newZoom);
+        return;
+      }
       
       // Apply zoom limits: between 0.1x and 10x
       newZoom = Math.max(0.1, Math.min(newZoom, 10));
       
-      // Calculate center of content
+      // Calculate the content center in SVG coordinates
       const contentCenterX = bounds.x + bounds.width / 2;
       const contentCenterY = bounds.y + bounds.height / 2;
       
-      // Calculate pan to center the content in viewport
+      // Validate content center
+      if (!isFinite(contentCenterX) || !isFinite(contentCenterY)) {
+        console.warn('Invalid content center:', contentCenterX, contentCenterY);
+        return;
+      }
+      
+      // Calculate where we want this center to appear in screen coordinates
       const viewportCenterX = viewportWidth / 2;
       const viewportCenterY = viewportHeight / 2;
       
-      // Calculate the pan offset needed to center the content
+      // For the SVG transform: translate(pan) scale(zoom)
+      // Screen coordinate = SVG coordinate * zoom + pan
+      // So: pan = screen coordinate - SVG coordinate * zoom
       const newPanX = viewportCenterX - contentCenterX * newZoom;
       const newPanY = viewportCenterY - contentCenterY * newZoom;
       
+      // Validate pan calculation
+      if (!isFinite(newPanX) || !isFinite(newPanY)) {
+        console.warn('Invalid pan calculation:', newPanX, newPanY);
+        return;
+      }
+      
       set({
-        viewport: {
+        viewport: validateViewport({
           ...viewport,
           zoom: newZoom,
           pan: { x: newPanX, y: newPanY },
-        },
+        }),
       });
     },
     
@@ -576,85 +646,136 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       // Get bounding box of selected commands
       const bounds = getSelectedElementsBounds(paths, selection.selectedCommands);
       
+      console.log('ZoomToSelection - bounds:', bounds);
+      
       if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
         console.log('No valid selection to zoom to');
         return;
       }
       
       // Try to get actual SVG dimensions from DOM
-      let viewportWidth = viewport.viewBox.width;
-      let viewportHeight = viewport.viewBox.height;
+      let viewportWidth = 800; // fallback width
+      let viewportHeight = 600; // fallback height
       
       // Try to get real dimensions from the DOM if available
       const svgElement = document.querySelector('svg');
       if (svgElement) {
         const rect = svgElement.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
+        console.log('ZoomToSelection - SVG getBoundingClientRect:', rect);
+        if (rect.width > 100 && rect.height > 100) { // Ensure reasonable minimum size
           viewportWidth = rect.width;
           viewportHeight = rect.height;
         }
       }
       
-      // Add some padding around the selection (15% on each side for tighter fit)
-      const padding = 0.15;
-      const paddedWidth = Math.max(bounds.width * (1 + padding * 2), 1); // Minimum 1px
-      const paddedHeight = Math.max(bounds.height * (1 + padding * 2), 1); // Minimum 1px
+      // If DOM dimensions are still not available, try to get from viewport
+      if (viewportWidth < 100 || viewportHeight < 100) {
+        // Use window dimensions as last resort
+        viewportWidth = window.innerWidth * 0.8; // 80% of window width
+        viewportHeight = window.innerHeight * 0.8; // 80% of window height
+      }
       
-      // Calculate zoom to fit selection in viewport
-      const zoomX = viewportWidth / paddedWidth;
-      const zoomY = viewportHeight / paddedHeight;
+      console.log('ZoomToSelection - viewport dimensions:', viewportWidth, viewportHeight);
+      console.log('ZoomToSelection - selection bounds:', bounds);
+      
+      // Use the selection bounds directly without excessive padding
+      const selectionWidth = Math.max(bounds.width, 1);
+      const selectionHeight = Math.max(bounds.height, 1);
+      
+      console.log('ZoomToSelection - selection dimensions:', selectionWidth, selectionHeight);
+      
+      // Calculate zoom to fit selection in viewport (with some padding)
+      const padding = 20; // 20px padding on each side
+      const availableWidth = Math.max(viewportWidth - padding * 2, 50);
+      const availableHeight = Math.max(viewportHeight - padding * 2, 50);
+      
+      const zoomX = availableWidth / selectionWidth;
+      const zoomY = availableHeight / selectionHeight;
       let newZoom = Math.min(zoomX, zoomY);
+      
+      console.log('ZoomToSelection - zoom calculations:', { zoomX, zoomY, newZoom, availableWidth, availableHeight });
+      
+      // Validate zoom calculation
+      if (!isFinite(newZoom) || newZoom <= 0) {
+        console.warn('Invalid zoom calculation in zoomToSelection:', newZoom);
+        return;
+      }
       
       // Apply zoom limits: between 0.1x and 20x (higher for selection)
       newZoom = Math.max(0.1, Math.min(newZoom, 20));
       
-      // Calculate center of selection
+      // Calculate the selection center in SVG coordinates
       const selectionCenterX = bounds.x + bounds.width / 2;
       const selectionCenterY = bounds.y + bounds.height / 2;
       
-      // Calculate pan to center the selection in viewport
+      // Validate selection center
+      if (!isFinite(selectionCenterX) || !isFinite(selectionCenterY)) {
+        console.warn('Invalid selection center:', selectionCenterX, selectionCenterY);
+        return;
+      }
+      
+      // Calculate where we want this center to appear in screen coordinates
       const viewportCenterX = viewportWidth / 2;
       const viewportCenterY = viewportHeight / 2;
       
-      // Calculate the pan offset needed to center the selection
+      // For the SVG transform: translate(pan) scale(zoom)
+      // Screen coordinate = SVG coordinate * zoom + pan
+      // So: pan = screen coordinate - SVG coordinate * zoom
       const newPanX = viewportCenterX - selectionCenterX * newZoom;
       const newPanY = viewportCenterY - selectionCenterY * newZoom;
       
+      // Validate pan calculation
+      if (!isFinite(newPanX) || !isFinite(newPanY)) {
+        console.warn('Invalid pan calculation in zoomToSelection:', newPanX, newPanY);
+        return;
+      }
+      
       set({
-        viewport: {
+        viewport: validateViewport({
           ...viewport,
           zoom: newZoom,
           pan: { x: newPanX, y: newPanY },
-        },
+        }),
       });
     },
     
     pan: (delta) =>
-      set((state) => ({
-        viewport: {
-          ...state.viewport,
-          pan: {
-            x: state.viewport.pan.x + delta.x,
-            y: state.viewport.pan.y + delta.y,
-          },
-        },
-      })),
+      set((state) => {
+        // Validate delta input
+        const safeDelta = {
+          x: isFinite(delta.x) ? delta.x : 0,
+          y: isFinite(delta.y) ? delta.y : 0,
+        };
+        
+        return {
+          viewport: validateViewport({
+            ...state.viewport,
+            pan: {
+              x: state.viewport.pan.x + safeDelta.x,
+              y: state.viewport.pan.y + safeDelta.y,
+            },
+          }),
+        };
+      }),
     
     setPan: (pan) =>
       set((state) => ({
-        viewport: {
+        viewport: validateViewport({
           ...state.viewport,
-          pan,
-        },
+          pan: {
+            x: isFinite(pan.x) ? pan.x : 0,
+            y: isFinite(pan.y) ? pan.y : 0,
+          },
+        }),
       })),
     
     resetView: () =>
       set((state) => ({
-        viewport: {
+        viewport: validateViewport({
           ...state.viewport,
           zoom: 1,
           pan: { x: 0, y: 0 },
-        },
+        }),
       })),
     
     // Mode actions
