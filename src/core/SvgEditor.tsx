@@ -18,6 +18,30 @@ import { CommandPointsRendererPlugin } from '../plugins/command-points-renderer/
 import { GlobalKeyboardPlugin } from '../plugins/global-keyboard/GlobalKeyboard';
 import { CreationModePlugin } from '../plugins/creation-mode/CreationMode';
 
+// Register plugins immediately during module loading
+const initializePlugins = () => {
+  // Register all plugins before any component renders
+  pluginManager.registerPlugin(MouseInteractionPlugin);
+  pluginManager.registerPlugin(RectSelectionPlugin);
+  pluginManager.registerPlugin(PathRendererPlugin);
+  pluginManager.registerPlugin(CommandPointsRendererPlugin);
+  pluginManager.registerPlugin(CreationModePlugin);
+  pluginManager.registerPlugin(GlobalKeyboardPlugin);
+  pluginManager.registerPlugin(ZoomPlugin);
+  pluginManager.registerPlugin(GridPlugin);
+  pluginManager.registerPlugin(UndoRedoPlugin);
+  pluginManager.registerPlugin(CreationToolsPlugin);
+  pluginManager.registerPlugin(FullscreenPlugin);
+  pluginManager.registerPlugin(PathStylePlugin);
+  pluginManager.registerPlugin(ControlPointsPlugin);
+  pluginManager.registerPlugin(SelectionToolsPlugin);
+  pluginManager.registerPlugin(SVGPlugin);
+  pluginManager.registerPlugin(SubPathListPlugin);
+};
+
+// Initialize plugins during module load
+initializePlugins();
+
 export const SvgEditor: React.FC = () => {
   const editorStore = useEditorStore();
   const { grid, isFullscreen } = editorStore;
@@ -37,31 +61,13 @@ export const SvgEditor: React.FC = () => {
     return 'default';
   };
 
-  // Initialize plugins
+  // Initialize plugins with editor store and SVG ref
   useEffect(() => {
     // Set up editor store and SVG ref for plugin manager
     pluginManager.setEditorStore(editorStore);
     pluginManager.setSVGRef(svgRef);
     
-    // Register all plugins
-    pluginManager.registerPlugin(MouseInteractionPlugin);
-    pluginManager.registerPlugin(RectSelectionPlugin);
-    pluginManager.registerPlugin(PathRendererPlugin);
-    pluginManager.registerPlugin(CommandPointsRendererPlugin);
-    pluginManager.registerPlugin(CreationModePlugin);
-    pluginManager.registerPlugin(GlobalKeyboardPlugin);
-    pluginManager.registerPlugin(ZoomPlugin);
-    pluginManager.registerPlugin(GridPlugin);
-    pluginManager.registerPlugin(UndoRedoPlugin);
-    pluginManager.registerPlugin(CreationToolsPlugin);
-    pluginManager.registerPlugin(FullscreenPlugin);
-    pluginManager.registerPlugin(PathStylePlugin);
-    pluginManager.registerPlugin(ControlPointsPlugin);
-    pluginManager.registerPlugin(SelectionToolsPlugin);
-    pluginManager.registerPlugin(SVGPlugin);
-    pluginManager.registerPlugin(SubPathListPlugin);
-
-    // Initialize plugins with editor store
+    // Initialize plugins with editor store (plugins are already registered)
     pluginManager.getEnabledPlugins().forEach(plugin => {
       plugin.initialize?.(editorStore);
     });
