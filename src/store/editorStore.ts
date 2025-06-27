@@ -66,7 +66,12 @@ const preferences = loadPreferences();
 
 const createInitialState = (): EditorState => {
   // Hardcoded SVG to load as initial state
-  const hardcodedSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"> <path d="M 50 50 C 62 37 140 40 150 50 C 160 60 162 137 150 150 C 137 163 36 188 26 178 C 15 167 37 63 50 50 M 10 210 L 90 210 L 90 290 L 10 290 L 10 210 M 30 220 L 30 260 L 60 280 L 80 230 L 30 220 M 110 210 L 110 290 L 190 290 A 50 30 0 0 0 110 210 M 200 10 C 200 100 225 100 250 100 S 275 30 300 30 Q 320 100 350 100 T 400 10 Z" fill="rgba(0, 120, 204, 0.2)" stroke="#007acc" stroke-width="3" /> <path d="M 200 200 C 200 150 300 150 400 100 C 450 100 500 150 400 200 Z" fill="rgba(255, 107, 107, 0.2)" stroke="#ff6b6b" stroke-width="2" /> </svg> `;
+  const hardcodedSVG = `
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <path d="M 50 50 C 62 37 140 40 150 50 C 160 60 162 137 150 150 C 137 163 36 188 26 178 C 15 167 37 63 50 50 M 20 370 L 100 370 L 100 450 L 20 450 L 20 370 M 40 380 L 40 420 L 70 440 L 90 390 L 40 380 M 120 370 L 120 450 L 200 450 A 50 30 0 0 0 120 370 M 200 10 C 200 100 225 100 250 100 S 275 30 300 30 Q 320 100 350 100 T 400 10 Z" fill="rgba(0, 120, 204, 0.2)" stroke="#007acc" stroke-width="3" />
+  <path d="M 210 280 C 210 230 230 190 340 240 C 340 190 450 210 450 280 Z" fill="rgba(255, 107, 107, 0.2)" stroke="#ff6b6b" stroke-width="2" />
+</svg>
+  `;
 
   let initialPaths: SVGPath[] = [];
   
