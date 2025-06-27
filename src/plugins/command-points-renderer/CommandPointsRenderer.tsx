@@ -6,6 +6,10 @@ import { getCommandPosition } from '../../utils/path-utils';
 export const CommandPointsRenderer: React.FC = () => {
   const { paths, selection, viewport } = useEditorStore();
 
+  if (!paths || paths.length === 0) {
+    return null;
+  }
+
   return (
     <>
       {paths.map((path) => 
@@ -15,7 +19,7 @@ export const CommandPointsRenderer: React.FC = () => {
             if (!position) return null;
 
             const isSelected = selection.selectedCommands.includes(command.id);
-            const radius = Math.max(6 / viewport.zoom, 6); // Minimum 6px for visibility
+            const radius = Math.max(6 / viewport.zoom, 2); // Minimum 2px for visibility
 
             return (
               <circle

@@ -50,7 +50,8 @@ class MouseInteractionManager {
   }
 
   handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
-    const { commandId, controlPoint } = context;      const { 
+    const { commandId, controlPoint } = context;
+    const { 
         selection, 
         viewport, 
         grid, 
@@ -77,33 +78,40 @@ class MouseInteractionManager {
       return true;
     } else if (commandId) {
       // Selecting/dragging a command point
+      let finalSelectedIds: string[] = [];
+      
       if (e.ctrlKey || e.metaKey) {
         // Multiple selection
         if (selection.selectedCommands.includes(commandId)) {
-          const newSelection = selection.selectedCommands.filter((id: string) => id !== commandId);
-          selectMultiple(newSelection, 'commands');
+          finalSelectedIds = selection.selectedCommands.filter((id: string) => id !== commandId);
+          selectMultiple(finalSelectedIds, 'commands');
         } else {
-          selectMultiple([...selection.selectedCommands, commandId], 'commands');
+          finalSelectedIds = [...selection.selectedCommands, commandId];
+          selectMultiple(finalSelectedIds, 'commands');
         }
       } else {
         // Simple selection
-        if (!selection.selectedCommands.includes(commandId)) {
+        if (selection.selectedCommands.includes(commandId)) {
+          // If the command is already selected, keep the current selection for dragging
+          finalSelectedIds = selection.selectedCommands;
+          // Use selectMultiple to ensure the state is maintained properly
+          selectMultiple(finalSelectedIds, 'commands');
+        } else {
+          // If not selected, select only this command (clear others)
+          finalSelectedIds = [commandId];
           selectCommand(commandId);
         }
       }
       
       this.state.draggingCommand = commandId;
       
-      // Save initial positions of all selected commands
-      const selectedIds = selection.selectedCommands.includes(commandId)
-        ? selection.selectedCommands
-        : [commandId];
+      // Save initial positions of all selected commands (use the final selection)
       const positions: { [id: string]: { x: number; y: number } } = {};
       
       paths.forEach((path: any) => {
         path.subPaths.forEach((subPath: any) => {
           subPath.commands.forEach((cmd: any) => {
-            if (selectedIds.includes(cmd.id)) {
+            if (finalSelectedIds.includes(cmd.id)) {
               const pos = getCommandPosition(cmd);
               if (pos) positions[cmd.id] = { x: pos.x, y: pos.y };
             }
@@ -119,10 +127,10 @@ class MouseInteractionManager {
       // Let creation mode plugin handle this
       return false;
     } else if (!commandId && !controlPoint && e.button === 0 && !(e.ctrlKey || e.metaKey)) {
-      // Let rect selection plugin handle this
+      // Let rect selection plugin handle this  
       return false;
-    } else {
-      // Clear selection if clicking on empty space
+    } else if (!commandId && !controlPoint) {
+      // Clear selection only if clicking on empty space (no command, no control point)
       clearSelection();
       return true;
     }
@@ -164,8 +172,8 @@ class MouseInteractionManager {
       const dx = point.x - this.state.dragOrigin.x;
       const dy = point.y - this.state.dragOrigin.y;
       
-      // Move all selected commands
-      selection.selectedCommands.forEach((cmdId: string) => {
+      // Move all commands that were selected when dragging started
+      Object.keys(this.state.dragStartPositions).forEach((cmdId: string) => {
         const start = this.state.dragStartPositions[cmdId];
         if (start) {
           let newX = start.x + dx;

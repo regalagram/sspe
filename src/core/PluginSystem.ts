@@ -106,7 +106,20 @@ export class PluginManager {
     };
 
     // Process plugins in order, stop if any plugin handles the event
-    for (const plugin of this.getEnabledPlugins()) {
+    // If there's a commandId, prioritize MouseInteraction plugin
+    let pluginsToProcess = this.getEnabledPlugins();
+    
+    if (commandId && eventType === 'mouseDown') {
+      // When clicking on a command, process MouseInteraction first, then others
+      const mouseInteractionPlugin = pluginsToProcess.find(p => p.id === 'mouse-interaction');
+      const otherPlugins = pluginsToProcess.filter(p => p.id !== 'mouse-interaction');
+      
+      if (mouseInteractionPlugin) {
+        pluginsToProcess = [mouseInteractionPlugin, ...otherPlugins];
+      }
+    }
+    
+    for (const plugin of pluginsToProcess) {
       if (!plugin.mouseHandlers) continue;
 
       let handled = false;

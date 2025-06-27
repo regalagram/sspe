@@ -17,9 +17,23 @@ class RectSelectionManager {
   };
 
   private editorStore: any;
+  private listeners: (() => void)[] = [];
 
   setEditorStore(store: any) {
     this.editorStore = store;
+  }
+
+  // Add listener for state changes
+  addListener(listener: () => void) {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener);
+    };
+  }
+
+  // Notify all listeners when state changes
+  private notifyListeners() {
+    this.listeners.forEach(listener => listener());
   }
 
   getSVGPoint(e: MouseEvent<SVGElement>, svgRef: React.RefObject<SVGSVGElement | null>): { x: number; y: number } {
@@ -41,13 +55,15 @@ class RectSelectionManager {
 
   handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
     const { commandId, controlPoint } = context;
+    const { mode } = this.editorStore;
 
-    // Only handle rect selection if no command or control point is being clicked
-    if (!commandId && !controlPoint && e.button === 0 && !(e.ctrlKey || e.metaKey)) {
+    // Only handle rect selection if we're in select mode, no command or control point is being clicked
+    if (mode.current === 'select' && !commandId && !controlPoint && e.button === 0 && !(e.ctrlKey || e.metaKey)) {
       const svgPoint = this.getSVGPoint(e, context.svgRef);
       this.state.isSelecting = true;
       this.state.selectionStart = svgPoint;
       this.state.selectionRect = null;
+      this.notifyListeners();
       return true;
     }
 
@@ -62,6 +78,7 @@ class RectSelectionManager {
       const width = Math.abs(this.state.selectionStart.x - svgPoint.x);
       const height = Math.abs(this.state.selectionStart.y - svgPoint.y);
       this.state.selectionRect = { x, y, width, height };
+      this.notifyListeners();
       return true;
     }
 
@@ -72,41 +89,49 @@ class RectSelectionManager {
     if (this.state.isSelecting && this.state.selectionRect) {
       const { paths, selectMultiple, clearSelection } = this.editorStore;
       
-      // Select all commands within the rectangle
-      const selectedIds: string[] = [];
-      paths.forEach((path: any) => {
-        path.subPaths.forEach((subPath: any) => {
-          subPath.commands.forEach((command: any) => {
-            const pos = getCommandPosition(command);
-            if (!pos) return;
-            if (
-              pos.x >= this.state.selectionRect!.x &&
-              pos.x <= this.state.selectionRect!.x + this.state.selectionRect!.width &&
-              pos.y >= this.state.selectionRect!.y &&
-              pos.y <= this.state.selectionRect!.y + this.state.selectionRect!.height
-            ) {
-              selectedIds.push(command.id);
-            }
+      // Only treat as a rectangle selection if there's actual area (not just a click)
+      const hasSignificantArea = this.state.selectionRect.width > 5 || this.state.selectionRect.height > 5;
+      
+      if (hasSignificantArea) {
+        // Select all commands within the rectangle
+        const selectedIds: string[] = [];
+        paths.forEach((path: any) => {
+          path.subPaths.forEach((subPath: any) => {
+            subPath.commands.forEach((command: any) => {
+              const pos = getCommandPosition(command);
+              if (!pos) return;
+              if (
+                pos.x >= this.state.selectionRect!.x &&
+                pos.x <= this.state.selectionRect!.x + this.state.selectionRect!.width &&
+                pos.y >= this.state.selectionRect!.y &&
+                pos.y <= this.state.selectionRect!.y + this.state.selectionRect!.height
+              ) {
+                selectedIds.push(command.id);
+              }
+            });
           });
         });
-      });
-      
-      if (selectedIds.length > 0) {
-        selectMultiple(selectedIds, 'commands');
-      } else {
-        clearSelection();
+        
+        if (selectedIds.length > 0) {
+          selectMultiple(selectedIds, 'commands');
+        } else {
+          clearSelection();
+        }
       }
+      // If it's just a small click (not a drag), don't clear selection
 
       this.state.isSelecting = false;
       this.state.selectionStart = null;
       this.state.selectionRect = null;
-      return true;
+      this.notifyListeners();
+      return hasSignificantArea; // Only consume the event if it was a real selection
     }
 
     if (this.state.isSelecting) {
       this.state.isSelecting = false;
       this.state.selectionStart = null;
       this.state.selectionRect = null;
+      this.notifyListeners();
       return true;
     }
 
@@ -140,6 +165,16 @@ export const useRectSelection = () => {
 // React component for rendering the selection rectangle
 export const RectSelectionRenderer: React.FC = () => {
   const { viewport } = useEditorStore();
+  const [, forceUpdate] = useState({});
+
+  // Subscribe to state changes to force re-render
+  React.useEffect(() => {
+    const unsubscribe = rectSelectionManager.addListener(() => {
+      forceUpdate({});
+    });
+    return unsubscribe;
+  }, []);
+
   const selectionRect = rectSelectionManager.getSelectionRect();
   const isSelecting = rectSelectionManager.isSelecting();
 

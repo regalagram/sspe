@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { useEditorStore } from '../store/editorStore';
 import { pluginManager } from './PluginSystem';
 import { ZoomPlugin } from '../plugins/zoom/Zoom';
-import { GridPlugin, FullScreenGridOverlay } from '../plugins/grid/Grid';
+import { GridPlugin } from '../plugins/grid/Grid';
 import { UndoRedoPlugin } from '../plugins/undo-redo/UndoRedo';
 import { CreationToolsPlugin } from '../plugins/creation-tools/CreationTools';
 import { FullscreenPlugin } from '../plugins/fullscreen/Fullscreen';
@@ -65,7 +65,7 @@ export const SvgEditor: React.FC = () => {
     pluginManager.getEnabledPlugins().forEach(plugin => {
       plugin.initialize?.(editorStore);
     });
-  }, []);
+  }, [editorStore]);
 
   // Handle keyboard shortcuts through plugin system
   useEffect(() => {
@@ -126,17 +126,6 @@ export const SvgEditor: React.FC = () => {
     <div className="svg-editor" style={editorStyle}>
       {/* Render toolbar plugins */}
       {renderPluginUI('toolbar')}
-      
-      {/* Full-screen grid overlay */}
-      {grid.enabled && (
-        <FullScreenGridOverlay
-          size={grid.size}
-          color={grid.color}
-          opacity={grid.opacity}
-          zoom={editorStore.viewport.zoom}
-          pan={editorStore.viewport.pan}
-        />
-      )}
       
       {/* Main SVG canvas */}
       <svg

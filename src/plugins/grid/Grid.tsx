@@ -206,6 +206,62 @@ export const GridComponent: React.FC = () => {
   );
 };
 
+// New SVG Grid Renderer that renders inside the SVG content
+export const SVGGridRenderer: React.FC = () => {
+  const { grid, viewport } = useEditorStore();
+
+  if (!grid.enabled) return null;
+
+  const lines = [];
+  
+  // Calculate the grid area based on viewport
+  const { viewBox } = viewport;
+  const { size, color, opacity } = grid;
+  
+  // Calculate extended area to cover zoomed/panned view
+  const extendFactor = 3;
+  const extendedWidth = viewBox.width * extendFactor;
+  const extendedHeight = viewBox.height * extendFactor;
+  const startX = viewBox.x - extendedWidth;
+  const endX = viewBox.x + viewBox.width + extendedWidth;
+  const startY = viewBox.y - extendedHeight;
+  const endY = viewBox.y + viewBox.height + extendedHeight;
+  
+  // Vertical lines
+  for (let x = Math.floor(startX / size) * size; x <= endX; x += size) {
+    lines.push(
+      <line
+        key={`v-${x}`}
+        x1={x}
+        y1={startY}
+        x2={x}
+        y2={endY}
+        stroke={color}
+        strokeOpacity={opacity}
+        strokeWidth={1 / viewport.zoom}
+      />
+    );
+  }
+  
+  // Horizontal lines
+  for (let y = Math.floor(startY / size) * size; y <= endY; y += size) {
+    lines.push(
+      <line
+        key={`h-${y}`}
+        x1={startX}
+        y1={y}
+        x2={endX}
+        y2={y}
+        stroke={color}
+        strokeOpacity={opacity}
+        strokeWidth={1 / viewport.zoom}
+      />
+    );
+  }
+  
+  return <g className="svg-grid-overlay" style={{ pointerEvents: 'none' }}>{lines}</g>;
+};
+
 export const GridPlugin: Plugin = {
   id: 'grid',
   name: 'Grid',
@@ -239,6 +295,12 @@ export const GridPlugin: Plugin = {
       component: GridComponent,
       position: 'sidebar',
       order: 2
+    },
+    {
+      id: 'svg-grid-renderer',
+      component: SVGGridRenderer,
+      position: 'svg-content',
+      order: 0 // Render first (in the background)
     }
   ]
 };

@@ -70,12 +70,12 @@ const createInitialState = (): EditorState => {
           {
             id: generateId(),
             commands: [
-              { id: generateId(), command: 'M', x: 200, y: 200 },
-              { id: generateId(), command: 'L', x: 300, y: 200 },
-              { id: generateId(), command: 'L', x: 350, y: 300 },
-              { id: generateId(), command: 'L', x: 250, y: 350 },
-              { id: generateId(), command: 'L', x: 150, y: 300 },
-              { id: generateId(), command: 'Z' },
+              { id: generateId(), command: 'M' as SVGCommandType, x: 200, y: 200 },
+              { id: generateId(), command: 'L' as SVGCommandType, x: 300, y: 200 },
+              { id: generateId(), command: 'L' as SVGCommandType, x: 350, y: 300 },
+              { id: generateId(), command: 'L' as SVGCommandType, x: 250, y: 350 },
+              { id: generateId(), command: 'L' as SVGCommandType, x: 150, y: 300 },
+              { id: generateId(), command: 'Z' as SVGCommandType },
             ],
           }
         ],
@@ -91,10 +91,10 @@ const createInitialState = (): EditorState => {
           {
             id: generateId(),
             commands: [
-              { id: generateId(), command: 'M', x: 100, y: 100 },
-              { id: generateId(), command: 'C', x: 400, y: 100, x1: 450, y1: 50, x2: 300, y2: 50 },
-              { id: generateId(), command: 'C', x: 400, y: 200, x1: 450, y1: 200, x2: 400, y2: 250 },
-              { id: generateId(), command: 'Z' },
+              { id: generateId(), command: 'M' as SVGCommandType, x: 100, y: 100 },
+              { id: generateId(), command: 'C' as SVGCommandType, x: 400, y: 100, x1: 450, y1: 50, x2: 300, y2: 50 },
+              { id: generateId(), command: 'C' as SVGCommandType, x: 400, y: 200, x1: 450, y1: 200, x2: 400, y2: 250 },
+              { id: generateId(), command: 'Z' as SVGCommandType },
             ],
           }
         ],
@@ -124,7 +124,7 @@ const createInitialState = (): EditorState => {
       snapToGrid: preferences.snapToGrid,
     },
     mode: {
-      current: 'select',
+      current: 'select' as const,
     },
     history: {
       past: [],
@@ -194,16 +194,25 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       })),
       
     selectMultiple: (ids, type) =>
-      set((state) => ({
-        selection: {
-          ...state.selection,
-          [type === 'paths' ? 'selectedPaths' : 
-           type === 'subpaths' ? 'selectedSubPaths' : 'selectedCommands']: ids,
-          [type === 'paths' ? 'selectedSubPaths' : 'selectedPaths']: [],
-          [type === 'paths' ? 'selectedCommands' : 
-           type === 'subpaths' ? 'selectedCommands' : 'selectedSubPaths']: [],
-        },
-      })),
+      set((state) => {
+        const newSelection = { ...state.selection };
+        
+        if (type === 'paths') {
+          newSelection.selectedPaths = ids;
+          newSelection.selectedSubPaths = [];
+          newSelection.selectedCommands = [];
+        } else if (type === 'subpaths') {
+          newSelection.selectedSubPaths = ids;
+          newSelection.selectedPaths = [];
+          newSelection.selectedCommands = [];
+        } else if (type === 'commands') {
+          newSelection.selectedCommands = ids;
+          newSelection.selectedPaths = [];
+          newSelection.selectedSubPaths = [];
+        }
+        
+        return { selection: newSelection };
+      }),
       
     clearSelection: () =>
       set((state) => ({
