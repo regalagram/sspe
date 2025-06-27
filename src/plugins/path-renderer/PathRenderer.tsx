@@ -1,7 +1,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { subPathToString, getContrastColor, subPathToStringInContext } from '../../utils/path-utils';
+import { subPathToString, getContrastColor, subPathToStringInContext, findSubPathAtPoint } from '../../utils/path-utils';
 
 export const PathRenderer: React.FC = () => {
   const { paths, selection, viewport, selectSubPathByPoint, moveSubPath, pushToHistory, renderVersion } = useEditorStore();
@@ -203,7 +203,26 @@ export const PathRenderer: React.FC = () => {
                   cursor: dragState.isDragging && dragState.subPathId === subPath.id ? 'grabbing' : 'grab',
                   filter: `drop-shadow(0 0 ${3 / viewport.zoom}px ${contrastColor})`,
                 }}
-                onMouseDown={(e) => handleSubPathMouseDown(e, subPath.id)}
+                onMouseDown={(e) => {
+                  // Check if this is a potential drag operation
+                  const svgElement = (e.target as SVGPathElement).closest('svg');
+                  if (svgElement) {
+                    const point = getSVGPoint(e, svgElement);
+                    
+                    // Try to find if there's a different subpath at this point that should be selected
+                    const foundSubPath = findSubPathAtPoint(path, point, 15);
+                    
+                    // If we found a different subpath, select it instead of starting drag
+                    if (foundSubPath && foundSubPath.id !== subPath.id) {
+                      e.stopPropagation();
+                      selectSubPathByPoint(path.id, point);
+                      return;
+                    }
+                  }
+                  
+                  // Otherwise, proceed with normal drag operation
+                  handleSubPathMouseDown(e, subPath.id);
+                }}
               />
             </g>
           );
