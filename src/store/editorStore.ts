@@ -50,6 +50,7 @@ interface EditorActions {
   toggleGrid: () => void;
   setGridSize: (size: number) => void;
   toggleSnapToGrid: () => void;
+  toggleGridLabels: () => void;
   
   // History actions
   undo: () => void;
@@ -109,6 +110,7 @@ const createInitialState = (): EditorState => {
       color: '#e0e0e0',
       opacity: 0.5,
       snapToGrid: preferences.snapToGrid,
+      showLabels: preferences.showLabels,
     },
     mode: {
       current: 'select' as const,
@@ -142,6 +144,7 @@ const saveCurrentPreferences = (state: EditorState) => {
     gridEnabled: state.grid.enabled,
     gridSize: state.grid.size,
     snapToGrid: state.grid.snapToGrid,
+    showLabels: state.grid.showLabels,
     showControlPoints: state.enabledFeatures.has('control-points'),
     showCommandPoints: state.enabledFeatures.has('command-points'),
   };
@@ -973,6 +976,21 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         };
         
         // Save preferences after updating snap to grid
+        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
+        return newState;
+      }),
+
+    toggleGridLabels: () =>
+      set((state) => {
+        const newState = {
+          grid: {
+            ...state.grid,
+            showLabels: !state.grid.showLabels,
+          },
+        };
+        
+        // Save preferences after updating grid labels
         setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
         
         return newState;

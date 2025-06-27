@@ -80,6 +80,7 @@ export interface GridState {
   color: string;
   opacity: number;
   snapToGrid: boolean;
+  showLabels: boolean;
 }
 
 export interface EditorMode {

@@ -10,6 +10,7 @@ export interface UserPreferences {
   gridEnabled: boolean;
   gridSize: number;
   snapToGrid: boolean;
+  showLabels: boolean;
   
   // Feature preferences
   showControlPoints: boolean;
@@ -23,6 +24,7 @@ const defaultPreferences: UserPreferences = {
   gridEnabled: false,
   gridSize: 10,
   snapToGrid: false,
+  showLabels: true,
   showControlPoints: true,
   showCommandPoints: true,
 };
@@ -45,6 +47,7 @@ export function loadPreferences(): UserPreferences {
       gridEnabled: typeof parsed.gridEnabled === 'boolean' ? parsed.gridEnabled : defaultPreferences.gridEnabled,
       gridSize: typeof parsed.gridSize === 'number' ? Math.max(1, Math.min(100, parsed.gridSize)) : defaultPreferences.gridSize,
       snapToGrid: typeof parsed.snapToGrid === 'boolean' ? parsed.snapToGrid : defaultPreferences.snapToGrid,
+      showLabels: typeof parsed.showLabels === 'boolean' ? parsed.showLabels : defaultPreferences.showLabels,
       showControlPoints: typeof parsed.showControlPoints === 'boolean' ? parsed.showControlPoints : defaultPreferences.showControlPoints,
       showCommandPoints: typeof parsed.showCommandPoints === 'boolean' ? parsed.showCommandPoints : defaultPreferences.showCommandPoints,
     };
