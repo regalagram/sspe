@@ -1,24 +1,135 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { subPathToString, getContrastColor } from '../../utils/path-utils';
 
 export const PathRenderer: React.FC = () => {
-  const { paths, selection, viewport, selectSubPathByPoint } = useEditorStore();
+  const { paths, selection, viewport, selectSubPathByPoint, moveSubPath, pushToHistory } = useEditorStore();
   const svgRef = useRef<SVGSVGElement>(null);
+  
+  // Drag state
+  const [dragState, setDragState] = useState<{
+    isDragging: boolean;
+    subPathId: string | null;
+    startPoint: { x: number; y: number } | null;
+    lastPoint: { x: number; y: number } | null;
+    svgElement: SVGSVGElement | null;
+  }>({
+    isDragging: false,
+    subPathId: null,
+    startPoint: null,
+    lastPoint: null,
+    svgElement: null,
+  });
 
   const getSVGPoint = (e: React.MouseEvent, svgElement: SVGSVGElement) => {
-    const pt = svgElement.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
-    const svgPoint = pt.matrixTransform(svgElement.getScreenCTM()?.inverse());
+    const rect = svgElement.getBoundingClientRect();
     
-    // Transform point to account for zoom and pan
-    return {
-      x: (svgPoint.x - viewport.pan.x) / viewport.zoom,
-      y: (svgPoint.y - viewport.pan.y) / viewport.zoom,
+    // Get mouse position relative to SVG element
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    console.log('Debug getSVGPoint:', {
+      clientX: e.clientX,
+      clientY: e.clientY,
+      rectLeft: rect.left,
+      rectTop: rect.top,
+      relativeX: x,
+      relativeY: y,
+      panX: viewport.pan.x,
+      panY: viewport.pan.y,
+      zoom: viewport.zoom
+    });
+    
+    // Apply inverse transform: first inverse scale, then inverse translate
+    // The SVG transform is: translate(pan.x, pan.y) scale(zoom)
+    // So inverse is: scale(1/zoom) translate(-pan.x, -pan.y)
+    const result = {
+      x: x / viewport.zoom - viewport.pan.x,
+      y: y / viewport.zoom - viewport.pan.y,
     };
+    
+    console.log('Final point:', result);
+    return result;
   };
+
+  // Handle mouse down on selected subpath for dragging
+  const handleSubPathMouseDown = useCallback((e: React.MouseEvent, subPathId: string) => {
+    e.stopPropagation();
+    
+    const svgElement = (e.target as SVGPathElement).closest('svg');
+    if (svgElement) {
+      const point = getSVGPoint(e, svgElement);
+      setDragState({
+        isDragging: true,
+        subPathId,
+        startPoint: point,
+        lastPoint: point,
+        svgElement: svgElement,
+      });
+      
+      // Save to history when starting to drag
+      pushToHistory();
+    }
+  }, [pushToHistory]);
+
+  // Handle mouse move for dragging
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!dragState.isDragging || !dragState.subPathId || !dragState.lastPoint || !dragState.svgElement) return;
+    
+    const currentPoint = getSVGPoint(e, dragState.svgElement);
+    const delta = {
+      x: currentPoint.x - dragState.lastPoint.x,
+      y: currentPoint.y - dragState.lastPoint.y,
+    };
+    
+    // Move the subpath
+    moveSubPath(dragState.subPathId, delta);
+    
+    // Update last point
+    setDragState(prev => ({
+      ...prev,
+      lastPoint: currentPoint,
+    }));
+  }, [dragState, moveSubPath]);
+
+  // Handle mouse up to stop dragging
+  const handleMouseUp = useCallback(() => {
+    setDragState({
+      isDragging: false,
+      subPathId: null,
+      startPoint: null,
+      lastPoint: null,
+      svgElement: null,
+    });
+  }, []);
+
+  // Add global mouse event listeners for dragging
+  React.useEffect(() => {
+    if (dragState.isDragging && dragState.svgElement) {
+      const handleGlobalMouseMove = (e: MouseEvent) => {
+        // Convert global mouse event to React mouse event format
+        const mockEvent = {
+          clientX: e.clientX,
+          clientY: e.clientY,
+          target: dragState.svgElement,
+        } as any;
+        handleMouseMove(mockEvent);
+      };
+
+      const handleGlobalMouseUp = () => {
+        handleMouseUp();
+      };
+
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+
+      return () => {
+        document.removeEventListener('mousemove', handleGlobalMouseMove);
+        document.removeEventListener('mouseup', handleGlobalMouseUp);
+      };
+    }
+  }, [dragState.isDragging, dragState.svgElement, handleMouseMove, handleMouseUp]);
 
   return (
     <>
@@ -94,7 +205,7 @@ export const PathRenderer: React.FC = () => {
                   filter: `blur(${2 / viewport.zoom}px)`,
                 }}
               />
-              {/* Main selection border */}
+              {/* Main selection border - draggable */}
               <path
                 d={d}
                 fill="none"
@@ -102,9 +213,11 @@ export const PathRenderer: React.FC = () => {
                 strokeWidth={(2.5) / viewport.zoom}
                 strokeDasharray={`${6 / viewport.zoom},${4 / viewport.zoom}`}
                 style={{
-                  pointerEvents: 'none',
+                  pointerEvents: 'all',
+                  cursor: dragState.isDragging && dragState.subPathId === subPath.id ? 'grabbing' : 'grab',
                   filter: `drop-shadow(0 0 ${3 / viewport.zoom}px ${contrastColor})`,
                 }}
+                onMouseDown={(e) => handleSubPathMouseDown(e, subPath.id)}
               />
             </g>
           );

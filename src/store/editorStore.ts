@@ -15,6 +15,7 @@ interface EditorActions {
   selectMultiple: (ids: string[], type: 'paths' | 'subpaths' | 'commands') => void;
   clearSelection: () => void;
   selectSubPathByPoint: (pathId: string, point: Point) => void;
+  moveSubPath: (subPathId: string, delta: Point) => void;
   
   // Path manipulation actions
   addPath: (style?: PathStyle) => string;
@@ -279,6 +280,32 @@ export const useEditorStore = create<EditorState & EditorActions>()(
           selectedSubPaths: state.selection.selectedSubPaths.filter(id => id !== subPathId),
         },
       })),
+    
+    moveSubPath: (subPathId, delta) => {
+      set((state) => ({
+        paths: state.paths.map((path) => ({
+          ...path,
+          subPaths: path.subPaths.map((subPath) =>
+            subPath.id === subPathId
+              ? {
+                  ...subPath,
+                  commands: subPath.commands.map((cmd) => ({
+                    ...cmd,
+                    // Move main position
+                    x: cmd.x !== undefined ? cmd.x + delta.x : cmd.x,
+                    y: cmd.y !== undefined ? cmd.y + delta.y : cmd.y,
+                    // Move control points if they exist
+                    x1: cmd.x1 !== undefined ? cmd.x1 + delta.x : cmd.x1,
+                    y1: cmd.y1 !== undefined ? cmd.y1 + delta.y : cmd.y1,
+                    x2: cmd.x2 !== undefined ? cmd.x2 + delta.x : cmd.x2,
+                    y2: cmd.y2 !== undefined ? cmd.y2 + delta.y : cmd.y2,
+                  })),
+                }
+              : subPath
+          ),
+        })),
+      }));
+    },
     
     addCommand: (subPathId, command) => {
       const commandId = generateId();
