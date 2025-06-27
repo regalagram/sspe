@@ -13,6 +13,7 @@ export interface UserPreferences {
   
   // Feature preferences
   showControlPoints: boolean;
+  showCommandPoints: boolean;
 }
 
 const STORAGE_KEY = 'svg-editor-preferences';
@@ -23,6 +24,7 @@ const defaultPreferences: UserPreferences = {
   gridSize: 10,
   snapToGrid: false,
   showControlPoints: true,
+  showCommandPoints: true,
 };
 
 /**
@@ -44,6 +46,7 @@ export function loadPreferences(): UserPreferences {
       gridSize: typeof parsed.gridSize === 'number' ? Math.max(1, Math.min(100, parsed.gridSize)) : defaultPreferences.gridSize,
       snapToGrid: typeof parsed.snapToGrid === 'boolean' ? parsed.snapToGrid : defaultPreferences.snapToGrid,
       showControlPoints: typeof parsed.showControlPoints === 'boolean' ? parsed.showControlPoints : defaultPreferences.showControlPoints,
+      showCommandPoints: typeof parsed.showCommandPoints === 'boolean' ? parsed.showCommandPoints : defaultPreferences.showCommandPoints,
     };
   } catch (error) {
     console.warn('Failed to load preferences from localStorage:', error);

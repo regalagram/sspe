@@ -47,7 +47,14 @@ const CommandPanel: React.FC<CommandPanelProps> = ({ command, pathId, subPathId 
         <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
           Command Type:
         </div>
-        <div style={{ fontSize: '14px', fontWeight: '600', color: '#007acc' }}>
+        <div style={{ 
+          fontSize: '14px', 
+          fontWeight: '600', 
+          color: '#007acc',
+          maxWidth: '170px',
+          wordWrap: 'break-word',
+          lineHeight: '1.3'
+        }}>
           {cmd.command} - {getCommandTypeDescription(cmd)}
         </div>
       </div>

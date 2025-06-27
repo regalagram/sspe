@@ -30,32 +30,50 @@ export const ControlPointsControls: React.FC<ControlPointsProps> = ({
         />
         Show Control Points
       </label>
-      <div style={{ 
-        fontSize: '12px', 
-        color: '#666', 
-        padding: '8px',
-        background: '#f8f9fa',
-        borderRadius: '4px',
-        border: '1px solid #dee2e6'
-      }}>
-        {enabled ? '✅ Control points are visible for curves' : '❌ Control points are hidden'}
-      </div>
+
     </div>
   );
 };
 
 export const ControlPointsRenderer: React.FC = () => {
-  const { paths, enabledFeatures, viewport } = useEditorStore();
+  const { paths, enabledFeatures, viewport, selection } = useEditorStore();
 
-  if (!enabledFeatures.has('control-points')) return null;
+  if (!paths || paths.length === 0) {
+    return null;
+  }
+
+  // Check if any sub-path is selected or any command is selected
+  const hasSelectedSubPath = selection.selectedSubPaths.length > 0;
+  const hasSelectedCommand = selection.selectedCommands.length > 0;
+  
+  // Show if feature is enabled OR if any sub-path is selected OR if any command is selected
+  const shouldShow = enabledFeatures.has('control-points') || hasSelectedSubPath || hasSelectedCommand;
+  
+  if (!shouldShow) {
+    return null;
+  }
 
   return (
     <>
       {paths.map((path) => 
-        path.subPaths.map((subPath) => 
-          subPath.commands.map((command, commandIndex) => {
+        path.subPaths.map((subPath) => {
+          // If feature is disabled, only show control points for selected sub-paths
+          const isSubPathSelected = selection.selectedSubPaths.includes(subPath.id);
+          const shouldShowSubPath = enabledFeatures.has('control-points') || isSubPathSelected;
+          
+          return subPath.commands.map((command, commandIndex) => {
             const position = getCommandPosition(command);
             if (!position) return null;
+            
+            const isCommandSelected = selection.selectedCommands.includes(command.id);
+            
+            // Show control points if:
+            // 1. Feature is enabled, OR
+            // 2. Sub-path is selected, OR 
+            // 3. This specific command is selected
+            const shouldShowCommand = shouldShowSubPath || isCommandSelected;
+            
+            if (!shouldShowCommand) return null;
             
             const radius = Math.max(6 / viewport.zoom, 6); // Minimum 6px for visibility
             
@@ -151,8 +169,8 @@ export const ControlPointsRenderer: React.FC = () => {
                 )}
               </g>
             );
-          })
-        )
+          });
+        })
       )}
     </>
   );

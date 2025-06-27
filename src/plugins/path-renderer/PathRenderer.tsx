@@ -29,28 +29,13 @@ export const PathRenderer: React.FC = () => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
-    console.log('Debug getSVGPoint:', {
-      clientX: e.clientX,
-      clientY: e.clientY,
-      rectLeft: rect.left,
-      rectTop: rect.top,
-      relativeX: x,
-      relativeY: y,
-      panX: viewport.pan.x,
-      panY: viewport.pan.y,
-      zoom: viewport.zoom
-    });
-    
     // Apply inverse transform: first inverse scale, then inverse translate
     // The SVG transform is: translate(pan.x, pan.y) scale(zoom)
     // So inverse is: scale(1/zoom) translate(-pan.x, -pan.y)
-    const result = {
+    return {
       x: x / viewport.zoom - viewport.pan.x,
       y: y / viewport.zoom - viewport.pan.y,
     };
-    
-    console.log('Final point:', result);
-    return result;
   };
 
   // Handle mouse down on selected subpath for dragging

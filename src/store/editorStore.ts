@@ -5,7 +5,7 @@ import { generateId } from '../utils/id-utils.js';
 import { loadPreferences, savePreferences, UserPreferences } from '../utils/persistence';
 import { decomposeIntoSubPaths, createNewPath, findSubPathContainingCommand } from '../utils/subpath-utils';
 import { parseSVGToSubPaths } from '../utils/svg-parser';
-import { findSubPathAtPoint } from '../utils/path-utils';
+import { findSubPathAtPoint, snapToGrid } from '../utils/path-utils';
 
 interface EditorActions {
   // Selection actions
@@ -68,9 +68,9 @@ const preferences = loadPreferences();
 const createInitialState = (): EditorState => {
   // Hardcoded SVG to load as initial state
   const hardcodedSVG = `
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
-  <path d="M 50 50 C 62 37 140 40 150 50 C 160 60 162 137 150 150 C 137 163 36 188 26 178 C 15 167 37 63 50 50 M 20 370 L 100 370 L 100 450 L 20 450 L 20 370 M 40 380 L 40 420 L 70 440 L 90 390 L 40 380 M 120 370 L 120 450 L 200 450 A 50 30 0 0 0 120 370 M 200 10 C 200 100 225 100 250 100 S 275 30 300 30 Q 320 100 350 100 T 400 10 Z" fill="rgba(0, 120, 204, 0.2)" stroke="#007acc" stroke-width="3" />
-  <path d="M 210 280 C 210 230 230 190 340 240 C 340 190 450 210 450 280 Z" fill="rgba(255, 107, 107, 0.2)" stroke="#ff6b6b" stroke-width="2" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <path d="M 190 160 C 200 150 280 150 290 160 C 300 170 300 250 290 260 C 280 270 180 300 170 290 C 160 280 180 170 190 160 M 20 190 L 100 190 L 100 270 L 20 270 L 20 190 M 40 200 L 40 240 L 70 260 L 90 210 L 40 200 M 380 170 L 380 250 L 460 250 A 50 30 0 0 0 380 170 M 90 40 C 90 130 120 130 140 130 S 170 60 190 60 Q 160 130 240 130 T 290 40 Z" fill="rgba(0, 120, 204, 0.2)" stroke="#007acc" stroke-width="3" />
+  <path d="M 490 160 C 360 80 470 30 490 90 C 500 30 600 60 490 160 Z" fill="rgba(255, 107, 107, 0.2)" stroke="#ff6b6b" stroke-width="2" />
 </svg>
   `;
 
@@ -119,7 +119,8 @@ const createInitialState = (): EditorState => {
       'zoom', 
       'pan', 
       'select', 
-      'grid', 
+      'grid',
+      ...(preferences.showCommandPoints ? ['command-points'] : []),
       ...(preferences.showControlPoints ? ['control-points'] : [])
     ]),
   };
@@ -135,6 +136,7 @@ const saveCurrentPreferences = (state: EditorState) => {
     gridSize: state.grid.size,
     snapToGrid: state.grid.snapToGrid,
     showControlPoints: state.enabledFeatures.has('control-points'),
+    showCommandPoints: state.enabledFeatures.has('command-points'),
   };
   savePreferences(preferences);
 };
@@ -289,17 +291,45 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             subPath.id === subPathId
               ? {
                   ...subPath,
-                  commands: subPath.commands.map((cmd) => ({
-                    ...cmd,
-                    // Move main position
-                    x: cmd.x !== undefined ? cmd.x + delta.x : cmd.x,
-                    y: cmd.y !== undefined ? cmd.y + delta.y : cmd.y,
-                    // Move control points if they exist
-                    x1: cmd.x1 !== undefined ? cmd.x1 + delta.x : cmd.x1,
-                    y1: cmd.y1 !== undefined ? cmd.y1 + delta.y : cmd.y1,
-                    x2: cmd.x2 !== undefined ? cmd.x2 + delta.x : cmd.x2,
-                    y2: cmd.y2 !== undefined ? cmd.y2 + delta.y : cmd.y2,
-                  })),
+                  commands: subPath.commands.map((cmd) => {
+                    // Calculate new positions
+                    let newX = cmd.x !== undefined ? cmd.x + delta.x : cmd.x;
+                    let newY = cmd.y !== undefined ? cmd.y + delta.y : cmd.y;
+                    let newX1 = cmd.x1 !== undefined ? cmd.x1 + delta.x : cmd.x1;
+                    let newY1 = cmd.y1 !== undefined ? cmd.y1 + delta.y : cmd.y1;
+                    let newX2 = cmd.x2 !== undefined ? cmd.x2 + delta.x : cmd.x2;
+                    let newY2 = cmd.y2 !== undefined ? cmd.y2 + delta.y : cmd.y2;
+
+                    // Apply snap to grid if enabled
+                    if (state.grid.snapToGrid) {
+                      if (newX !== undefined && newY !== undefined) {
+                        const snapped = snapToGrid({ x: newX, y: newY }, state.grid.size);
+                        newX = snapped.x;
+                        newY = snapped.y;
+                      }
+                      if (newX1 !== undefined && newY1 !== undefined) {
+                        const snapped = snapToGrid({ x: newX1, y: newY1 }, state.grid.size);
+                        newX1 = snapped.x;
+                        newY1 = snapped.y;
+                      }
+                      if (newX2 !== undefined && newY2 !== undefined) {
+                        const snapped = snapToGrid({ x: newX2, y: newY2 }, state.grid.size);
+                        newX2 = snapped.x;
+                        newY2 = snapped.y;
+                      }
+                    }
+
+                    return {
+                      ...cmd,
+                      // Apply the calculated positions
+                      x: newX,
+                      y: newY,
+                      x1: newX1,
+                      y1: newY1,
+                      x2: newX2,
+                      y2: newY2,
+                    };
+                  }),
                 }
               : subPath
           ),
@@ -641,8 +671,8 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         
         const newState = { enabledFeatures: newFeatures };
         
-        // Save preferences after updating features (especially control-points)
-        if (feature === 'control-points') {
+        // Save preferences after updating features
+        if (feature === 'control-points' || feature === 'command-points') {
           setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
         }
         
@@ -655,8 +685,8 @@ export const useEditorStore = create<EditorState & EditorActions>()(
           enabledFeatures: new Set([...state.enabledFeatures, feature]),
         };
         
-        // Save preferences after enabling features (especially control-points)
-        if (feature === 'control-points') {
+        // Save preferences after enabling features
+        if (feature === 'control-points' || feature === 'command-points') {
           setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
         }
         
@@ -670,8 +700,8 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         
         const newState = { enabledFeatures: newFeatures };
         
-        // Save preferences after disabling features (especially control-points)
-        if (feature === 'control-points') {
+        // Save preferences after disabling features
+        if (feature === 'control-points' || feature === 'command-points') {
           setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
         }
         
