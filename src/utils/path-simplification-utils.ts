@@ -186,193 +186,183 @@ export const simplifySegmentWithPointsOnPath = (
 };
 
 /**
- * Enhanced smoothing that converts ALL segments to cubic Bézier curves (C commands)
- * Based on reference implementation - ensures smoothed paths use only C commands
+ * Generate smoothed path using the exact algorithm from pseudocode
+ * Follows all 7 steps exactly as specified with all edge cases
  */
 export const generateSmoothPath = (
   subpathSegment: SVGCommand[],
-  gridSize: number = 1
-): SVGCommand[] => {
-  if (!subpathSegment || subpathSegment.length < 2) return subpathSegment;
+  commands: SVGCommand[],
+  updatePath: (commands: SVGCommand[], addToHistory: boolean) => void,
+  snapToGridValue: (value: number) => number,
+  historyState?: any
+): void => {
+  // VALIDACIÓN INICIAL
+  if (!subpathSegment || subpathSegment.length < 2) {
+    return; // Sin hacer nada
+  }
   
-  // Store original Z command state
-  const originalEndsWithZ = subpathSegment[subpathSegment.length - 1]?.command === 'Z' || 
-                             subpathSegment[subpathSegment.length - 1]?.command === 'z';
+  console.log('🔧 PASO 1: Normalización de comandos Z');
+  // PASO 1: NORMALIZACIÓN DE COMANDOS Z
+  // Los comandos Z deben convertirse a L para mejor suavizado
+  const normalizedSegment = normalizeZCommandsForSmoothing(subpathSegment);
+  const originalEndsWithZ = (subpathSegment[subpathSegment.length - 1]?.command === 'Z' || 
+                             subpathSegment[subpathSegment.length - 1]?.command === 'z');
   
-  // Store original first command
+  console.log('Original ends with Z:', originalEndsWithZ);
+  console.log('Normalized segment:', normalizedSegment.map(c => `${c.command}(${c.x},${c.y})`));
+  
+  console.log('🎨 PASO 2: Aplicar suavizado usando getPointSmooth()');
+  // PASO 2: APLICAR SUAVIZADO USANDO getPointSmooth()
+  // Esta función externa analiza el path y genera curvas Bézier suaves
+  let smoothedSegment = getPointSmooth(normalizedSegment);
+  
+  console.log('Smoothed segment after getPointSmooth:', smoothedSegment.map(c => `${c.command}(${c.x},${c.y})`));
+  
+  console.log('📐 PASO 3: Ajuste a grilla (Snap to Grid)');
+  // PASO 3: AJUSTE A GRILLA (SNAP TO GRID)
+  // Todos los puntos calculados se ajustan a la grilla definida
+  smoothedSegment = smoothedSegment.map((cmd) => {
+    const snappedCmd = { ...cmd };
+    
+    // Coordenadas principales
+    if ('x' in snappedCmd && snappedCmd.x !== undefined) snappedCmd.x = snapToGridValue(snappedCmd.x);
+    if ('y' in snappedCmd && snappedCmd.y !== undefined) snappedCmd.y = snapToGridValue(snappedCmd.y);
+    
+    // Puntos de control Bézier (para comandos C)
+    if ('x1' in snappedCmd && snappedCmd.x1 !== undefined) snappedCmd.x1 = snapToGridValue(snappedCmd.x1);
+    if ('y1' in snappedCmd && snappedCmd.y1 !== undefined) snappedCmd.y1 = snapToGridValue(snappedCmd.y1);
+    if ('x2' in snappedCmd && snappedCmd.x2 !== undefined) snappedCmd.x2 = snapToGridValue(snappedCmd.x2);
+    if ('y2' in snappedCmd && snappedCmd.y2 !== undefined) snappedCmd.y2 = snapToGridValue(snappedCmd.y2);
+    
+    return snappedCmd;
+  });
+  
+  console.log('After grid snapping:', smoothedSegment.map(c => `${c.command}(${c.x},${c.y})`));
+  
+  console.log('🔄 PASO 4: Manejo de paths cerrados (Caso de borde crítico)');
+  // PASO 4: MANEJO DE PATHS CERRADOS (CASO DE BORDE CRÍTICO)
+  if (originalEndsWithZ && smoothedSegment.length > 0) {
+    const lastCmd = smoothedSegment[smoothedSegment.length - 1];
+    const firstCmd = smoothedSegment[0];
+    
+    // Verificar si es necesario agregar línea de cierre
+    if (lastCmd && firstCmd && 
+        'x' in lastCmd && 'y' in lastCmd && 'x' in firstCmd && 'y' in firstCmd &&
+        lastCmd.x !== undefined && lastCmd.y !== undefined &&
+        firstCmd.x !== undefined && firstCmd.y !== undefined) {
+      
+      const distanciaX = Math.abs(lastCmd.x - firstCmd.x);
+      const distanciaY = Math.abs(lastCmd.y - firstCmd.y);
+      const epsilon = 1e-6; // Tolerancia para puntos "iguales"
+      
+      console.log(`Distance check: dx=${distanciaX}, dy=${distanciaY}, epsilon=${epsilon}`);
+      
+      if (distanciaX > epsilon || distanciaY > epsilon) {
+        // Agregar línea explícita para cerrar el path
+        const comandoCierre: SVGCommand = {
+          id: `${lastCmd.id || 'smooth'}-close`,
+          command: 'L',
+          x: firstCmd.x,
+          y: firstCmd.y,
+        };
+        smoothedSegment.push(comandoCierre);
+        console.log('Added closing line:', comandoCierre);
+      }
+    }
+    
+    // IMPORTANTE: NO se agrega comando 'Z' porque:
+    //   - Los algoritmos de suavizado funcionan mejor con líneas explícitas
+    //   - 'Z' puede crear discontinuidades en el suavizado
+    //   - El comportamiento visual es idéntico con 'L' al primer punto
+  }
+  
+  console.log('📍 PASO 5: Preservación de comando M inicial (Caso de borde)');
+  // PASO 5: PRESERVACIÓN DE COMANDO M INICIAL (CASO DE BORDE)
   const originalFirstCommand = subpathSegment[0];
   
-  // Normalize Z commands to L commands for proper smoothing
-  const normalizedSegment = normalizeZCommandsForSmoothing(subpathSegment);
-  
-  // Convert ALL segments to cubic Bézier curves
-  const smoothedCommands: SVGCommand[] = [];
-  const smoothingFactor = 0.25;
-  
-  for (let i = 0; i < normalizedSegment.length; i++) {
-    const current = normalizedSegment[i];
+  // Caso 1: El original era M pero el suavizado lo cambió
+  if (originalFirstCommand && originalFirstCommand.command === 'M' && 
+      smoothedSegment.length > 0 && smoothedSegment[0].command !== 'M') {
     
-    // Always preserve the first M command
-    if (i === 0) {
-      smoothedCommands.push({
-        ...current,
-        id: `${current.id || 'smooth'}-${i}`,
-        command: 'M',
-        x: snapToGridValue(current.x || 0, gridSize),
-        y: snapToGridValue(current.y || 0, gridSize)
-      });
-      continue;
-    }
+    const firstSmoothed = smoothedSegment[0];
     
-    // Get previous point for curve calculation
-    const prev = normalizedSegment[i - 1];
-    if (!prev || !('x' in prev) || !('y' in prev) || !('x' in current) || !('y' in current)) {
-      // Fallback: preserve as-is if we can't get coordinates
-      smoothedCommands.push({ ...current });
-      continue;
-    }
-    
-    const prevX = prev.x!;
-    const prevY = prev.y!;
-    const currX = current.x!;
-    const currY = current.y!;
-    
-    // Calculate segment vector
-    const segVecX = currX - prevX;
-    const segVecY = currY - prevY;
-    const segLength = Math.sqrt(segVecX * segVecX + segVecY * segVecY);
-    
-    // Skip if segment is too short (degenerate case)
-    if (segLength < 1e-6) {
-      continue; // Skip degenerate segments
-    }
-    
-    // Get next point to calculate smooth control points (if available)
-    const next = i < normalizedSegment.length - 1 ? normalizedSegment[i + 1] : null;
-    
-    let cp1X, cp1Y, cp2X, cp2Y;
-    
-    if (next && 'x' in next && 'y' in next) {
-      // We have a next point - use it for intelligent smoothing
-      const nextX = next.x!;
-      const nextY = next.y!;
+    if ('x' in originalFirstCommand && 'y' in originalFirstCommand &&
+        originalFirstCommand.x !== undefined && originalFirstCommand.y !== undefined &&
+        'x' in firstSmoothed && 'y' in firstSmoothed &&
+        firstSmoothed.x !== undefined && firstSmoothed.y !== undefined) {
       
-      // Input vector (from previous to current)
-      const inVecX = currX - prevX;
-      const inVecY = currY - prevY;
-      const inLength = Math.sqrt(inVecX * inVecX + inVecY * inVecY);
+      // Verificar si las coordenadas son diferentes
+      const coordenadasDiferentes = (
+        snapToGridValue(originalFirstCommand.x) !== snapToGridValue(firstSmoothed.x) ||
+        snapToGridValue(originalFirstCommand.y) !== snapToGridValue(firstSmoothed.y)
+      );
       
-      // Output vector (from current to next)
-      const outVecX = nextX - currX;
-      const outVecY = nextY - currY;
-      const outLength = Math.sqrt(outVecX * outVecX + outVecY * outVecY);
+      console.log('Coordinates different:', coordenadasDiferentes);
       
-      if (inLength > 1e-6 && outLength > 1e-6) {
-        // Calculate smooth tangent
-        const inNormX = inVecX / inLength;
-        const inNormY = inVecY / inLength;
-        const outNormX = outVecX / outLength;
-        const outNormY = outVecY / outLength;
-        
-        // Average tangent direction for smooth transitions
-        const tangentX = (inNormX + outNormX) * 0.5;
-        const tangentY = (inNormY + outNormY) * 0.5;
-        const tangentLength = Math.sqrt(tangentX * tangentX + tangentY * tangentY);
-        
-        if (tangentLength > 1e-6) {
-          const normTangentX = tangentX / tangentLength;
-          const normTangentY = tangentY / tangentLength;
-          
-          const controlDistance = Math.min(inLength, outLength) * smoothingFactor;
-          
-          // Place control points along the smooth tangent
-          cp1X = prevX + normTangentX * controlDistance;
-          cp1Y = prevY + normTangentY * controlDistance;
-          cp2X = currX - normTangentX * controlDistance;
-          cp2Y = currY - normTangentY * controlDistance;
-        } else {
-          // Fallback to simple control points
-          const controlDistance = segLength * smoothingFactor;
-          cp1X = prevX + segVecX * smoothingFactor;
-          cp1Y = prevY + segVecY * smoothingFactor;
-          cp2X = currX - segVecX * smoothingFactor;
-          cp2Y = currY - segVecY * smoothingFactor;
-        }
+      if (coordenadasDiferentes) {
+        // Insertar M explícito al inicio
+        const comandoM: SVGCommand = {
+          id: originalFirstCommand.id,
+          command: 'M',
+          x: snapToGridValue(originalFirstCommand.x),
+          y: snapToGridValue(originalFirstCommand.y),
+        };
+        smoothedSegment.unshift(comandoM);
+        console.log('Inserted explicit M command:', comandoM);
       } else {
-        // Fallback to linear control points
-        const controlDistance = segLength * smoothingFactor;
-        cp1X = prevX + segVecX * smoothingFactor;
-        cp1Y = prevY + segVecY * smoothingFactor;
-        cp2X = currX - segVecX * smoothingFactor;
-        cp2Y = currY - segVecY * smoothingFactor;
+        // Simplemente cambiar el tipo de comando
+        firstSmoothed.command = 'M';
+        console.log('Changed first command to M');
       }
-    } else {
-      // Last segment or no next point - use simple control points
-      const controlDistance = segLength * smoothingFactor;
-      cp1X = prevX + segVecX * smoothingFactor;
-      cp1Y = prevY + segVecY * smoothingFactor;
-      cp2X = currX - segVecX * smoothingFactor;
-      cp2Y = currY - segVecY * smoothingFactor;
     }
-    
-    // Create cubic Bézier curve command (ALL smoothed segments become C commands)
-    smoothedCommands.push({
-      id: `${current.id || 'smooth'}-${i}`,
-      command: 'C',
-      x1: snapToGridValue(cp1X, gridSize),
-      y1: snapToGridValue(cp1Y, gridSize),
-      x2: snapToGridValue(cp2X, gridSize),
-      y2: snapToGridValue(cp2Y, gridSize),
-      x: snapToGridValue(currX, gridSize),
-      y: snapToGridValue(currY, gridSize)
-    });
   }
   
-  // Handle Z command restoration for closed paths
-  // Following reference implementation - add explicit C curve instead of Z for better smoothing
-  if (originalEndsWithZ && smoothedCommands.length > 1) {
-    const firstCmd = smoothedCommands[0];
-    const lastCmd = smoothedCommands[smoothedCommands.length - 1];
+  // Caso 2: El original NO era M pero el suavizado lo convirtió a M
+  if (originalFirstCommand && originalFirstCommand.command !== 'M' && 
+      smoothedSegment.length > 0 && smoothedSegment[0].command === 'M') {
+    smoothedSegment[0].command = 'L';
+    console.log('Changed M back to L (original was not M)');
+  }
+  
+  console.log('🧹 PASO 6: Eliminación de comandos L redundantes (Optimización)');
+  // PASO 6: ELIMINACIÓN DE COMANDOS L REDUNDANTES (OPTIMIZACIÓN)
+  // Evitar M seguido inmediatamente de L al mismo punto
+  if (smoothedSegment.length > 1) {
+    const cmd0 = smoothedSegment[0];
+    const cmd1 = smoothedSegment[1];
     
-    // Only add closing curve if endpoints don't match
-    if (firstCmd && lastCmd && 
-        'x' in firstCmd && 'y' in firstCmd && 
-        'x' in lastCmd && 'y' in lastCmd) {
+    if (cmd0.command === 'M' && cmd1.command === 'L' &&
+        'x' in cmd0 && 'y' in cmd0 && 'x' in cmd1 && 'y' in cmd1 &&
+        cmd0.x !== undefined && cmd0.y !== undefined &&
+        cmd1.x !== undefined && cmd1.y !== undefined &&
+        cmd1.x === cmd0.x && cmd1.y === cmd0.y) {
       
-      const tolerance = gridSize * 0.5;
-      if (Math.abs(lastCmd.x! - firstCmd.x!) > tolerance || 
-          Math.abs(lastCmd.y! - firstCmd.y!) > tolerance) {
-        
-        // Calculate smooth closing curve
-        const closeVecX = firstCmd.x! - lastCmd.x!;
-        const closeVecY = firstCmd.y! - lastCmd.y!;
-        const closeLength = Math.sqrt(closeVecX * closeVecX + closeVecY * closeVecY);
-        
-        if (closeLength > 1e-6) {
-          const controlDistance = closeLength * smoothingFactor;
-          const cp1X = lastCmd.x! + closeVecX * smoothingFactor;
-          const cp1Y = lastCmd.y! + closeVecY * smoothingFactor;
-          const cp2X = firstCmd.x! - closeVecX * smoothingFactor;
-          const cp2Y = firstCmd.y! - closeVecY * smoothingFactor;
-          
-          // Add smooth closing curve (C command, not Z)
-          smoothedCommands.push({
-            id: `${lastCmd.id || 'smooth'}-close`,
-            command: 'C',
-            x1: snapToGridValue(cp1X, gridSize),
-            y1: snapToGridValue(cp1Y, gridSize),
-            x2: snapToGridValue(cp2X, gridSize),
-            y2: snapToGridValue(cp2Y, gridSize),
-            x: firstCmd.x,
-            y: firstCmd.y
-          });
-        }
-      }
-      // Note: Following reference, we don't add Z here for better smoothing results
+      smoothedSegment.splice(1, 1); // Eliminar L redundante
+      console.log('Removed redundant L command after M');
     }
   }
-
-  return smoothedCommands;
+  
+  console.log('🔄 PASO 7: Reemplazo en el array de comandos principal');
+  // PASO 7: REEMPLAZO EN EL ARRAY DE COMANDOS PRINCIPAL
+  // Encontrar dónde está el segmento original en el array completo
+  const startIndex = commands.findIndex((cmd) => cmd === subpathSegment[0]);
+  const endIndex = commands.findIndex((cmd) => cmd === subpathSegment[subpathSegment.length - 1]);
+  
+  console.log(`Found indices: start=${startIndex}, end=${endIndex}`);
+  
+  if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
+    console.error('No se pudieron encontrar índices del segmento');
+    return;
+  }
+  
+  // Crear nuevo array con el segmento suavizado
+  const newCommands = [...commands];
+  newCommands.splice(startIndex, endIndex - startIndex + 1, ...smoothedSegment);
+  
+  console.log('Final smoothed commands:', smoothedSegment.map(c => `${c.command}(${c.x},${c.y})`));
+  
+  // Actualizar el path en el estado (con historial)
+  updatePath(newCommands, true);
 };
 
 /**

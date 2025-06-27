@@ -22,32 +22,60 @@ export const PathSimplificationControls: React.FC = () => {
   const [simplifyTolerance, setSimplifyTolerance] = useState(0.1);
   const [simplifyDistance, setSimplifyDistance] = useState(10);
 
-  const { selectedCommands } = selection;
+  const { selectedCommands, selectedSubPaths } = selection;
   
-  // Check if selected commands are in the same subpath
-  const analysisResult = areCommandsInSameSubPath(selectedCommands, paths);
-  const { sameSubPath, subPath, pathId, commands: sortedCommands, startIndex, endIndex } = analysisResult;
+  // Determine what to simplify: selected commands OR selected subpaths
+  let targetSubPath: any = null;
+  let targetCommands: any[] = [];
+  let startIndex: number | undefined;
+  let endIndex: number | undefined;
+  let canSimplify = false;
   
-  const canSimplify = selectedCommands.length >= 2 && sameSubPath && sortedCommands && sortedCommands.length >= 2;
+  if (selectedCommands.length >= 2) {
+    // Use selected commands approach
+    const analysisResult = areCommandsInSameSubPath(selectedCommands, paths);
+    const result = analysisResult;
+    if (result.sameSubPath && result.subPath && result.commands && result.commands.length >= 2) {
+      targetSubPath = result.subPath;
+      targetCommands = result.commands;
+      startIndex = result.startIndex;
+      endIndex = result.endIndex;
+      canSimplify = true;
+    }
+  } else if (selectedSubPaths.length === 1) {
+    // Use selected subpath approach - simplify the entire subpath
+    const subPathId = selectedSubPaths[0];
+    for (const path of paths) {
+      const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
+      if (subPath && subPath.commands.length >= 2) {
+        targetSubPath = subPath;
+        targetCommands = subPath.commands;
+        startIndex = 0;
+        endIndex = subPath.commands.length - 1;
+        canSimplify = true;
+        break;
+      }
+    }
+  }
 
   const handleSimplify = () => {
-    if (!canSimplify || !subPath || !pathId || !sortedCommands || startIndex === undefined || endIndex === undefined) return;
+    if (!canSimplify || !targetSubPath || !targetCommands || startIndex === undefined || endIndex === undefined) return;
 
     // CRITICAL: Commands are already sorted by path order (not selection order)
-    // This guarantees that sortedCommands[0] is the first command in the path sequence
-    console.log('Simplification - sorted commands by path order:', sortedCommands.map(c => `${c.command}(${c.x},${c.y})`));
+    // This guarantees that targetCommands[0] is the first command in the path sequence
+    console.log('Simplification - sorted commands by path order:', targetCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
     console.log('Simplification - startIndex:', startIndex, 'endIndex:', endIndex);
 
     // Check if the selection starts with the subpath's M command
-    const isStartingFromM = startIndex === 0 && sortedCommands[0].command === 'M';
+    const isStartingFromM = startIndex === 0 && targetCommands[0].command === 'M';
     
     // Determine commands to process
-    let commandsToSimplify = [...sortedCommands];
+    let commandsToSimplify = [...targetCommands];
     let needsContextM = false;
     
     // If we're not starting from M, we need M for context
     if (!isStartingFromM) {
-      const subpathMCommand = subPath.commands[0]; // First command should be M
+      const subpathMCommand = targetSubPath.commands[0]; // First command should be M
       if (subpathMCommand && subpathMCommand.command === 'M') {
         commandsToSimplify.unshift(subpathMCommand);
         needsContextM = true;
@@ -64,10 +92,10 @@ export const PathSimplificationControls: React.FC = () => {
     );
 
     if (simplifiedCommands.length === 0) return;
-    console.log('Simplified commands:', simplifiedCommands.map(c => `${c.command}(${c.x},${c.y})`));
+    console.log('Simplified commands:', simplifiedCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
 
     // Create the new commands array for the entire subpath
-    let newSubPathCommands = [...subPath.commands];
+    let newSubPathCommands = [...targetSubPath.commands];
     
     // Determine what commands to use for replacement
     let commandsToReplace = simplifiedCommands;
@@ -76,7 +104,7 @@ export const PathSimplificationControls: React.FC = () => {
     if (needsContextM && simplifiedCommands.length > 0 && simplifiedCommands[0].command === 'M') {
       // We added M for context, so skip it in the replacement since it's not part of selection
       commandsToReplace = simplifiedCommands.slice(1);
-      console.log('Skipping context M, replacement commands:', commandsToReplace.map(c => `${c.command}(${c.x},${c.y})`));
+      console.log('Skipping context M, replacement commands:', commandsToReplace.map((c: any) => `${c.command}(${c.x},${c.y})`));
     }
     
     // Replace the selected range with simplified commands
@@ -95,10 +123,10 @@ export const PathSimplificationControls: React.FC = () => {
       }
     }
 
-    console.log('Final subpath commands:', newSubPathCommands.map(c => `${c.command}(${c.x},${c.y})`));
+    console.log('Final subpath commands:', newSubPathCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
     
     // Replace all commands in the subpath
-    replaceSubPathCommands(subPath.id, newSubPathCommands);
+    replaceSubPathCommands(targetSubPath.id, newSubPathCommands);
   };
 
   const buttonStyle: React.CSSProperties = {
@@ -152,10 +180,12 @@ export const PathSimplificationControls: React.FC = () => {
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '220px' }}>
         <div style={infoStyle}>
-          {selectedCommands.length === 0 && 'Select commands to simplify'}
-          {selectedCommands.length === 1 && 'Select at least 2 commands'}
-          {selectedCommands.length >= 2 && !sameSubPath && 'Commands must be in same subpath'}
-          {canSimplify && `${selectedCommands.length} commands selected`}
+          {selectedCommands.length === 0 && selectedSubPaths.length === 0 && 'Select commands or a subpath to simplify'}
+          {selectedCommands.length === 1 && selectedSubPaths.length === 0 && 'Select at least 2 commands'}
+          {selectedCommands.length >= 2 && !canSimplify && 'Commands must be in same subpath'}
+          {selectedSubPaths.length > 1 && 'Select only one subpath at a time'}
+          {canSimplify && selectedCommands.length > 0 && `${selectedCommands.length} commands selected`}
+          {canSimplify && selectedSubPaths.length === 1 && `Entire subpath selected`}
         </div>
 
         {/* Tolerance Controls */}
@@ -193,7 +223,7 @@ export const PathSimplificationControls: React.FC = () => {
           onClick={handleSimplify}
           disabled={!canSimplify}
           style={buttonStyle}
-          title={canSimplify ? 'Simplify selected commands using Ramer-Douglas-Peucker algorithm' : 'Select 2+ commands in same subpath'}
+          title={canSimplify ? 'Simplify selected commands/subpath using Ramer-Douglas-Peucker algorithm' : 'Select 2+ commands in same subpath or one subpath'}
         >
           <Minimize2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
           Simplify Path
@@ -201,7 +231,7 @@ export const PathSimplificationControls: React.FC = () => {
 
         {canSimplify && (
           <div style={{ ...infoStyle, background: '#e8f5e8' }}>
-            ✓ Ready to simplify {selectedCommands.length} commands
+            ✓ Ready to simplify {selectedCommands.length > 0 ? `${selectedCommands.length} commands` : 'entire subpath'}
           </div>
         )}
 
