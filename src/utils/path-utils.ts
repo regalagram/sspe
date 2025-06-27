@@ -18,6 +18,203 @@ export const subPathToString = (subPath: SVGSubPath): string => {
     .join(' ');
 };
 
+// Function to find which subpath contains a given point
+export const findSubPathAtPoint = (path: SVGPath, point: Point, tolerance: number = 15): SVGSubPath | null => {
+  let closestSubPath = null;
+  let minDistance = Infinity;
+
+  for (const subPath of path.subPaths) {
+    // Calculate the distance from the point to this subpath
+    const distance = getDistanceToSubPath(subPath, point);
+    
+    if (distance < tolerance && distance < minDistance) {
+      minDistance = distance;
+      closestSubPath = subPath;
+    }
+  }
+
+  return closestSubPath;
+};
+
+// Helper function to calculate distance from a point to a subpath
+const getDistanceToSubPath = (subPath: SVGSubPath, point: Point): number => {
+  let minDistance = Infinity;
+
+  // Calculate distance to each command point in the subpath
+  for (let i = 0; i < subPath.commands.length; i++) {
+    const command = subPath.commands[i];
+    
+    // Distance to main command point
+    if (command.x !== undefined && command.y !== undefined) {
+      const distance = Math.sqrt(
+        Math.pow(point.x - command.x, 2) + 
+        Math.pow(point.y - command.y, 2)
+      );
+      minDistance = Math.min(minDistance, distance);
+    }
+    
+    // Distance to control points for curves
+    if (command.x1 !== undefined && command.y1 !== undefined) {
+      const distance = Math.sqrt(
+        Math.pow(point.x - command.x1, 2) + 
+        Math.pow(point.y - command.y1, 2)
+      );
+      minDistance = Math.min(minDistance, distance);
+    }
+    
+    if (command.x2 !== undefined && command.y2 !== undefined) {
+      const distance = Math.sqrt(
+        Math.pow(point.x - command.x2, 2) + 
+        Math.pow(point.y - command.y2, 2)
+      );
+      minDistance = Math.min(minDistance, distance);
+    }
+
+    // For line segments, also check distance to the line between consecutive points
+    if (i > 0) {
+      const prevCommand = subPath.commands[i - 1];
+      if (prevCommand.x !== undefined && prevCommand.y !== undefined &&
+          command.x !== undefined && command.y !== undefined) {
+        const lineDistance = distanceToLineSegment(
+          point,
+          { x: prevCommand.x, y: prevCommand.y },
+          { x: command.x, y: command.y }
+        );
+        minDistance = Math.min(minDistance, lineDistance);
+      }
+    }
+  }
+
+  return minDistance;
+};
+
+// Helper function to calculate distance from a point to a line segment
+const distanceToLineSegment = (point: Point, lineStart: Point, lineEnd: Point): number => {
+  const A = point.x - lineStart.x;
+  const B = point.y - lineStart.y;
+  const C = lineEnd.x - lineStart.x;
+  const D = lineEnd.y - lineStart.y;
+
+  const dot = A * C + B * D;
+  const lenSq = C * C + D * D;
+  
+  if (lenSq === 0) {
+    // Line start and end are the same point
+    return Math.sqrt(A * A + B * B);
+  }
+  
+  let param = dot / lenSq;
+
+  let xx, yy;
+
+  if (param < 0) {
+    xx = lineStart.x;
+    yy = lineStart.y;
+  } else if (param > 1) {
+    xx = lineEnd.x;
+    yy = lineEnd.y;
+  } else {
+    xx = lineStart.x + param * C;
+    yy = lineStart.y + param * D;
+  }
+
+  const dx = point.x - xx;
+  const dy = point.y - yy;
+  return Math.sqrt(dx * dx + dy * dy);
+};
+
+// Helper function to get a contrasting color for selection feedback
+export const getContrastColor = (color: string): string => {
+  // Handle common color formats
+  if (!color || color === 'none' || color === 'transparent') {
+    return '#ff4444'; // Default red for transparent/none
+  }
+
+  // Convert color to RGB values
+  let r, g, b;
+  
+  if (color.startsWith('#')) {
+    // Hex color
+    const hex = color.slice(1);
+    if (hex.length === 3) {
+      r = parseInt(hex[0] + hex[0], 16);
+      g = parseInt(hex[1] + hex[1], 16);
+      b = parseInt(hex[2] + hex[2], 16);
+    } else if (hex.length === 6) {
+      r = parseInt(hex.slice(0, 2), 16);
+      g = parseInt(hex.slice(2, 4), 16);
+      b = parseInt(hex.slice(4, 6), 16);
+    } else {
+      return '#ff4444'; // Default red for invalid hex
+    }
+  } else if (color.startsWith('rgb')) {
+    // RGB/RGBA color
+    const match = color.match(/\d+/g);
+    if (match && match.length >= 3) {
+      r = parseInt(match[0]);
+      g = parseInt(match[1]);
+      b = parseInt(match[2]);
+    } else {
+      return '#ff4444'; // Default red for invalid rgb
+    }
+  } else {
+    // Named colors - use a simple mapping for common ones
+    const namedColors: { [key: string]: [number, number, number] } = {
+      'black': [0, 0, 0],
+      'white': [255, 255, 255],
+      'red': [255, 0, 0],
+      'green': [0, 128, 0],
+      'blue': [0, 0, 255],
+      'yellow': [255, 255, 0],
+      'cyan': [0, 255, 255],
+      'magenta': [255, 0, 255],
+      'orange': [255, 165, 0],
+      'purple': [128, 0, 128],
+      'brown': [165, 42, 42],
+      'pink': [255, 192, 203],
+      'gray': [128, 128, 128],
+      'grey': [128, 128, 128],
+    };
+    
+    const colorLower = color.toLowerCase();
+    if (namedColors[colorLower]) {
+      [r, g, b] = namedColors[colorLower];
+    } else {
+      return '#ff4444'; // Default red for unknown named colors
+    }
+  }
+
+  // Calculate luminance
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  
+  // Determine dominant color channel
+  const maxChannel = Math.max(r, g, b);
+  const isReddish = r === maxChannel;
+  const isGreenish = g === maxChannel;
+  const isBluish = b === maxChannel;
+  
+  // Choose contrasting color based on luminance and dominant color
+  if (luminance > 0.7) {
+    // Very light color - use dark contrasts
+    if (isBluish) return '#cc3300'; // Dark red for light blue
+    if (isGreenish) return '#6600cc'; // Dark purple for light green  
+    if (isReddish) return '#0066cc'; // Dark blue for light red
+    return '#333333'; // Dark gray for other light colors
+  } else if (luminance > 0.3) {
+    // Medium color - use bright contrasts
+    if (isBluish) return '#ff6600'; // Bright orange for medium blue
+    if (isGreenish) return '#ff3366'; // Bright pink for medium green
+    if (isReddish) return '#00ccff'; // Bright cyan for medium red
+    return '#ffff00'; // Bright yellow for other medium colors
+  } else {
+    // Dark color - use bright contrasts
+    if (isBluish) return '#ffcc00'; // Bright yellow for dark blue
+    if (isGreenish) return '#ff6699'; // Bright pink for dark green
+    if (isReddish) return '#66ff99'; // Bright cyan-green for dark red
+    return '#ffffff'; // White for other dark colors
+  }
+};
+
 export const commandToString = (command: SVGCommand): string => {
   const { id, command: cmd, ...params } = command;
   

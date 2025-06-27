@@ -5,6 +5,7 @@ import { generateId } from '../utils/id-utils.js';
 import { loadPreferences, savePreferences, UserPreferences } from '../utils/persistence';
 import { decomposeIntoSubPaths, createNewPath, findSubPathContainingCommand } from '../utils/subpath-utils';
 import { parseSVGToSubPaths } from '../utils/svg-parser';
+import { findSubPathAtPoint } from '../utils/path-utils';
 
 interface EditorActions {
   // Selection actions
@@ -13,6 +14,7 @@ interface EditorActions {
   selectCommand: (commandId: string) => void;
   selectMultiple: (ids: string[], type: 'paths' | 'subpaths' | 'commands') => void;
   clearSelection: () => void;
+  selectSubPathByPoint: (pathId: string, point: Point) => void;
   
   // Path manipulation actions
   addPath: (style?: PathStyle) => string;
@@ -208,6 +210,25 @@ export const useEditorStore = create<EditorState & EditorActions>()(
           selectedControlPoints: [],
         },
       })),
+
+    selectSubPathByPoint: (pathId, point) => {
+      const state = get();
+      const path = state.paths.find(p => p.id === pathId);
+      if (!path) return;
+
+      const foundSubPath = findSubPathAtPoint(path, point);
+
+      if (foundSubPath) {
+        set((state) => ({
+          selection: {
+            ...state.selection,
+            selectedSubPaths: [foundSubPath.id],
+            selectedPaths: [],
+            selectedCommands: [],
+          },
+        }));
+      }
+    },
     
     // Path manipulation actions
     addPath: (style = { fill: 'none', stroke: '#000000', strokeWidth: 2 }) => {
