@@ -2,22 +2,26 @@ import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
-import { ZoomIn, ZoomOut, RotateCcw, Maximize2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Target } from 'lucide-react';
 
 interface ZoomControlsProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onZoomToFit: () => void;
+  onZoomToSelection: () => void;
   onResetView: () => void;
   currentZoom: number;
+  hasSelection: boolean;
 }
 
 export const ZoomControls: React.FC<ZoomControlsProps> = ({
   onZoomIn,
   onZoomOut,
   onZoomToFit,
+  onZoomToSelection,
   onResetView,
   currentZoom,
+  hasSelection,
 }) => {
   const buttonStyle: React.CSSProperties = {
     padding: '8px 12px',
@@ -58,6 +62,17 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
       >
         <Maximize2 size={16} /> Fit
       </button>
+      {hasSelection && (
+        <button 
+          onClick={onZoomToSelection} 
+          title="Zoom to Selection (Ctrl+Shift+0)"
+          style={buttonStyle}
+          onMouseEnter={(e) => e.currentTarget.style.background = '#e9ecef'}
+          onMouseLeave={(e) => e.currentTarget.style.background = '#f8f9fa'}
+        >
+          <Target size={16} /> Fit Selection
+        </button>
+      )}
       <button 
         onClick={onResetView} 
         title="Reset View (Ctrl+R)"
@@ -82,7 +97,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
 };
 
 export const Zoom: React.FC = () => {
-  const { viewport, zoomIn, zoomOut, zoomToFit, resetView } = useEditorStore();
+  const { viewport, selection, zoomIn, zoomOut, zoomToFit, zoomToSelection, resetView } = useEditorStore();
 
   return (
     <DraggablePanel 
@@ -94,8 +109,10 @@ export const Zoom: React.FC = () => {
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onZoomToFit={zoomToFit}
+        onZoomToSelection={zoomToSelection}
         onResetView={resetView}
         currentZoom={viewport.zoom}
+        hasSelection={selection.selectedCommands.length > 0}
       />
     </DraggablePanel>
   );
@@ -146,6 +163,17 @@ export const ZoomPlugin: Plugin = {
       action: () => {
         const store = useEditorStore.getState();
         store.resetView();
+      }
+    },
+    {
+      key: '0',
+      modifiers: ['ctrl', 'shift'],
+      description: 'Zoom to Selection',
+      action: () => {
+        const store = useEditorStore.getState();
+        if (store.selection.selectedCommands.length > 0) {
+          store.zoomToSelection();
+        }
       }
     }
   ],

@@ -5,7 +5,7 @@ import { generateId } from '../utils/id-utils.js';
 import { loadPreferences, savePreferences, UserPreferences } from '../utils/persistence';
 import { decomposeIntoSubPaths, createNewPath, findSubPathContainingCommand } from '../utils/subpath-utils';
 import { parseSVGToSubPaths } from '../utils/svg-parser';
-import { findSubPathAtPoint, snapToGrid } from '../utils/path-utils';
+import { findSubPathAtPoint, snapToGrid, getAllPathsBounds, getSelectedElementsBounds } from '../utils/path-utils';
 
 interface EditorActions {
   // Selection actions
@@ -34,6 +34,7 @@ interface EditorActions {
   zoomIn: (center?: Point) => void;
   zoomOut: (center?: Point) => void;
   zoomToFit: () => void;
+  zoomToSelection: () => void;
   pan: (delta: Point) => void;
   setPan: (pan: Point) => void;
   resetView: () => void;
@@ -502,14 +503,130 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     },
     
     zoomToFit: () => {
-      // Implementation for zoom to fit
-      set((state) => ({
+      const state = get();
+      const { paths, viewport } = state;
+      
+      // Get bounding box of all paths
+      const bounds = getAllPathsBounds(paths);
+      
+      if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
+        // If no valid content, reset to default view
+        set({
+          viewport: {
+            ...viewport,
+            zoom: 1,
+            pan: { x: 0, y: 0 },
+          },
+        });
+        return;
+      }
+      
+      // Try to get actual SVG dimensions from DOM
+      let viewportWidth = viewport.viewBox.width;
+      let viewportHeight = viewport.viewBox.height;
+      
+      // Try to get real dimensions from the DOM if available
+      const svgElement = document.querySelector('svg');
+      if (svgElement) {
+        const rect = svgElement.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          viewportWidth = rect.width;
+          viewportHeight = rect.height;
+        }
+      }
+      
+      // Add some padding around the content (10% on each side)
+      const padding = 0.1;
+      const paddedWidth = Math.max(bounds.width * (1 + padding * 2), 1); // Minimum 1px
+      const paddedHeight = Math.max(bounds.height * (1 + padding * 2), 1); // Minimum 1px
+      
+      // Calculate zoom to fit content in viewport
+      const zoomX = viewportWidth / paddedWidth;
+      const zoomY = viewportHeight / paddedHeight;
+      let newZoom = Math.min(zoomX, zoomY);
+      
+      // Apply zoom limits: between 0.1x and 10x
+      newZoom = Math.max(0.1, Math.min(newZoom, 10));
+      
+      // Calculate center of content
+      const contentCenterX = bounds.x + bounds.width / 2;
+      const contentCenterY = bounds.y + bounds.height / 2;
+      
+      // Calculate pan to center the content in viewport
+      const viewportCenterX = viewportWidth / 2;
+      const viewportCenterY = viewportHeight / 2;
+      
+      // Calculate the pan offset needed to center the content
+      const newPanX = viewportCenterX - contentCenterX * newZoom;
+      const newPanY = viewportCenterY - contentCenterY * newZoom;
+      
+      set({
         viewport: {
-          ...state.viewport,
-          zoom: 1,
-          pan: { x: 0, y: 0 },
+          ...viewport,
+          zoom: newZoom,
+          pan: { x: newPanX, y: newPanY },
         },
-      }));
+      });
+    },
+    
+    zoomToSelection: () => {
+      const state = get();
+      const { paths, viewport, selection } = state;
+      
+      // Get bounding box of selected commands
+      const bounds = getSelectedElementsBounds(paths, selection.selectedCommands);
+      
+      if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
+        console.log('No valid selection to zoom to');
+        return;
+      }
+      
+      // Try to get actual SVG dimensions from DOM
+      let viewportWidth = viewport.viewBox.width;
+      let viewportHeight = viewport.viewBox.height;
+      
+      // Try to get real dimensions from the DOM if available
+      const svgElement = document.querySelector('svg');
+      if (svgElement) {
+        const rect = svgElement.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+          viewportWidth = rect.width;
+          viewportHeight = rect.height;
+        }
+      }
+      
+      // Add some padding around the selection (15% on each side for tighter fit)
+      const padding = 0.15;
+      const paddedWidth = Math.max(bounds.width * (1 + padding * 2), 1); // Minimum 1px
+      const paddedHeight = Math.max(bounds.height * (1 + padding * 2), 1); // Minimum 1px
+      
+      // Calculate zoom to fit selection in viewport
+      const zoomX = viewportWidth / paddedWidth;
+      const zoomY = viewportHeight / paddedHeight;
+      let newZoom = Math.min(zoomX, zoomY);
+      
+      // Apply zoom limits: between 0.1x and 20x (higher for selection)
+      newZoom = Math.max(0.1, Math.min(newZoom, 20));
+      
+      // Calculate center of selection
+      const selectionCenterX = bounds.x + bounds.width / 2;
+      const selectionCenterY = bounds.y + bounds.height / 2;
+      
+      // Calculate pan to center the selection in viewport
+      const viewportCenterX = viewportWidth / 2;
+      const viewportCenterY = viewportHeight / 2;
+      
+      // Calculate the pan offset needed to center the selection
+      const newPanX = viewportCenterX - selectionCenterX * newZoom;
+      const newPanY = viewportCenterY - selectionCenterY * newZoom;
+      
+      set({
+        viewport: {
+          ...viewport,
+          zoom: newZoom,
+          pan: { x: newPanX, y: newPanY },
+        },
+      });
     },
     
     pan: (delta) =>

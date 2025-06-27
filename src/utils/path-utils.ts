@@ -1379,3 +1379,85 @@ const isPointInsidePolygonNonZero = (point: Point, polygon: Point[]): boolean =>
 const isLeft = (p0: Point, p1: Point, p2: Point): number => {
   return (p1.x - p0.x) * (p2.y - p0.y) - (p2.x - p0.x) * (p1.y - p0.y);
 };
+
+export const getAllPathsBounds = (paths: SVGPath[]): BoundingBox | null => {
+  if (paths.length === 0) return null;
+  
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  
+  paths.forEach(path => {
+    const bounds = getPathBounds(path);
+    
+    // Skip empty bounds
+    if (!isFinite(bounds.x) || !isFinite(bounds.y) || bounds.width <= 0 || bounds.height <= 0) {
+      return;
+    }
+    
+    minX = Math.min(minX, bounds.x);
+    minY = Math.min(minY, bounds.y);
+    maxX = Math.max(maxX, bounds.x + bounds.width);
+    maxY = Math.max(maxY, bounds.y + bounds.height);
+  });
+  
+  // Return null if no valid bounds found
+  if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) {
+    return null;
+  }
+  
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY
+  };
+};
+
+export const getSelectedElementsBounds = (paths: SVGPath[], selectedCommandIds: string[]): BoundingBox | null => {
+  if (selectedCommandIds.length === 0) return null;
+  
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let hasValidBounds = false;
+  
+  paths.forEach(path => {
+    path.subPaths.forEach(subPath => {
+      subPath.commands.forEach(command => {
+        if (selectedCommandIds.includes(command.id)) {
+          // Add command position
+          if (command.x !== undefined && command.y !== undefined) {
+            minX = Math.min(minX, command.x);
+            maxX = Math.max(maxX, command.x);
+            minY = Math.min(minY, command.y);
+            maxY = Math.max(maxY, command.y);
+            hasValidBounds = true;
+          }
+          
+          // Add control points if they exist
+          if (command.x1 !== undefined && command.y1 !== undefined) {
+            minX = Math.min(minX, command.x1);
+            maxX = Math.max(maxX, command.x1);
+            minY = Math.min(minY, command.y1);
+            maxY = Math.max(maxY, command.y1);
+            hasValidBounds = true;
+          }
+          
+          if (command.x2 !== undefined && command.y2 !== undefined) {
+            minX = Math.min(minX, command.x2);
+            maxX = Math.max(maxX, command.x2);
+            minY = Math.min(minY, command.y2);
+            maxY = Math.max(maxY, command.y2);
+            hasValidBounds = true;
+          }
+        }
+      });
+    });
+  });
+  
+  if (!hasValidBounds) return null;
+  
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY
+  };
+};
