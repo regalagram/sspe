@@ -4,7 +4,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { getAllSubPaths } from '../../utils/subpath-utils';
 import { subPathToString } from '../../utils/path-utils';
-import { List, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { SVGPath, SVGSubPath } from '../../types';
 
 interface SubPathWireframeProps {
@@ -18,15 +18,15 @@ const SubPathWireframe: React.FC<SubPathWireframeProps> = ({ subPath, isSelected
   if (!pathData || subPath.commands.length === 0) {
     return (
       <div style={{
-        width: '32px',
-        height: '24px',
+        width: '100%',
+        height: '50px',
         border: '1px solid #ddd',
         borderRadius: '2px',
         backgroundColor: '#f9f9f9',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: '7px',
+        fontSize: '10px',
         color: '#999',
         flexShrink: 0
       }}>
@@ -39,6 +39,7 @@ const SubPathWireframe: React.FC<SubPathWireframeProps> = ({ subPath, isSelected
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   
   subPath.commands.forEach(cmd => {
+    // Main coordinates
     if (cmd.x !== undefined) {
       minX = Math.min(minX, cmd.x);
       maxX = Math.max(maxX, cmd.x);
@@ -47,7 +48,8 @@ const SubPathWireframe: React.FC<SubPathWireframeProps> = ({ subPath, isSelected
       minY = Math.min(minY, cmd.y);
       maxY = Math.max(maxY, cmd.y);
     }
-    // Also check control points for curves
+    
+    // Control points for curves
     if (cmd.x1 !== undefined) {
       minX = Math.min(minX, cmd.x1);
       maxX = Math.max(maxX, cmd.x1);
@@ -64,21 +66,36 @@ const SubPathWireframe: React.FC<SubPathWireframeProps> = ({ subPath, isSelected
       minY = Math.min(minY, cmd.y2);
       maxY = Math.max(maxY, cmd.y2);
     }
+    
+    // Special handling for arc commands (A)
+    if (cmd.command === 'A' && cmd.x !== undefined && cmd.y !== undefined && cmd.rx !== undefined && cmd.ry !== undefined) {
+      // For arcs, add the radii to ensure the full arc is visible
+      const centerX = cmd.x;
+      const centerY = cmd.y;
+      const rx = Math.abs(cmd.rx);
+      const ry = Math.abs(cmd.ry);
+      
+      // Expand bounds to include potential arc extremes
+      minX = Math.min(minX, centerX - rx);
+      maxX = Math.max(maxX, centerX + rx);
+      minY = Math.min(minY, centerY - ry);
+      maxY = Math.max(maxY, centerY + ry);
+    }
   });
 
   // Fallback if bounds couldn't be calculated
   if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) {
     return (
       <div style={{
-        width: '32px',
-        height: '24px',
+        width: '100%',
+        height: '50px',
         border: '1px solid #ddd',
         borderRadius: '2px',
         backgroundColor: '#f9f9f9',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: '7px',
+        fontSize: '10px',
         color: '#999',
         flexShrink: 0
       }}>
@@ -89,11 +106,19 @@ const SubPathWireframe: React.FC<SubPathWireframeProps> = ({ subPath, isSelected
 
   const width = Math.max(maxX - minX, 5); // Minimum width
   const height = Math.max(maxY - minY, 5); // Minimum height
-  const padding = Math.max(width * 0.1, height * 0.1, 1); // Dynamic padding
+  const padding = Math.max(width * 0.15, height * 0.15, 2); // Increased padding for better visibility
   
-  // Scale to fit in a 32x24 preview
-  const previewWidth = 32;
-  const previewHeight = 24;
+  // Calculate aspect ratio and dynamic height
+  const aspectRatio = height / width;
+  const maxPreviewHeight = 120; // Maximum height limit
+  const minPreviewHeight = 30;  // Minimum height limit
+  const baseWidth = 200; // Approximate container width for calculation
+  
+  // Calculate proportional height based on aspect ratio
+  let previewHeight = Math.round(baseWidth * aspectRatio);
+  
+  // Apply height constraints
+  previewHeight = Math.max(minPreviewHeight, Math.min(maxPreviewHeight, previewHeight));
 
   const viewBoxWidth = width + padding * 2;
   const viewBoxHeight = height + padding * 2;
@@ -106,7 +131,7 @@ const SubPathWireframe: React.FC<SubPathWireframeProps> = ({ subPath, isSelected
 
   return (
     <div style={{
-      width: `${previewWidth}px`,
+      width: '100%',
       height: `${previewHeight}px`,
       border: isSelected ? '1px solid #2196f3' : '1px solid #ddd',
       borderRadius: '2px',
@@ -118,10 +143,11 @@ const SubPathWireframe: React.FC<SubPathWireframeProps> = ({ subPath, isSelected
       flexShrink: 0
     }}>
       <svg
-        width={previewWidth}
-        height={previewHeight}
+        width="100%"
+        height="100%"
         viewBox={`${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`}
         style={{ display: 'block' }}
+        preserveAspectRatio="xMidYMid meet"
       >
         <path
           d={pathData}
@@ -177,11 +203,10 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
         }
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
         <SubPathWireframe subPath={subPath} isSelected={isSelected} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
-            <List size={11} color={isSelected ? '#2196f3' : '#666'} />
+        <div style={{ width: '100%', textAlign: 'center' }}>
+          <div style={{ marginBottom: '4px' }}>
             <span style={{ 
               fontWeight: '500', 
               color: isSelected ? '#2196f3' : '#333',
