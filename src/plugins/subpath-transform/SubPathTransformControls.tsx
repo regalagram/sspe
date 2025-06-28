@@ -53,6 +53,13 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
   const [translateY, setTranslateY] = useState(0);
   const [uniformScale, setUniformScale] = useState(true);
   
+  // Collapsible sections state
+  const [scaleExpanded, setScaleExpanded] = useState(false);
+  const [rotationExpanded, setRotationExpanded] = useState(false);
+  const [translationExpanded, setTranslationExpanded] = useState(false);
+  const [smoothingExpanded, setSmoothingExpanded] = useState(false);
+  const [simplificationExpanded, setSimplificationExpanded] = useState(false);
+  
   // Smoothing and Simplification settings with localStorage persistence
   const [simplifyTolerance, setSimplifyTolerance] = usePersistentState('pathSimplification.tolerance', 0.1);
   const [simplifyDistance, setSimplifyDistance] = usePersistentState('pathSimplification.distance', 10);
@@ -103,6 +110,8 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
     setRotation(0);
     setTranslateX(0);
     setTranslateY(0);
+    setSimplifyTolerance(0.1);
+    setSimplifyDistance(10);
   };
 
   // Smoothing functionality
@@ -440,6 +449,17 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
 
   const canApplySimplification = canApplySmoothing; // Same logic
 
+  // Check if there are values that can be reset
+  const hasValuesToReset = () => {
+    return scaleX !== 1 || 
+           scaleY !== 1 || 
+           rotation !== 0 || 
+           translateX !== 0 || 
+           translateY !== 0 || 
+           simplifyTolerance !== 0.1 || 
+           simplifyDistance !== 10;
+  };
+
   return (
     <DraggablePanel
       title="Transform"
@@ -469,63 +489,126 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
           <>
             {/* Scale Section */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#666', 
-                fontWeight: 'bold'
-              }}>
+              <div 
+                style={{ 
+                  fontSize: '12px', 
+                  color: '#666', 
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                onClick={() => setScaleExpanded(!scaleExpanded)}
+              >
+                <span style={{ transform: scaleExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
                 Scale
               </div>
               
-              <div>
-                <label style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '6px', 
-                  fontSize: '11px', 
-                  cursor: 'pointer',
-                  marginBottom: '4px'
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={uniformScale}
-                    onChange={(e) => setUniformScale(e.target.checked)}
-                    style={{ accentColor: '#007acc', cursor: 'pointer' }}
+              {scaleExpanded && (
+                <>
+                  <div>
+                    <label style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '6px', 
+                      fontSize: '11px', 
+                      cursor: 'pointer',
+                      marginBottom: '4px'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={uniformScale}
+                        onChange={(e) => setUniformScale(e.target.checked)}
+                        style={{ accentColor: '#007acc', cursor: 'pointer' }}
+                      />
+                      Uniform scale
+                    </label>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Scale X</div>
+                      <input
+                        type="number"
+                        value={scaleX}
+                        onChange={(e) => handleUniformScaleChange(parseFloat(e.target.value) || 1)}
+                        step="0.1"
+                        min="0.1"
+                        max="10"
+                        style={{ 
+                          width: '100%', 
+                          padding: '4px', 
+                          fontSize: '12px',
+                          border: '1px solid #ddd',
+                          borderRadius: '3px'
+                        }}
+                      />
+                    </div>
+                    
+                    {!uniformScale && (
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Scale Y</div>
+                        <input
+                          type="number"
+                          value={scaleY}
+                          onChange={(e) => handleScaleYChange(parseFloat(e.target.value) || 1)}
+                          step="0.1"
+                          min="0.1"
+                          max="10"
+                          style={{ 
+                            width: '100%', 
+                            padding: '4px', 
+                            fontSize: '12px',
+                            border: '1px solid #ddd',
+                            borderRadius: '3px'
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <PluginButton
+                    icon={<Maximize2 size={14} />}
+                    text="Scale"
+                    color="#007acc"
+                    active={false}
+                    disabled={false}
+                    onClick={handleScale}
                   />
-                  Uniform scale
-                </label>
+                </>
+              )}
+            </div>
+
+            {/* Rotation Section */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div 
+                style={{ 
+                  fontSize: '12px', 
+                  color: '#666', 
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                onClick={() => setRotationExpanded(!rotationExpanded)}
+              >
+                <span style={{ transform: rotationExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
+                Rotation
               </div>
               
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Scale X</div>
-                  <input
-                    type="number"
-                    value={scaleX}
-                    onChange={(e) => handleUniformScaleChange(parseFloat(e.target.value) || 1)}
-                    step="0.1"
-                    min="0.1"
-                    max="10"
-                    style={{ 
-                      width: '100%', 
-                      padding: '4px', 
-                      fontSize: '12px',
-                      border: '1px solid #ddd',
-                      borderRadius: '3px'
-                    }}
-                  />
-                </div>
-                
-                {!uniformScale && (
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Scale Y</div>
+              {rotationExpanded && (
+                <>
+                  <div>
+                    <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Angle (degrees)</div>
                     <input
                       type="number"
-                      value={scaleY}
-                      onChange={(e) => handleScaleYChange(parseFloat(e.target.value) || 1)}
-                      step="0.1"
-                      min="0.1"
-                      max="10"
+                      value={rotation}
+                      onChange={(e) => setRotation(parseFloat(e.target.value) || 0)}
+                      step="15"
                       style={{ 
                         width: '100%', 
                         padding: '4px', 
@@ -535,364 +618,318 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                       }}
                     />
                   </div>
-                )}
-              </div>
-              
-              <PluginButton
-                icon={<Maximize2 size={14} />}
-                text="Apply Scale"
-                color="#007acc"
-                active={false}
-                disabled={false}
-                onClick={handleScale}
-              />
-            </div>
-
-            {/* Rotation Section */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#666', 
-                fontWeight: 'bold'
-              }}>
-                Rotate
-              </div>
-              
-              <div>
-                <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Angle (degrees)</div>
-                <input
-                  type="number"
-                  value={rotation}
-                  onChange={(e) => setRotation(parseFloat(e.target.value) || 0)}
-                  step="15"
-                  style={{ 
-                    width: '100%', 
-                    padding: '4px', 
-                    fontSize: '12px',
-                    border: '1px solid #ddd',
-                    borderRadius: '3px'
-                  }}
-                />
-              </div>
-              
-              <div style={{ 
-                display: 'grid', 
-                gridTemplateColumns: '1fr 1fr',
-                gap: '4px'
-              }}>
-                {[
-                  { angle: 0, icon: <ArrowUp size={12} /> },
-                  { angle: 90, icon: <RotateCw size={12} /> },
-                  { angle: 180, icon: <ArrowDown size={12} /> },
-                  { angle: 270, icon: <RotateCcw size={12} /> }
-                ].map(({ angle, icon }) => (
-                  <button
-                    key={angle}
-                    onClick={() => setRotation(angle)}
-                    style={{
-                      padding: '4px 8px',
-                      background: rotation === angle ? '#007acc' : '#f5f5f5',
-                      color: rotation === angle ? 'white' : '#333',
-                      border: 'none',
-                      borderRadius: '3px',
-                      cursor: 'pointer',
-                      fontSize: '10px',
-                      fontWeight: '500',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '2px'
-                    }}
-                  >
-                    {icon} {angle}°
-                  </button>
-                ))}
-              </div>
-              
-              <PluginButton
-                icon={<RotateCw size={14} />}
-                text="Apply Rotation"
-                color="#007acc"
-                active={false}
-                disabled={false}
-                onClick={handleRotate}
-              />
+                  
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '4px'
+                  }}>
+                    {[
+                      { angle: 0, icon: <ArrowUp size={12} /> },
+                      { angle: 90, icon: <RotateCw size={12} /> },
+                      { angle: 180, icon: <ArrowDown size={12} /> },
+                      { angle: 270, icon: <RotateCcw size={12} /> }
+                    ].map(({ angle, icon }) => (
+                      <button
+                        key={angle}
+                        onClick={() => setRotation(angle)}
+                        style={{
+                          padding: '4px 8px',
+                          background: rotation === angle ? '#007acc' : '#f5f5f5',
+                          color: rotation === angle ? 'white' : '#333',
+                          border: 'none',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '10px',
+                          fontWeight: '500',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '2px'
+                        }}
+                      >
+                        {icon} {angle}°
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <PluginButton
+                    icon={<RotateCw size={14} />}
+                    text="Rotate"
+                    color="#007acc"
+                    active={false}
+                    disabled={false}
+                    onClick={handleRotate}
+                  />
+                </>
+              )}
             </div>
 
             {/* Translation Section */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#666', 
-                fontWeight: 'bold'
-              }}>
-                Translate
+              <div 
+                style={{ 
+                  fontSize: '12px', 
+                  color: '#666', 
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                onClick={() => setTranslationExpanded(!translationExpanded)}
+              >
+                <span style={{ transform: translationExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
+                Translation
               </div>
               
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Translate X</div>
-                  <input
-                    type="number"
-                    value={translateX}
-                    onChange={(e) => setTranslateX(parseFloat(e.target.value) || 0)}
-                    step="1"
-                    style={{ 
-                      width: '100%', 
-                      padding: '4px', 
-                      fontSize: '12px',
-                      border: '1px solid #ddd',
-                      borderRadius: '3px'
-                    }}
+              {translationExpanded && (
+                <>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Translate X</div>
+                      <input
+                        type="number"
+                        value={translateX}
+                        onChange={(e) => setTranslateX(parseFloat(e.target.value) || 0)}
+                        step="1"
+                        style={{ 
+                          width: '100%', 
+                          padding: '4px', 
+                          fontSize: '12px',
+                          border: '1px solid #ddd',
+                          borderRadius: '3px'
+                        }}
+                      />
+                    </div>
+                    
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Translate Y</div>
+                      <input
+                        type="number"
+                        value={translateY}
+                        onChange={(e) => setTranslateY(parseFloat(e.target.value) || 0)}
+                        step="1"
+                        style={{ 
+                          width: '100%', 
+                          padding: '4px', 
+                          fontSize: '12px',
+                          border: '1px solid #ddd',
+                          borderRadius: '3px'
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: '2px',
+                    justifyContent: 'center'
+                  }}>
+                    <button
+                      onClick={() => { setTranslateX(0); setTranslateY(-10); }}
+                      style={{
+                        padding: '4px 8px',
+                        background: '#f5f5f5',
+                        color: '#333',
+                        border: 'none',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        fontSize: '10px',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '2px'
+                      }}
+                    >
+                      <ArrowUp size={12} /> 10
+                    </button>
+                    <button
+                      onClick={() => { setTranslateX(-10); setTranslateY(0); }}
+                      style={{
+                        padding: '4px 8px',
+                        background: '#f5f5f5',
+                        color: '#333',
+                        border: 'none',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        fontSize: '10px',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '2px'
+                      }}
+                    >
+                      <ArrowLeft size={12} /> 10
+                    </button>
+                    <button
+                      onClick={() => { setTranslateX(10); setTranslateY(0); }}
+                      style={{
+                        padding: '4px 8px',
+                        background: '#f5f5f5',
+                        color: '#333',
+                        border: 'none',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        fontSize: '10px',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '2px'
+                      }}
+                    >
+                      <ArrowRight size={12} /> 10
+                    </button>
+                    <button
+                      onClick={() => { setTranslateX(0); setTranslateY(10); }}
+                      style={{
+                        padding: '4px 8px',
+                        background: '#f5f5f5',
+                        color: '#333',
+                        border: 'none',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        fontSize: '10px',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '2px'
+                      }}
+                    >
+                      <ArrowDown size={12} /> 10
+                    </button>
+                  </div>
+                  
+                  <PluginButton
+                    icon={<Move size={14} />}
+                    text="Translate"
+                    color="#007acc"
+                    active={false}
+                    disabled={false}
+                    onClick={handleTranslate}
                   />
-                </div>
-                
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Translate Y</div>
-                  <input
-                    type="number"
-                    value={translateY}
-                    onChange={(e) => setTranslateY(parseFloat(e.target.value) || 0)}
-                    step="1"
-                    style={{ 
-                      width: '100%', 
-                      padding: '4px', 
-                      fontSize: '12px',
-                      border: '1px solid #ddd',
-                      borderRadius: '3px'
-                    }}
-                  />
-                </div>
-              </div>
-              
-              <div style={{ 
-                display: 'flex', 
-                flexDirection: 'column',
-                gap: '2px',
-                alignItems: 'center'
-              }}>
-                <button
-                  onClick={() => { setTranslateX(0); setTranslateY(-10); }}
-                  style={{
-                    padding: '4px 8px',
-                    background: '#f5f5f5',
-                    color: '#333',
-                    border: 'none',
-                    borderRadius: '3px',
-                    cursor: 'pointer',
-                    fontSize: '10px',
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '2px'
-                  }}
-                >
-                  <ArrowUp size={12} /> 10
-                </button>
-                <div style={{ 
-                  display: 'flex', 
-                  gap: '2px',
-                  alignItems: 'center'
-                }}>
-                  <button
-                    onClick={() => { setTranslateX(-10); setTranslateY(0); }}
-                    style={{
-                      padding: '4px 8px',
-                      background: '#f5f5f5',
-                      color: '#333',
-                      border: 'none',
-                      borderRadius: '3px',
-                      cursor: 'pointer',
-                      fontSize: '10px',
-                      fontWeight: '500',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '2px'
-                    }}
-                  >
-                    <ArrowLeft size={12} /> 10
-                  </button>
-                  <button
-                    onClick={() => { setTranslateX(10); setTranslateY(0); }}
-                    style={{
-                      padding: '4px 8px',
-                      background: '#f5f5f5',
-                      color: '#333',
-                      border: 'none',
-                      borderRadius: '3px',
-                      cursor: 'pointer',
-                      fontSize: '10px',
-                      fontWeight: '500',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '2px'
-                    }}
-                  >
-                    <ArrowRight size={12} /> 10
-                  </button>
-                </div>
-                <button
-                  onClick={() => { setTranslateX(0); setTranslateY(10); }}
-                  style={{
-                    padding: '4px 8px',
-                    background: '#f5f5f5',
-                    color: '#333',
-                    border: 'none',
-                    borderRadius: '3px',
-                    cursor: 'pointer',
-                    fontSize: '10px',
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '2px'
-                  }}
-                >
-                  <ArrowDown size={12} /> 10
-                </button>
-              </div>
-              
-              <PluginButton
-                icon={<Move size={14} />}
-                text="Apply Translation"
-                color="#007acc"
-                active={false}
-                disabled={false}
-                onClick={handleTranslate}
-              />
+                </>
+              )}
             </div>
 
             {/* Smoothing Section */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#666', 
-                fontWeight: 'bold'
-              }}>
+              <div 
+                style={{ 
+                  fontSize: '12px', 
+                  color: '#666', 
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                onClick={() => setSmoothingExpanded(!smoothingExpanded)}
+              >
+                <span style={{ transform: smoothingExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
                 Smoothing
               </div>
               
-              <PluginButton
-                icon={<Waves size={14} />}
-                text="Apply Smoothing"
-                color="#28a745"
-                active={false}
-                disabled={!canApplySmoothing()}
-                onClick={handleSmooth}
-              />
+              {smoothingExpanded && (
+                <PluginButton
+                  icon={<Waves size={14} />}
+                  text="Smooth"
+                  color="#007acc"
+                  active={false}
+                  disabled={!canApplySmoothing()}
+                  onClick={handleSmooth}
+                />
+              )}
             </div>
 
             {/* Simplification Section */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ 
-                fontSize: '12px', 
-                color: '#666', 
-                fontWeight: 'bold'
-              }}>
+              <div 
+                style={{ 
+                  fontSize: '12px', 
+                  color: '#666', 
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                onClick={() => setSimplificationExpanded(!simplificationExpanded)}
+              >
+                <span style={{ transform: simplificationExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
                 Simplification
               </div>
               
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '6px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <label style={{ fontSize: '10px', color: '#666', minWidth: 50 }}>
-                    Tolerance
-                  </label>
-                  <input
-                    type="number"
-                    min="0.01"
-                    max="1"
-                    step="0.01"
-                    value={simplifyTolerance}
-                    onChange={(e) => setSimplifyTolerance(parseFloat(e.target.value))}
-                    style={{ 
-                      flex: 1,
-                      padding: '2px 4px', 
-                      fontSize: '11px',
-                      border: '1px solid #ddd',
-                      borderRadius: '3px'
-                    }}
+              {simplificationExpanded && (
+                <>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Tolerance</div>
+                      <input
+                        type="number"
+                        value={simplifyTolerance}
+                        onChange={(e) => setSimplifyTolerance(parseFloat(e.target.value) || 0.1)}
+                        min="0.01"
+                        max="1"
+                        step="0.01"
+                        style={{ 
+                          width: '100%', 
+                          padding: '4px', 
+                          fontSize: '12px',
+                          border: '1px solid #ddd',
+                          borderRadius: '3px'
+                        }}
+                      />
+                    </div>
+                    
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Distance</div>
+                      <input
+                        type="number"
+                        value={simplifyDistance}
+                        onChange={(e) => setSimplifyDistance(parseInt(e.target.value) || 10)}
+                        min="1"
+                        max="50"
+                        step="1"
+                        style={{ 
+                          width: '100%', 
+                          padding: '4px', 
+                          fontSize: '12px',
+                          border: '1px solid #ddd',
+                          borderRadius: '3px'
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <PluginButton
+                    icon={<Minimize2 size={14} />}
+                    text="Simplificate"
+                    color="#007acc"
+                    active={false}
+                    disabled={!canApplySimplification()}
+                    onClick={handleSimplify}
                   />
-                  <button
-                    onClick={() => setSimplifyTolerance(0.1)}
-                    style={{ 
-                      fontSize: '9px', 
-                      padding: '1px 4px', 
-                      border: '1px solid #ddd', 
-                      borderRadius: '2px', 
-                      background: '#f8f9fa',
-                      cursor: 'pointer'
-                    }}
-                    title="Reset to default (0.1)"
-                  >
-                    Reset
-                  </button>
-                </div>
+                </>
+              )}
+            </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <label style={{ fontSize: '10px', color: '#666', minWidth: 50 }}>
-                    Distance
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="50"
-                    step="1"
-                    value={simplifyDistance}
-                    onChange={(e) => setSimplifyDistance(parseInt(e.target.value))}
-                    style={{ 
-                      flex: 1,
-                      padding: '2px 4px', 
-                      fontSize: '11px',
-                      border: '1px solid #ddd',
-                      borderRadius: '3px'
-                    }}
-                  />
-                  <button
-                    onClick={() => setSimplifyDistance(10)}
-                    style={{ 
-                      fontSize: '9px', 
-                      padding: '1px 4px', 
-                      border: '1px solid #ddd', 
-                      borderRadius: '2px', 
-                      background: '#f8f9fa',
-                      cursor: 'pointer'
-                    }}
-                    title="Reset to default (10px)"
-                  >
-                    Reset
-                  </button>
-                </div>
+            {/* Reset Section - Only visible when there are values to reset */}
+            {hasValuesToReset() && (
+              <div style={{ paddingTop: '8px', borderTop: '1px solid #eee' }}>
+                <PluginButton
+                  icon={<RotateCcw size={14} />}
+                  text="Reset Values"
+                  color="#6c757d"
+                  active={false}
+                  disabled={false}
+                  onClick={resetTransforms}
+                />
               </div>
-              
-              <PluginButton
-                icon={<Minimize2 size={14} />}
-                text="Apply Simplification"
-                color="#007acc"
-                active={false}
-                disabled={!canApplySimplification()}
-                onClick={handleSimplify}
-              />
-            </div>
-
-            {/* Reset Section */}
-            <div style={{ paddingTop: '8px', borderTop: '1px solid #eee' }}>
-              <PluginButton
-                icon={<RotateCcw size={14} />}
-                text="Reset Values"
-                color="#6c757d"
-                active={false}
-                disabled={false}
-                onClick={resetTransforms}
-              />
-            </div>
-            
-            <div style={{ 
-              fontSize: '10px', 
-              color: '#666', 
-              textAlign: 'center',
-              paddingTop: '4px'
-            }}>
-              Selected: {selection.selectedSubPaths.length} subpath{selection.selectedSubPaths.length !== 1 ? 's' : ''}
-            </div>
+            )}
           </>
         )}
       </div>
