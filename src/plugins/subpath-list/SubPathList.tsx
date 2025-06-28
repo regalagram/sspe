@@ -294,7 +294,7 @@ export const SubPathListComponent: React.FC = () => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxWidth: '174px'  }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
         <span style={{ fontSize: '11px', color: '#666', fontWeight: 500 }}>
           {subPathsList.length} Sub-Path{subPathsList.length !== 1 ? 's' : ''} Available
