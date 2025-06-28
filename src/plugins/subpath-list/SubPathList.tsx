@@ -166,7 +166,7 @@ interface SubPathListItemProps {
   path: SVGPath;
   subPath: SVGSubPath;
   isSelected: boolean;
-  onSelect: () => void;
+  onSelect: (e: React.MouseEvent) => void;
 }
 
 const SubPathListItem: React.FC<SubPathListItemProps> = ({
@@ -228,7 +228,14 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
 };
 
 export const SubPathListComponent: React.FC = () => {
-  const { paths, selection, selectSubPath, clearSelection, zoomToSubPath } = useEditorStore();
+  const { 
+    paths, 
+    selection, 
+    selectSubPath, 
+    selectSubPathMultiple,
+    clearSelection, 
+    zoomToSubPath 
+  } = useEditorStore();
   // Estado local para mantener la lista de sub-paths
   const [subPathsList, setSubPathsList] = useState<Array<{ path: SVGPath; subPath: SVGSubPath }>>([]);
   // Estado local para el toggle de auto-zoom
@@ -266,18 +273,24 @@ export const SubPathListComponent: React.FC = () => {
     }
   }, [selection.selectedSubPaths, subPathsList]);
 
-  const handleSubPathSelect = (subPathId: string) => {
-    if (selection.selectedSubPaths.includes(subPathId)) {
+  const handleSubPathSelect = (subPathId: string, isShiftPressed = false) => {
+    if (isShiftPressed) {
+      // Use the new multiple selection logic
+      selectSubPathMultiple(subPathId, true);
+    } else if (selection.selectedSubPaths.includes(subPathId) && selection.selectedSubPaths.length === 1) {
+      // Solo desmarcar si es el único seleccionado y no se mantiene shift
       clearSelection();
     } else {
-      selectSubPath(subPathId);
-      if (autoZoom) {
-        // Timeout para asegurar que el estado de selección se actualice antes del zoom
-        if (zoomTimeout.current) clearTimeout(zoomTimeout.current);
-        zoomTimeout.current = setTimeout(() => {
-          zoomToSubPath();
-        }, 50);
-      }
+      // Comportamiento normal de selección
+      selectSubPathMultiple(subPathId, false);
+    }
+    
+    if (autoZoom && !isShiftPressed) {
+      // Timeout para asegurar que el estado de selección se actualice antes del zoom
+      if (zoomTimeout.current) clearTimeout(zoomTimeout.current);
+      zoomTimeout.current = setTimeout(() => {
+        zoomToSubPath();
+      }, 50);
     }
   };
 
@@ -300,6 +313,26 @@ export const SubPathListComponent: React.FC = () => {
         <span style={{ fontSize: '11px', color: '#666', fontWeight: 500 }}>
           {subPathsList.length} Sub-Path{subPathsList.length !== 1 ? 's' : ''} Available
         </span>
+        {selection.selectedSubPaths.length > 1 && (
+          <span style={{ 
+            fontSize: '10px', 
+            color: '#2196f3', 
+            backgroundColor: '#e3f2fd',
+            padding: '2px 6px',
+            borderRadius: '3px',
+            fontWeight: 500
+          }}>
+            {selection.selectedSubPaths.length} selected
+          </span>
+        )}
+      </div>
+      <div style={{ 
+        fontSize: '10px', 
+        color: '#999', 
+        fontStyle: 'italic',
+        marginBottom: '4px'
+      }}>
+        Hold Shift + Click to select multiple sub-paths
       </div>
       <div style={{ 
         maxHeight: '300px', 
@@ -315,7 +348,7 @@ export const SubPathListComponent: React.FC = () => {
               path={path}
               subPath={subPath}
               isSelected={selection.selectedSubPaths.includes(subPath.id)}
-              onSelect={() => handleSubPathSelect(subPath.id)}
+              onSelect={(e) => handleSubPathSelect(subPath.id, e.shiftKey)}
             />
           </div>
         ))}
@@ -356,6 +389,18 @@ export const SubPathListPlugin: Plugin = {
         const panel = document.querySelector('#subpath-list');
         if (panel) {
           panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    },
+    {
+      key: 'a',
+      modifiers: ['ctrl', 'shift'],
+      description: 'Select All Sub-Paths',
+      action: () => {
+        const store = useEditorStore.getState();
+        const allSubPathIds = getAllSubPaths(store.paths).map(({ subPath }) => subPath.id);
+        if (allSubPathIds.length > 0) {
+          store.selectMultiple(allSubPathIds, 'subpaths');
         }
       }
     }

@@ -5,7 +5,17 @@ import { subPathToString, getContrastColor, subPathToStringInContext, findSubPat
 import { getSVGPoint } from '../../utils/transform-utils';
 
 export const PathRenderer: React.FC = () => {
-  const { paths, selection, viewport, selectSubPathByPoint, moveSubPath, pushToHistory, renderVersion, enabledFeatures } = useEditorStore();
+  const { 
+    paths, 
+    selection, 
+    viewport, 
+    selectSubPathByPoint, 
+    selectSubPathMultiple,
+    moveSubPath, 
+    pushToHistory, 
+    renderVersion, 
+    enabledFeatures 
+  } = useEditorStore();
   const svgRef = useRef<SVGSVGElement>(null);
   
   // Drag state
@@ -146,7 +156,7 @@ export const PathRenderer: React.FC = () => {
               const svgElement = (e.target as SVGPathElement).closest('svg');
               if (svgElement) {
                 const point = getTransformedPoint(e as React.MouseEvent<SVGElement>, svgElement);
-                selectSubPathByPoint(path.id, point);
+                selectSubPathByPoint(path.id, point, e.shiftKey);
               }
             }}
           />

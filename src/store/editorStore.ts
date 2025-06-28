@@ -12,10 +12,11 @@ interface EditorActions {
   // Selection actions
   selectPath: (pathId: string) => void;
   selectSubPath: (subPathId: string) => void;
+  selectSubPathMultiple: (subPathId: string, isShiftPressed?: boolean) => void;
   selectCommand: (commandId: string) => void;
   selectMultiple: (ids: string[], type: 'paths' | 'subpaths' | 'commands') => void;
   clearSelection: () => void;
-  selectSubPathByPoint: (pathId: string, point: Point) => void;
+  selectSubPathByPoint: (pathId: string, point: Point, isShiftPressed?: boolean) => void;
   moveSubPath: (subPathId: string, delta: Point) => void;
   
   // Transform actions
@@ -215,6 +216,46 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         },
       })),
       
+    selectSubPathMultiple: (subPathId, isShiftPressed = false) =>
+      set((state) => {
+        if (isShiftPressed && state.selection.selectedSubPaths.length > 0) {
+          // Si Shift está presionado y hay sub-paths seleccionados
+          const currentSelection = state.selection.selectedSubPaths;
+          
+          if (currentSelection.includes(subPathId)) {
+            // Si ya está seleccionado, lo removemos de la selección
+            return {
+              selection: {
+                ...state.selection,
+                selectedSubPaths: currentSelection.filter(id => id !== subPathId),
+                selectedPaths: [],
+                selectedCommands: [],
+              },
+            };
+          } else {
+            // Si no está seleccionado, lo agregamos a la selección
+            return {
+              selection: {
+                ...state.selection,
+                selectedSubPaths: [...currentSelection, subPathId],
+                selectedPaths: [],
+                selectedCommands: [],
+              },
+            };
+          }
+        } else {
+          // Comportamiento normal: seleccionar solo este sub-path
+          return {
+            selection: {
+              ...state.selection,
+              selectedSubPaths: [subPathId],
+              selectedPaths: [],
+              selectedCommands: [],
+            },
+          };
+        }
+      }),
+      
     selectCommand: (commandId) =>
       set((state) => ({
         selection: {
@@ -257,7 +298,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         },
       })),
 
-    selectSubPathByPoint: (pathId, point) => {
+    selectSubPathByPoint: (pathId, point, isShiftPressed = false) => {
       const state = get();
       const path = state.paths.find(p => p.id === pathId);
       if (!path) return;
@@ -266,14 +307,8 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       const foundSubPath = findSubPathAtPoint(path, point, 15);
 
       if (foundSubPath) {
-        set((state) => ({
-          selection: {
-            ...state.selection,
-            selectedSubPaths: [foundSubPath.id],
-            selectedPaths: [],
-            selectedCommands: [],
-          },
-        }));
+        // Use the new multiple selection logic
+        get().selectSubPathMultiple(foundSubPath.id, isShiftPressed);
       }
     },
     

@@ -268,7 +268,7 @@ export function generateId(): string {
 
 ```
 src/
-├── core/                    # Core system
+├── core/                   # Core system
 │   ├── PluginSystem.ts     # Plugin management
 │   └── SvgEditor.tsx       # Main component
 ├── plugins/                # One directory per plugin
