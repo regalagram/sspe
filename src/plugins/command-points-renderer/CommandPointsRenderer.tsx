@@ -76,7 +76,7 @@ export const CommandPointsRenderer: React.FC = () => {
             
             if (!shouldShowCommand) return null;
 
-            const radius = Math.max(6 / viewport.zoom, 2); // Minimum 2px for visibility
+            const radius = 4 / viewport.zoom; // Fixed visual size independent of zoom
 
             return (
               <circle
@@ -86,7 +86,7 @@ export const CommandPointsRenderer: React.FC = () => {
                 r={radius}
                 fill={isCommandSelected ? '#007acc' : '#ff4444'}
                 stroke={isCommandSelected ? '#005299' : '#cc0000'}
-                strokeWidth={2 / viewport.zoom}
+                strokeWidth={1 / viewport.zoom}
                 style={{ 
                   cursor: 'grab',
                   pointerEvents: 'all',

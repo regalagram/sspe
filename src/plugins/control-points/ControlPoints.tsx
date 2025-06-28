@@ -76,7 +76,7 @@ export const ControlPointsRenderer: React.FC = () => {
             
             if (!shouldShowCommand) return null;
             
-            const radius = Math.max(6 / viewport.zoom, 6); // Minimum 6px for visibility
+            const radius = 3 / viewport.zoom; // Fixed visual size independent of zoom
             
             // Find previous command position for connecting control points
             const prevCommand = commandIndex > 0 ? subPath.commands[commandIndex - 1] : null;

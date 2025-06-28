@@ -120,7 +120,7 @@ export const PathRenderer: React.FC = () => {
         
         // Wireframe mode overrides path styles
         const isWireframeMode = enabledFeatures.has('wireframe');
-        const wireframeStrokeWidth = 2; // Fixed stroke width for wireframe
+        const wireframeStrokeWidth = 2 / viewport.zoom; // Fixed visual thickness independent of zoom
         
         return (
           <path
@@ -128,7 +128,7 @@ export const PathRenderer: React.FC = () => {
             d={d}
             fill={isWireframeMode ? 'none' : path.style.fill}
             stroke={isWireframeMode ? '#000000' : path.style.stroke}
-            strokeWidth={isWireframeMode ? wireframeStrokeWidth / viewport.zoom : (path.style.strokeWidth || 1) / viewport.zoom}
+            strokeWidth={isWireframeMode ? wireframeStrokeWidth : (path.style.strokeWidth || 1) / viewport.zoom}
             strokeDasharray={isWireframeMode ? undefined : path.style.strokeDasharray}
             strokeLinecap={isWireframeMode ? 'round' : path.style.strokeLinecap}
             strokeLinejoin={isWireframeMode ? 'round' : path.style.strokeLinejoin}
