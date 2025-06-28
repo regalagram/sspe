@@ -101,7 +101,7 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
 };
 
 export const SVGComponent: React.FC = () => {
-  const { paths, viewport, replacePaths } = useEditorStore();
+  const { paths, viewport, replacePaths, resetViewportCompletely } = useEditorStore();
 
   // Generate SVG string from current paths
   const generateSVGCode = (): string => {
@@ -176,7 +176,10 @@ ${pathElements}
     // Clear all paths by replacing with empty array
     replacePaths([]);
     
-    console.log('All paths cleared successfully');
+    // Reset viewport completely to default state (zoom 1, pan 0,0, and default viewBox)
+    resetViewportCompletely();
+    
+    console.log('All paths cleared and viewport reset successfully');
   };
 
   const currentSVG = generateSVGCode();

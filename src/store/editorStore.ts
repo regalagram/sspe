@@ -46,6 +46,7 @@ interface EditorActions {
   pan: (delta: Point) => void;
   setPan: (pan: Point) => void;
   resetView: () => void;
+  resetViewportCompletely: () => void;
   
   // Mode actions
   setMode: (mode: EditorState['mode']['current']) => void;
@@ -1084,6 +1085,22 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         };
 
         // Save preferences after resetting view
+        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+
+        return newState;
+      }),
+
+    resetViewportCompletely: () =>
+      set((state) => {
+        const newState = {
+          viewport: validateViewport({
+            zoom: 1,
+            pan: { x: 0, y: 0 },
+            viewBox: { x: 0, y: 0, width: 800, height: 600 },
+          }),
+        };
+
+        // Save preferences after resetting viewport completely
         setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
 
         return newState;
