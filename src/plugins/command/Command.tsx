@@ -15,23 +15,14 @@ const CommandPanel: React.FC<CommandPanelProps> = ({ command, pathId, subPathId 
   const getCommandTypeDescription = (cmd: SVGCommand): string => {
     const descriptions: Record<string, string> = {
       'M': 'Move To (absolute)',
-      'm': 'Move To (relative)',
       'L': 'Line To (absolute)',
-      'l': 'Line To (relative)',
       'H': 'Horizontal Line To (absolute)',
-      'h': 'Horizontal Line To (relative)',
       'V': 'Vertical Line To (absolute)',
-      'v': 'Vertical Line To (relative)',
       'C': 'Cubic Bézier Curve (absolute)',
-      'c': 'Cubic Bézier Curve (relative)',
       'S': 'Smooth Cubic Bézier Curve (absolute)',
-      's': 'Smooth Cubic Bézier Curve (relative)',
       'Q': 'Quadratic Bézier Curve (absolute)',
-      'q': 'Quadratic Bézier Curve (relative)',
       'T': 'Smooth Quadratic Bézier Curve (absolute)',
-      't': 'Smooth Quadratic Bézier Curve (relative)',
       'A': 'Elliptical Arc (absolute)',
-      'a': 'Elliptical Arc (relative)',
       'Z': 'Close Path',
       'z': 'Close Path'
     };

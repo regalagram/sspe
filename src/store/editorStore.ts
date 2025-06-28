@@ -169,7 +169,6 @@ const saveCurrentPreferences = (state: EditorState) => {
     showControlPoints: state.enabledFeatures.has('control-points'),
     showCommandPoints: state.enabledFeatures.has('command-points'),
     wireframeMode: state.enabledFeatures.has('wireframe'),
-    useRelativeCommands: false, // This might be controlled by another plugin
   };
   savePreferences(preferences);
 };

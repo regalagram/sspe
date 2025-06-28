@@ -3,8 +3,8 @@
  * Run with: node --loader ts-node/esm test-transforms.ts
  */
 
-import { scaleSubPath, rotateSubPath, translateSubPath, getSubPathCenter } from '../utils/transform-subpath-utils';
-import { SVGSubPath } from '../types';
+import { scaleSubPath, rotateSubPath, translateSubPath, getSubPathCenter } from '../../utils/transform-subpath-utils';
+import { SVGSubPath } from '../../types';
 
 // Test data: a simple rectangle subpath
 const testSubPath: SVGSubPath = {

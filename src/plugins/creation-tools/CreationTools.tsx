@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { SVGCommandType } from '../../types';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import SVGCommandIcon from '../../components/SVGCommandIcons';
 import { ToggleLeft, ToggleRight } from 'lucide-react';
-import { loadPreferences, savePreferences } from '../../utils/persistence';
 import { PluginButton } from '../../components/PluginButton';
 import { LogOut } from 'lucide-react';
 
@@ -25,26 +24,6 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
   onSelectTool,
   onExitCreateMode,
 }) => {
-  const [useRelativeCommands, setUseRelativeCommands] = useState(false);
-
-  // Load the relative commands preference from localStorage on component mount
-  useEffect(() => {
-    const preferences = loadPreferences();
-    setUseRelativeCommands(preferences.useRelativeCommands);
-  }, []);
-
-  // Save preference to localStorage when it changes
-  const handleToggleRelativeCommands = () => {
-    const newValue = !useRelativeCommands;
-    setUseRelativeCommands(newValue);
-    
-    const preferences = loadPreferences();
-    savePreferences({
-      ...preferences,
-      useRelativeCommands: newValue
-    });
-  };
-
   const baseTools: Array<{ command: SVGCommandType; label: string; category: string }> = [
     { command: 'M', label: 'Move To', category: 'Start & End' },
     { command: 'Z', label: 'Close Path', category: 'Start & End' },
@@ -58,15 +37,10 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
     { command: 'A', label: 'Arc', category: 'Arcs' },
   ];
 
-  // Convert commands to relative if toggle is enabled
+  // All tools are absolute since we work internally with absolute coordinates
   const tools = baseTools.map(tool => ({
     ...tool,
-    command: (useRelativeCommands && tool.command !== 'Z') 
-      ? tool.command.toLowerCase() as SVGCommandType 
-      : tool.command,
-    label: (useRelativeCommands && tool.command !== 'Z') 
-      ? `${tool.label} (relative)` 
-      : `${tool.label} (absolute)`
+    label: `${tool.label} (absolute)`
   }));
 
   // Reorganizar herramientas en grupos para la grilla
@@ -267,17 +241,6 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
             textAlign: 'left'
           }}>
             Mode
-          </div>
-          <div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={useRelativeCommands}
-                onChange={handleToggleRelativeCommands}
-                style={{ accentColor: '#2196f3', marginRight: 4, cursor: 'pointer' }}
-              />
-              Relative
-            </label>
           </div>
         </div>
       </div>

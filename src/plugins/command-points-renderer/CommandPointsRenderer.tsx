@@ -61,7 +61,7 @@ export const CommandPointsRenderer: React.FC = () => {
           const shouldShowSubPath = enabledFeatures.has('command-points') || isSubPathSelected;
           
           return subPath.commands.map((command) => {
-            // Use the new function that correctly handles relative commands with path context
+            // Get the absolute position of the command
             const position = getAbsoluteCommandPosition(command, subPath, path.subPaths);
             
             if (!position) return null;

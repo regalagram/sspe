@@ -1,5 +1,4 @@
 import { SVGPath, SVGCommand, SVGSubPath, Point, BoundingBox } from "../types";
-import { getSubPathFinalPosition } from "./relative-utils";
 
 export const pathToString = (path: SVGPath): string => {
   return path.subPaths
@@ -23,72 +22,13 @@ export const subPathToString = (subPath: SVGSubPath): string => {
     .join(' ')
     .trim();
   
-  // Ensure the path always starts with a MoveTo command
-  if (commands && !commands.startsWith('M') && !commands.startsWith('m')) {
-    // If the first command is not MoveTo, we need to fix this
-    console.warn('SubPath does not start with MoveTo command:', commands);
-    
-    // Try to extract the first coordinates and convert to MoveTo
-    const firstCommand = subPath.commands[0];
-    if (firstCommand && 'x' in firstCommand && 'y' in firstCommand && 
-        firstCommand.x !== undefined && firstCommand.y !== undefined) {
-      // Replace the first command with MoveTo and keep the rest
-      const firstCoords = `M ${firstCommand.x} ${firstCommand.y}`;
-      const restCommands = subPath.commands.slice(1)
-        .map((command) => commandToString(command))
-        .join(' ');
-      return (firstCoords + ' ' + restCommands).trim();
-    }
-  }
-  
   return commands;
 };
 
-// Generate subpath string with context - for proper visual feedback rendering
+// Generate subpath string with context - simplified since everything is absolute internally
 export const subPathToStringInContext = (subPath: SVGSubPath, allSubPaths: SVGSubPath[]): string => {
-  // Find the index of this subpath
-  const subPathIndex = allSubPaths.findIndex(sp => sp.id === subPath.id);
-  if (subPathIndex === -1) {
-    // Fallback to regular string if not found in array
-    return subPathToString(subPath);
-  }
-
-  // Calculate the starting position for this subpath based on previous subpaths
-  let startingPosition: Point = { x: 0, y: 0 };
-  for (let i = 0; i < subPathIndex; i++) {
-    startingPosition = getSubPathFinalPosition(allSubPaths[i], startingPosition);
-  }
-
-  // Generate the commands string with proper context
-  let currentPosition = startingPosition;
-  
-  return subPath.commands.map((command, index) => {
-    const position = getAbsoluteCommandPosition(command, subPath, allSubPaths);
-    
-    if (!position) {
-      return commandToString(command);
-    }
-
-    // For the first command of a subpath that's not the first subpath,
-    // we need to ensure proper positioning
-    if (index === 0 && subPathIndex > 0) {
-      // If it's a relative 'm' command at the start of a non-first subpath,
-      // convert it to absolute coordinates for proper rendering
-      if (command.command === 'm') {
-        const absoluteCommand = {
-          ...command,
-          command: 'M' as const,
-          x: position.x,
-          y: position.y
-        };
-        currentPosition = position;
-        return commandToString(absoluteCommand);
-      }
-    }
-    
-    currentPosition = position;
-    return commandToString(command);
-  }).join(' ');
+  // Since everything is already absolute internally, just return the regular string
+  return subPathToString(subPath);
 };
 
 // Function to find which subpath contains a given point
@@ -278,7 +218,7 @@ const calculateSubPathArea = (subPath: SVGSubPath, allSubPaths?: SVGSubPath[]): 
   return Math.abs(area) / 2;
 };
 
-// Helper function to calculate distance from a point to a subpath
+// Helper function to calculate distance from a point to a subpath (simplified)
 const getDistanceToSubPath = (subPath: SVGSubPath, point: Point, allSubPaths?: SVGSubPath[]): number => {
   // First priority: Check distance to contour/stroke for all subpaths
   const contourDistance = getDistanceToSubPathContour(subPath, point);
@@ -303,7 +243,7 @@ const getDistanceToSubPath = (subPath: SVGSubPath, point: Point, allSubPaths?: S
   return contourDistance;
 };
 
-// Separated contour-only distance calculation
+// Separated contour-only distance calculation (simplified since everything is absolute)
 const getDistanceToSubPathContour = (subPath: SVGSubPath, point: Point): number => {
   let minDistance = Infinity;
   let currentPoint: Point = { x: 0, y: 0 };
@@ -312,8 +252,8 @@ const getDistanceToSubPathContour = (subPath: SVGSubPath, point: Point): number 
   for (let i = 0; i < subPath.commands.length; i++) {
     const command = subPath.commands[i];
     
-    // Get absolute position for this command
-    const absolutePos = getAbsoluteCommandPosition(command, subPath);
+    // Get absolute position for this command (simplified since everything is already absolute)
+    const absolutePos = getAbsoluteCommandPosition(command);
     
     if (absolutePos) {
       // Distance to the endpoint of the command
@@ -335,7 +275,7 @@ const getDistanceToSubPathContour = (subPath: SVGSubPath, point: Point): number 
             // Cubic Bézier curve
             if (command.x1 !== undefined && command.y1 !== undefined &&
                 command.x2 !== undefined && command.y2 !== undefined) {
-              const controlPoints = getAbsoluteControlPoints(command, subPath);
+              const controlPoints = getAbsoluteControlPoints(command);
               if (controlPoints.length >= 2) {
                 segmentDistance = distanceToCubicBezier(
                   point, currentPoint, controlPoints[0], controlPoints[1], absolutePos
@@ -347,7 +287,7 @@ const getDistanceToSubPathContour = (subPath: SVGSubPath, point: Point): number 
           case 'S':
             // Smooth cubic Bézier
             if (command.x2 !== undefined && command.y2 !== undefined) {
-              const controlPoints = getAbsoluteControlPoints(command, subPath);
+              const controlPoints = getAbsoluteControlPoints(command);
               if (controlPoints.length >= 1) {
                 const reflectedCP1 = getReflectedControlPoint(subPath.commands, i, currentPoint);
                 segmentDistance = distanceToCubicBezier(
@@ -360,7 +300,7 @@ const getDistanceToSubPathContour = (subPath: SVGSubPath, point: Point): number 
           case 'Q':
             // Quadratic Bézier curve
             if (command.x1 !== undefined && command.y1 !== undefined) {
-              const controlPoints = getAbsoluteControlPoints(command, subPath);
+              const controlPoints = getAbsoluteControlPoints(command);
               if (controlPoints.length >= 1) {
                 segmentDistance = distanceToQuadraticBezier(
                   point, currentPoint, controlPoints[0], absolutePos
@@ -609,90 +549,188 @@ export const parsePathCommands = (d: string): SVGCommand[] => {
   const regex = /([MmLlHhVvCcSsQqTtAaZz])([^MmLlHhVvCcSsQqTtAaZz]*)/g;
   const commands: SVGCommand[] = [];
   let match;
+  let currentX = 0;
+  let currentY = 0;
+  let subPathStartX = 0;
+  let subPathStartY = 0;
   
   while ((match = regex.exec(d)) !== null) {
     const command = match[1];
     const params = match[2].trim().split(/[\s,]+/).filter(p => p !== '').map(parseFloat);
+    const isRelative = command === command.toLowerCase() && command !== 'z';
     
-    if (command === 'M' || command === 'm' || 
-        command === 'L' || command === 'l') {
+    if (command.toLowerCase() === 'm' || command.toLowerCase() === 'l') {
       for (let i = 0; i < params.length; i += 2) {
+        let x = params[i];
+        let y = params[i + 1];
+        
+        if (isRelative) {
+          x += currentX;
+          y += currentY;
+        }
+        
+        // For M commands, update subpath start position
+        if (command.toLowerCase() === 'm') {
+          subPathStartX = x;
+          subPathStartY = y;
+        }
+        
         commands.push({
           id: `cmd-${commands.length}`,
-          command: command,
-          x: params[i],
-          y: params[i + 1]
+          command: command.toLowerCase() === 'm' ? 'M' : 'L', // Normalize to absolute
+          x,
+          y
         });
+        
+        currentX = x;
+        currentY = y;
       }
-    } else if (command === 'H' || command === 'h') {
+    } else if (command.toLowerCase() === 'h') {
       for (let i = 0; i < params.length; i++) {
+        let x = params[i];
+        
+        if (isRelative) {
+          x += currentX;
+        }
+        
         commands.push({
           id: `cmd-${commands.length}`,
-          command: command,
-          x: params[i]
+          command: 'L', // Convert H to L for internal consistency
+          x,
+          y: currentY
         });
+        
+        currentX = x;
       }
-    } else if (command === 'V' || command === 'v') {
+    } else if (command.toLowerCase() === 'v') {
       for (let i = 0; i < params.length; i++) {
+        let y = params[i];
+        
+        if (isRelative) {
+          y += currentY;
+        }
+        
         commands.push({
           id: `cmd-${commands.length}`,
-          command: command,
-          y: params[i]
+          command: 'L', // Convert V to L for internal consistency
+          x: currentX,
+          y
         });
+        
+        currentY = y;
       }
-    } else if (command === 'C' || command === 'c') {
+    } else if (command.toLowerCase() === 'c') {
       for (let i = 0; i < params.length; i += 6) {
+        let x1 = params[i];
+        let y1 = params[i + 1];
+        let x2 = params[i + 2];
+        let y2 = params[i + 3];
+        let x = params[i + 4];
+        let y = params[i + 5];
+        
+        if (isRelative) {
+          x1 += currentX;
+          y1 += currentY;
+          x2 += currentX;
+          y2 += currentY;
+          x += currentX;
+          y += currentY;
+        }
+        
         commands.push({
           id: `cmd-${commands.length}`,
-          command: command,
-          x1: params[i],
-          y1: params[i + 1],
-          x2: params[i + 2],
-          y2: params[i + 3],
-          x: params[i + 4],
-          y: params[i + 5]
+          command: 'C', // Normalize to absolute
+          x1,
+          y1,
+          x2,
+          y2,
+          x,
+          y
         });
+        
+        currentX = x;
+        currentY = y;
       }
-    } else if (command === 'S' || command === 's' || 
-               command === 'Q' || command === 'q') {
+    } else if (command.toLowerCase() === 's' || command.toLowerCase() === 'q') {
       for (let i = 0; i < params.length; i += 4) {
+        let x1 = params[i];
+        let y1 = params[i + 1];
+        let x = params[i + 2];
+        let y = params[i + 3];
+        
+        if (isRelative) {
+          x1 += currentX;
+          y1 += currentY;
+          x += currentX;
+          y += currentY;
+        }
+        
         commands.push({
           id: `cmd-${commands.length}`,
-          command: command,
-          x1: params[i],
-          y1: params[i + 1],
-          x: params[i + 2],
-          y: params[i + 3]
+          command: command.toLowerCase() === 's' ? 'S' : 'Q', // Normalize to absolute
+          x1,
+          y1,
+          x,
+          y
         });
+        
+        currentX = x;
+        currentY = y;
       }
-    } else if (command === 'T' || command === 't') {
+    } else if (command.toLowerCase() === 't') {
       for (let i = 0; i < params.length; i += 2) {
+        let x = params[i];
+        let y = params[i + 1];
+        
+        if (isRelative) {
+          x += currentX;
+          y += currentY;
+        }
+        
         commands.push({
           id: `cmd-${commands.length}`,
-          command: command,
-          x: params[i],
-          y: params[i + 1]
+          command: 'T', // Normalize to absolute
+          x,
+          y
         });
+        
+        currentX = x;
+        currentY = y;
       }
-    } else if (command === 'A' || command === 'a') {
+    } else if (command.toLowerCase() === 'a') {
       for (let i = 0; i < params.length; i += 7) {
+        let x = params[i + 5];
+        let y = params[i + 6];
+        
+        if (isRelative) {
+          x += currentX;
+          y += currentY;
+        }
+        
         commands.push({
           id: `cmd-${commands.length}`,
-          command: command,
+          command: 'A', // Normalize to absolute
           rx: params[i],
           ry: params[i + 1],
           xAxisRotation: params[i + 2],
           largeArcFlag: params[i + 3],
           sweepFlag: params[i + 4],
-          x: params[i + 5],
-          y: params[i + 6]
+          x,
+          y
         });
+        
+        currentX = x;
+        currentY = y;
       }
-    } else if (command === 'Z' || command === 'z') {
+    } else if (command.toLowerCase() === 'z') {
       commands.push({
         id: `cmd-${commands.length}`,
-        command: command
+        command: 'Z'
       });
+      
+      // Z command returns to subpath start
+      currentX = subPathStartX;
+      currentY = subPathStartY;
     }
   }
   
@@ -759,172 +797,28 @@ export const getCommandPosition = (command: SVGCommand): Point | null => {
 };
 
 /**
- * Gets the absolute position of a command within its subpath context
- * This correctly handles relative commands by calculating cumulative positions
- * Now also considers the subpath's position within the full path
+ * Gets the absolute position of a command (simplified since everything is already absolute internally)
  */
-export const getAbsoluteCommandPosition = (command: SVGCommand, subPath: SVGSubPath, allSubPaths?: SVGSubPath[]): Point | null => {
-  if (command.x === undefined || command.y === undefined) {
-    return null;
+export const getAbsoluteCommandPosition = (command: SVGCommand, subPath?: SVGSubPath, allSubPaths?: SVGSubPath[]): Point | null => {
+  if (command.x !== undefined && command.y !== undefined) {
+    return { x: command.x, y: command.y };
   }
-
-  // Find the index of this command in the subpath
-  const commandIndex = subPath.commands.findIndex(cmd => cmd.id === command.id);
-  if (commandIndex === -1) {
-    return null;
-  }
-
-  // Calculate the starting position of this subpath within the full path
-  let pathStartPosition: { x: number, y: number } = { x: 0, y: 0 };
-  
-  if (allSubPaths) {
-    const subPathIndex = allSubPaths.findIndex(sp => sp.id === subPath.id);
-    if (subPathIndex > 0) {
-      // Calculate cumulative position from all previous subpaths
-      for (let i = 0; i < subPathIndex; i++) {
-        pathStartPosition = getSubPathFinalPosition(allSubPaths[i], pathStartPosition);
-      }
-    }
-  }
-
-  // Calculate absolute position by tracking through all previous commands in this subpath
-  let currentX = pathStartPosition.x;
-  let currentY = pathStartPosition.y;
-
-  for (let i = 0; i <= commandIndex; i++) {
-    const cmd = subPath.commands[i];
-    const isRelative = cmd.command === cmd.command.toLowerCase() && cmd.command !== 'z';
-
-    if (cmd.x !== undefined && cmd.y !== undefined) {
-      if (cmd.command === 'M' || cmd.command === 'm') {
-        // Special handling for M/m commands
-        if (i === 0) {
-          // First command in subpath - m is relative to pathStartPosition
-          if (isRelative) {
-            currentX = pathStartPosition.x + cmd.x;
-            currentY = pathStartPosition.y + cmd.y;
-          } else {
-            currentX = cmd.x;
-            currentY = cmd.y;
-          }
-        } else {
-          // Subsequent M/m commands within the same subpath
-          if (isRelative) {
-            currentX += cmd.x;
-            currentY += cmd.y;
-          } else {
-            currentX = cmd.x;
-            currentY = cmd.y;
-          }
-        }
-      } else {
-        // Other commands (L, C, Q, etc.)
-        if (isRelative) {
-          currentX += cmd.x;
-          currentY += cmd.y;
-        } else {
-          currentX = cmd.x;
-          currentY = cmd.y;
-        }
-      }
-    } else if (cmd.command === 'H' || cmd.command === 'h') {
-      // Horizontal line
-      if (cmd.x !== undefined) {
-        if (isRelative) {
-          currentX += cmd.x;
-        } else {
-          currentX = cmd.x;
-        }
-      }
-    } else if (cmd.command === 'V' || cmd.command === 'v') {
-      // Vertical line
-      if (cmd.y !== undefined) {
-        if (isRelative) {
-          currentY += cmd.y;
-        } else {
-          currentY = cmd.y;
-        }
-      }
-    }
-  }
-
-  return { x: currentX, y: currentY };
+  return null;
 };
 
 /**
- * Gets all absolute control point positions for a command within its subpath context
- * Now also considers the subpath's position within the full path
+ * Gets all absolute control point positions for a command (simplified since everything is already absolute internally)
  */
-export const getAbsoluteControlPoints = (command: SVGCommand, subPath: SVGSubPath, allSubPaths?: SVGSubPath[]): Point[] => {
+export const getAbsoluteControlPoints = (command: SVGCommand, subPath?: SVGSubPath, allSubPaths?: SVGSubPath[]): Point[] => {
   const controlPoints: Point[] = [];
   
-  // First get the absolute position of the current command
-  const commandIndex = subPath.commands.findIndex(cmd => cmd.id === command.id);
-  if (commandIndex === -1) {
-    return controlPoints;
-  }
-
-  // Calculate the starting position of this subpath within the full path
-  let pathStartPosition: { x: number, y: number } = { x: 0, y: 0 };
-  
-  if (allSubPaths) {
-    const subPathIndex = allSubPaths.findIndex(sp => sp.id === subPath.id);
-    if (subPathIndex > 0) {
-      // Calculate cumulative position from all previous subpaths
-      for (let i = 0; i < subPathIndex; i++) {
-        pathStartPosition = getSubPathFinalPosition(allSubPaths[i], pathStartPosition);
-      }
-    }
-  }
-
-  // Calculate the current absolute position (position before this command)
-  let currentX = pathStartPosition.x;
-  let currentY = pathStartPosition.y;
-
-  for (let i = 0; i < commandIndex; i++) {
-    const cmd = subPath.commands[i];
-    const isRelative = cmd.command === cmd.command.toLowerCase();
-
-    if (cmd.x !== undefined && cmd.y !== undefined) {
-      if (isRelative && i > 0) {
-        currentX += cmd.x;
-        currentY += cmd.y;
-      } else {
-        currentX = cmd.x;
-        currentY = cmd.y;
-      }
-    } else if (cmd.command === 'H' || cmd.command === 'h') {
-      if (cmd.x !== undefined) {
-        if (isRelative) {
-          currentX += cmd.x;
-        } else {
-          currentX = cmd.x;
-        }
-      }
-    } else if (cmd.command === 'V' || cmd.command === 'v') {
-      if (cmd.y !== undefined) {
-        if (isRelative) {
-          currentY += cmd.y;
-        } else {
-          currentY = cmd.y;
-        }
-      }
-    }
-  }
-
-  const isRelative = command.command === command.command.toLowerCase();
-
-  // Add control points based on command type
+  // Add control points based on command type (all are already absolute)
   if (command.x1 !== undefined && command.y1 !== undefined) {
-    const x1 = isRelative ? currentX + command.x1 : command.x1;
-    const y1 = isRelative ? currentY + command.y1 : command.y1;
-    controlPoints.push({ x: x1, y: y1 });
+    controlPoints.push({ x: command.x1, y: command.y1 });
   }
 
   if (command.x2 !== undefined && command.y2 !== undefined) {
-    const x2 = isRelative ? currentX + command.x2 : command.x2;
-    const y2 = isRelative ? currentY + command.y2 : command.y2;
-    controlPoints.push({ x: x2, y: y2 });
+    controlPoints.push({ x: command.x2, y: command.y2 });
   }
 
   return controlPoints;
@@ -1102,7 +996,7 @@ const quadraticBezierPoint = (p0: Point, p1: Point, p2: Point, t: number): Point
   };
 };
 
-// Get reflected control point for smooth curves (S and T commands)
+// Get reflected control point for smooth curves (S and T commands) - simplified
 const getReflectedControlPoint = (commands: SVGCommand[], currentIndex: number, currentPoint: Point): Point => {
   if (currentIndex <= 0) {
     return currentPoint;
@@ -1113,7 +1007,7 @@ const getReflectedControlPoint = (commands: SVGCommand[], currentIndex: number, 
   
   // For S command, reflect the second control point of the previous C command
   if (prevCommandType === 'C' && prevCommand.x2 !== undefined && prevCommand.y2 !== undefined) {
-    const prevAbsolutePos = getAbsoluteCommandPosition(prevCommand, { commands, id: '' });
+    const prevAbsolutePos = getAbsoluteCommandPosition(prevCommand);
     if (prevAbsolutePos) {
       return {
         x: 2 * prevAbsolutePos.x - prevCommand.x2,
@@ -1124,7 +1018,7 @@ const getReflectedControlPoint = (commands: SVGCommand[], currentIndex: number, 
   
   // For T command, reflect the control point of the previous Q command
   if (prevCommandType === 'Q' && prevCommand.x1 !== undefined && prevCommand.y1 !== undefined) {
-    const prevAbsolutePos = getAbsoluteCommandPosition(prevCommand, { commands, id: '' });
+    const prevAbsolutePos = getAbsoluteCommandPosition(prevCommand);
     if (prevAbsolutePos) {
       return {
         x: 2 * prevAbsolutePos.x - prevCommand.x1,
@@ -1136,7 +1030,7 @@ const getReflectedControlPoint = (commands: SVGCommand[], currentIndex: number, 
   return currentPoint;
 };
 
-// Helper function to check if a point is inside a subpath using fill rules
+// Helper function to check if a point is inside a subpath using fill rules (simplified)
 const isPointInsideSubPath = (subPath: SVGSubPath, point: Point, fillRule: 'nonzero' | 'evenodd' = 'nonzero', allSubPaths?: SVGSubPath[]): boolean => {
   // First, check if the subpath is closed (has a Z command or ends where it starts)
   const isClosed = isSubPathClosed(subPath, allSubPaths);
@@ -1164,7 +1058,7 @@ const isPointInsideSubPath = (subPath: SVGSubPath, point: Point, fillRule: 'nonz
   return result;
 };
 
-// Check if a subpath is closed
+// Check if a subpath is closed (simplified)
 const isSubPathClosed = (subPath: SVGSubPath, allSubPaths?: SVGSubPath[]): boolean => {
   if (subPath.commands.length === 0) return false;
   
@@ -1174,10 +1068,10 @@ const isSubPathClosed = (subPath: SVGSubPath, allSubPaths?: SVGSubPath[]): boole
     return true;
   }
   
-  // Check if the path ends where it starts
+  // Check if the path ends where it starts (simplified since everything is absolute)
   const firstCommand = subPath.commands[0];
-  const lastPosition = getAbsoluteCommandPosition(lastCommand, subPath, allSubPaths);
-  const firstPosition = getAbsoluteCommandPosition(firstCommand, subPath, allSubPaths);
+  const lastPosition = getAbsoluteCommandPosition(lastCommand);
+  const firstPosition = getAbsoluteCommandPosition(firstCommand);
   
   if (firstPosition && lastPosition) {
     const threshold = 1; // Allow small tolerance for floating point errors
@@ -1187,14 +1081,14 @@ const isSubPathClosed = (subPath: SVGSubPath, allSubPaths?: SVGSubPath[]): boole
   return false;
 };
 
-// Extract polygon points from a subpath (approximating curves)
+// Extract polygon points from a subpath (approximating curves) - simplified
 const getSubPathPolygonPoints = (subPath: SVGSubPath, allSubPaths?: SVGSubPath[]): Point[] => {
   const points: Point[] = [];
   let currentPoint: Point = { x: 0, y: 0 };
   
   for (let i = 0; i < subPath.commands.length; i++) {
     const command = subPath.commands[i];
-    const absolutePos = getAbsoluteCommandPosition(command, subPath, allSubPaths);
+    const absolutePos = getAbsoluteCommandPosition(command);
     
     if (!absolutePos) continue;
     
@@ -1210,7 +1104,7 @@ const getSubPathPolygonPoints = (subPath: SVGSubPath, allSubPaths?: SVGSubPath[]
         // For cubic Bézier, sample points along the curve
         if (command.x1 !== undefined && command.y1 !== undefined &&
             command.x2 !== undefined && command.y2 !== undefined) {
-          const controlPoints = getAbsoluteControlPoints(command, subPath);
+          const controlPoints = getAbsoluteControlPoints(command);
           if (controlPoints.length >= 2) {
             const curvePoints = sampleCubicBezier(currentPoint, controlPoints[0], controlPoints[1], absolutePos, 10);
             points.push(...curvePoints);
@@ -1221,7 +1115,7 @@ const getSubPathPolygonPoints = (subPath: SVGSubPath, allSubPaths?: SVGSubPath[]
       case 'S':
         // Smooth cubic Bézier
         if (command.x2 !== undefined && command.y2 !== undefined) {
-          const controlPoints = getAbsoluteControlPoints(command, subPath);
+          const controlPoints = getAbsoluteControlPoints(command);
           if (controlPoints.length >= 1) {
             const reflectedCP1 = getReflectedControlPoint(subPath.commands, i, currentPoint);
             const curvePoints = sampleCubicBezier(currentPoint, reflectedCP1, controlPoints[0], absolutePos, 10);
@@ -1233,7 +1127,7 @@ const getSubPathPolygonPoints = (subPath: SVGSubPath, allSubPaths?: SVGSubPath[]
       case 'Q':
         // Quadratic Bézier
         if (command.x1 !== undefined && command.y1 !== undefined) {
-          const controlPoints = getAbsoluteControlPoints(command, subPath);
+          const controlPoints = getAbsoluteControlPoints(command);
           if (controlPoints.length >= 1) {
             const curvePoints = sampleQuadraticBezier(currentPoint, controlPoints[0], absolutePos, 10);
             points.push(...curvePoints);
@@ -1494,8 +1388,8 @@ export const getSubPathBounds = (subPath: SVGSubPath, allSubPaths?: SVGSubPath[]
   let hasValidBounds = false;
   
   subPath.commands.forEach(command => {
-    // Get absolute position considering subpath context
-    const position = getAbsoluteCommandPosition(command, subPath, allSubPaths);
+    // Get absolute position (simplified since everything is already absolute)
+    const position = getAbsoluteCommandPosition(command);
     if (position) {
       minX = Math.min(minX, position.x);
       maxX = Math.max(maxX, position.x);
@@ -1505,7 +1399,7 @@ export const getSubPathBounds = (subPath: SVGSubPath, allSubPaths?: SVGSubPath[]
     }
     
     // Also check control points
-    const controlPoints = getAbsoluteControlPoints(command, subPath, allSubPaths);
+    const controlPoints = getAbsoluteControlPoints(command);
     controlPoints.forEach(cp => {
       minX = Math.min(minX, cp.x);
       maxX = Math.max(maxX, cp.x);

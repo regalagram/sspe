@@ -16,9 +16,6 @@ export interface UserPreferences {
   showControlPoints: boolean;
   showCommandPoints: boolean;
   wireframeMode: boolean;
-  
-  // Creation tools preferences
-  useRelativeCommands: boolean;
 
   // Precision of points (optional)
   precision?: number;
@@ -35,7 +32,6 @@ const defaultPreferences: UserPreferences = {
   showControlPoints: true,
   showCommandPoints: true,
   wireframeMode: false,
-  useRelativeCommands: false,
   precision: 2,
 };
 
@@ -61,7 +57,6 @@ export function loadPreferences(): UserPreferences {
       showControlPoints: typeof parsed.showControlPoints === 'boolean' ? parsed.showControlPoints : defaultPreferences.showControlPoints,
       showCommandPoints: typeof parsed.showCommandPoints === 'boolean' ? parsed.showCommandPoints : defaultPreferences.showCommandPoints,
       wireframeMode: typeof parsed.wireframeMode === 'boolean' ? parsed.wireframeMode : defaultPreferences.wireframeMode,
-      useRelativeCommands: typeof parsed.useRelativeCommands === 'boolean' ? parsed.useRelativeCommands : defaultPreferences.useRelativeCommands,
       precision: typeof parsed.precision === 'number' ? Math.max(0, Math.min(8, parsed.precision)) : defaultPreferences.precision,
     };
   } catch (error) {

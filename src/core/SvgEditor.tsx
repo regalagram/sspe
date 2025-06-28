@@ -18,7 +18,6 @@ import { CommandPointsRendererPlugin } from '../plugins/command-points-renderer/
 import { CommandPlugin } from '../plugins/command/Command';
 import { GlobalKeyboardPlugin } from '../plugins/global-keyboard/GlobalKeyboard';
 import { CreationModePlugin } from '../plugins/creation-mode/CreationMode';
-import { RelativeToolsPlugin } from '../plugins/relative-tools/RelativeTools';
 import { PathSimplificationPlugin } from '../plugins/path-simplification/PathSimplification';
 import { PathSmoothingPlugin } from '../plugins/path-smoothing/PathSmoothing';
 import { WireframePlugin } from '../plugins/wireframe/Wireframe';
@@ -45,7 +44,6 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(SelectionToolsPlugin);
   pluginManager.registerPlugin(SVGPlugin);
   pluginManager.registerPlugin(SubPathListPlugin);
-  pluginManager.registerPlugin(RelativeToolsPlugin);
   pluginManager.registerPlugin(PathSimplificationPlugin);
   pluginManager.registerPlugin(PathSmoothingPlugin);
   pluginManager.registerPlugin(WireframePlugin);
