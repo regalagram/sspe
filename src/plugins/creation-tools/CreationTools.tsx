@@ -156,7 +156,8 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
         <div style={{ 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: '4px'
+          gap: '4px',
+          marginTop: '8px'
         }}>
           <div style={{ 
             fontSize: '10px', 
@@ -187,7 +188,8 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
         <div style={{ 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: '4px'
+          gap: '4px',
+          marginTop: '8px'
         }}>
           <div style={{ 
             fontSize: '10px', 
@@ -218,7 +220,8 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
         <div style={{ 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: '4px'
+          gap: '4px',
+          marginTop: '8px'
         }}>
           <div style={{ 
             fontSize: '10px', 
@@ -249,7 +252,8 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
         <div style={{ 
           display: 'flex', 
           flexDirection: 'column', 
-          gap: '4px'
+          gap: '4px',
+          marginTop: '8px'
         }}>
           <div style={{ 
             fontSize: '10px', 
@@ -302,7 +306,8 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
             cursor: 'pointer',
             fontSize: '14px',
             transition: 'background 0.2s ease',
-            alignSelf: 'center'
+            alignSelf: 'center',
+            marginTop: '8px'
           }}
           onMouseEnter={(e) => e.currentTarget.style.background = '#c82333'}
           onMouseLeave={(e) => e.currentTarget.style.background = '#dc3545'}
