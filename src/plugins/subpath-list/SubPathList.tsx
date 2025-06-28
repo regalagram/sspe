@@ -3,8 +3,138 @@ import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { getAllSubPaths } from '../../utils/subpath-utils';
+import { subPathToString } from '../../utils/path-utils';
 import { List, Eye, EyeOff } from 'lucide-react';
 import { SVGPath, SVGSubPath } from '../../types';
+
+interface SubPathWireframeProps {
+  subPath: SVGSubPath;
+  isSelected: boolean;
+}
+
+const SubPathWireframe: React.FC<SubPathWireframeProps> = ({ subPath, isSelected }) => {
+  const pathData = subPathToString(subPath);
+  
+  if (!pathData || subPath.commands.length === 0) {
+    return (
+      <div style={{
+        width: '32px',
+        height: '24px',
+        border: '1px solid #ddd',
+        borderRadius: '2px',
+        backgroundColor: '#f9f9f9',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '7px',
+        color: '#999',
+        flexShrink: 0
+      }}>
+        Empty
+      </div>
+    );
+  }
+
+  // Calculate rough bounds for scaling
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  
+  subPath.commands.forEach(cmd => {
+    if (cmd.x !== undefined) {
+      minX = Math.min(minX, cmd.x);
+      maxX = Math.max(maxX, cmd.x);
+    }
+    if (cmd.y !== undefined) {
+      minY = Math.min(minY, cmd.y);
+      maxY = Math.max(maxY, cmd.y);
+    }
+    // Also check control points for curves
+    if (cmd.x1 !== undefined) {
+      minX = Math.min(minX, cmd.x1);
+      maxX = Math.max(maxX, cmd.x1);
+    }
+    if (cmd.y1 !== undefined) {
+      minY = Math.min(minY, cmd.y1);
+      maxY = Math.max(maxY, cmd.y1);
+    }
+    if (cmd.x2 !== undefined) {
+      minX = Math.min(minX, cmd.x2);
+      maxX = Math.max(maxX, cmd.x2);
+    }
+    if (cmd.y2 !== undefined) {
+      minY = Math.min(minY, cmd.y2);
+      maxY = Math.max(maxY, cmd.y2);
+    }
+  });
+
+  // Fallback if bounds couldn't be calculated
+  if (!isFinite(minX) || !isFinite(minY) || !isFinite(maxX) || !isFinite(maxY)) {
+    return (
+      <div style={{
+        width: '32px',
+        height: '24px',
+        border: '1px solid #ddd',
+        borderRadius: '2px',
+        backgroundColor: '#f9f9f9',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '7px',
+        color: '#999',
+        flexShrink: 0
+      }}>
+        Path
+      </div>
+    );
+  }
+
+  const width = Math.max(maxX - minX, 5); // Minimum width
+  const height = Math.max(maxY - minY, 5); // Minimum height
+  const padding = Math.max(width * 0.1, height * 0.1, 1); // Dynamic padding
+  
+  // Scale to fit in a 32x24 preview
+  const previewWidth = 32;
+  const previewHeight = 24;
+
+  const viewBoxWidth = width + padding * 2;
+  const viewBoxHeight = height + padding * 2;
+  const viewBoxX = minX - padding;
+  const viewBoxY = minY - padding;
+
+  // Calculate stroke width based on the size of the path
+  const avgDimension = (width + height) / 2;
+  const strokeWidth = Math.max(avgDimension * 0.02, 0.5);
+
+  return (
+    <div style={{
+      width: `${previewWidth}px`,
+      height: `${previewHeight}px`,
+      border: isSelected ? '1px solid #2196f3' : '1px solid #ddd',
+      borderRadius: '2px',
+      backgroundColor: isSelected ? '#f3f9ff' : '#fafafa',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+      flexShrink: 0
+    }}>
+      <svg
+        width={previewWidth}
+        height={previewHeight}
+        viewBox={`${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`}
+        style={{ display: 'block' }}
+      >
+        <path
+          d={pathData}
+          fill="none"
+          stroke={isSelected ? '#2196f3' : '#666'}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
+  );
+};
 
 interface SubPathListItemProps {
   path: SVGPath;
@@ -27,12 +157,12 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
     <div
       onClick={onSelect}
       style={{
-        padding: '8px 12px',
+        padding: '6px 8px',
         borderRadius: '4px',
         cursor: 'pointer',
         backgroundColor: isSelected ? '#e3f2fd' : 'transparent',
         border: isSelected ? '1px solid #2196f3' : '1px solid transparent',
-        marginBottom: '4px',
+        marginBottom: '3px',
         fontSize: '12px',
         transition: 'all 0.2s ease',
       }}
@@ -47,20 +177,26 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
         }
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-        <List size={12} color={isSelected ? '#2196f3' : '#666'} />
-        <span style={{ 
-          fontWeight: '500', 
-          color: isSelected ? '#2196f3' : '#333' 
-        }}>
-          Sub-Path {subPath.id.slice(-6)}
-        </span>
-      </div>
-      
-      <div style={{ color: '#666', fontSize: '11px', marginLeft: '18px' }}>
-        <div>Start: {firstCommand?.command} {firstCommand?.x?.toFixed(0)},{firstCommand?.y?.toFixed(0)}</div>
-        <div>{commandCount} command{commandCount !== 1 ? 's' : ''}</div>
-        <div style={{ color: '#999' }}>Path: {path.id.slice(-6)}</div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+        <SubPathWireframe subPath={subPath} isSelected={isSelected} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
+            <List size={11} color={isSelected ? '#2196f3' : '#666'} />
+            <span style={{ 
+              fontWeight: '500', 
+              color: isSelected ? '#2196f3' : '#333',
+              fontSize: '11px'
+            }}>
+              Sub-Path {subPath.id.slice(-6)}
+            </span>
+          </div>
+          
+          <div style={{ color: '#666', fontSize: '10px', lineHeight: '1.3' }}>
+            <div>Start: {firstCommand?.command} {firstCommand?.x?.toFixed(0)},{firstCommand?.y?.toFixed(0)}</div>
+            <div>{commandCount} command{commandCount !== 1 ? 's' : ''}</div>
+            <div style={{ color: '#999' }}>Path: {path.id.slice(-6)}</div>
+          </div>
+        </div>
       </div>
     </div>
   );
