@@ -169,8 +169,8 @@ export const simplifySegmentWithPointsOnPath = (
     newSegmentCommands.push({
       id: `simplified-${i}`,
       command: command,
-      x: snapToGridValue(point[0], gridSize),
-      y: snapToGridValue(point[1], gridSize),
+      x: gridSize > 0 ? snapToGridValue(point[0], gridSize) : point[0],
+      y: gridSize > 0 ? snapToGridValue(point[1], gridSize) : point[1],
     });
   }
   

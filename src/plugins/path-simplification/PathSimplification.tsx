@@ -115,7 +115,7 @@ export const PathSimplificationControls: React.FC = () => {
       commandsToSimplify, 
       simplifyTolerance, 
       simplifyDistance, 
-      grid.size
+      grid.snapToGrid ? grid.size : 0
     );
 
     if (simplifiedCommands.length === 0) return;

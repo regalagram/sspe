@@ -102,7 +102,7 @@ export const PathSmoothingControls: React.FC = () => {
       segmentToSmooth,
       targetSubPath.commands,
       updatePath,
-      (value: number) => Math.round(value / grid.size) * grid.size
+      grid.snapToGrid ? (value: number) => Math.round(value / grid.size) * grid.size : (value: number) => value
     );
   };
 
