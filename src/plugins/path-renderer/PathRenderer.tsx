@@ -47,7 +47,7 @@ export const PathRenderer: React.FC = () => {
       // Save to history when starting to drag
       pushToHistory();
     }
-  }, [pushToHistory]);
+  }, [pushToHistory, viewport]);
 
   // Handle mouse move for dragging
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGElement>) => {
@@ -67,7 +67,7 @@ export const PathRenderer: React.FC = () => {
       ...prev,
       lastPoint: currentPoint,
     }));
-  }, [dragState, moveSubPath]);
+  }, [dragState, moveSubPath, viewport]);
 
   // Handle mouse up to stop dragging
   const handleMouseUp = useCallback(() => {
