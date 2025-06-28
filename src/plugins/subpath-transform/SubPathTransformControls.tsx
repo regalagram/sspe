@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
-import { Move, RotateCw, Scale, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Move, RotateCw, Maximize2, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 
 interface SubPathTransformControlsProps {}
 
@@ -168,7 +168,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
               </div>
               
               <PluginButton
-                icon={<Scale size={14} />}
+                icon={<Maximize2 size={14} />}
                 text="Apply Scale"
                 color="#007acc"
                 active={false}
