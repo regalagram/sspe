@@ -81,6 +81,8 @@ export const SubPathListComponent: React.FC = () => {
   });
   // Ref para evitar doble zoom en doble click
   const zoomTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Refs para los elementos de la lista de sub-paths
+  const subPathRefs = useRef<{ [subPathId: string]: HTMLDivElement | null }>({});
 
   // Actualizar la lista de sub-paths cuando cambian los paths
   useEffect(() => {
@@ -91,6 +93,17 @@ export const SubPathListComponent: React.FC = () => {
       setSubPathsList([]);
     }
   }, [paths]);
+
+  // Hacer scroll automático al sub-path seleccionado
+  useEffect(() => {
+    if (selection.selectedSubPaths.length === 1) {
+      const selectedId = selection.selectedSubPaths[0];
+      const el = subPathRefs.current[selectedId];
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [selection.selectedSubPaths, subPathsList]);
 
   const handleSubPathSelect = (subPathId: string) => {
     if (selection.selectedSubPaths.includes(subPathId)) {
@@ -133,13 +146,17 @@ export const SubPathListComponent: React.FC = () => {
         paddingRight: '4px'
       }}>
         {subPathsList.map(({ path, subPath }) => (
-          <SubPathListItem
+          <div
             key={subPath.id}
-            path={path}
-            subPath={subPath}
-            isSelected={selection.selectedSubPaths.includes(subPath.id)}
-            onSelect={() => handleSubPathSelect(subPath.id)}
-          />
+            ref={el => { subPathRefs.current[subPath.id] = el; }}
+          >
+            <SubPathListItem
+              path={path}
+              subPath={subPath}
+              isSelected={selection.selectedSubPaths.includes(subPath.id)}
+              onSelect={() => handleSubPathSelect(subPath.id)}
+            />
+          </div>
         ))}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', marginTop: 12, marginBottom: 0, justifyContent: 'flex-start' }}>
