@@ -15,6 +15,7 @@ export interface UserPreferences {
   // Feature preferences
   showControlPoints: boolean;
   showCommandPoints: boolean;
+  wireframeMode: boolean;
   
   // Creation tools preferences
   useRelativeCommands: boolean;
@@ -30,6 +31,7 @@ const defaultPreferences: UserPreferences = {
   showLabels: true,
   showControlPoints: true,
   showCommandPoints: true,
+  wireframeMode: false,
   useRelativeCommands: false,
 };
 
@@ -54,6 +56,7 @@ export function loadPreferences(): UserPreferences {
       showLabels: typeof parsed.showLabels === 'boolean' ? parsed.showLabels : defaultPreferences.showLabels,
       showControlPoints: typeof parsed.showControlPoints === 'boolean' ? parsed.showControlPoints : defaultPreferences.showControlPoints,
       showCommandPoints: typeof parsed.showCommandPoints === 'boolean' ? parsed.showCommandPoints : defaultPreferences.showCommandPoints,
+      wireframeMode: typeof parsed.wireframeMode === 'boolean' ? parsed.wireframeMode : defaultPreferences.wireframeMode,
       useRelativeCommands: typeof parsed.useRelativeCommands === 'boolean' ? parsed.useRelativeCommands : defaultPreferences.useRelativeCommands,
     };
   } catch (error) {

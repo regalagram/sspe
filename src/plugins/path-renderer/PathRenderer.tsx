@@ -5,7 +5,7 @@ import { subPathToString, getContrastColor, subPathToStringInContext, findSubPat
 import { getSVGPoint } from '../../utils/transform-utils';
 
 export const PathRenderer: React.FC = () => {
-  const { paths, selection, viewport, selectSubPathByPoint, moveSubPath, pushToHistory, renderVersion } = useEditorStore();
+  const { paths, selection, viewport, selectSubPathByPoint, moveSubPath, pushToHistory, renderVersion, enabledFeatures } = useEditorStore();
   const svgRef = useRef<SVGSVGElement>(null);
   
   // Drag state
@@ -118,18 +118,22 @@ export const PathRenderer: React.FC = () => {
         // Join all sub-paths into a single d string
         const d = path.subPaths.map(subPathToString).join(' ');
         
+        // Wireframe mode overrides path styles
+        const isWireframeMode = enabledFeatures.has('wireframe');
+        const wireframeStrokeWidth = 2; // Fixed stroke width for wireframe
+        
         return (
           <path
             key={`path-${path.id}`}
             d={d}
-            fill={path.style.fill}
-            stroke={path.style.stroke}
-            strokeWidth={(path.style.strokeWidth || 1) / viewport.zoom}
-            strokeDasharray={path.style.strokeDasharray}
-            strokeLinecap={path.style.strokeLinecap}
-            strokeLinejoin={path.style.strokeLinejoin}
-            fillOpacity={path.style.fillOpacity}
-            strokeOpacity={path.style.strokeOpacity}
+            fill={isWireframeMode ? 'none' : path.style.fill}
+            stroke={isWireframeMode ? '#000000' : path.style.stroke}
+            strokeWidth={isWireframeMode ? wireframeStrokeWidth / viewport.zoom : (path.style.strokeWidth || 1) / viewport.zoom}
+            strokeDasharray={isWireframeMode ? undefined : path.style.strokeDasharray}
+            strokeLinecap={isWireframeMode ? 'round' : path.style.strokeLinecap}
+            strokeLinejoin={isWireframeMode ? 'round' : path.style.strokeLinejoin}
+            fillOpacity={isWireframeMode ? 0 : path.style.fillOpacity}
+            strokeOpacity={isWireframeMode ? 1 : path.style.strokeOpacity}
             fillRule={path.style.fillRule || 'nonzero'}
             style={{
               cursor: 'pointer',

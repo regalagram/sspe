@@ -129,7 +129,8 @@ const createInitialState = (): EditorState => {
       'select', 
       'grid',
       ...(preferences.showCommandPoints ? ['command-points'] : []),
-      ...(preferences.showControlPoints ? ['control-points'] : [])
+      ...(preferences.showControlPoints ? ['control-points'] : []),
+      ...(preferences.wireframeMode ? ['wireframe'] : [])
     ]),
     renderVersion: 0,
   };
@@ -147,6 +148,8 @@ const saveCurrentPreferences = (state: EditorState) => {
     showLabels: state.grid.showLabels,
     showControlPoints: state.enabledFeatures.has('control-points'),
     showCommandPoints: state.enabledFeatures.has('command-points'),
+    wireframeMode: state.enabledFeatures.has('wireframe'),
+    useRelativeCommands: false, // This might be controlled by another plugin
   };
   savePreferences(preferences);
 };
@@ -1059,7 +1062,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         const newState = { enabledFeatures: newFeatures };
         
         // Save preferences after updating features
-        if (feature === 'control-points' || feature === 'command-points') {
+        if (feature === 'control-points' || feature === 'command-points' || feature === 'wireframe') {
           setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
         }
         
@@ -1073,7 +1076,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         };
         
         // Save preferences after enabling features
-        if (feature === 'control-points' || feature === 'command-points') {
+        if (feature === 'control-points' || feature === 'command-points' || feature === 'wireframe') {
           setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
         }
         
@@ -1088,7 +1091,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         const newState = { enabledFeatures: newFeatures };
         
         // Save preferences after disabling features
-        if (feature === 'control-points' || feature === 'command-points') {
+        if (feature === 'control-points' || feature === 'command-points' || feature === 'wireframe') {
           setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
         }
         
