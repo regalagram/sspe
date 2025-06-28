@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
@@ -10,17 +10,41 @@ import {
   generateSubpathString
 } from '../../utils/path-simplification-utils';
 
+// Custom hook for persistent state in localStorage
+const usePersistentState = <T,>(key: string, defaultValue: T): [T, (value: T) => void] => {
+  const [state, setState] = useState<T>(() => {
+    try {
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : defaultValue;
+    } catch {
+      return defaultValue;
+    }
+  });
+
+  const setPersistentState = (value: T) => {
+    setState(value);
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (error) {
+      console.warn(`Failed to save ${key} to localStorage:`, error);
+    }
+  };
+
+  return [state, setPersistentState];
+};
+
 export const PathSimplificationControls: React.FC = () => {
   const { 
     selection, 
     paths, 
     grid,
-    replaceSubPathCommands
+    replaceSubPathCommands,
+    pushToHistory
   } = useEditorStore();
 
-  // Tolerance settings for simplification
-  const [simplifyTolerance, setSimplifyTolerance] = useState(0.1);
-  const [simplifyDistance, setSimplifyDistance] = useState(10);
+  // Tolerance settings for simplification with localStorage persistence
+  const [simplifyTolerance, setSimplifyTolerance] = usePersistentState('pathSimplification.tolerance', 0.1);
+  const [simplifyDistance, setSimplifyDistance] = usePersistentState('pathSimplification.distance', 10);
 
   const { selectedCommands, selectedSubPaths } = selection;
   
@@ -60,6 +84,9 @@ export const PathSimplificationControls: React.FC = () => {
 
   const handleSimplify = () => {
     if (!canSimplify || !targetSubPath || !targetCommands || startIndex === undefined || endIndex === undefined) return;
+
+    // Save current state to history before making changes
+    pushToHistory();
 
     // CRITICAL: Commands are already sorted by path order (not selection order)
     // This guarantees that targetCommands[0] is the first command in the path sequence
@@ -190,9 +217,25 @@ export const PathSimplificationControls: React.FC = () => {
 
         {/* Tolerance Controls */}
         <div style={controlStyle}>
-          <label style={labelStyle}>
-            Tolerance: {simplifyTolerance}
-          </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label style={labelStyle}>
+              Tolerance: {simplifyTolerance}
+            </label>
+            <button
+              onClick={() => setSimplifyTolerance(0.1)}
+              style={{ 
+                fontSize: '10px', 
+                padding: '2px 6px', 
+                border: '1px solid #ddd', 
+                borderRadius: '3px', 
+                background: '#f8f9fa',
+                cursor: 'pointer'
+              }}
+              title="Reset to default (0.1)"
+            >
+              Reset
+            </button>
+          </div>
           <input
             type="range"
             min="0.01"
@@ -205,9 +248,25 @@ export const PathSimplificationControls: React.FC = () => {
         </div>
 
         <div style={controlStyle}>
-          <label style={labelStyle}>
-            Distance: {simplifyDistance}px
-          </label>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label style={labelStyle}>
+              Distance: {simplifyDistance}px
+            </label>
+            <button
+              onClick={() => setSimplifyDistance(10)}
+              style={{ 
+                fontSize: '10px', 
+                padding: '2px 6px', 
+                border: '1px solid #ddd', 
+                borderRadius: '3px', 
+                background: '#f8f9fa',
+                cursor: 'pointer'
+              }}
+              title="Reset to default (10px)"
+            >
+              Reset
+            </button>
+          </div>
           <input
             type="range"
             min="1"
@@ -223,7 +282,7 @@ export const PathSimplificationControls: React.FC = () => {
           onClick={handleSimplify}
           disabled={!canSimplify}
           style={buttonStyle}
-          title={canSimplify ? 'Simplify selected commands/subpath using Ramer-Douglas-Peucker algorithm' : 'Select 2+ commands in same subpath or one subpath'}
+          title={canSimplify ? 'Simplify selected commands/subpath using Ramer-Douglas-Peucker algorithm (Undoable with Ctrl+Z)' : 'Select 2+ commands in same subpath or one subpath'}
         >
           <Minimize2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
           Simplify Path
@@ -237,6 +296,10 @@ export const PathSimplificationControls: React.FC = () => {
 
         <div style={{ ...infoStyle, fontSize: '10px' }}>
           Uses Ramer-Douglas-Peucker algorithm to reduce points while preserving shape.
+          <br />
+          <em>Settings are automatically saved to localStorage.</em>
+          <br />
+          <strong>💡 All operations can be undone with Ctrl+Z</strong>
         </div>
       </div>
     </DraggablePanel>

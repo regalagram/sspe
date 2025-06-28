@@ -13,7 +13,8 @@ export const PathSmoothingControls: React.FC = () => {
     selection, 
     paths, 
     grid,
-    replaceSubPathCommands
+    replaceSubPathCommands,
+    pushToHistory
   } = useEditorStore();
 
   const { selectedCommands, selectedSubPaths } = selection;
@@ -54,6 +55,9 @@ export const PathSmoothingControls: React.FC = () => {
 
   const handleSmooth = () => {
     if (!canSmooth || !targetSubPath || !targetCommands || startIndex === undefined || endIndex === undefined) return;
+
+    // Save current state to history before making changes
+    pushToHistory();
 
     // CRITICAL: Commands are already sorted by path order (not selection order)
     // This guarantees that targetCommands[0] is the first command in the path sequence
@@ -145,7 +149,7 @@ export const PathSmoothingControls: React.FC = () => {
           onClick={handleSmooth}
           disabled={!canSmooth}
           style={buttonStyle}
-          title={canSmooth ? 'Apply smoothing to selected commands using getPointSmooth' : 'Select 2+ commands in same subpath'}
+          title={canSmooth ? 'Apply smoothing to selected commands using getPointSmooth (Undoable with Ctrl+Z)' : 'Select 2+ commands in same subpath'}
         >
           <Waves size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
           Apply Smoothing
@@ -159,6 +163,8 @@ export const PathSmoothingControls: React.FC = () => {
 
         <div style={{ ...infoStyle, fontSize: '11px' }}>
           Converts straight lines to smooth Bézier curves while preserving the overall shape.
+          <br />
+          <strong>💡 All operations can be undone with Ctrl+Z</strong>
         </div>
       </div>
     </DraggablePanel>
