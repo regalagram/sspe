@@ -1,9 +1,13 @@
 import React, { useState, MouseEvent } from 'react';
 import { Plugin, MouseEventHandler, MouseEventContext } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
+import { DraggablePanel } from '../../components/DraggablePanel';
+import { PluginButton } from '../../components/PluginButton';
+import { MousePointer2, XCircle } from 'lucide-react';
 import { getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 
+// Rectangle Selection Manager
 interface RectSelectionState {
   isSelecting: boolean;
   selectionStart: { x: number; y: number } | null;
@@ -24,7 +28,6 @@ class RectSelectionManager {
     this.editorStore = store;
   }
 
-  // Add listener for state changes
   addListener(listener: () => void) {
     this.listeners.push(listener);
     return () => {
@@ -32,7 +35,6 @@ class RectSelectionManager {
     };
   }
 
-  // Notify all listeners when state changes
   private notifyListeners() {
     this.listeners.forEach(listener => listener());
   }
@@ -45,7 +47,6 @@ class RectSelectionManager {
     const { commandId, controlPoint } = context;
     const { mode } = this.editorStore;
 
-    // Only handle rect selection if we're in select mode, no command or control point is being clicked
     if (mode.current === 'select' && !commandId && !controlPoint && e.button === 0 && !e.shiftKey) {
       const svgPoint = this.getSVGPoint(e, context.svgRef);
       this.state.isSelecting = true;
@@ -77,11 +78,9 @@ class RectSelectionManager {
     if (this.state.isSelecting && this.state.selectionRect) {
       const { paths, selectMultiple, clearSelection } = this.editorStore;
       
-      // Only treat as a rectangle selection if there's actual area (not just a click)
       const hasSignificantArea = this.state.selectionRect.width > 5 || this.state.selectionRect.height > 5;
       
       if (hasSignificantArea) {
-        // First, find all commands within the rectangle, plus Z commands from same sub-paths
         const commandsInRect: { commandId: string; subPathId: string; pathId: string }[] = [];
         const subPathsWithCommands = new Set<string>();
         
@@ -89,7 +88,6 @@ class RectSelectionManager {
           path.subPaths.forEach((subPath: any) => {
             subPath.commands.forEach((command: any) => {
               const pos = getCommandPosition(command);
-              // Include commands with positions that are within the rectangle
               if (pos && 
                 pos.x >= this.state.selectionRect!.x &&
                 pos.x <= this.state.selectionRect!.x + this.state.selectionRect!.width &&
@@ -107,12 +105,11 @@ class RectSelectionManager {
           });
         });
 
-        // Now add Z commands from sub-paths that have other commands selected
+        // Add Z commands from sub-paths that have other commands selected
         paths.forEach((path: any) => {
           path.subPaths.forEach((subPath: any) => {
             if (subPathsWithCommands.has(subPath.id)) {
               subPath.commands.forEach((command: any) => {
-                // Add Z commands (and other commands without position) from affected sub-paths
                 const pos = getCommandPosition(command);
                 if (!pos && !commandsInRect.some(item => item.commandId === command.id)) {
                   commandsInRect.push({
@@ -127,10 +124,8 @@ class RectSelectionManager {
         });
 
         if (commandsInRect.length > 0) {
-          // Group commands by sub-path to check completeness
           const subPathGroups = new Map<string, { commandIds: string[]; totalCommands: number }>();
           
-          // First pass: collect all commands in rectangle grouped by sub-path
           commandsInRect.forEach(({ commandId, subPathId }) => {
             if (!subPathGroups.has(subPathId)) {
               subPathGroups.set(subPathId, { commandIds: [], totalCommands: 0 });
@@ -138,7 +133,6 @@ class RectSelectionManager {
             subPathGroups.get(subPathId)!.commandIds.push(commandId);
           });
           
-          // Second pass: get total command count for each sub-path
           paths.forEach((path: any) => {
             path.subPaths.forEach((subPath: any) => {
               if (subPathGroups.has(subPath.id)) {
@@ -147,40 +141,31 @@ class RectSelectionManager {
             });
           });
           
-          // Check if ALL selected commands belong to COMPLETE sub-paths
           let allCommandsBelongToCompleteSubPaths = true;
           const completeSubPathIds: string[] = [];
           
           subPathGroups.forEach((group, subPathId) => {
             if (group.commandIds.length === group.totalCommands) {
-              // This sub-path is complete
               completeSubPathIds.push(subPathId);
             } else {
-              // This sub-path is incomplete - we have partial commands
               allCommandsBelongToCompleteSubPaths = false;
             }
           });
           
           if (allCommandsBelongToCompleteSubPaths && completeSubPathIds.length > 0) {
-            // ALL commands belong to complete sub-paths, so select those sub-paths
             const { selectSubPathMultiple } = this.editorStore;
-            // Clear current selection and select the first sub-path
             selectSubPathMultiple(completeSubPathIds[0], false);
-            // Then add the rest with shift behavior
             for (let i = 1; i < completeSubPathIds.length; i++) {
               selectSubPathMultiple(completeSubPathIds[i], true);
             }
           } else {
-            // Some commands don't complete their sub-paths, use original behavior
-            // But only include commands that have positions (exclude Z commands in partial selection)
             const selectedCommandIds = commandsInRect
               .filter(item => {
-                // Find the actual command to check if it has a position
                 for (const path of paths) {
                   for (const subPath of path.subPaths) {
                     const command = subPath.commands.find((cmd: any) => cmd.id === item.commandId);
                     if (command) {
-                      return getCommandPosition(command) !== null; // Only include commands with positions
+                      return getCommandPosition(command) !== null;
                     }
                   }
                 }
@@ -193,13 +178,12 @@ class RectSelectionManager {
           clearSelection();
         }
       }
-      // If it's just a small click (not a drag), don't clear selection
 
       this.state.isSelecting = false;
       this.state.selectionStart = null;
       this.state.selectionRect = null;
       this.notifyListeners();
-      return hasSignificantArea; // Only consume the event if it was a real selection
+      return hasSignificantArea;
     }
 
     if (this.state.isSelecting) {
@@ -237,12 +221,11 @@ export const useRectSelection = () => {
   };
 };
 
-// React component for rendering the selection rectangle
-export const RectSelectionRenderer: React.FC = () => {
+// Selection Rectangle Renderer
+export const SelectionRectRenderer: React.FC = () => {
   const { viewport } = useEditorStore();
   const [, forceUpdate] = useState({});
 
-  // Subscribe to state changes to force re-render
   React.useEffect(() => {
     const unsubscribe = rectSelectionManager.addListener(() => {
       forceUpdate({});
@@ -269,26 +252,143 @@ export const RectSelectionRenderer: React.FC = () => {
   );
 };
 
-export const RectSelectionPlugin: Plugin = {
-  id: 'rect-selection',
-  name: 'Rectangle Selection',
+// Selection Tools UI Components
+interface SelectionToolsProps {
+  currentMode: string;
+  onSetSelectionMode: () => void;
+  onClearSelection: () => void;
+  selectedCount: number;
+}
+
+export const SelectionTools: React.FC<SelectionToolsProps> = ({
+  currentMode,
+  onSetSelectionMode,
+  onClearSelection,
+  selectedCount,
+}) => {
+  return (
+    <div className="selection-tools" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <PluginButton
+        icon={<MousePointer2 size={16} />}
+        text="Selection Mode"
+        color="#007acc"
+        active={currentMode === 'select'}
+        disabled={false}
+        onClick={onSetSelectionMode}
+      />
+      <PluginButton
+        icon={<XCircle size={16} />}
+        text="Clear Selection"
+        color="#dc3545"
+        active={false}
+        disabled={selectedCount === 0}
+        onClick={onClearSelection}
+      />
+      <div style={{ 
+        fontSize: '12px', 
+        color: '#666', 
+        textAlign: 'center',
+        padding: '8px',
+        background: '#f0f0f0',
+        borderRadius: '4px',
+        border: '1px solid #ddd'
+      }}>
+        <strong>{selectedCount}</strong> item{selectedCount !== 1 ? 's' : ''} selected
+      </div>
+    </div>
+  );
+};
+
+export const SelectionToolsComponent: React.FC = () => {
+  const { mode, selection, setMode, clearSelection } = useEditorStore();
+  
+  const selectedCount = 
+    selection.selectedPaths.length + 
+    selection.selectedSubPaths.length + 
+    selection.selectedCommands.length;
+  
+  return (
+    <DraggablePanel 
+      title="Selection"
+      initialPosition={{ x: 980, y: 300 }}
+      id="selection-tools"
+    >
+      <SelectionTools
+        currentMode={mode.current}
+        onSetSelectionMode={() => setMode('select')}
+        onClearSelection={clearSelection}
+        selectedCount={selectedCount}
+      />
+    </DraggablePanel>
+  );
+};
+
+// Combined Selection Plugin
+export const SelectionPlugin: Plugin = {
+  id: 'selection',
+  name: 'Selection',
   version: '1.0.0',
   enabled: true,
   dependencies: ['mouse-interaction'],
+  
   initialize: (editor) => {
     rectSelectionManager.setEditorStore(editor);
   },
+  
   mouseHandlers: {
     onMouseDown: rectSelectionManager.handleMouseDown,
     onMouseMove: rectSelectionManager.handleMouseMove,
     onMouseUp: rectSelectionManager.handleMouseUp,
   },
+  
+  shortcuts: [
+    {
+      key: 'v',
+      description: 'Selection Tool',
+      action: () => {
+        const store = useEditorStore.getState();
+        store.setMode('select');
+      }
+    },
+    {
+      key: 'a',
+      modifiers: ['ctrl'],
+      description: 'Select All',
+      action: () => {
+        const store = useEditorStore.getState();
+        
+        const allCommandIds = store.paths.flatMap(path => 
+          path.subPaths.flatMap(subPath => 
+            subPath.commands.map(cmd => cmd.id)
+          )
+        );
+        
+        store.selectMultiple(allCommandIds, 'commands');
+      }
+    },
+    {
+      key: 'd',
+      modifiers: ['ctrl'],
+      description: 'Deselect All',
+      action: () => {
+        const store = useEditorStore.getState();
+        store.clearSelection();
+      }
+    }
+  ],
+  
   ui: [
     {
-      id: 'rect-selection-renderer',
-      component: RectSelectionRenderer,
-      position: 'svg-content',
-      order: 100, // Render on top
+      id: 'selection-tools',
+      component: SelectionToolsComponent,
+      position: 'sidebar',
+      order: 0
     },
-  ],
+    {
+      id: 'selection-rect-renderer',
+      component: SelectionRectRenderer,
+      position: 'svg-content',
+      order: 100,
+    },
+  ]
 };

@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';import { useEditorStore } from '../store/editorStore';
+import React, { useEffect, useRef } from 'react';
+import { useEditorStore } from '../store/editorStore';
 import { pluginManager } from './PluginSystem';
 import { getSafeTransform } from '../utils/transform-utils';
 import { ZoomPlugin } from '../plugins/zoom/Zoom';
@@ -7,11 +8,10 @@ import { UndoRedoPlugin } from '../plugins/undo-redo/UndoRedo';
 import { CreationPlugin } from '../plugins/creation/Creation';
 import { FullscreenPlugin } from '../plugins/fullscreen/Fullscreen';
 import { PathStylePlugin } from '../plugins/path-style/PathStyle';
-import { SelectionToolsPlugin } from '../plugins/selection-tools/SelectionTools';
+import { SelectionPlugin, useRectSelection } from '../plugins/selection/Selection';
 import { SVGPlugin } from '../plugins/svg-editor/SVGEditor';
 import { SubPathListPlugin } from '../plugins/subpath-list/SubPathList';
 import { MouseInteractionPlugin, useMouseInteraction } from '../plugins/mouse-interaction/MouseInteraction';
-import { RectSelectionPlugin, useRectSelection } from '../plugins/rect-selection/RectSelection';
 import { PathRendererPlugin } from '../plugins/path-renderer/PathRenderer';
 import { CommandPlugin } from '../plugins/command/Command';
 import { GlobalKeyboardPlugin } from '../plugins/global-keyboard/GlobalKeyboard';
@@ -22,7 +22,7 @@ import { SubPathTransformPlugin } from '../plugins/subpath-transform/SubPathTran
 const initializePlugins = () => {
   // Register all plugins before any component renders
   pluginManager.registerPlugin(MouseInteractionPlugin);
-  pluginManager.registerPlugin(RectSelectionPlugin);
+  pluginManager.registerPlugin(SelectionPlugin);
   pluginManager.registerPlugin(PathRendererPlugin);
   pluginManager.registerPlugin(VisualDebugPlugin);
   pluginManager.registerPlugin(CommandPlugin);
@@ -33,7 +33,6 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(UndoRedoPlugin);
   pluginManager.registerPlugin(FullscreenPlugin);
   pluginManager.registerPlugin(PathStylePlugin);
-  pluginManager.registerPlugin(SelectionToolsPlugin);
   pluginManager.registerPlugin(SVGPlugin);
   pluginManager.registerPlugin(SubPathListPlugin);
   pluginManager.registerPlugin(SubPathTransformPlugin);
