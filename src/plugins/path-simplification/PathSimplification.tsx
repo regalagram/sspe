@@ -217,21 +217,6 @@ export const PathSimplificationControls: React.FC = () => {
     }
   };
 
-  // Determine button text and info message
-  let buttonText = "Simplify";
-  let infoMessage = "";
-  
-  if (selectedCommands.length >= 2) {
-    infoMessage = `Simplify ${selectedCommands.length} selected commands`;
-  } else if (selectedSubPaths.length === 1) {
-    infoMessage = "Simplify entire selected sub-path";
-  } else if (selectedSubPaths.length > 1) {
-    buttonText = `Simplify ${selectedSubPaths.length} Sub-Paths`;
-    infoMessage = `Simplify all ${selectedSubPaths.length} selected sub-paths entirely`;
-  } else {
-    infoMessage = "Select commands within a sub-path or select sub-path(s) to simplify";
-  }
-
   const buttonStyle: React.CSSProperties = {
     padding: '8px 12px',
     border: '1px solid #ddd',
@@ -346,13 +331,11 @@ export const PathSimplificationControls: React.FC = () => {
           </div>
         </div>
 
-        <div style={infoStyle}>
-          {infoMessage}
-        </div>
+
 
         <PluginButton
           icon={<Minimize2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
-          text={buttonText}
+          text="Simplify"
           color="#007acc"
           active={false}
           disabled={!canSimplify}

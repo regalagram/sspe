@@ -81,15 +81,16 @@ class RectSelectionManager {
       const hasSignificantArea = this.state.selectionRect.width > 5 || this.state.selectionRect.height > 5;
       
       if (hasSignificantArea) {
-        // First, find all commands within the rectangle
+        // First, find all commands within the rectangle, plus Z commands from same sub-paths
         const commandsInRect: { commandId: string; subPathId: string; pathId: string }[] = [];
+        const subPathsWithCommands = new Set<string>();
         
         paths.forEach((path: any) => {
           path.subPaths.forEach((subPath: any) => {
             subPath.commands.forEach((command: any) => {
               const pos = getCommandPosition(command);
-              if (!pos) return;
-              if (
+              // Include commands with positions that are within the rectangle
+              if (pos && 
                 pos.x >= this.state.selectionRect!.x &&
                 pos.x <= this.state.selectionRect!.x + this.state.selectionRect!.width &&
                 pos.y >= this.state.selectionRect!.y &&
@@ -100,8 +101,28 @@ class RectSelectionManager {
                   subPathId: subPath.id,
                   pathId: path.id
                 });
+                subPathsWithCommands.add(subPath.id);
               }
             });
+          });
+        });
+
+        // Now add Z commands from sub-paths that have other commands selected
+        paths.forEach((path: any) => {
+          path.subPaths.forEach((subPath: any) => {
+            if (subPathsWithCommands.has(subPath.id)) {
+              subPath.commands.forEach((command: any) => {
+                // Add Z commands (and other commands without position) from affected sub-paths
+                const pos = getCommandPosition(command);
+                if (!pos && !commandsInRect.some(item => item.commandId === command.id)) {
+                  commandsInRect.push({
+                    commandId: command.id,
+                    subPathId: subPath.id,
+                    pathId: path.id
+                  });
+                }
+              });
+            }
           });
         });
 
@@ -151,7 +172,21 @@ class RectSelectionManager {
             }
           } else {
             // Some commands don't complete their sub-paths, use original behavior
-            const selectedCommandIds = commandsInRect.map(item => item.commandId);
+            // But only include commands that have positions (exclude Z commands in partial selection)
+            const selectedCommandIds = commandsInRect
+              .filter(item => {
+                // Find the actual command to check if it has a position
+                for (const path of paths) {
+                  for (const subPath of path.subPaths) {
+                    const command = subPath.commands.find((cmd: any) => cmd.id === item.commandId);
+                    if (command) {
+                      return getCommandPosition(command) !== null; // Only include commands with positions
+                    }
+                  }
+                }
+                return false;
+              })
+              .map(item => item.commandId);
             selectMultiple(selectedCommandIds, 'commands');
           }
         } else {

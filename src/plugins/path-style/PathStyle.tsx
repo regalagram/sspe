@@ -278,25 +278,7 @@ export const PathStyleComponent: React.FC = () => {
   
   // Only show the panel when all paths have the same style
   if (!allPathsHaveSameStyle) {
-    return (
-      <DraggablePanel 
-        title="Path Style"
-        initialPosition={{ x: 980, y: 220 }}
-        id="path-style"
-      >
-        <div style={{ 
-          padding: '16px 8px',
-          fontSize: '12px', 
-          color: '#666', 
-          textAlign: 'center',
-          fontStyle: 'italic'
-        }}>
-          Selected sub-paths have different styles.
-          <br />
-          Select sub-paths from paths with matching styles to edit.
-        </div>
-      </DraggablePanel>
-    );
+    return null;
   }
   
   // Force re-render when selection changes by creating a key that changes
