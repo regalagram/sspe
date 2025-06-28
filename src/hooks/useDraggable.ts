@@ -38,7 +38,6 @@ export const useDraggable = (options: UseDraggableOptions = {}): UseDraggableRet
 
   const [position, setPositionState] = useState<Position>(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<Position>({ x: 0, y: 0 });
   const elementRef = useRef<HTMLElement>(null);
 
   // Update position when initialPosition changes (from storage)
@@ -90,32 +89,37 @@ export const useDraggable = (options: UseDraggableOptions = {}): UseDraggableRet
     }
 
     setIsDragging(true);
-    setDragStart({
+    
+    // Calculate drag offset based on current position
+    const currentDragStart = {
       x: e.clientX - position.x,
       y: e.clientY - position.y
-    });
+    };
+
+    let currentPosition = position;
 
     // Add global event listeners
     const handleMouseMove = (e: MouseEvent) => {
       const newPosition = {
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y
+        x: e.clientX - currentDragStart.x,
+        y: e.clientY - currentDragStart.y
       };
       const constrainedPosition = constrainPosition(newPosition);
+      currentPosition = constrainedPosition;
       setPositionState(constrainedPosition);
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
-      // Call onPositionChange when dragging stops
-      onPositionChange?.(position);
+      // Call onPositionChange with the final position
+      onPositionChange?.(currentPosition);
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-  }, [position, dragStart, constrainPosition, handle, onPositionChange, disabled]);
+  }, [position, constrainPosition, handle, onPositionChange, disabled]);
 
   // Update element ref when position changes
   useEffect(() => {
