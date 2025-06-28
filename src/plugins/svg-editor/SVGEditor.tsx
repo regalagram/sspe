@@ -6,6 +6,129 @@ import { parseSVGToSubPaths } from '../../utils/svg-parser';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
 import { RotateCcw, CheckCircle2, Trash2 } from 'lucide-react';
+import { savePreferences, loadPreferences } from '../../utils/persistence';
+
+interface PrecisionControlProps {
+  precision: number;
+  onPrecisionChange: (precision: number) => void;
+}
+
+const PrecisionControl: React.FC<PrecisionControlProps> = ({ precision, onPrecisionChange }) => {
+  const [inputValue, setInputValue] = useState(precision);
+
+  // Update input when precision prop changes
+  useEffect(() => {
+    setInputValue(precision);
+  }, [precision]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let val = parseInt(e.target.value, 10);
+    if (isNaN(val) || val < 0) val = 0;
+    if (val > 8) val = 8;
+    setInputValue(val);
+  };
+
+  const handleReset = () => {
+    setInputValue(2);
+  };
+
+  const handleApply = () => {
+    onPrecisionChange(inputValue);
+    try {
+      const prefs = loadPreferences();
+      savePreferences({ ...prefs, precision: inputValue });
+    } catch {}
+  };
+
+  const controlStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    marginBottom: '12px',
+    padding: '8px',
+    backgroundColor: '#f8f9fa',
+    borderRadius: '4px',
+    border: '1px solid #e9ecef'
+  };
+
+  const topRowStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  };
+
+  const bottomRowStyle: React.CSSProperties = {
+    display: 'flex',
+    gap: '6px',
+    justifyContent: 'flex-end'
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: '11px',
+    color: '#666',
+    fontWeight: '500',
+    minWidth: '55px'
+  };
+
+  const inputStyle: React.CSSProperties = {
+    padding: '4px 8px',
+    border: '1px solid #ddd',
+    borderRadius: '4px',
+    fontSize: '12px',
+    width: '50px',
+    textAlign: 'center' as const
+  };
+
+  return (
+    <div style={controlStyle}>
+      <div style={topRowStyle}>
+        <label style={labelStyle}>
+          Precision
+        </label>
+        <input
+          type="number"
+          min={0}
+          max={8}
+          value={inputValue}
+          onChange={handleChange}
+          style={inputStyle}
+        />
+      </div>
+      <div style={bottomRowStyle}>
+        <button
+          onClick={handleReset}
+          style={{
+            fontSize: '10px',
+            padding: '2px 6px',
+            border: '1px solid #ddd',
+            borderRadius: '3px',
+            background: '#f8f9fa',
+            cursor: 'pointer'
+          }}
+          title="Reset to default (2)"
+        >
+          Reset
+        </button>
+        <button
+          onClick={handleApply}
+          disabled={inputValue === precision}
+          style={{
+            fontSize: '10px',
+            padding: '2px 8px',
+            border: '1px solid #2196f3',
+            borderRadius: '3px',
+            background: inputValue !== precision ? '#2196f3' : '#f8f9fa',
+            color: inputValue !== precision ? 'white' : '#666',
+            cursor: inputValue !== precision ? 'pointer' : 'not-allowed'
+          }}
+          title="Apply precision changes"
+        >
+          Apply
+        </button>
+      </div>
+    </div>
+  );
+};
 
 interface SVGEditorProps {
   svgCode: string;
@@ -101,7 +224,7 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
 };
 
 export const SVGComponent: React.FC = () => {
-  const { paths, viewport, replacePaths, resetViewportCompletely } = useEditorStore();
+  const { paths, viewport, replacePaths, resetViewportCompletely, precision, setPrecision } = useEditorStore();
 
   // Generate SVG string from current paths
   const generateSVGCode = (): string => {
@@ -190,6 +313,10 @@ ${pathElements}
       initialPosition={{ x: 980, y: 300 }}
       id="svg-editor"
     >
+      <PrecisionControl
+        precision={precision}
+        onPrecisionChange={setPrecision}
+      />
       <SVGEditor
         svgCode={currentSVG}
         onSVGChange={handleSVGChange}

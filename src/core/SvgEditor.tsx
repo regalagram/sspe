@@ -7,19 +7,16 @@ import { UndoRedoPlugin } from '../plugins/undo-redo/UndoRedo';
 import { CreationToolsPlugin } from '../plugins/creation-tools/CreationTools';
 import { FullscreenPlugin } from '../plugins/fullscreen/Fullscreen';
 import { PathStylePlugin } from '../plugins/path-style/PathStyle';
-import { ControlPointsPlugin } from '../plugins/control-points/ControlPoints';
 import { SelectionToolsPlugin } from '../plugins/selection-tools/SelectionTools';
 import { SVGPlugin } from '../plugins/svg-editor/SVGEditor';
 import { SubPathListPlugin } from '../plugins/subpath-list/SubPathList';
 import { MouseInteractionPlugin, useMouseInteraction } from '../plugins/mouse-interaction/MouseInteraction';
 import { RectSelectionPlugin, useRectSelection } from '../plugins/rect-selection/RectSelection';
 import { PathRendererPlugin } from '../plugins/path-renderer/PathRenderer';
-import { CommandPointsRendererPlugin } from '../plugins/command-points-renderer/CommandPointsRenderer';
 import { CommandPlugin } from '../plugins/command/Command';
 import { GlobalKeyboardPlugin } from '../plugins/global-keyboard/GlobalKeyboard';
 import { CreationModePlugin } from '../plugins/creation-mode/CreationMode';
-import { WireframePlugin } from '../plugins/wireframe/Wireframe';
-import { PrecisionControlPlugin } from '../plugins/precision-control/PrecisionControl';
+import { VisualDebugPlugin } from '../plugins/visual-debug/VisualDebug';
 import { SubPathTransformPlugin } from '../plugins/subpath-transform/SubPathTransform';
 
 // Register plugins immediately during module loading
@@ -28,7 +25,7 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(MouseInteractionPlugin);
   pluginManager.registerPlugin(RectSelectionPlugin);
   pluginManager.registerPlugin(PathRendererPlugin);
-  pluginManager.registerPlugin(CommandPointsRendererPlugin);
+  pluginManager.registerPlugin(VisualDebugPlugin);
   pluginManager.registerPlugin(CommandPlugin);
   pluginManager.registerPlugin(CreationModePlugin);
   pluginManager.registerPlugin(GlobalKeyboardPlugin);
@@ -38,12 +35,9 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(CreationToolsPlugin);
   pluginManager.registerPlugin(FullscreenPlugin);
   pluginManager.registerPlugin(PathStylePlugin);
-  pluginManager.registerPlugin(ControlPointsPlugin);
   pluginManager.registerPlugin(SelectionToolsPlugin);
   pluginManager.registerPlugin(SVGPlugin);
   pluginManager.registerPlugin(SubPathListPlugin);
-  pluginManager.registerPlugin(WireframePlugin);
-  pluginManager.registerPlugin(PrecisionControlPlugin);
   pluginManager.registerPlugin(SubPathTransformPlugin);
 };
 
