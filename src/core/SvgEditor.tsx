@@ -22,6 +22,7 @@ import { RelativeToolsPlugin } from '../plugins/relative-tools/RelativeTools';
 import { PathSimplificationPlugin } from '../plugins/path-simplification/PathSimplification';
 import { PathSmoothingPlugin } from '../plugins/path-smoothing/PathSmoothing';
 import { WireframePlugin } from '../plugins/wireframe/Wireframe';
+import { PrecisionControlPlugin } from '../plugins/precision-control/PrecisionControl';
 
 // Register plugins immediately during module loading
 const initializePlugins = () => {
@@ -47,6 +48,7 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(PathSimplificationPlugin);
   pluginManager.registerPlugin(PathSmoothingPlugin);
   pluginManager.registerPlugin(WireframePlugin);
+  pluginManager.registerPlugin(PrecisionControlPlugin);
 };
 
 // Initialize plugins during module load

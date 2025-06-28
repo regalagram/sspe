@@ -67,10 +67,21 @@ interface EditorActions {
   
   // Render control
   forceRender: () => void;
+
+  // Precision control
+  setPrecision: (precision: number) => void;
 }
 
 // Load preferences from localStorage
 const preferences = loadPreferences();
+const storedPrecision = (() => {
+  try {
+    const val = localStorage.getItem('sspe-precision');
+    return val ? Math.max(0, Math.min(8, parseInt(JSON.parse(val), 10))) : 2;
+  } catch {
+    return 2;
+  }
+})();
 
 const createInitialState = (): EditorState => {
   // Hardcoded SVG to load as initial state
@@ -133,6 +144,7 @@ const createInitialState = (): EditorState => {
       ...(preferences.wireframeMode ? ['wireframe'] : [])
     ]),
     renderVersion: 0,
+    precision: storedPrecision, // Precisión inicial
   };
 };
 
@@ -1116,5 +1128,37 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       set((state) => ({
         renderVersion: state.renderVersion + 1,
       })),
+
+    // Precision control
+    setPrecision: (precision: number) => {
+      set((state) => {
+        // Ajustar todos los puntos de todos los paths a la nueva precisión
+        const round = (val: number | undefined) =>
+          typeof val === 'number' ? Number(val.toFixed(precision)) : val;
+        const newPaths = state.paths.map((path) => ({
+          ...path,
+          subPaths: path.subPaths.map((subPath) => ({
+            ...subPath,
+            commands: subPath.commands.map((cmd) => ({
+              ...cmd,
+              x: round(cmd.x),
+              y: round(cmd.y),
+              x1: round(cmd.x1),
+              y1: round(cmd.y1),
+              x2: round(cmd.x2),
+              y2: round(cmd.y2),
+              rx: round(cmd.rx),
+              ry: round(cmd.ry),
+              xAxisRotation: round(cmd.xAxisRotation),
+            })),
+          })),
+        }));
+        return {
+          precision,
+          paths: newPaths,
+          renderVersion: state.renderVersion + 1,
+        };
+      });
+    },
   }))
 );
