@@ -201,13 +201,13 @@ export const PathSimplificationControls: React.FC = () => {
 
   return (
     <DraggablePanel
-      title="Path Simplification"
+      title="Simplification"
       id="path-simplification"
       initialPosition={{ x: 980, y: 300 }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '220px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <div style={infoStyle}>
-          {selectedCommands.length === 0 && selectedSubPaths.length === 0 && 'Select commands or a subpath to simplify'}
+          {selectedCommands.length === 0 && selectedSubPaths.length === 0 && 'commands or subpath'}
           {selectedCommands.length === 1 && selectedSubPaths.length === 0 && 'Select at least 2 commands'}
           {selectedCommands.length >= 2 && !canSimplify && 'Commands must be in same subpath'}
           {selectedSubPaths.length > 1 && 'Select only one subpath at a time'}
@@ -287,20 +287,6 @@ export const PathSimplificationControls: React.FC = () => {
           <Minimize2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
           Simplify Path
         </button>
-
-        {canSimplify && (
-          <div style={{ ...infoStyle, background: '#e8f5e8' }}>
-            ✓ Ready to simplify {selectedCommands.length > 0 ? `${selectedCommands.length} commands` : 'entire subpath'}
-          </div>
-        )}
-
-        <div style={{ ...infoStyle, fontSize: '10px' }}>
-          Uses Ramer-Douglas-Peucker algorithm to reduce points while preserving shape.
-          <br />
-          <em>Settings are automatically saved to localStorage.</em>
-          <br />
-          <strong>💡 All operations can be undone with Ctrl+Z</strong>
-        </div>
       </div>
     </DraggablePanel>
   );

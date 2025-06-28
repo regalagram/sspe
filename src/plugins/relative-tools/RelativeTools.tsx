@@ -4,6 +4,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { convertSubPathCoordinates, convertPathCoordinates, convertSubPathCoordinatesInContext, getSubPathFinalPosition, isRelativeCommand } from '../../utils/relative-utils';
 import { SVGSubPath, SVGCommand, Point } from '../../types';
+import { MapPin, Link } from 'lucide-react';
 
 interface RelativeToolsProps {
   selectedSubPaths: string[];
@@ -20,10 +21,6 @@ export const RelativeTools: React.FC<RelativeToolsProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
-        Coordinate System Conversion
-      </div>
-      
       {!hasSelection && (
         <div style={{ 
           fontSize: '12px', 
@@ -34,7 +31,7 @@ export const RelativeTools: React.FC<RelativeToolsProps> = ({
           borderRadius: '4px',
           textAlign: 'center'
         }}>
-          Select a sub-path to convert coordinates
+          Select a sub-path
         </div>
       )}
       
@@ -68,8 +65,8 @@ export const RelativeTools: React.FC<RelativeToolsProps> = ({
             }
           }}
         >
-          <span style={{ fontSize: '16px' }}>📍</span>
-          Convert to Absolute (UPPERCASE)
+          <MapPin size={16} />
+          Absolute
         </button>
         
         <button
@@ -101,26 +98,10 @@ export const RelativeTools: React.FC<RelativeToolsProps> = ({
             }
           }}
         >
-          <span style={{ fontSize: '16px' }}>🔗</span>
-          Convert to Relative (lowercase)
+          <Link size={16} />
+          Relative
         </button>
       </div>
-      
-      {hasSelection && (
-        <div style={{ 
-          fontSize: '11px', 
-          color: '#6c757d',
-          lineHeight: '1.4',
-          padding: '8px',
-          background: '#f8f9fa',
-          borderRadius: '4px',
-          border: '1px solid #dee2e6'
-        }}>
-          <strong>Selected:</strong> {selectedSubPaths.length} sub-path{selectedSubPaths.length !== 1 ? 's' : ''}<br />
-          <strong>Absolute commands:</strong> Use fixed coordinates (M, L, C, etc.)<br />
-          <strong>Relative commands:</strong> Use offsets from current position (m, l, c, etc.)
-        </div>
-      )}
     </div>
   );
 };

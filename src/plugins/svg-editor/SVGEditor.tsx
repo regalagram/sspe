@@ -52,9 +52,6 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
-          SVG Code:
-        </div>
         <textarea
           value={localSVG}
           onChange={(e) => handleSVGChange(e.target.value)}
@@ -115,14 +112,6 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
           </button>
         </div>
       )}
-
-      <div style={{ fontSize: '11px', color: '#999', lineHeight: '1.3' }}>
-        <strong>Tips:</strong>
-        <br />• Ctrl+Enter to apply changes
-        <br />• Escape to revert changes
-        <br />• Changes will replace all current paths
-        <br />• Only &lt;path&gt; elements are supported
-      </div>
     </div>
   );
 };

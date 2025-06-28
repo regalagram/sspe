@@ -131,13 +131,13 @@ export const PathSmoothingControls: React.FC = () => {
 
   return (
     <DraggablePanel
-      title="Path Smoothing"
+      title="Smoothing"
       id="path-smoothing"
       initialPosition={{ x: 980, y: 520 }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '220px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <div style={infoStyle}>
-          {selectedCommands.length === 0 && selectedSubPaths.length === 0 && 'Select commands or a subpath to smooth'}
+          {selectedCommands.length === 0 && selectedSubPaths.length === 0 && 'commands or subpath'}
           {selectedCommands.length === 1 && selectedSubPaths.length === 0 && 'Select at least 2 commands'}
           {selectedCommands.length >= 2 && !canSmooth && 'Commands must be in same subpath'}
           {selectedSubPaths.length > 1 && 'Select only one subpath at a time'}
@@ -152,20 +152,14 @@ export const PathSmoothingControls: React.FC = () => {
           title={canSmooth ? 'Apply smoothing to selected commands using getPointSmooth (Undoable with Ctrl+Z)' : 'Select 2+ commands in same subpath'}
         >
           <Waves size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-          Apply Smoothing
+          Smooth
         </button>
 
         {canSmooth && (
           <div style={{ ...infoStyle, background: '#e8f5e8' }}>
-            ✓ Ready to smooth {selectedCommands.length} commands
+            {selectedCommands.length} commands
           </div>
         )}
-
-        <div style={{ ...infoStyle, fontSize: '11px' }}>
-          Converts straight lines to smooth Bézier curves while preserving the overall shape.
-          <br />
-          <strong>💡 All operations can be undone with Ctrl+Z</strong>
-        </div>
       </div>
     </DraggablePanel>
   );
