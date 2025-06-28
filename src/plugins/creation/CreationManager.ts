@@ -1,10 +1,9 @@
-import React, { MouseEvent } from 'react';
-import { Plugin, MouseEventHandler, MouseEventContext } from '../../core/PluginSystem';
-import { useEditorStore } from '../../store/editorStore';
+import { MouseEvent } from 'react';
+import { MouseEventHandler, MouseEventContext } from '../../core/PluginSystem';
 import { snapToGrid } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 
-class CreationModeManager {
+export class CreationManager {
   private editorStore: any;
 
   setEditorStore(store: any) {
@@ -87,45 +86,4 @@ class CreationModeManager {
   };
 }
 
-const creationModeManager = new CreationModeManager();
-
-// React component for rendering the creation mode preview
-export const CreationModeRenderer: React.FC = () => {
-  const { mode, viewport } = useEditorStore();
-
-  if (mode.current !== 'create' || !mode.createMode?.previewCommand) return null;
-
-  return (
-    <circle
-      cx={mode.createMode.previewCommand.x}
-      cy={mode.createMode.previewCommand.y}
-      r={4 / viewport.zoom}
-      fill="rgba(0, 122, 204, 0.5)"
-      stroke="#007acc"
-      strokeWidth={1 / viewport.zoom}
-      style={{ pointerEvents: 'none' }}
-    />
-  );
-};
-
-export const CreationModePlugin: Plugin = {
-  id: 'creation-mode',
-  name: 'Creation Mode',
-  version: '1.0.0',
-  enabled: true,
-  dependencies: ['mouse-interaction'],
-  initialize: (editor) => {
-    creationModeManager.setEditorStore(editor);
-  },
-  mouseHandlers: {
-    onMouseDown: creationModeManager.handleMouseDown,
-  },
-  ui: [
-    {
-      id: 'creation-mode-renderer',
-      component: CreationModeRenderer,
-      position: 'svg-content',
-      order: 40, // Render on top
-    },
-  ],
-};
+export const creationManager = new CreationManager();

@@ -4,7 +4,7 @@ import { getSafeTransform } from '../utils/transform-utils';
 import { ZoomPlugin } from '../plugins/zoom/Zoom';
 import { GridPlugin } from '../plugins/grid/Grid';
 import { UndoRedoPlugin } from '../plugins/undo-redo/UndoRedo';
-import { CreationToolsPlugin } from '../plugins/creation-tools/CreationTools';
+import { CreationPlugin } from '../plugins/creation/Creation';
 import { FullscreenPlugin } from '../plugins/fullscreen/Fullscreen';
 import { PathStylePlugin } from '../plugins/path-style/PathStyle';
 import { SelectionToolsPlugin } from '../plugins/selection-tools/SelectionTools';
@@ -15,7 +15,6 @@ import { RectSelectionPlugin, useRectSelection } from '../plugins/rect-selection
 import { PathRendererPlugin } from '../plugins/path-renderer/PathRenderer';
 import { CommandPlugin } from '../plugins/command/Command';
 import { GlobalKeyboardPlugin } from '../plugins/global-keyboard/GlobalKeyboard';
-import { CreationModePlugin } from '../plugins/creation-mode/CreationMode';
 import { VisualDebugPlugin } from '../plugins/visual-debug/VisualDebug';
 import { SubPathTransformPlugin } from '../plugins/subpath-transform/SubPathTransform';
 
@@ -27,12 +26,11 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(PathRendererPlugin);
   pluginManager.registerPlugin(VisualDebugPlugin);
   pluginManager.registerPlugin(CommandPlugin);
-  pluginManager.registerPlugin(CreationModePlugin);
+  pluginManager.registerPlugin(CreationPlugin);
   pluginManager.registerPlugin(GlobalKeyboardPlugin);
   pluginManager.registerPlugin(ZoomPlugin);
   pluginManager.registerPlugin(GridPlugin);
   pluginManager.registerPlugin(UndoRedoPlugin);
-  pluginManager.registerPlugin(CreationToolsPlugin);
   pluginManager.registerPlugin(FullscreenPlugin);
   pluginManager.registerPlugin(PathStylePlugin);
   pluginManager.registerPlugin(SelectionToolsPlugin);

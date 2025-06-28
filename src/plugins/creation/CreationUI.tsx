@@ -1,10 +1,8 @@
 import React from 'react';
-import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { SVGCommandType } from '../../types';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import SVGCommandIcon from '../../components/SVGCommandIcons';
-import { ToggleLeft, ToggleRight } from 'lucide-react';
 import { PluginButton } from '../../components/PluginButton';
 import { LogOut } from 'lucide-react';
 
@@ -67,13 +65,11 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
           />
         )}
       </div>
-
-
     </div>
   );
 };
 
-export const CreationToolsComponent: React.FC = () => {
+export const CreationUI: React.FC = () => {
   const { mode, setCreateMode, exitCreateMode } = useEditorStore();
 
   return (
@@ -90,106 +86,4 @@ export const CreationToolsComponent: React.FC = () => {
       />
     </DraggablePanel>
   );
-};
-
-export const CreationToolsPlugin: Plugin = {
-  id: 'creation-tools',
-  name: 'Creation Tools',
-  version: '1.0.0',
-  enabled: true,
-
-  shortcuts: [
-    {
-      key: 'm',
-      description: 'Move To Tool',
-      action: () => {
-        const store = useEditorStore.getState();
-        store.setCreateMode('M');
-      }
-    },
-    {
-      key: 'l',
-      description: 'Line To Tool',
-      action: () => {
-        const store = useEditorStore.getState();
-        store.setCreateMode('L');
-      }
-    },
-    {
-      key: 'c',
-      description: 'Cubic Bezier Tool',
-      action: () => {
-        const store = useEditorStore.getState();
-        store.setCreateMode('C');
-      }
-    },
-    {
-      key: 'z',
-      description: 'Close Path Tool',
-      action: () => {
-        const store = useEditorStore.getState();
-        store.setCreateMode('Z');
-      }
-    },
-    {
-      key: 'Escape',
-      description: 'Exit Create Mode',
-      action: () => {
-        const store = useEditorStore.getState();
-        store.exitCreateMode();
-      }
-    }
-  ],
-
-  tools: [
-    {
-      id: 'move-to',
-      name: 'Move To',
-      category: 'create',
-      shortcut: 'M',
-      onActivate: () => {
-        const store = useEditorStore.getState();
-        store.setCreateMode('M');
-      }
-    },
-    {
-      id: 'line-to',
-      name: 'Line To',
-      category: 'create',
-      shortcut: 'L',
-      onActivate: () => {
-        const store = useEditorStore.getState();
-        store.setCreateMode('L');
-      }
-    },
-    {
-      id: 'cubic-bezier',
-      name: 'Cubic Bezier',
-      category: 'create',
-      shortcut: 'C',
-      onActivate: () => {
-        const store = useEditorStore.getState();
-        store.setCreateMode('C');
-      }
-    },
-    {
-      id: 'close-path',
-      name: 'Close Path',
-      category: 'create',
-      shortcut: 'Z',
-      onActivate: () => {
-        const store = useEditorStore.getState();
-        store.setCreateMode('Z');
-      }
-    }
-  ],
-
-  ui: [
-    {
-      id: 'creation-tools',
-      component: CreationToolsComponent,
-      position: 'toolbar',
-      order: 3
-    }
-  ]
 };
