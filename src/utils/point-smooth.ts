@@ -35,8 +35,11 @@ export function getPointSmooth(commands: SVGCommand[]): SVGCommand[] {
   // PASO 2: DETECCIÓN DE SEGMENTOS PARA SUAVIZAR
   // Factor de tensión (controla "suavidad")
   const tension = 0.5; // Valor típico entre 0.0 (angular) y 1.0 (muy suave)
-  const smoothingThreshold = Math.PI / 6; // 30 grados - ángulo mínimo para suavizar
+  const smoothingThreshold = Math.PI / 12; // 15 grados - ángulo mínimo reducido para suavizar más
   const epsilon = 1e-6; // Tolerancia para puntos "iguales"
+  
+  // NUEVO: Forzar conversión de L a C independientemente del ángulo
+  const forceAllToCurves = true; // Cuando es true, convierte todos los L a C
 
   // DETECTAR SI ES FIGURA CERRADA
   const esFiguraCerrada = points.length > 2 && (
@@ -101,48 +104,53 @@ export function getPointSmooth(commands: SVGCommand[]): SVGCommand[] {
     // Verificar si necesita suavizado (detectar "esquina")
     let needsSmoothing = false;
     
-    // CAMBIO CRÍTICO: También evaluar primer y último segmento
-    if (points.length >= 3) {
-      // Para el primer segmento (i=1), evaluar si hay continuidad
-      if (i === 1) {
-        if (esFiguraCerrada) {
-          // En figuras cerradas, siempre suavizar el primer segmento
-          needsSmoothing = true;
-        } else {
-          // En figuras abiertas, verificar si hay vector de salida válido
-          const outVec = { x: P3.x - P2.x, y: P3.y - P2.y };
-          const outLength = Math.sqrt(outVec.x * outVec.x + outVec.y * outVec.y);
-          needsSmoothing = outLength > 1e-6 && points.length > 2;
+    // CAMBIO CRÍTICO: Si forceAllToCurves está activo, convertir todos los segmentos
+    if (forceAllToCurves) {
+      needsSmoothing = true;
+    } else {
+      // LÓGICA ORIGINAL: También evaluar primer y último segmento
+      if (points.length >= 3) {
+        // Para el primer segmento (i=1), evaluar si hay continuidad
+        if (i === 1) {
+          if (esFiguraCerrada) {
+            // En figuras cerradas, siempre suavizar el primer segmento
+            needsSmoothing = true;
+          } else {
+            // En figuras abiertas, verificar si hay vector de salida válido
+            const outVec = { x: P3.x - P2.x, y: P3.y - P2.y };
+            const outLength = Math.sqrt(outVec.x * outVec.x + outVec.y * outVec.y);
+            needsSmoothing = outLength > 1e-6 && points.length > 2;
+          }
         }
-      }
-      // Para el último segmento en figuras cerradas, también suavizar
-      else if (i === points.length - 1 && esFiguraCerrada) {
-        needsSmoothing = true;
-      }
-      // Para el último segmento en figuras abiertas
-      else if (i === points.length - 1 && !esFiguraCerrada) {
-        const inVec = { x: P1.x - P0.x, y: P1.y - P0.y };
-        const inLength = Math.sqrt(inVec.x * inVec.x + inVec.y * inVec.y);
-        needsSmoothing = inLength > 1e-6 && points.length > 2;
-      }
-      // Para segmentos intermedios, calcular ángulo entre vectores
-      else if (i > 1 && i < points.length - 1) {
-        const inVec = { x: P1.x - P0.x, y: P1.y - P0.y };
-        const outVec = { x: P2.x - P1.x, y: P2.y - P1.y };
-        
-        const inLength = Math.sqrt(inVec.x * inVec.x + inVec.y * inVec.y);
-        const outLength = Math.sqrt(outVec.x * outVec.x + outVec.y * outVec.y);
-        
-        if (inLength > 1e-6 && outLength > 1e-6) {
-          const inNorm = { x: inVec.x / inLength, y: inVec.y / inLength };
-          const outNorm = { x: outVec.x / outLength, y: outVec.y / outLength };
+        // Para el último segmento en figuras cerradas, también suavizar
+        else if (i === points.length - 1 && esFiguraCerrada) {
+          needsSmoothing = true;
+        }
+        // Para el último segmento en figuras abiertas
+        else if (i === points.length - 1 && !esFiguraCerrada) {
+          const inVec = { x: P1.x - P0.x, y: P1.y - P0.y };
+          const inLength = Math.sqrt(inVec.x * inVec.x + inVec.y * inVec.y);
+          needsSmoothing = inLength > 1e-6 && points.length > 2;
+        }
+        // Para segmentos intermedios, calcular ángulo entre vectores
+        else if (i > 1 && i < points.length - 1) {
+          const inVec = { x: P1.x - P0.x, y: P1.y - P0.y };
+          const outVec = { x: P2.x - P1.x, y: P2.y - P1.y };
           
-          // Calcular ángulo entre vectores
-          const dotProduct = inNorm.x * outNorm.x + inNorm.y * outNorm.y;
-          const angle = Math.acos(Math.max(-1, Math.min(1, dotProduct))); // Clamp para evitar NaN
+          const inLength = Math.sqrt(inVec.x * inVec.x + inVec.y * inVec.y);
+          const outLength = Math.sqrt(outVec.x * outVec.x + outVec.y * outVec.y);
           
-          // Si el ángulo es mayor al umbral, necesita suavizado
-          needsSmoothing = angle > smoothingThreshold;
+          if (inLength > 1e-6 && outLength > 1e-6) {
+            const inNorm = { x: inVec.x / inLength, y: inVec.y / inLength };
+            const outNorm = { x: outVec.x / outLength, y: outVec.y / outLength };
+            
+            // Calcular ángulo entre vectores
+            const dotProduct = inNorm.x * outNorm.x + inNorm.y * outNorm.y;
+            const angle = Math.acos(Math.max(-1, Math.min(1, dotProduct))); // Clamp para evitar NaN
+            
+            // Si el ángulo es mayor al umbral, necesita suavizado
+            needsSmoothing = angle > smoothingThreshold;
+          }
         }
       }
     }
@@ -153,15 +161,41 @@ export function getPointSmooth(commands: SVGCommand[]): SVGCommand[] {
       // Vectores tangentes usando algoritmo Catmull-Rom
       // tangente1 = (P2 - P0) * tensión
       // tangente2 = (P3 - P1) * tensión
-      const tangent1 = {
+      let tangent1 = {
         x: (P2.x - P0.x) * tension,
         y: (P2.y - P0.y) * tension
       };
       
-      const tangent2 = {
+      let tangent2 = {
         x: (P3.x - P1.x) * tension,
         y: (P3.y - P1.y) * tension
       };
+      
+      // MEJORA: Para puntos muy cercanos, usar vectores alternativos
+      const distance12 = Math.sqrt((P2.x - P1.x) ** 2 + (P2.y - P1.y) ** 2);
+      const minDistance = 5; // Distancia mínima para considerar "puntos cercanos"
+      
+      if (distance12 < minDistance) {
+        // Para puntos muy cercanos, crear tangentes más suaves basadas en la dirección local
+        const localDirection = {
+          x: P2.x - P1.x,
+          y: P2.y - P1.y
+        };
+        
+        // Normalizar y aplicar un factor de suavizado más conservador
+        const localLength = Math.sqrt(localDirection.x ** 2 + localDirection.y ** 2);
+        if (localLength > epsilon) {
+          const smoothFactor = Math.min(distance12 / 3, 2); // Factor más conservador para puntos cercanos
+          tangent1 = {
+            x: (localDirection.x / localLength) * smoothFactor,
+            y: (localDirection.y / localLength) * smoothFactor
+          };
+          tangent2 = {
+            x: (localDirection.x / localLength) * smoothFactor,
+            y: (localDirection.y / localLength) * smoothFactor
+          };
+        }
+      }
       
       // Puntos de control Bézier derivados de tangentes Catmull-Rom
       // control1 = P1 + tangente1 / 3
