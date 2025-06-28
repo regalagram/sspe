@@ -2,7 +2,8 @@ import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
-import { MousePointer2 } from 'lucide-react';
+import { PluginButton } from '../../components/PluginButton';
+import { MousePointer2, XCircle } from 'lucide-react';
 
 interface SelectionToolsProps {
   currentMode: string;
@@ -17,75 +18,24 @@ export const SelectionTools: React.FC<SelectionToolsProps> = ({
   onClearSelection,
   selectedCount,
 }) => {
-  const buttonStyle: React.CSSProperties = {
-    padding: '8px 12px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    transition: 'all 0.2s ease',
-    width: '100%',
-  };
-
-  const activeButtonStyle: React.CSSProperties = {
-    ...buttonStyle,
-    background: '#007acc',
-    color: 'white',
-    borderColor: '#005299',
-  };
-
-  const inactiveButtonStyle: React.CSSProperties = {
-    ...buttonStyle,
-    background: '#f8f9fa',
-    color: '#333',
-  };
-
   return (
     <div className="selection-tools" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      <button
-        className={currentMode === 'select' ? 'active' : ''}
+      <PluginButton
+        icon={<MousePointer2 size={16} />}
+        text="Selection Mode"
+        color="#007acc"
+        active={currentMode === 'select'}
+        disabled={false}
         onClick={onSetSelectionMode}
-        title="Selection Mode (V)"
-        style={currentMode === 'select' ? activeButtonStyle : inactiveButtonStyle}
-        onMouseEnter={(e) => {
-          if (currentMode !== 'select') {
-            e.currentTarget.style.background = '#e9ecef';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (currentMode !== 'select') {
-            e.currentTarget.style.background = '#f8f9fa';
-          }
-        }}
-      >
-        <MousePointer2 size={16} /> Selection Mode
-      </button>
-      
-      <button
-        onClick={onClearSelection}
+      />
+      <PluginButton
+        icon={<XCircle size={16} />}
+        text="Clear Selection"
+        color="#dc3545"
+        active={false}
         disabled={selectedCount === 0}
-        title="Clear Selection (Escape)"
-        style={{
-          ...buttonStyle,
-          opacity: selectedCount === 0 ? 0.5 : 1,
-          background: selectedCount === 0 ? '#f0f0f0' : '#dc3545',
-          color: selectedCount === 0 ? '#666' : 'white',
-          cursor: selectedCount === 0 ? 'not-allowed' : 'pointer',
-        }}
-        onMouseEnter={(e) => {
-          if (selectedCount > 0) {
-            e.currentTarget.style.background = '#c82333';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (selectedCount > 0) {
-            e.currentTarget.style.background = '#dc3545';
-          }
-        }}
-      >
-        ❌ Clear Selection
-      </button>
-      
+        onClick={onClearSelection}
+      />
       <div style={{ 
         fontSize: '12px', 
         color: '#666', 

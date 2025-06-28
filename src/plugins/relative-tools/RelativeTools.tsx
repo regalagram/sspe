@@ -5,6 +5,7 @@ import { DraggablePanel } from '../../components/DraggablePanel';
 import { convertSubPathCoordinates, convertPathCoordinates, convertSubPathCoordinatesInContext, getSubPathFinalPosition, isRelativeCommand } from '../../utils/relative-utils';
 import { SVGSubPath, SVGCommand, Point } from '../../types';
 import { MapPin, Link } from 'lucide-react';
+import { PluginButton } from '../../components/PluginButton';
 
 interface RelativeToolsProps {
   selectedSubPaths: string[];
@@ -34,73 +35,23 @@ export const RelativeTools: React.FC<RelativeToolsProps> = ({
           Select a sub-path
         </div>
       )}
-      
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <button
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
+        <PluginButton
+          icon={<MapPin size={18} />}
+          text="Absolute"
+          color="#28a745"
+          active={false}
+          disabled={!hasSelection}
           onClick={() => onConvertToAbsolute(selectedSubPaths)}
+        />
+        <PluginButton
+          icon={<Link size={18} />}
+          text="Relative"
+          color="#007bff"
+          active={false}
           disabled={!hasSelection}
-          style={{
-            padding: '10px 16px',
-            background: hasSelection ? '#28a745' : '#e9ecef',
-            color: hasSelection ? 'white' : '#6c757d',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: hasSelection ? 'pointer' : 'not-allowed',
-            fontSize: '13px',
-            fontWeight: '500',
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px'
-          }}
-          onMouseEnter={(e) => {
-            if (hasSelection) {
-              e.currentTarget.style.background = '#218838';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (hasSelection) {
-              e.currentTarget.style.background = '#28a745';
-            }
-          }}
-        >
-          <MapPin size={16} />
-          Absolute
-        </button>
-        
-        <button
           onClick={() => onConvertToRelative(selectedSubPaths)}
-          disabled={!hasSelection}
-          style={{
-            padding: '10px 16px',
-            background: hasSelection ? '#007bff' : '#e9ecef',
-            color: hasSelection ? 'white' : '#6c757d',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: hasSelection ? 'pointer' : 'not-allowed',
-            fontSize: '13px',
-            fontWeight: '500',
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px'
-          }}
-          onMouseEnter={(e) => {
-            if (hasSelection) {
-              e.currentTarget.style.background = '#0056b3';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (hasSelection) {
-              e.currentTarget.style.background = '#007bff';
-            }
-          }}
-        >
-          <Link size={16} />
-          Relative
-        </button>
+        />
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { Minimize2 } from 'lucide-react';
+import { PluginButton } from '../../components/PluginButton';
 import { 
   simplifySegmentWithPointsOnPath, 
   areCommandsInSameSubPath, 
@@ -278,15 +279,14 @@ export const PathSimplificationControls: React.FC = () => {
           />
         </div>
 
-        <button
-          onClick={handleSimplify}
+        <PluginButton
+          icon={<Minimize2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
+          text="Simplify"
+          color="#007acc"
+          active={false}
           disabled={!canSimplify}
-          style={buttonStyle}
-          title={canSimplify ? 'Simplify selected commands/subpath using Ramer-Douglas-Peucker algorithm (Undoable with Ctrl+Z)' : 'Select 2+ commands in same subpath or one subpath'}
-        >
-          <Minimize2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-          Simplify Path
-        </button>
+          onClick={handleSimplify}
+        />
       </div>
     </DraggablePanel>
   );

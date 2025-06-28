@@ -4,6 +4,8 @@ import { useEditorStore } from '../../store/editorStore';
 import { pathToString, subPathToString } from '../../utils/path-utils';
 import { parseSVGToSubPaths } from '../../utils/svg-parser';
 import { DraggablePanel } from '../../components/DraggablePanel';
+import { PluginButton } from '../../components/PluginButton';
+import { RotateCcw, CheckCircle2 } from 'lucide-react';
 
 interface SVGEditorProps {
   svgCode: string;
@@ -75,41 +77,23 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
       </div>
 
       {isEditing && (
-        <div style={{ display: 'flex', gap: '6px' }}>
-          <button
-            onClick={handleApplyChanges}
-            style={{
-              flex: 1,
-              padding: '6px 12px',
-              background: '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: '500',
-            }}
-            title="Apply changes (Ctrl+Enter)"
-          >
-            Apply
-          </button>
-          <button
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <PluginButton
+            icon={<RotateCcw size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
+            text="Revert"
+            color="#6c757d"
+            active={false}
+            disabled={false}
             onClick={handleRevert}
-            style={{
-              flex: 1,
-              padding: '6px 12px',
-              background: '#6c757d',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: '500',
-            }}
-            title="Revert changes (Escape)"
-          >
-            Revert
-          </button>
+          />
+          <PluginButton
+            icon={<CheckCircle2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
+            text="Apply"
+            color="#28a745"
+            active={false}
+            disabled={false}
+            onClick={handleApplyChanges}
+          />
         </div>
       )}
     </div>

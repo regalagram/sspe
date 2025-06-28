@@ -7,6 +7,7 @@ import {
   generateSmoothPath, 
   areCommandsInSameSubPath
 } from '../../utils/path-simplification-utils';
+import { PluginButton } from '../../components/PluginButton';
 
 export const PathSmoothingControls: React.FC = () => {
   const { 
@@ -144,17 +145,14 @@ export const PathSmoothingControls: React.FC = () => {
           {canSmooth && selectedCommands.length > 0 && `${selectedCommands.length} commands selected`}
           {canSmooth && selectedSubPaths.length === 1 && `Entire subpath selected`}
         </div>
-
-        <button
-          onClick={handleSmooth}
+        <PluginButton
+          icon={<Waves size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
+          text="Smooth"
+          color="#28a745"
+          active={false}
           disabled={!canSmooth}
-          style={buttonStyle}
-          title={canSmooth ? 'Apply smoothing to selected commands using getPointSmooth (Undoable with Ctrl+Z)' : 'Select 2+ commands in same subpath'}
-        >
-          <Waves size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-          Smooth
-        </button>
-
+          onClick={handleSmooth}
+        />
         {canSmooth && (
           <div style={{ ...infoStyle, background: '#e8f5e8' }}>
             {selectedCommands.length} commands

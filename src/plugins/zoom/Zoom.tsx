@@ -3,6 +3,7 @@ import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Target } from 'lucide-react';
+import { PluginButton } from '../../components/PluginButton';
 
 interface ZoomControlsProps {
   onZoomIn: () => void;
@@ -27,76 +28,60 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
   hasSelection,
   hasSubPathSelection,
 }) => {
-  const buttonStyle: React.CSSProperties = {
-    padding: '8px 12px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    background: '#f8f9fa',
-    cursor: 'pointer',
-    fontSize: '14px',
-    transition: 'all 0.2s ease',
-  };
-
   return (
     <div className="zoom-controls" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <button 
-        onClick={onZoomIn} 
-        title="Zoom In (Ctrl++)"
-        style={buttonStyle}
-        onMouseEnter={(e) => e.currentTarget.style.background = '#e9ecef'}
-        onMouseLeave={(e) => e.currentTarget.style.background = '#f8f9fa'}
-      >
-        <ZoomIn size={16} /> Zoom In
-      </button>
-      <button 
-        onClick={onZoomOut} 
-        title="Zoom Out (Ctrl+-)"
-        style={buttonStyle}
-        onMouseEnter={(e) => e.currentTarget.style.background = '#e9ecef'}
-        onMouseLeave={(e) => e.currentTarget.style.background = '#f8f9fa'}
-      >
-        <ZoomOut size={16} /> Zoom Out
-      </button>
-      <button 
-        onClick={onZoomToFit} 
-        title="Zoom to Fit (Ctrl+0)"
-        style={buttonStyle}
-        onMouseEnter={(e) => e.currentTarget.style.background = '#e9ecef'}
-        onMouseLeave={(e) => e.currentTarget.style.background = '#f8f9fa'}
-      >
-        <Maximize2 size={16} /> Fit
-      </button>
+      <PluginButton
+        icon={<ZoomIn size={16} />}
+        text="Zoom In"
+        color="#007acc"
+        active={false}
+        disabled={false}
+        onClick={onZoomIn}
+      />
+      <PluginButton
+        icon={<ZoomOut size={16} />}
+        text="Zoom Out"
+        color="#007acc"
+        active={false}
+        disabled={false}
+        onClick={onZoomOut}
+      />
+      <PluginButton
+        icon={<Maximize2 size={16} />}
+        text="Fit"
+        color="#007acc"
+        active={false}
+        disabled={false}
+        onClick={onZoomToFit}
+      />
       {hasSelection && (
-        <button 
-          onClick={onZoomToSelection} 
-          title="Zoom to Selection (Ctrl+Shift+0)"
-          style={buttonStyle}
-          onMouseEnter={(e) => e.currentTarget.style.background = '#e9ecef'}
-          onMouseLeave={(e) => e.currentTarget.style.background = '#f8f9fa'}
-        >
-          <Target size={16} /> Fit Selection
-        </button>
+        <PluginButton
+          icon={<Target size={16} />}
+          text="Fit Selection"
+          color="#007acc"
+          active={false}
+          disabled={false}
+          onClick={onZoomToSelection}
+        />
       )}
       {hasSubPathSelection && (
-        <button 
-          onClick={onZoomToSubPath} 
-          title="Zoom to Selected SubPath (Ctrl+Shift+S)"
-          style={buttonStyle}
-          onMouseEnter={(e) => e.currentTarget.style.background = '#e9ecef'}
-          onMouseLeave={(e) => e.currentTarget.style.background = '#f8f9fa'}
-        >
-          <Target size={16} /> Fit SubPath
-        </button>
+        <PluginButton
+          icon={<Target size={16} />}
+          text="Fit SubPath"
+          color="#007acc"
+          active={false}
+          disabled={false}
+          onClick={onZoomToSubPath}
+        />
       )}
-      <button 
-        onClick={onResetView} 
-        title="Reset View (Ctrl+R)"
-        style={buttonStyle}
-        onMouseEnter={(e) => e.currentTarget.style.background = '#e9ecef'}
-        onMouseLeave={(e) => e.currentTarget.style.background = '#f8f9fa'}
-      >
-        <RotateCcw size={16} /> Reset
-      </button>
+      <PluginButton
+        icon={<RotateCcw size={16} />}
+        text="Reset"
+        color="#6c757d"
+        active={false}
+        disabled={false}
+        onClick={onResetView}
+      />
       <div style={{ 
         fontSize: '12px', 
         textAlign: 'center', 

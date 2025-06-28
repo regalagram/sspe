@@ -3,6 +3,7 @@ import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { Undo2, Redo2 } from 'lucide-react';
+import { PluginButton } from '../../components/PluginButton';
 
 interface UndoRedoControlsProps {
   canUndo: boolean;
@@ -17,46 +18,24 @@ export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({
   onUndo,
   onRedo,
 }) => {
-  const buttonStyle: React.CSSProperties = {
-    padding: '8px 12px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    background: '#f8f9fa',
-    cursor: 'pointer',
-    fontSize: '14px',
-    transition: 'all 0.2s ease',
-    minWidth: '80px',
-  };
-
-  const disabledStyle: React.CSSProperties = {
-    ...buttonStyle,
-    opacity: 0.5,
-    cursor: 'not-allowed',
-    background: '#f0f0f0',
-  };
-
   return (
-    <div className="undo-redo-controls" style={{ display: 'flex', gap: '8px' }}>
-      <button
-        onClick={onUndo}
+    <div className="undo-redo-controls" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <PluginButton
+        icon={<Undo2 size={16} />}
+        text="Undo"
+        color="#007acc"
+        active={false}
         disabled={!canUndo}
-        title="Undo (Ctrl+Z)"
-        style={canUndo ? buttonStyle : disabledStyle}
-        onMouseEnter={(e) => canUndo && (e.currentTarget.style.background = '#e9ecef')}
-        onMouseLeave={(e) => canUndo && (e.currentTarget.style.background = '#f8f9fa')}
-      >
-        <Undo2 size={16} /> Undo
-      </button>
-      <button
-        onClick={onRedo}
+        onClick={onUndo}
+      />
+      <PluginButton
+        icon={<Redo2 size={16} />}
+        text="Redo"
+        color="#007acc"
+        active={false}
         disabled={!canRedo}
-        title="Redo (Ctrl+Y)"
-        style={canRedo ? buttonStyle : disabledStyle}
-        onMouseEnter={(e) => canRedo && (e.currentTarget.style.background = '#e9ecef')}
-        onMouseLeave={(e) => canRedo && (e.currentTarget.style.background = '#f8f9fa')}
-      >
-        <Redo2 size={16} /> Redo
-      </button>
+        onClick={onRedo}
+      />
     </div>
   );
 };

@@ -6,6 +6,8 @@ import { DraggablePanel } from '../../components/DraggablePanel';
 import SVGCommandIcon from '../../components/SVGCommandIcons';
 import { ToggleLeft, ToggleRight } from 'lucide-react';
 import { loadPreferences, savePreferences } from '../../utils/persistence';
+import { PluginButton } from '../../components/PluginButton';
+import { LogOut } from 'lucide-react';
 
 interface ToolButtonProps {
   command: SVGCommandType;
@@ -330,26 +332,14 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
       </div>
       
       {currentMode === 'create' && (
-        <button
+        <PluginButton
+          icon={<LogOut size={16} />}
+          text="Exit Create Mode"
+          color="#dc3545"
+          active={false}
+          disabled={false}
           onClick={onExitCreateMode}
-          style={{
-            padding: '8px 16px',
-            background: '#dc3545',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            transition: 'background 0.2s ease',
-            alignSelf: 'center',
-            marginTop: '8px',
-            width: '100%',
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.background = '#c82333'}
-          onMouseLeave={(e) => e.currentTarget.style.background = '#dc3545'}
-        >
-          Exit Create Mode
-        </button>
+        />
       )}
     </div>
   );
