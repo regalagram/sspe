@@ -902,13 +902,20 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       })),
     
     resetView: () =>
-      set((state) => ({
-        viewport: validateViewport({
-          ...state.viewport,
-          zoom: 1,
-          pan: { x: 0, y: 0 },
-        }),
-      })),
+      set((state) => {
+        const newState = {
+          viewport: validateViewport({
+            ...state.viewport,
+            zoom: 1,
+            pan: { x: 0, y: 0 },
+          }),
+        };
+
+        // Save preferences after resetting view
+        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+
+        return newState;
+      }),
     
     // Mode actions
     setMode: (mode) =>
