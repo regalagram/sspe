@@ -4,6 +4,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { SVGCommandType } from '../../types';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import SVGCommandIcon from '../../components/SVGCommandIcons';
+import { ToggleLeft, ToggleRight } from 'lucide-react';
 
 interface ToolButtonProps {
   command: SVGCommandType;
@@ -19,29 +20,29 @@ const ToolButton: React.FC<ToolButtonProps> = ({ command, label, isActive, onCli
       onClick={onClick}
       title={`${label} (${command})`}
       style={{
-        padding: '8px 12px',
-        margin: '2px',
+        padding: '6px 8px',
+        margin: '1px',
         border: '1px solid #ccc',
         borderRadius: '4px',
         background: isActive ? '#007acc' : 'white',
         color: isActive ? 'white' : 'black',
         cursor: 'pointer',
-        fontSize: '12px',
+        fontSize: '10px',
         fontFamily: 'monospace',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         gap: '4px',
-        minWidth: '60px',
+        minWidth: '50px',
         minHeight: '50px'
       }}
     >
       <SVGCommandIcon 
         command={command} 
-        size={20} 
+        size={16} 
         color={isActive ? 'white' : '#333'} 
       />
-      <span style={{ fontSize: '10px', fontWeight: 'bold' }}>
+      <span style={{ fontSize: '9px', fontWeight: 'bold' }}>
         {command}
       </span>
     </button>
@@ -90,68 +91,204 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
       : `${tool.label} (absolute)`
   }));
 
-  const categories = ['Start & End', 'Lines', 'Curves', 'Arcs'];
+  // Reorganizar herramientas en grupos para la grilla
+  const toolGroups = [
+    {
+      title: 'Start & End',
+      tools: tools.filter(tool => ['M', 'm', 'Z', 'z'].includes(tool.command))
+    },
+    {
+      title: 'Lines',
+      tools: tools.filter(tool => ['L', 'l', 'H', 'h', 'V', 'v'].includes(tool.command))
+    },
+    {
+      title: 'Curves',
+      tools: tools.filter(tool => ['C', 'c', 'S', 's', 'Q', 'q', 'T', 't'].includes(tool.command))
+    },
+    {
+      title: 'Arcs',
+      tools: tools.filter(tool => ['A', 'a'].includes(tool.command))
+    }
+  ];
 
   return (
-    <div className="creation-tools" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      {/* Relative/Absolute Toggle */}
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '8px',
-        padding: '8px',
-        background: '#f8f9fa',
-        borderRadius: '4px',
-        border: '1px solid #dee2e6'
+    <div className="creation-tools" style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+    }}>
+      {/* Grilla de herramientas - disposición vertical por filas */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
       }}>
-        <input
-          type="checkbox"
-          id="relative-commands"
-          checked={useRelativeCommands}
-          onChange={(e) => setUseRelativeCommands(e.target.checked)}
-          style={{ cursor: 'pointer' }}
-        />
-        <label 
-          htmlFor="relative-commands" 
-          style={{ 
-            fontSize: '12px', 
-            color: '#495057', 
-            fontWeight: '500',
-            cursor: 'pointer',
-            userSelect: 'none'
-          }}
-        >
-          Use Relative Commands
-        </label>
+        {/* Start & End */}
         <div style={{ 
-          fontSize: '10px', 
-          color: '#6c757d',
-          marginLeft: 'auto'
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '4px'
         }}>
-          {useRelativeCommands ? 'lowercase' : 'UPPERCASE'}
+          <div style={{ 
+            fontSize: '10px', 
+            color: '#666', 
+            fontWeight: '500',
+            textAlign: 'left'
+          }}>
+            Start & End
+          </div>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'row',
+            gap: '2px'
+          }}>
+            {toolGroups[0].tools.map(tool => (
+              <ToolButton
+                key={tool.command}
+                command={tool.command}
+                label={tool.label}
+                isActive={currentMode === 'create' && createMode?.commandType === tool.command}
+                onClick={() => onSelectTool(tool.command)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Lines */}
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '4px'
+        }}>
+          <div style={{ 
+            fontSize: '10px', 
+            color: '#666', 
+            fontWeight: '500',
+            textAlign: 'left'
+          }}>
+            Lines
+          </div>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'row',
+            gap: '2px'
+          }}>
+            {toolGroups[1].tools.map(tool => (
+              <ToolButton
+                key={tool.command}
+                command={tool.command}
+                label={tool.label}
+                isActive={currentMode === 'create' && createMode?.commandType === tool.command}
+                onClick={() => onSelectTool(tool.command)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Curves */}
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '4px'
+        }}>
+          <div style={{ 
+            fontSize: '10px', 
+            color: '#666', 
+            fontWeight: '500',
+            textAlign: 'left'
+          }}>
+            Curves
+          </div>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'row',
+            gap: '2px'
+          }}>
+            {toolGroups[2].tools.map(tool => (
+              <ToolButton
+                key={tool.command}
+                command={tool.command}
+                label={tool.label}
+                isActive={currentMode === 'create' && createMode?.commandType === tool.command}
+                onClick={() => onSelectTool(tool.command)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Arcs */}
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '4px'
+        }}>
+          <div style={{ 
+            fontSize: '10px', 
+            color: '#666', 
+            fontWeight: '500',
+            textAlign: 'left'
+          }}>
+            Arcs
+          </div>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'row',
+            gap: '2px'
+          }}>
+            {toolGroups[3].tools.map(tool => (
+              <ToolButton
+                key={tool.command}
+                command={tool.command}
+                label={tool.label}
+                isActive={currentMode === 'create' && createMode?.commandType === tool.command}
+                onClick={() => onSelectTool(tool.command)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Mode */}
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '4px'
+        }}>
+          <div style={{ 
+            fontSize: '10px', 
+            color: '#666', 
+            fontWeight: '500',
+            textAlign: 'left'
+          }}>
+            Mode
+          </div>
+          <div>
+            <button
+              onClick={() => setUseRelativeCommands(!useRelativeCommands)}
+              style={{
+                padding: '8px 12px',
+                background: useRelativeCommands ? '#007acc' : '#e9ecef',
+                color: useRelativeCommands ? 'white' : '#495057',
+                border: '1px solid #ccc',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '10px',
+                fontWeight: '500',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '4px',
+                transition: 'all 0.2s ease',
+                minWidth: '50px',
+                minHeight: '50px'
+              }}
+              title={useRelativeCommands ? 'Switch to Absolute Commands' : 'Switch to Relative Commands'}
+            >
+              {useRelativeCommands ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+              <span style={{ fontSize: '9px' }}>
+                {useRelativeCommands ? 'REL' : 'ABS'}
+              </span>
+            </button>
+          </div>
         </div>
       </div>
-
-      {categories.map(category => (
-        <div key={category} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
-            {category}
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-            {tools
-              .filter(tool => tool.category === category)
-              .map(tool => (
-                <ToolButton
-                  key={tool.command}
-                  command={tool.command}
-                  label={tool.label}
-                  isActive={currentMode === 'create' && createMode?.commandType === tool.command}
-                  onClick={() => onSelectTool(tool.command)}
-                />
-              ))}
-          </div>
-        </div>
-      ))}
       
       {currentMode === 'create' && (
         <button
@@ -164,7 +301,8 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
             borderRadius: '4px',
             cursor: 'pointer',
             fontSize: '14px',
-            transition: 'background 0.2s ease'
+            transition: 'background 0.2s ease',
+            alignSelf: 'center'
           }}
           onMouseEnter={(e) => e.currentTarget.style.background = '#c82333'}
           onMouseLeave={(e) => e.currentTarget.style.background = '#dc3545'}
