@@ -5,7 +5,7 @@ import { pathToString, subPathToString } from '../../utils/path-utils';
 import { parseSVGToSubPaths } from '../../utils/svg-parser';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
-import { RotateCcw, CheckCircle2 } from 'lucide-react';
+import { RotateCcw, CheckCircle2, Trash2 } from 'lucide-react';
 
 interface SVGEditorProps {
   svgCode: string;
@@ -159,6 +159,26 @@ ${pathElements}
     }
   };
 
+  const handleClearAll = () => {
+    const pathCount = paths.length;
+    
+    if (pathCount === 0) {
+      alert('No paths to clear.');
+      return;
+    }
+    
+    // Show confirmation for destructive action
+    const confirmMessage = `This will permanently delete all ${pathCount} path(s) and leave an empty SVG. This action cannot be undone. Are you sure?`;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+    
+    // Clear all paths by replacing with empty array
+    replacePaths([]);
+    
+    console.log('All paths cleared successfully');
+  };
+
   const currentSVG = generateSVGCode();
 
   return (
@@ -171,6 +191,16 @@ ${pathElements}
         svgCode={currentSVG}
         onSVGChange={handleSVGChange}
       />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+        <PluginButton
+          icon={<Trash2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
+          text="Clear All Paths"
+          color="#dc3545"
+          active={false}
+          disabled={false}
+          onClick={handleClearAll}
+        />
+      </div>
     </DraggablePanel>
   );
 };
