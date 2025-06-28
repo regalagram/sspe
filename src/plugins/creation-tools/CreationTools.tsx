@@ -9,49 +9,6 @@ import { loadPreferences, savePreferences } from '../../utils/persistence';
 import { PluginButton } from '../../components/PluginButton';
 import { LogOut } from 'lucide-react';
 
-interface ToolButtonProps {
-  command: SVGCommandType;
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-}
-
-const ToolButton: React.FC<ToolButtonProps> = ({ command, label, isActive, onClick }) => {
-  return (
-    <button
-      className={`tool-button ${isActive ? 'active' : ''}`}
-      onClick={onClick}
-      title={`${label} (${command})`}
-      style={{
-        padding: '4px 6px',
-        margin: '1px',
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        background: isActive ? '#007acc' : 'white',
-        color: isActive ? 'white' : 'black',
-        cursor: 'pointer',
-        fontSize: '10px',
-        fontFamily: 'monospace',
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: '6px',
-        minWidth: '65px',
-        minHeight: '32px'
-      }}
-    >
-      <SVGCommandIcon 
-        command={command} 
-        size={14} 
-        color={isActive ? 'white' : '#333'} 
-      />
-      <span style={{ fontSize: '9px', fontWeight: 'bold' }}>
-        {command}
-      </span>
-    </button>
-  );
-};
-
 interface CreationToolsProps {
   currentMode: string;
   createMode?: {
@@ -132,6 +89,9 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
     }
   ];
 
+  // Colores para los botones de herramientas
+  const toolColor = '#007acc';
+
   return (
     <div className="creation-tools" style={{ 
       display: 'flex', 
@@ -159,14 +119,16 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
           <div style={{ 
             display: 'flex', 
             flexDirection: 'row',
-            gap: '2px'
+            gap: '6px'
           }}>
             {toolGroups[0].tools.map(tool => (
-              <ToolButton
+              <PluginButton
                 key={tool.command}
-                command={tool.command}
-                label={tool.label}
-                isActive={currentMode === 'create' && createMode?.commandType === tool.command}
+                icon={<SVGCommandIcon command={tool.command} size={14} color={currentMode === 'create' && createMode?.commandType === tool.command ? 'white' : '#333'} />}
+                text={tool.command}
+                color={toolColor}
+                active={currentMode === 'create' && createMode?.commandType === tool.command}
+                disabled={false}
                 onClick={() => onSelectTool(tool.command)}
               />
             ))}
@@ -191,20 +153,22 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
           <div style={{ 
             display: 'flex', 
             flexDirection: 'column',
-            gap: '2px'
+            gap: '4px'
           }}>
             {Array.from({ length: Math.ceil(toolGroups[1].tools.length / 2) }, (_, rowIndex) => (
               <div key={rowIndex} style={{ 
                 display: 'flex', 
                 flexDirection: 'row',
-                gap: '2px'
+                gap: '6px'
               }}>
                 {toolGroups[1].tools.slice(rowIndex * 2, (rowIndex + 1) * 2).map(tool => (
-                  <ToolButton
+                  <PluginButton
                     key={tool.command}
-                    command={tool.command}
-                    label={tool.label}
-                    isActive={currentMode === 'create' && createMode?.commandType === tool.command}
+                    icon={<SVGCommandIcon command={tool.command} size={14} color={currentMode === 'create' && createMode?.commandType === tool.command ? 'white' : '#333'} />}
+                    text={tool.command}
+                    color={toolColor}
+                    active={currentMode === 'create' && createMode?.commandType === tool.command}
+                    disabled={false}
                     onClick={() => onSelectTool(tool.command)}
                   />
                 ))}
@@ -231,20 +195,22 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
           <div style={{ 
             display: 'flex', 
             flexDirection: 'column',
-            gap: '2px'
+            gap: '4px'
           }}>
             {Array.from({ length: Math.ceil(toolGroups[2].tools.length / 2) }, (_, rowIndex) => (
               <div key={rowIndex} style={{ 
                 display: 'flex', 
                 flexDirection: 'row',
-                gap: '2px'
+                gap: '6px'
               }}>
                 {toolGroups[2].tools.slice(rowIndex * 2, (rowIndex + 1) * 2).map(tool => (
-                  <ToolButton
+                  <PluginButton
                     key={tool.command}
-                    command={tool.command}
-                    label={tool.label}
-                    isActive={currentMode === 'create' && createMode?.commandType === tool.command}
+                    icon={<SVGCommandIcon command={tool.command} size={14} color={currentMode === 'create' && createMode?.commandType === tool.command ? 'white' : '#333'} />}
+                    text={tool.command}
+                    color={toolColor}
+                    active={currentMode === 'create' && createMode?.commandType === tool.command}
+                    disabled={false}
                     onClick={() => onSelectTool(tool.command)}
                   />
                 ))}
@@ -271,14 +237,16 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
           <div style={{ 
             display: 'flex', 
             flexDirection: 'row',
-            gap: '2px'
+            gap: '6px'
           }}>
             {toolGroups[3].tools.map(tool => (
-              <ToolButton
+              <PluginButton
                 key={tool.command}
-                command={tool.command}
-                label={tool.label}
-                isActive={currentMode === 'create' && createMode?.commandType === tool.command}
+                icon={<SVGCommandIcon command={tool.command} size={14} color={currentMode === 'create' && createMode?.commandType === tool.command ? 'white' : '#333'} />}
+                text={tool.command}
+                color={toolColor}
+                active={currentMode === 'create' && createMode?.commandType === tool.command}
+                disabled={false}
                 onClick={() => onSelectTool(tool.command)}
               />
             ))}
@@ -301,32 +269,15 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
             Mode
           </div>
           <div>
-            <button
-              onClick={handleToggleRelativeCommands}
-              style={{
-                padding: '6px 10px',
-                background: useRelativeCommands ? '#28a745' : '#e9ecef',
-                color: useRelativeCommands ? 'white' : '#495057',
-                border: '1px solid #ccc',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '10px',
-                fontWeight: '500',
-                display: 'flex',
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s ease',
-                minWidth: '80px',
-                minHeight: '32px'
-              }}
-              title={useRelativeCommands ? 'Switch to Absolute Commands' : 'Switch to Relative Commands'}
-            >
-              {useRelativeCommands ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
-              <span style={{ fontSize: '9px' }}>
-                {useRelativeCommands ? 'REL' : 'ABS'}
-              </span>
-            </button>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={useRelativeCommands}
+                onChange={handleToggleRelativeCommands}
+                style={{ accentColor: '#2196f3', marginRight: 4, cursor: 'pointer' }}
+              />
+              Relative
+            </label>
           </div>
         </div>
       </div>
