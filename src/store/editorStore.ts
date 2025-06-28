@@ -6,6 +6,7 @@ import { loadPreferences, savePreferences, UserPreferences } from '../utils/pers
 import { decomposeIntoSubPaths, createNewPath, findSubPathContainingCommand } from '../utils/subpath-utils';
 import { parseSVGToSubPaths } from '../utils/svg-parser';
 import { findSubPathAtPoint, snapToGrid, getAllPathsBounds, getSelectedElementsBounds, getSelectedSubPathsBounds } from '../utils/path-utils';
+import { scaleSubPath, rotateSubPath, translateSubPath, getSubPathCenter } from '../utils/transform-subpath-utils';
 
 interface EditorActions {
   // Selection actions
@@ -16,6 +17,11 @@ interface EditorActions {
   clearSelection: () => void;
   selectSubPathByPoint: (pathId: string, point: Point) => void;
   moveSubPath: (subPathId: string, delta: Point) => void;
+  
+  // Transform actions
+  scaleSubPath: (subPathId: string, scaleX: number, scaleY: number, center?: Point) => void;
+  rotateSubPath: (subPathId: string, angle: number, center?: Point) => void;
+  translateSubPath: (subPathId: string, delta: Point) => void;
   
   // Path manipulation actions
   addPath: (style?: PathStyle) => string;
@@ -377,6 +383,81 @@ export const useEditorStore = create<EditorState & EditorActions>()(
               : subPath
           ),
         })),
+      }));
+    },
+    
+    // Transform actions
+    scaleSubPath: (subPathId, scaleX, scaleY, center) => {
+      set((state) => {
+        // Find the subpath to get its center if not provided
+        let actualCenter = center;
+        if (!actualCenter) {
+          for (const path of state.paths) {
+            const subPath = path.subPaths.find(sp => sp.id === subPathId);
+            if (subPath) {
+              actualCenter = getSubPathCenter(subPath);
+              break;
+            }
+          }
+        }
+        
+        if (!actualCenter) return state;
+        
+        return {
+          paths: state.paths.map((path) => ({
+            ...path,
+            subPaths: path.subPaths.map((subPath) =>
+              subPath.id === subPathId
+                ? scaleSubPath(subPath, scaleX, scaleY, actualCenter)
+                : subPath
+            ),
+          })),
+          renderVersion: state.renderVersion + 1,
+        };
+      });
+    },
+    
+    rotateSubPath: (subPathId, angle, center) => {
+      set((state) => {
+        // Find the subpath to get its center if not provided
+        let actualCenter = center;
+        if (!actualCenter) {
+          for (const path of state.paths) {
+            const subPath = path.subPaths.find(sp => sp.id === subPathId);
+            if (subPath) {
+              actualCenter = getSubPathCenter(subPath);
+              break;
+            }
+          }
+        }
+        
+        if (!actualCenter) return state;
+        
+        return {
+          paths: state.paths.map((path) => ({
+            ...path,
+            subPaths: path.subPaths.map((subPath) =>
+              subPath.id === subPathId
+                ? rotateSubPath(subPath, angle, actualCenter)
+                : subPath
+            ),
+          })),
+          renderVersion: state.renderVersion + 1,
+        };
+      });
+    },
+    
+    translateSubPath: (subPathId, delta) => {
+      set((state) => ({
+        paths: state.paths.map((path) => ({
+          ...path,
+          subPaths: path.subPaths.map((subPath) =>
+            subPath.id === subPathId
+              ? translateSubPath(subPath, delta)
+              : subPath
+          ),
+        })),
+        renderVersion: state.renderVersion + 1,
       }));
     },
     

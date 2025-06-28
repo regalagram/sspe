@@ -23,6 +23,7 @@ import { PathSimplificationPlugin } from '../plugins/path-simplification/PathSim
 import { PathSmoothingPlugin } from '../plugins/path-smoothing/PathSmoothing';
 import { WireframePlugin } from '../plugins/wireframe/Wireframe';
 import { PrecisionControlPlugin } from '../plugins/precision-control/PrecisionControl';
+import { SubPathTransformPlugin } from '../plugins/subpath-transform/SubPathTransform';
 
 // Register plugins immediately during module loading
 const initializePlugins = () => {
@@ -49,6 +50,7 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(PathSmoothingPlugin);
   pluginManager.registerPlugin(WireframePlugin);
   pluginManager.registerPlugin(PrecisionControlPlugin);
+  pluginManager.registerPlugin(SubPathTransformPlugin);
 };
 
 // Initialize plugins during module load
