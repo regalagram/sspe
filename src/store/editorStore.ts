@@ -178,6 +178,11 @@ const validateViewport = (viewport: any) => {
   };
 };
 
+// Helper function to round values to the current precision
+function roundToPrecision(val: number | undefined, precision: number): number | undefined {
+  return typeof val === 'number' ? Number(val.toFixed(precision)) : val;
+}
+
 export const useEditorStore = create<EditorState & EditorActions>()(
   subscribeWithSelector((set, get) => ({
     ...initialState,
@@ -377,6 +382,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     
     addCommand: (subPathId, command) => {
       const commandId = generateId();
+      const precision = get().precision;
       
       // Si es un comando "M", debemos crear un nuevo sub-path
       if (command.command === 'M' || command.command === 'm') {
@@ -428,7 +434,19 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             subPath.id === subPathId
               ? {
                   ...subPath,
-                  commands: [...subPath.commands, { ...command, id: commandId }],
+                  commands: [...subPath.commands, {
+                    ...command,
+                    id: commandId,
+                    x: roundToPrecision(command.x, precision),
+                    y: roundToPrecision(command.y, precision),
+                    x1: roundToPrecision(command.x1, precision),
+                    y1: roundToPrecision(command.y1, precision),
+                    x2: roundToPrecision(command.x2, precision),
+                    y2: roundToPrecision(command.y2, precision),
+                    rx: roundToPrecision(command.rx, precision),
+                    ry: roundToPrecision(command.ry, precision),
+                    xAxisRotation: roundToPrecision(command.xAxisRotation, precision),
+                  }],
                 }
               : subPath
           ),
@@ -439,17 +457,31 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     },
     
     updateCommand: (commandId, updates) =>
-      set((state) => ({
-        paths: state.paths.map((path) => ({
-          ...path,
-          subPaths: path.subPaths.map((subPath) => ({
-            ...subPath,
-            commands: subPath.commands.map((cmd) =>
-              cmd.id === commandId ? { ...cmd, ...updates } : cmd
-            ),
+      set((state) => {
+        const precision = state.precision;
+        return {
+          paths: state.paths.map((path) => ({
+            ...path,
+            subPaths: path.subPaths.map((subPath) => ({
+              ...subPath,
+              commands: subPath.commands.map((cmd) =>
+                cmd.id === commandId
+                  ? {
+                      ...cmd,
+                      ...Object.fromEntries(
+                        Object.entries(updates).map(([k, v]) =>
+                          typeof v === 'number'
+                            ? [k, Number(v.toFixed(precision))]
+                            : [k, v]
+                        )
+                      ),
+                    }
+                  : cmd
+              ),
+            })),
           })),
-        })),
-      })),
+        };
+      }),
     
     removeCommand: (commandId) =>
       set((state) => ({
@@ -467,39 +499,60 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       })),
     
     moveCommand: (commandId, position) =>
-      set((state) => ({
-        paths: state.paths.map((path) => ({
-          ...path,
-          subPaths: path.subPaths.map((subPath) => ({
-            ...subPath,
-            commands: subPath.commands.map((cmd) =>
-              cmd.id === commandId ? { ...cmd, x: position.x, y: position.y } : cmd
-            ),
+      set((state) => {
+        const precision = state.precision;
+        return {
+          paths: state.paths.map((path) => ({
+            ...path,
+            subPaths: path.subPaths.map((subPath) => ({
+              ...subPath,
+              commands: subPath.commands.map((cmd) =>
+                cmd.id === commandId
+                  ? {
+                      ...cmd,
+                      x: roundToPrecision(position.x, precision),
+                      y: roundToPrecision(position.y, precision),
+                    }
+                  : cmd
+              ),
+            })),
           })),
-        })),
-      })),
+        };
+      }),
 
     replaceSubPathCommands: (subPathId, newCommands) => {
-      set((state) => ({
-        paths: state.paths.map((path) => ({
-          ...path,
-          subPaths: path.subPaths.map((subPath) =>
-            subPath.id === subPathId
-              ? {
-                  ...subPath,
-                  commands: newCommands.map((cmd, index) => ({
-                    ...cmd,
-                    id: generateId(),
-                  })),
-                }
-              : subPath
-          ),
-        })),
-        selection: {
-          ...state.selection,
-          selectedCommands: [], // Clear command selection after replacement
-        },
-      }));
+      set((state) => {
+        const precision = state.precision;
+        return {
+          paths: state.paths.map((path) => ({
+            ...path,
+            subPaths: path.subPaths.map((subPath) =>
+              subPath.id === subPathId
+                ? {
+                    ...subPath,
+                    commands: newCommands.map((cmd) => ({
+                      ...cmd,
+                      id: generateId(),
+                      x: roundToPrecision(cmd.x, precision),
+                      y: roundToPrecision(cmd.y, precision),
+                      x1: roundToPrecision(cmd.x1, precision),
+                      y1: roundToPrecision(cmd.y1, precision),
+                      x2: roundToPrecision(cmd.x2, precision),
+                      y2: roundToPrecision(cmd.y2, precision),
+                      rx: roundToPrecision(cmd.rx, precision),
+                      ry: roundToPrecision(cmd.ry, precision),
+                      xAxisRotation: roundToPrecision(cmd.xAxisRotation, precision),
+                    })),
+                  }
+                : subPath
+            ),
+          })),
+          selection: {
+            ...state.selection,
+            selectedCommands: [], // Clear command selection after replacement
+          },
+        };
+      });
     },
     
     updatePathStyle: (pathId, styleUpdates) =>
@@ -512,15 +565,38 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       })),
     
     replacePaths: (newPaths) =>
-      set((state) => ({
-        paths: newPaths,
-        selection: {
-          selectedPaths: [],
-          selectedSubPaths: [],
-          selectedCommands: [],
-          selectedControlPoints: [],
-        },
-      })),
+      set((state) => {
+        const precision = state.precision;
+        // Redondear todos los puntos de todos los paths importados
+        const round = (val: number | undefined) =>
+          typeof val === 'number' ? Number(val.toFixed(precision)) : val;
+        return {
+          paths: newPaths.map((path) => ({
+            ...path,
+            subPaths: path.subPaths.map((subPath) => ({
+              ...subPath,
+              commands: subPath.commands.map((cmd) => ({
+                ...cmd,
+                x: round(cmd.x),
+                y: round(cmd.y),
+                x1: round(cmd.x1),
+                y1: round(cmd.y1),
+                x2: round(cmd.x2),
+                y2: round(cmd.y2),
+                rx: round(cmd.rx),
+                ry: round(cmd.ry),
+                xAxisRotation: round(cmd.xAxisRotation),
+              })),
+            })),
+          })),
+          selection: {
+            selectedPaths: [],
+            selectedSubPaths: [],
+            selectedCommands: [],
+            selectedControlPoints: [],
+          },
+        };
+      }),
     
     // Viewport actions
     setZoom: (zoom, center) =>
