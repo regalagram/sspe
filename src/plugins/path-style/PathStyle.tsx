@@ -3,30 +3,21 @@ import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { PathStyle } from '../../types';
 import { DraggablePanel } from '../../components/DraggablePanel';
+import { convertRgbToHex } from '../../utils/color-utils';
 
-// Helper function to convert rgba/rgb/hex colors to hex format for color inputs
+// Helper function to convert colors to hex format for color inputs
 const colorToHex = (color: string | undefined): string => {
   if (!color || color === 'none') return '#000000';
   
-  // If it's already in hex format, return as is
-  if (color.startsWith('#')) return color;
+  // Use the improved color conversion function
+  const converted = convertRgbToHex(color);
   
-  // Handle rgba/rgb format
-  if (color.startsWith('rgba(') || color.startsWith('rgb(')) {
-    const values = color.match(/\d+/g);
-    if (values && values.length >= 3) {
-      const r = parseInt(values[0]);
-      const g = parseInt(values[1]);
-      const b = parseInt(values[2]);
-      
-      // Convert to hex
-      const toHex = (n: number) => n.toString(16).padStart(2, '0');
-      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-    }
+  // If conversion failed or returned non-hex, fallback to black
+  if (!converted || converted === color && !color.startsWith('#')) {
+    return '#000000';
   }
   
-  // Fallback for any other format
-  return '#000000';
+  return converted;
 };
 
 interface PathStyleControlsProps {

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { SVGCommandType } from '../../types';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import SVGCommandIcon from '../../components/SVGCommandIcons';
 import { ToggleLeft, ToggleRight } from 'lucide-react';
+import { loadPreferences, savePreferences } from '../../utils/persistence';
 
 interface ToolButtonProps {
   command: SVGCommandType;
@@ -20,7 +21,7 @@ const ToolButton: React.FC<ToolButtonProps> = ({ command, label, isActive, onCli
       onClick={onClick}
       title={`${label} (${command})`}
       style={{
-        padding: '6px 8px',
+        padding: '4px 6px',
         margin: '1px',
         border: '1px solid #ccc',
         borderRadius: '4px',
@@ -30,16 +31,16 @@ const ToolButton: React.FC<ToolButtonProps> = ({ command, label, isActive, onCli
         fontSize: '10px',
         fontFamily: 'monospace',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'row',
         alignItems: 'center',
-        gap: '4px',
-        minWidth: '50px',
-        minHeight: '50px'
+        gap: '6px',
+        minWidth: '65px',
+        minHeight: '32px'
       }}
     >
       <SVGCommandIcon 
         command={command} 
-        size={16} 
+        size={14} 
         color={isActive ? 'white' : '#333'} 
       />
       <span style={{ fontSize: '9px', fontWeight: 'bold' }}>
@@ -66,6 +67,24 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
   onExitCreateMode,
 }) => {
   const [useRelativeCommands, setUseRelativeCommands] = useState(false);
+
+  // Load the relative commands preference from localStorage on component mount
+  useEffect(() => {
+    const preferences = loadPreferences();
+    setUseRelativeCommands(preferences.useRelativeCommands);
+  }, []);
+
+  // Save preference to localStorage when it changes
+  const handleToggleRelativeCommands = () => {
+    const newValue = !useRelativeCommands;
+    setUseRelativeCommands(newValue);
+    
+    const preferences = loadPreferences();
+    savePreferences({
+      ...preferences,
+      useRelativeCommands: newValue
+    });
+  };
 
   const baseTools: Array<{ command: SVGCommandType; label: string; category: string }> = [
     { command: 'M', label: 'Move To', category: 'Start & End' },
@@ -169,17 +188,25 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
           </div>
           <div style={{ 
             display: 'flex', 
-            flexDirection: 'row',
+            flexDirection: 'column',
             gap: '2px'
           }}>
-            {toolGroups[1].tools.map(tool => (
-              <ToolButton
-                key={tool.command}
-                command={tool.command}
-                label={tool.label}
-                isActive={currentMode === 'create' && createMode?.commandType === tool.command}
-                onClick={() => onSelectTool(tool.command)}
-              />
+            {Array.from({ length: Math.ceil(toolGroups[1].tools.length / 2) }, (_, rowIndex) => (
+              <div key={rowIndex} style={{ 
+                display: 'flex', 
+                flexDirection: 'row',
+                gap: '2px'
+              }}>
+                {toolGroups[1].tools.slice(rowIndex * 2, (rowIndex + 1) * 2).map(tool => (
+                  <ToolButton
+                    key={tool.command}
+                    command={tool.command}
+                    label={tool.label}
+                    isActive={currentMode === 'create' && createMode?.commandType === tool.command}
+                    onClick={() => onSelectTool(tool.command)}
+                  />
+                ))}
+              </div>
             ))}
           </div>
         </div>
@@ -201,17 +228,25 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
           </div>
           <div style={{ 
             display: 'flex', 
-            flexDirection: 'row',
+            flexDirection: 'column',
             gap: '2px'
           }}>
-            {toolGroups[2].tools.map(tool => (
-              <ToolButton
-                key={tool.command}
-                command={tool.command}
-                label={tool.label}
-                isActive={currentMode === 'create' && createMode?.commandType === tool.command}
-                onClick={() => onSelectTool(tool.command)}
-              />
+            {Array.from({ length: Math.ceil(toolGroups[2].tools.length / 2) }, (_, rowIndex) => (
+              <div key={rowIndex} style={{ 
+                display: 'flex', 
+                flexDirection: 'row',
+                gap: '2px'
+              }}>
+                {toolGroups[2].tools.slice(rowIndex * 2, (rowIndex + 1) * 2).map(tool => (
+                  <ToolButton
+                    key={tool.command}
+                    command={tool.command}
+                    label={tool.label}
+                    isActive={currentMode === 'create' && createMode?.commandType === tool.command}
+                    onClick={() => onSelectTool(tool.command)}
+                  />
+                ))}
+              </div>
             ))}
           </div>
         </div>
@@ -265,10 +300,10 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
           </div>
           <div>
             <button
-              onClick={() => setUseRelativeCommands(!useRelativeCommands)}
+              onClick={handleToggleRelativeCommands}
               style={{
-                padding: '8px 12px',
-                background: useRelativeCommands ? '#007acc' : '#e9ecef',
+                padding: '6px 10px',
+                background: useRelativeCommands ? '#28a745' : '#e9ecef',
                 color: useRelativeCommands ? 'white' : '#495057',
                 border: '1px solid #ccc',
                 borderRadius: '6px',
@@ -276,16 +311,16 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
                 fontSize: '10px',
                 fontWeight: '500',
                 display: 'flex',
-                flexDirection: 'column',
+                flexDirection: 'row',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '6px',
                 transition: 'all 0.2s ease',
-                minWidth: '50px',
-                minHeight: '50px'
+                minWidth: '80px',
+                minHeight: '32px'
               }}
               title={useRelativeCommands ? 'Switch to Absolute Commands' : 'Switch to Relative Commands'}
             >
-              {useRelativeCommands ? <ToggleRight size={16} /> : <ToggleLeft size={16} />}
+              {useRelativeCommands ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
               <span style={{ fontSize: '9px' }}>
                 {useRelativeCommands ? 'REL' : 'ABS'}
               </span>
@@ -307,7 +342,8 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
             fontSize: '14px',
             transition: 'background 0.2s ease',
             alignSelf: 'center',
-            marginTop: '8px'
+            marginTop: '8px',
+            width: '100%',
           }}
           onMouseEnter={(e) => e.currentTarget.style.background = '#c82333'}
           onMouseLeave={(e) => e.currentTarget.style.background = '#dc3545'}

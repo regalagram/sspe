@@ -15,6 +15,9 @@ export interface UserPreferences {
   // Feature preferences
   showControlPoints: boolean;
   showCommandPoints: boolean;
+  
+  // Creation tools preferences
+  useRelativeCommands: boolean;
 }
 
 const STORAGE_KEY = 'svg-editor-preferences';
@@ -27,6 +30,7 @@ const defaultPreferences: UserPreferences = {
   showLabels: true,
   showControlPoints: true,
   showCommandPoints: true,
+  useRelativeCommands: false,
 };
 
 /**
@@ -50,6 +54,7 @@ export function loadPreferences(): UserPreferences {
       showLabels: typeof parsed.showLabels === 'boolean' ? parsed.showLabels : defaultPreferences.showLabels,
       showControlPoints: typeof parsed.showControlPoints === 'boolean' ? parsed.showControlPoints : defaultPreferences.showControlPoints,
       showCommandPoints: typeof parsed.showCommandPoints === 'boolean' ? parsed.showCommandPoints : defaultPreferences.showCommandPoints,
+      useRelativeCommands: typeof parsed.useRelativeCommands === 'boolean' ? parsed.useRelativeCommands : defaultPreferences.useRelativeCommands,
     };
   } catch (error) {
     console.warn('Failed to load preferences from localStorage:', error);
