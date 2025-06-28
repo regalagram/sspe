@@ -1,5 +1,4 @@
-import React, { useEffect, useRef } from 'react';
-import { useEditorStore } from '../store/editorStore';
+import React, { useEffect, useRef } from 'react';import { useEditorStore } from '../store/editorStore';
 import { pluginManager } from './PluginSystem';
 import { getSafeTransform } from '../utils/transform-utils';
 import { ZoomPlugin } from '../plugins/zoom/Zoom';
@@ -20,8 +19,8 @@ import { CommandPlugin } from '../plugins/command/Command';
 import { GlobalKeyboardPlugin } from '../plugins/global-keyboard/GlobalKeyboard';
 import { CreationModePlugin } from '../plugins/creation-mode/CreationMode';
 import { RelativeToolsPlugin } from '../plugins/relative-tools/RelativeTools';
-import { pathSimplificationPlugin } from '../plugins/path-simplification';
-import { pathSmoothingPlugin } from '../plugins/path-smoothing';
+import { PathSimplificationPlugin } from '../plugins/path-simplification/PathSimplification';
+import { PathSmoothingPlugin } from '../plugins/path-smoothing/PathSmoothing';
 
 // Register plugins immediately during module loading
 const initializePlugins = () => {
@@ -44,10 +43,8 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(SVGPlugin);
   pluginManager.registerPlugin(SubPathListPlugin);
   pluginManager.registerPlugin(RelativeToolsPlugin);
-  pluginManager.registerPlugin(pathSimplificationPlugin);
-  pluginManager.registerPlugin(pathSmoothingPlugin);
-  pluginManager.registerPlugin(pathSimplificationPlugin);
-  pluginManager.registerPlugin(pathSmoothingPlugin);
+  pluginManager.registerPlugin(PathSimplificationPlugin);
+  pluginManager.registerPlugin(PathSmoothingPlugin);
 };
 
 // Initialize plugins during module load

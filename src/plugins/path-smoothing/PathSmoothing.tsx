@@ -165,7 +165,7 @@ export const PathSmoothingControls: React.FC = () => {
   );
 };
 
-export const pathSmoothingPlugin: Plugin = {
+export const PathSmoothingPlugin: Plugin = {
   id: 'path-smoothing',
   name: 'Path Smoothing',
   version: '1.0.0',

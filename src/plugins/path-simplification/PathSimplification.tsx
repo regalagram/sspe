@@ -243,7 +243,7 @@ export const PathSimplificationControls: React.FC = () => {
   );
 };
 
-export const pathSimplificationPlugin: Plugin = {
+export const PathSimplificationPlugin: Plugin = {
   id: 'path-simplification',
   name: 'Path Simplification',
   version: '1.0.0',
