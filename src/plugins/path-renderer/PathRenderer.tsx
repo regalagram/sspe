@@ -45,6 +45,11 @@ export const PathRenderer: React.FC = () => {
     
     const svgElement = (e.target as SVGPathElement).closest('svg');
     if (svgElement) {
+      // If the subpath being dragged is not selected, select it (considering Shift key)
+      if (!selection.selectedSubPaths.includes(subPathId)) {
+        selectSubPathMultiple(subPathId, e.shiftKey);
+      }
+      
       const point = getTransformedPoint(e, svgElement);
       setDragState({
         isDragging: true,
@@ -57,7 +62,7 @@ export const PathRenderer: React.FC = () => {
       // Save to history when starting to drag
       pushToHistory();
     }
-  }, [pushToHistory, viewport]);
+  }, [pushToHistory, viewport, selection.selectedSubPaths, selectSubPathMultiple]);
 
   // Handle mouse move for dragging
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGElement>) => {
@@ -69,15 +74,21 @@ export const PathRenderer: React.FC = () => {
       y: currentPoint.y - dragState.lastPoint.y,
     };
     
-    // Move the subpath
-    moveSubPath(dragState.subPathId, delta);
+    // Move all selected subpaths (including the one being dragged)
+    const subPathsToMove = selection.selectedSubPaths.length > 0 
+      ? selection.selectedSubPaths 
+      : [dragState.subPathId];
+    
+    subPathsToMove.forEach(subPathId => {
+      moveSubPath(subPathId, delta);
+    });
     
     // Update last point
     setDragState(prev => ({
       ...prev,
       lastPoint: currentPoint,
     }));
-  }, [dragState, moveSubPath, viewport]);
+  }, [dragState, moveSubPath, selection.selectedSubPaths, viewport]);
 
   // Handle mouse up to stop dragging
   const handleMouseUp = useCallback(() => {
@@ -220,7 +231,7 @@ export const PathRenderer: React.FC = () => {
                     // If we found a different subpath, select it instead of starting drag
                     if (foundSubPath && foundSubPath.id !== subPath.id) {
                       e.stopPropagation();
-                      selectSubPathByPoint(path.id, point);
+                      selectSubPathByPoint(path.id, point, e.shiftKey);
                       return;
                     }
                   }
@@ -229,6 +240,57 @@ export const PathRenderer: React.FC = () => {
                   handleSubPathMouseDown(e, subPath.id);
                 }}
               />
+              
+              {/* Multi-selection indicator */}
+              {dragState.isDragging && dragState.subPathId === subPath.id && selection.selectedSubPaths.length > 1 && (
+                (() => {
+                  // Get bounding box of the subpath to position the indicator
+                  const commands = subPath.commands;
+                  if (commands.length === 0) return null;
+                  
+                  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                  commands.forEach(cmd => {
+                    if (cmd.x !== undefined && cmd.y !== undefined) {
+                      minX = Math.min(minX, cmd.x);
+                      minY = Math.min(minY, cmd.y);
+                      maxX = Math.max(maxX, cmd.x);
+                      maxY = Math.max(maxY, cmd.y);
+                    }
+                  });
+                  
+                  if (!isFinite(minX) || !isFinite(minY)) return null;
+                  
+                  const centerX = (minX + maxX) / 2;
+                  const centerY = (minY + maxY) / 2;
+                  const fontSize = Math.max(12 / viewport.zoom, 8);
+                  
+                  return (
+                    <g transform={`translate(${centerX}, ${centerY})`}>
+                      {/* Background circle */}
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r={fontSize * 0.8}
+                        fill="rgba(33, 150, 243, 0.9)"
+                        stroke="white"
+                        strokeWidth={1 / viewport.zoom}
+                      />
+                      {/* Count text */}
+                      <text
+                        x="0"
+                        y={fontSize * 0.3}
+                        textAnchor="middle"
+                        fill="white"
+                        fontSize={fontSize}
+                        fontWeight="bold"
+                        style={{ pointerEvents: 'none' }}
+                      >
+                        {selection.selectedSubPaths.length}
+                      </text>
+                    </g>
+                  );
+                })()
+              )}
             </g>
           );
         })
