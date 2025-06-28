@@ -528,6 +528,68 @@ export function debugParsePathStyle(element: Element, useComputedStyles = false)
 }
 
 /**
+ * Test function for XML declaration handling
+ */
+export function testXmlDeclarationHandling(): void {
+  if (typeof document === 'undefined') {
+    console.log('❌ This function requires a browser environment');
+    return;
+  }
+  
+  console.log('🧪 Testing XML declaration handling...');
+  
+  // Test cases with and without XML declarations
+  const testCases = [
+    {
+      name: 'SVG without XML declaration',
+      svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 10 10 L 50 50" stroke="red" fill="none"/></svg>'
+    },
+    {
+      name: 'SVG with leading blank lines',
+      svg: '\n\n\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 10 10 L 50 50" stroke="red" fill="none"/></svg>'
+    },
+    {
+      name: 'SVG with XML declaration',
+      svg: '<?xml version="1.0" encoding="utf-8" ?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 10 10 L 50 50" stroke="red" fill="none"/></svg>'
+    },
+    {
+      name: 'SVG with blank lines before XML declaration',
+      svg: '\n\n<?xml version="1.0" encoding="utf-8" ?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 10 10 L 50 50" stroke="blue" fill="none"/></svg>'
+    },
+    {
+      name: 'SVG with XML declaration and different encoding',
+      svg: '<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 10 10 L 50 50" stroke="blue" fill="none"/></svg>'
+    },
+    {
+      name: 'SVG with XML declaration with extra attributes',
+      svg: '<?xml version="1.0" encoding="utf-8" standalone="yes" ?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 10 10 L 50 50" stroke="green" fill="none"/></svg>'
+    },
+    {
+      name: 'SVG with spaces and tabs before XML',
+      svg: '   \t\n  <?xml version="1.0" encoding="utf-8" ?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 10 10 L 50 50" stroke="purple" fill="none"/></svg>'
+    }
+  ];
+  
+  testCases.forEach((testCase, index) => {
+    console.log(`\n--- Test ${index + 1}: ${testCase.name} ---`);
+    
+    try {
+      const paths = parseSVGToSubPaths(testCase.svg);
+      console.log(`✅ Parsed successfully: ${paths.length} path(s) found`);
+      
+      if (paths.length > 0) {
+        console.log(`   First path has ${paths[0].subPaths.length} subpath(s)`);
+        if (paths[0].subPaths.length > 0) {
+          console.log(`   First subpath has ${paths[0].subPaths[0].commands.length} command(s)`);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error:', error);
+    }
+  });
+}
+
+/**
  * Test function for browser environment
  */
 export function testStrokeParsingInBrowser(): void {
@@ -585,8 +647,14 @@ export function testStrokeParsingInBrowser(): void {
  * Process and normalize SVG content, converting shapes to paths and normalizing path data
  */
 export function processSvgContent(svgString: string, debugMode = false): { svgElement: Element; normalizedSvgContent: string } {
+  // Normalize whitespace - remove leading/trailing whitespace and blank lines
+  let normalizedString = svgString.trim();
+  
+  // Remove XML declaration if present (optional XML declaration support)
+  const cleanedSvgString = normalizedString.replace(/^<\?xml[^>]*\?>\s*/, '');
+  
   const parser = new DOMParser();
-  const svgDoc = parser.parseFromString(svgString, 'image/svg+xml');
+  const svgDoc = parser.parseFromString(cleanedSvgString, 'image/svg+xml');
 
   const svgElement = svgDoc.documentElement;
   const parserError = svgElement.querySelector('parsererror');
@@ -1047,5 +1115,6 @@ export const SVGParser = {
   debug: {
     parsePathStyle: debugParsePathStyle,
     testStrokeParsingInBrowser,
+    testXmlDeclarationHandling,
   }
 };
