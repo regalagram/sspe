@@ -28,6 +28,11 @@ Se ha implementado exitosamente la funcionalidad completa de selección múltipl
 - ✅ Aplica cambios a TODOS los paths que contienen sub-paths seleccionados
 - ✅ Muestra mensaje informativo cuando hay conflictos de estilo
 
+### 4. **Selección Rectangular Inteligente**
+- ✅ **Selección de Sub-Paths**: Si la selección rectangular captura ÚNICAMENTE sub-paths completos, selecciona esos sub-paths
+- ✅ **Selección de Comandos**: Si hay comandos que no completan sub-paths, usa comportamiento tradicional (selecciona comandos individuales)
+- ✅ **Lógica estricta**: Solo selecciona sub-paths cuando TODOS los comandos en el rectángulo pertenecen a sub-paths completos
+
 ## 🔧 Cambios Técnicos Realizados
 
 ### Unificación del Modificador de Selección
@@ -70,6 +75,12 @@ selectSubPathByPoint: (pathId: string, point: Point, isShiftPressed?: boolean) =
 - Feedback visual actualizado para indicar operación múltiple
 - Proceso batch eficiente para múltiples sub-paths
 
+### RectSelection (RectSelection.tsx)
+- Lógica inteligente para detectar sub-paths completos en selección rectangular
+- Análisis exhaustivo: verifica que TODOS los comandos pertenezcan a sub-paths completos
+- Fallback elegante: usa selección de comandos individuales si hay comandos parciales
+- Optimización de experiencia: comportamiento predictible y consistente
+
 ### PathSimplification (PathSimplification.tsx)
 - Aplicación de simplificación a múltiples sub-paths seleccionados
 - Detecta automáticamente selección múltiple
@@ -83,10 +94,13 @@ selectSubPathByPoint: (pathId: string, point: Point, isShiftPressed?: boolean) =
 | `Shift + Click` | **Selección múltiple universal** (puntos y sub-paths) |
 | `Shift + Click` | Selección múltiple de puntos individuales |
 | `Shift + Click` | Selección múltiple de sub-paths |
+| `Arrastrar` | **Selección rectangular inteligente** (sub-paths completos o comandos) |
 | `Ctrl + Shift + A` | Seleccionar todos los sub-paths |
 | `Ctrl + Shift + P` | Enfocar panel de sub-paths |
 
 > **Nota**: Se unificó el modificador de selección. Anteriormente los puntos usaban `Cmd/Ctrl + Click` y los sub-paths `Shift + Click`. Ahora **todo usa `Shift + Click`** siguiendo los estándares de herramientas de diseño.
+
+> **Selección Rectangular**: Si el rectángulo captura únicamente sub-paths completos, selecciona esos sub-paths. Si contiene comandos parciales, selecciona comandos individuales.
 
 ## 🎨 Feedback Visual
 
@@ -131,6 +145,12 @@ selectSubPathByPoint: (pathId: string, point: Point, isShiftPressed?: boolean) =
 - **Aplicación múltiple**: Cambios se aplican a todos los paths relevantes
 - **Feedback contextual**: Mensajes claros sobre el estado de los estilos
 
+### 4. **Rectangular Selection Plugin**
+- **Análisis inteligente**: Examina cada comando en el rectángulo para determinar completitud de sub-paths
+- **Lógica estricta**: Solo selecciona sub-paths si TODOS los comandos forman sub-paths completos
+- **Compatibilidad**: Mantiene selección de comandos individuales cuando hay elementos parciales
+- **Performance**: Optimizado para análisis eficiente de grandes selecciones
+
 ## 📐 Principios Arquitectónicos Seguidos
 
 ### ✅ Modular Plugin Architecture
@@ -155,6 +175,7 @@ selectSubPathByPoint: (pathId: string, point: Point, isShiftPressed?: boolean) =
 - ✅ **Path Simplification**: ✨ **ACTUALIZADO** - Aplica simplificación a múltiples sub-paths
 - ✅ **Path Smoothing**: ✨ **ACTUALIZADO** - Aplica suavizado a múltiples sub-paths
 - ✅ **Path Style**: ✨ **ACTUALIZADO** - Panel inteligente para múltiples estilos
+- ✅ **Rectangular Selection**: ✨ **ACTUALIZADO** - Selección inteligente de sub-paths completos
 - ✅ **Relative Tools**: Funciona con múltiples selecciones
 - ✅ **Creation Tools**: Sin interferencias
 - ✅ **Zoom/Pan**: Sin interferencias

@@ -81,8 +81,9 @@ class RectSelectionManager {
       const hasSignificantArea = this.state.selectionRect.width > 5 || this.state.selectionRect.height > 5;
       
       if (hasSignificantArea) {
-        // Select all commands within the rectangle
-        const selectedIds: string[] = [];
+        // First, find all commands within the rectangle
+        const commandsInRect: { commandId: string; subPathId: string; pathId: string }[] = [];
+        
         paths.forEach((path: any) => {
           path.subPaths.forEach((subPath: any) => {
             subPath.commands.forEach((command: any) => {
@@ -94,14 +95,65 @@ class RectSelectionManager {
                 pos.y >= this.state.selectionRect!.y &&
                 pos.y <= this.state.selectionRect!.y + this.state.selectionRect!.height
               ) {
-                selectedIds.push(command.id);
+                commandsInRect.push({
+                  commandId: command.id,
+                  subPathId: subPath.id,
+                  pathId: path.id
+                });
               }
             });
           });
         });
-        
-        if (selectedIds.length > 0) {
-          selectMultiple(selectedIds, 'commands');
+
+        if (commandsInRect.length > 0) {
+          // Group commands by sub-path to check completeness
+          const subPathGroups = new Map<string, { commandIds: string[]; totalCommands: number }>();
+          
+          // First pass: collect all commands in rectangle grouped by sub-path
+          commandsInRect.forEach(({ commandId, subPathId }) => {
+            if (!subPathGroups.has(subPathId)) {
+              subPathGroups.set(subPathId, { commandIds: [], totalCommands: 0 });
+            }
+            subPathGroups.get(subPathId)!.commandIds.push(commandId);
+          });
+          
+          // Second pass: get total command count for each sub-path
+          paths.forEach((path: any) => {
+            path.subPaths.forEach((subPath: any) => {
+              if (subPathGroups.has(subPath.id)) {
+                subPathGroups.get(subPath.id)!.totalCommands = subPath.commands.length;
+              }
+            });
+          });
+          
+          // Check if ALL selected commands belong to COMPLETE sub-paths
+          let allCommandsBelongToCompleteSubPaths = true;
+          const completeSubPathIds: string[] = [];
+          
+          subPathGroups.forEach((group, subPathId) => {
+            if (group.commandIds.length === group.totalCommands) {
+              // This sub-path is complete
+              completeSubPathIds.push(subPathId);
+            } else {
+              // This sub-path is incomplete - we have partial commands
+              allCommandsBelongToCompleteSubPaths = false;
+            }
+          });
+          
+          if (allCommandsBelongToCompleteSubPaths && completeSubPathIds.length > 0) {
+            // ALL commands belong to complete sub-paths, so select those sub-paths
+            const { selectSubPathMultiple } = this.editorStore;
+            // Clear current selection and select the first sub-path
+            selectSubPathMultiple(completeSubPathIds[0], false);
+            // Then add the rest with shift behavior
+            for (let i = 1; i < completeSubPathIds.length; i++) {
+              selectSubPathMultiple(completeSubPathIds[i], true);
+            }
+          } else {
+            // Some commands don't complete their sub-paths, use original behavior
+            const selectedCommandIds = commandsInRect.map(item => item.commandId);
+            selectMultiple(selectedCommandIds, 'commands');
+          }
         } else {
           clearSelection();
         }
