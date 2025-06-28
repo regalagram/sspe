@@ -83,13 +83,22 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         onClick={onResetView}
       />
       <div style={{ 
-        fontSize: '12px', 
+        fontSize: '20px', 
+        fontWeight: 700,
         textAlign: 'center', 
-        padding: '4px', 
-        background: '#f0f0f0', 
-        borderRadius: '4px',
-        color: '#666'
+        padding: '8px 0', 
+        background: '#fff', 
+        borderRadius: '12px',
+        color: '#007acc',
+        border: 'none',
+        margin: '8px 0 0 0',
+        letterSpacing: '1px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8
       }}>
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ opacity: 0.7 }}><circle cx="9" cy="9" r="7" stroke="#007acc" strokeWidth="2"/><line x1="14.2" y1="14.2" x2="18" y2="18" stroke="#007acc" strokeWidth="2" strokeLinecap="round"/></svg>
         {Math.round(currentZoom * 100)}%
       </div>
     </div>
