@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
@@ -67,11 +67,21 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
 };
 
 export const SubPathListComponent: React.FC = () => {
-  const { paths, selection, selectSubPath, clearSelection } = useEditorStore();
-  
+  const { paths, selection, selectSubPath, clearSelection, zoomToSubPath } = useEditorStore();
   // Estado local para mantener la lista de sub-paths
   const [subPathsList, setSubPathsList] = useState<Array<{ path: SVGPath; subPath: SVGSubPath }>>([]);
-  
+  // Estado local para el toggle de auto-zoom
+  const [autoZoom, setAutoZoom] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem('sspe-auto-zoom');
+      return stored ? JSON.parse(stored) : false;
+    } catch {
+      return false;
+    }
+  });
+  // Ref para evitar doble zoom en doble click
+  const zoomTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Actualizar la lista de sub-paths cuando cambian los paths
   useEffect(() => {
     if (paths && paths.length > 0) {
@@ -81,15 +91,22 @@ export const SubPathListComponent: React.FC = () => {
       setSubPathsList([]);
     }
   }, [paths]);
-  
+
   const handleSubPathSelect = (subPathId: string) => {
     if (selection.selectedSubPaths.includes(subPathId)) {
       clearSelection();
     } else {
       selectSubPath(subPathId);
+      if (autoZoom) {
+        // Timeout para asegurar que el estado de selección se actualice antes del zoom
+        if (zoomTimeout.current) clearTimeout(zoomTimeout.current);
+        zoomTimeout.current = setTimeout(() => {
+          zoomToSubPath();
+        }, 50);
+      }
     }
   };
-  
+
   if (subPathsList.length === 0) {
     return (
       <div style={{ 
@@ -102,19 +119,14 @@ export const SubPathListComponent: React.FC = () => {
       </div>
     );
   }
-  
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <div style={{ 
-        fontSize: '11px', 
-        color: '#666', 
-        fontWeight: '500',
-        padding: '0 4px',
-        marginBottom: '4px'
-      }}>
-        {subPathsList.length} Sub-Path{subPathsList.length !== 1 ? 's' : ''} Available
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+        <span style={{ fontSize: '11px', color: '#666', fontWeight: 500 }}>
+          {subPathsList.length} Sub-Path{subPathsList.length !== 1 ? 's' : ''} Available
+        </span>
       </div>
-      
       <div style={{ 
         maxHeight: '300px', 
         overflowY: 'auto',
@@ -129,6 +141,22 @@ export const SubPathListComponent: React.FC = () => {
             onSelect={() => handleSubPathSelect(subPath.id)}
           />
         ))}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', marginTop: 12, marginBottom: 0, justifyContent: 'flex-start' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={autoZoom}
+            onChange={e => {
+              setAutoZoom(e.target.checked);
+              try {
+                localStorage.setItem('sspe-auto-zoom', JSON.stringify(e.target.checked));
+              } catch {}
+            }}
+            style={{ accentColor: '#2196f3', marginRight: 4 }}
+          />
+          Auto-Zoom
+        </label>
       </div>
     </div>
   );
