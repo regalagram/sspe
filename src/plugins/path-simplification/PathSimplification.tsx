@@ -49,12 +49,14 @@ export const PathSimplificationControls: React.FC = () => {
 
   const { selectedCommands, selectedSubPaths } = selection;
   
-  // Determine what to simplify: selected commands OR selected subpaths
+  // Determine what to simplify: selected commands OR selected subpaths (single or multiple)
   let targetSubPath: any = null;
+  let targetSubPaths: any[] = [];
   let targetCommands: any[] = [];
   let startIndex: number | undefined;
   let endIndex: number | undefined;
   let canSimplify = false;
+  let isMultiSubPath = false;
   
   if (selectedCommands.length >= 2) {
     // Use selected commands approach
@@ -67,95 +69,168 @@ export const PathSimplificationControls: React.FC = () => {
       endIndex = result.endIndex;
       canSimplify = true;
     }
-  } else if (selectedSubPaths.length === 1) {
-    // Use selected subpath approach - simplify the entire subpath
-    const subPathId = selectedSubPaths[0];
-    for (const path of paths) {
-      const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
-      if (subPath && subPath.commands.length >= 2) {
-        targetSubPath = subPath;
-        targetCommands = subPath.commands;
-        startIndex = 0;
-        endIndex = subPath.commands.length - 1;
+  } else if (selectedSubPaths.length >= 1) {
+    // Use selected subpath(s) approach - simplify entire subpath(s)
+    if (selectedSubPaths.length === 1) {
+      // Single subpath
+      const subPathId = selectedSubPaths[0];
+      for (const path of paths) {
+        const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
+        if (subPath && subPath.commands.length >= 2) {
+          targetSubPath = subPath;
+          targetCommands = subPath.commands;
+          startIndex = 0;
+          endIndex = subPath.commands.length - 1;
+          canSimplify = true;
+          break;
+        }
+      }
+    } else {
+      // Multiple subpaths
+      for (const subPathId of selectedSubPaths) {
+        for (const path of paths) {
+          const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
+          if (subPath && subPath.commands.length >= 2) {
+            targetSubPaths.push(subPath);
+          }
+        }
+      }
+      if (targetSubPaths.length > 0) {
         canSimplify = true;
-        break;
+        isMultiSubPath = true;
       }
     }
   }
 
   const handleSimplify = () => {
-    if (!canSimplify || !targetSubPath || !targetCommands || startIndex === undefined || endIndex === undefined) return;
+    if (!canSimplify) return;
 
     // Save current state to history before making changes
     pushToHistory();
 
-    // CRITICAL: Commands are already sorted by path order (not selection order)
-    // This guarantees that targetCommands[0] is the first command in the path sequence
-    console.log('Simplification - sorted commands by path order:', targetCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
-    console.log('Simplification - startIndex:', startIndex, 'endIndex:', endIndex);
+    if (isMultiSubPath) {
+      // Handle multiple sub-paths
+      console.log('Simplifying multiple sub-paths:', targetSubPaths.length);
+      
+      for (const subPath of targetSubPaths) {
+        if (subPath.commands.length < 2) continue;
+        
+        const commands = subPath.commands;
+        console.log('Simplification - processing subpath:', subPath.id, 'with', commands.length, 'commands');
+        
+        // Use points-on-path algorithm for simplification (Ramer-Douglas-Peucker)
+        const simplifiedCommands = simplifySegmentWithPointsOnPath(
+          commands, 
+          simplifyTolerance, 
+          simplifyDistance, 
+          grid.snapToGrid ? grid.size : 0
+        );
 
-    // Check if the selection starts with the subpath's M command
-    const isStartingFromM = startIndex === 0 && targetCommands[0].command === 'M';
-    
-    // Determine commands to process
-    let commandsToSimplify = [...targetCommands];
-    let needsContextM = false;
-    
-    // If we're not starting from M, we need M for context
-    if (!isStartingFromM) {
-      const subpathMCommand = targetSubPath.commands[0]; // First command should be M
-      if (subpathMCommand && subpathMCommand.command === 'M') {
-        commandsToSimplify.unshift(subpathMCommand);
-        needsContextM = true;
-        console.log('Added M for context:', subpathMCommand);
+        if (simplifiedCommands.length === 0) continue;
+        console.log('Simplified commands for', subPath.id, ':', simplifiedCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
+
+        // CRITICAL: Ensure the subpath ALWAYS starts with M
+        if (simplifiedCommands.length > 0 && simplifiedCommands[0].command !== 'M') {
+          console.warn('First command is not M, converting:', simplifiedCommands[0]);
+          const firstCmd = simplifiedCommands[0];
+          if ('x' in firstCmd && 'y' in firstCmd) {
+            simplifiedCommands[0] = {
+              ...firstCmd,
+              command: 'M'
+            };
+          }
+        }
+
+        console.log('Final subpath commands for', subPath.id, ':', simplifiedCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
+        
+        // Replace all commands in this subpath
+        replaceSubPathCommands(subPath.id, simplifiedCommands);
       }
-    }
+    } else if (targetSubPath && targetCommands && startIndex !== undefined && endIndex !== undefined) {
+      // Handle single sub-path (existing logic)
+      // CRITICAL: Commands are already sorted by path order (not selection order)
+      // This guarantees that targetCommands[0] is the first command in the path sequence
+      console.log('Simplification - sorted commands by path order:', targetCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
+      console.log('Simplification - startIndex:', startIndex, 'endIndex:', endIndex);
 
-    // Use points-on-path algorithm for simplification (Ramer-Douglas-Peucker)
-    const simplifiedCommands = simplifySegmentWithPointsOnPath(
-      commandsToSimplify, 
-      simplifyTolerance, 
-      simplifyDistance, 
-      grid.snapToGrid ? grid.size : 0
-    );
-
-    if (simplifiedCommands.length === 0) return;
-    console.log('Simplified commands:', simplifiedCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
-
-    // Create the new commands array for the entire subpath
-    let newSubPathCommands = [...targetSubPath.commands];
-    
-    // Determine what commands to use for replacement
-    let commandsToReplace = simplifiedCommands;
-    
-    // If we added M for context and it's still there, handle it properly
-    if (needsContextM && simplifiedCommands.length > 0 && simplifiedCommands[0].command === 'M') {
-      // We added M for context, so skip it in the replacement since it's not part of selection
-      commandsToReplace = simplifiedCommands.slice(1);
-      console.log('Skipping context M, replacement commands:', commandsToReplace.map((c: any) => `${c.command}(${c.x},${c.y})`));
-    }
-    
-    // Replace the selected range with simplified commands
-    console.log('Replacing range [', startIndex, ',', endIndex, '] with', commandsToReplace.length, 'commands');
-    newSubPathCommands.splice(startIndex, endIndex - startIndex + 1, ...commandsToReplace);
-    
-    // CRITICAL: Ensure the subpath ALWAYS starts with M
-    if (newSubPathCommands.length > 0 && newSubPathCommands[0].command !== 'M') {
-      console.warn('First command is not M, converting:', newSubPathCommands[0]);
-      const firstCmd = newSubPathCommands[0];
-      if ('x' in firstCmd && 'y' in firstCmd) {
-        newSubPathCommands[0] = {
-          ...firstCmd,
-          command: 'M'
-        };
+      // Check if the selection starts with the subpath's M command
+      const isStartingFromM = startIndex === 0 && targetCommands[0].command === 'M';
+      
+      // Determine commands to process
+      let commandsToSimplify = [...targetCommands];
+      let needsContextM = false;
+      
+      // If we're not starting from M, we need M for context
+      if (!isStartingFromM) {
+        const subpathMCommand = targetSubPath.commands[0]; // First command should be M
+        if (subpathMCommand && subpathMCommand.command === 'M') {
+          commandsToSimplify.unshift(subpathMCommand);
+          needsContextM = true;
+          console.log('Added M for context:', subpathMCommand);
+        }
       }
-    }
 
-    console.log('Final subpath commands:', newSubPathCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
-    
-    // Replace all commands in the subpath
-    replaceSubPathCommands(targetSubPath.id, newSubPathCommands);
+      // Use points-on-path algorithm for simplification (Ramer-Douglas-Peucker)
+      const simplifiedCommands = simplifySegmentWithPointsOnPath(
+        commandsToSimplify, 
+        simplifyTolerance, 
+        simplifyDistance, 
+        grid.snapToGrid ? grid.size : 0
+      );
+
+      if (simplifiedCommands.length === 0) return;
+      console.log('Simplified commands:', simplifiedCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
+
+      // Create the new commands array for the entire subpath
+      let newSubPathCommands = [...targetSubPath.commands];
+      
+      // Determine what commands to use for replacement
+      let commandsToReplace = simplifiedCommands;
+      
+      // If we added M for context and it's still there, handle it properly
+      if (needsContextM && simplifiedCommands.length > 0 && simplifiedCommands[0].command === 'M') {
+        // We added M for context, so skip it in the replacement since it's not part of selection
+        commandsToReplace = simplifiedCommands.slice(1);
+        console.log('Skipping context M, replacement commands:', commandsToReplace.map((c: any) => `${c.command}(${c.x},${c.y})`));
+      }
+      
+      // Replace the selected range with simplified commands
+      console.log('Replacing range [', startIndex, ',', endIndex, '] with', commandsToReplace.length, 'commands');
+      newSubPathCommands.splice(startIndex, endIndex - startIndex + 1, ...commandsToReplace);
+      
+      // CRITICAL: Ensure the subpath ALWAYS starts with M
+      if (newSubPathCommands.length > 0 && newSubPathCommands[0].command !== 'M') {
+        console.warn('First command is not M, converting:', newSubPathCommands[0]);
+        const firstCmd = newSubPathCommands[0];
+        if ('x' in firstCmd && 'y' in firstCmd) {
+          newSubPathCommands[0] = {
+            ...firstCmd,
+            command: 'M'
+          };
+        }
+      }
+
+      console.log('Final subpath commands:', newSubPathCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
+      
+      // Replace all commands in the subpath
+      replaceSubPathCommands(targetSubPath.id, newSubPathCommands);
+    }
   };
+
+  // Determine button text and info message
+  let buttonText = "Simplify";
+  let infoMessage = "";
+  
+  if (selectedCommands.length >= 2) {
+    infoMessage = `Simplify ${selectedCommands.length} selected commands`;
+  } else if (selectedSubPaths.length === 1) {
+    infoMessage = "Simplify entire selected sub-path";
+  } else if (selectedSubPaths.length > 1) {
+    buttonText = `Simplify ${selectedSubPaths.length} Sub-Paths`;
+    infoMessage = `Simplify all ${selectedSubPaths.length} selected sub-paths entirely`;
+  } else {
+    infoMessage = "Select commands within a sub-path or select sub-path(s) to simplify";
+  }
 
   const buttonStyle: React.CSSProperties = {
     padding: '8px 12px',
@@ -271,9 +346,13 @@ export const PathSimplificationControls: React.FC = () => {
           </div>
         </div>
 
+        <div style={infoStyle}>
+          {infoMessage}
+        </div>
+
         <PluginButton
           icon={<Minimize2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
-          text="Simplify"
+          text={buttonText}
           color="#007acc"
           active={false}
           disabled={!canSimplify}

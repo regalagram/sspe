@@ -26,6 +26,8 @@ export const PathSmoothingControls: React.FC = () => {
   let startIndex: number | undefined;
   let endIndex: number | undefined;
   let canSmooth = false;
+  let isMultipleSubPaths = false;
+  let targetSubPaths: any[] = [];
   
   if (selectedCommands.length >= 2) {
     // Use selected commands approach
@@ -52,59 +54,112 @@ export const PathSmoothingControls: React.FC = () => {
         break;
       }
     }
+  } else if (selectedSubPaths.length > 1) {
+    // Multiple subpaths selected - smooth all that have enough commands
+    isMultipleSubPaths = true;
+    for (const subPathId of selectedSubPaths) {
+      for (const path of paths) {
+        const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
+        if (subPath && subPath.commands.length >= 2) {
+          targetSubPaths.push(subPath);
+        }
+      }
+    }
+    canSmooth = targetSubPaths.length > 0;
   }
 
   const handleSmooth = () => {
-    if (!canSmooth || !targetSubPath || !targetCommands || startIndex === undefined || endIndex === undefined) return;
+    if (!canSmooth) return;
 
     // Save current state to history before making changes
     pushToHistory();
 
-    // CRITICAL: Commands are already sorted by path order (not selection order)
-    // This guarantees that targetCommands[0] is the first command in the path sequence
-    console.log('Smoothing - sorted commands by path order:', targetCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
-    console.log('Smoothing - startIndex:', startIndex, 'endIndex:', endIndex);
+    if (isMultipleSubPaths && targetSubPaths.length > 0) {
+      // Handle multiple subpaths
+      targetSubPaths.forEach((subPath) => {
+        const subPathCommands = subPath.commands;
+        
+        if (subPathCommands.length < 2) return;
+        
+        // Apply smoothing to entire subpath
+        const segmentToSmooth = [...subPathCommands];
+        
+        // Helper function to update this specific subpath
+        const updateSubPath = (newCommands: any[]) => {
+          // CRITICAL: Ensure the subpath ALWAYS starts with M
+          if (newCommands.length > 0 && newCommands[0].command !== 'M') {
+            console.warn('First command is not M, converting:', newCommands[0]);
+            const firstCmd = newCommands[0];
+            if ('x' in firstCmd && 'y' in firstCmd) {
+              newCommands[0] = {
+                ...firstCmd,
+                command: 'M'
+              };
+            }
+          }
 
-    // Extract the segment to smooth
-    const segmentToSmooth = [...targetCommands];
-    
-    // Helper function to update the path after smoothing
-    const updatePath = (newCommands: any[], addToHistory: boolean = true) => {
-      // Create the new commands array for the entire subpath
-      let newSubPathCommands = [...targetSubPath.commands];
+          console.log(`Smoothing subpath ${subPath.id}:`, newCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
+          
+          // Replace all commands in this subpath
+          replaceSubPathCommands(subPath.id, newCommands);
+        };
+        
+        // Apply smoothing using the generateSmoothPath function
+        generateSmoothPath(
+          segmentToSmooth,
+          subPathCommands,
+          updateSubPath,
+          grid.snapToGrid ? (value: number) => Math.round(value / grid.size) * grid.size : (value: number) => value
+        );
+      });
+    } else if (!isMultipleSubPaths && targetSubPath && targetCommands && startIndex !== undefined && endIndex !== undefined) {
+      // Handle single subpath or selected commands (original logic)
+      // CRITICAL: Commands are already sorted by path order (not selection order)
+      // This guarantees that targetCommands[0] is the first command in the path sequence
+      console.log('Smoothing - sorted commands by path order:', targetCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
+      console.log('Smoothing - startIndex:', startIndex, 'endIndex:', endIndex);
+
+      // Extract the segment to smooth
+      const segmentToSmooth = [...targetCommands];
       
-      // Replace the segment range with the new smoothed commands
-      const actualStartIndex = Math.max(0, startIndex!);
-      const actualEndIndex = Math.min(targetSubPath.commands.length - 1, endIndex!);
-      const replaceLength = actualEndIndex - actualStartIndex + 1;
-      
-      newSubPathCommands.splice(actualStartIndex, replaceLength, ...newCommands);
-      
-      // CRITICAL: Ensure the subpath ALWAYS starts with M
-      if (newSubPathCommands.length > 0 && newSubPathCommands[0].command !== 'M') {
-        console.warn('First command is not M, converting:', newSubPathCommands[0]);
-        const firstCmd = newSubPathCommands[0];
-        if ('x' in firstCmd && 'y' in firstCmd) {
-          newSubPathCommands[0] = {
-            ...firstCmd,
-            command: 'M'
-          };
+      // Helper function to update the path after smoothing
+      const updatePath = (newCommands: any[], addToHistory: boolean = true) => {
+        // Create the new commands array for the entire subpath
+        let newSubPathCommands = [...targetSubPath.commands];
+        
+        // Replace the segment range with the new smoothed commands
+        const actualStartIndex = Math.max(0, startIndex!);
+        const actualEndIndex = Math.min(targetSubPath.commands.length - 1, endIndex!);
+        const replaceLength = actualEndIndex - actualStartIndex + 1;
+        
+        newSubPathCommands.splice(actualStartIndex, replaceLength, ...newCommands);
+        
+        // CRITICAL: Ensure the subpath ALWAYS starts with M
+        if (newSubPathCommands.length > 0 && newSubPathCommands[0].command !== 'M') {
+          console.warn('First command is not M, converting:', newSubPathCommands[0]);
+          const firstCmd = newSubPathCommands[0];
+          if ('x' in firstCmd && 'y' in firstCmd) {
+            newSubPathCommands[0] = {
+              ...firstCmd,
+              command: 'M'
+            };
+          }
         }
-      }
 
-      console.log('Final subpath commands:', newSubPathCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
+        console.log('Final subpath commands:', newSubPathCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
+        
+        // Replace all commands in the subpath
+        replaceSubPathCommands(targetSubPath.id, newSubPathCommands);
+      };
       
-      // Replace all commands in the subpath
-      replaceSubPathCommands(targetSubPath.id, newSubPathCommands);
-    };
-    
-    // Apply smoothing using the new generateSmoothPath function with void signature
-    generateSmoothPath(
-      segmentToSmooth,
-      targetSubPath.commands,
-      updatePath,
-      grid.snapToGrid ? (value: number) => Math.round(value / grid.size) * grid.size : (value: number) => value
-    );
+      // Apply smoothing using the new generateSmoothPath function with void signature
+      generateSmoothPath(
+        segmentToSmooth,
+        targetSubPath.commands,
+        updatePath,
+        grid.snapToGrid ? (value: number) => Math.round(value / grid.size) * grid.size : (value: number) => value
+      );
+    }
   };
 
   const buttonStyle: React.CSSProperties = {

@@ -53,6 +53,18 @@ selectSubPathByPoint: (pathId: string, point: Point, isShiftPressed?: boolean) =
 - Aplicación de cambios a múltiples paths
 - Mensajes informativos contextual
 
+### PathSmoothing (PathSmoothing.tsx)
+- Aplicación de suavizado a múltiples sub-paths seleccionados
+- Detecta automáticamente selección múltiple
+- Feedback visual actualizado para indicar operación múltiple
+- Proceso batch eficiente para múltiples sub-paths
+
+### PathSimplification (PathSimplification.tsx)
+- Aplicación de simplificación a múltiples sub-paths seleccionados
+- Detecta automáticamente selección múltiple
+- Interfaz adaptativa que muestra cantidad de sub-paths
+- Proceso batch para simplificar múltiples sub-paths simultáneamente
+
 ## 🚀 Atajos de Teclado
 
 | Combinación | Acción |
@@ -76,6 +88,34 @@ selectSubPathByPoint: (pathId: string, point: Point, isShiftPressed?: boolean) =
 - **Mensaje informativo**: "Editing X paths with matching styles"
 - **Aviso de conflicto**: Cuando estilos no coinciden
 
+### Panel de Suavizado (Smoothing)
+- **Botón adaptativo**: "Smooth X Sub-Paths" cuando hay múltiples seleccionados
+- **Mensaje informativo**: Indica cuántos sub-paths serán suavizados
+
+### Panel de Simplificación (Simplification)
+- **Botón adaptativo**: "Simplify X Sub-Paths" cuando hay múltiples seleccionados
+- **Mensaje informativo**: Indica cuántos sub-paths serán simplificados
+
+## 🔄 Plugins Mejorados con Soporte Multi-Sub-Path
+
+### 1. **Path Smoothing Plugin**
+- **Detección automática**: Identifica cuando múltiples sub-paths están seleccionados
+- **Aplicación batch**: Suaviza todos los sub-paths seleccionados con una sola acción
+- **Configuración compartida**: Mismos parámetros de suavizado para todos
+- **Historial único**: Una entrada en el historial para toda la operación
+
+### 2. **Path Simplification Plugin**
+- **Detección automática**: Identifica cuando múltiples sub-paths están seleccionados  
+- **Aplicación batch**: Simplifica todos los sub-paths seleccionados simultáneamente
+- **Configuración compartida**: Mismos parámetros de tolerancia y distancia para todos
+- **Historial único**: Una entrada en el historial para toda la operación
+
+### 3. **Path Style Plugin**
+- **Análisis inteligente**: Compara estilos de todos los paths que contienen sub-paths seleccionados
+- **Panel condicional**: Solo se muestra si todos los estilos son idénticos
+- **Aplicación múltiple**: Cambios se aplican a todos los paths relevantes
+- **Feedback contextual**: Mensajes claros sobre el estado de los estilos
+
 ## 📐 Principios Arquitectónicos Seguidos
 
 ### ✅ Modular Plugin Architecture
@@ -97,8 +137,9 @@ selectSubPathByPoint: (pathId: string, point: Point, isShiftPressed?: boolean) =
 
 ### Con Funcionalidades Existentes
 - ✅ **SubPath Transform**: Funciona automáticamente con múltiples selecciones
-- ✅ **Path Simplification**: Mantiene compatibilidad
-- ✅ **Path Smoothing**: Mantiene compatibilidad
+- ✅ **Path Simplification**: ✨ **ACTUALIZADO** - Aplica simplificación a múltiples sub-paths
+- ✅ **Path Smoothing**: ✨ **ACTUALIZADO** - Aplica suavizado a múltiples sub-paths
+- ✅ **Path Style**: ✨ **ACTUALIZADO** - Panel inteligente para múltiples estilos
 - ✅ **Relative Tools**: Funciona con múltiples selecciones
 - ✅ **Creation Tools**: Sin interferencias
 - ✅ **Zoom/Pan**: Sin interferencias
