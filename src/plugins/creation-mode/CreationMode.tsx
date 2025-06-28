@@ -16,7 +16,7 @@ class CreationModeManager {
   }
 
   handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
-    const { mode, grid, paths, addCommand, pushToHistory } = this.editorStore;
+    const { mode, grid, paths, addCommand, addPath, pushToHistory, setCreateMode } = this.editorStore;
     
     // Only handle if we're in create mode and no specific element is being clicked
     if (mode.current !== 'create' || !mode.createMode || context.commandId || context.controlPoint) {
@@ -32,6 +32,20 @@ class CreationModeManager {
       point.y = snappedPoint.y;
     }
     
+    const commandType = mode.createMode.commandType;
+    
+    // Special handling for 'M' command when no paths exist
+    if ((commandType === 'M' || commandType === 'm') && paths.length === 0) {
+      // Create a new path with the M command at the clicked position
+      addPath(undefined, point.x, point.y);
+      pushToHistory();
+      
+      // Automatically switch to 'L' command after creating 'M'
+      setCreateMode('L');
+      
+      return true;
+    }
+    
     // Find the active path and sub-path (last sub-path of last path or create new)
     let activeSubPath = null;
     if (paths.length > 0) {
@@ -42,7 +56,6 @@ class CreationModeManager {
     }
     
     if (activeSubPath) {
-      const commandType = mode.createMode.commandType;
       const newCommand: any = {
         command: commandType,
         x: point.x,
@@ -71,6 +84,12 @@ class CreationModeManager {
       
       addCommand(activeSubPath.id, newCommand);
       pushToHistory();
+      
+      // Automatically switch to 'L' command after creating 'M'
+      if (commandType === 'M' || commandType === 'm') {
+        setCreateMode('L');
+      }
+      
       return true;
     }
 

@@ -24,7 +24,7 @@ interface EditorActions {
   translateSubPath: (subPathId: string, delta: Point) => void;
   
   // Path manipulation actions
-  addPath: (style?: PathStyle) => string;
+  addPath: (style?: PathStyle, x?: number, y?: number) => string;
   removePath: (pathId: string) => void;
   addSubPath: (pathId: string) => string;
   removeSubPath: (subPathId: string) => void;
@@ -277,8 +277,8 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     },
     
     // Path manipulation actions
-    addPath: (style = { fill: 'none', stroke: '#000000', strokeWidth: 2 }) => {
-      const newPath = createNewPath();
+    addPath: (style = { fill: 'none', stroke: '#000000', strokeWidth: 2 }, x = 100, y = 100) => {
+      const newPath = createNewPath(x, y);
       newPath.style = { ...newPath.style, ...style };
       
       set((state) => ({
