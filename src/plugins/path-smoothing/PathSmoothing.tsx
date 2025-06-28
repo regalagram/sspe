@@ -139,7 +139,7 @@ export const PathSmoothingControls: React.FC = () => {
         <div style={infoStyle}>
           {selectedCommands.length === 0 && selectedSubPaths.length === 0 && 'commands or subpath'}
           {selectedCommands.length === 1 && selectedSubPaths.length === 0 && 'Select at least 2 commands'}
-          {selectedCommands.length >= 2 && !canSmooth && 'Commands must be in same subpath'}
+          {selectedCommands.length >= 2 && !canSmooth && 'must be in same subpath'}
           {selectedSubPaths.length > 1 && 'Select only one subpath at a time'}
           {canSmooth && selectedCommands.length > 0 && `${selectedCommands.length} commands selected`}
           {canSmooth && selectedSubPaths.length === 1 && `Entire subpath selected`}

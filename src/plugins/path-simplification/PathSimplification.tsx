@@ -209,7 +209,7 @@ export const PathSimplificationControls: React.FC = () => {
         <div style={infoStyle}>
           {selectedCommands.length === 0 && selectedSubPaths.length === 0 && 'commands or subpath'}
           {selectedCommands.length === 1 && selectedSubPaths.length === 0 && 'Select at least 2 commands'}
-          {selectedCommands.length >= 2 && !canSimplify && 'Commands must be in same subpath'}
+          {selectedCommands.length >= 2 && !canSimplify && 'must be in same subpath'}
           {selectedSubPaths.length > 1 && 'Select only one subpath at a time'}
           {canSimplify && selectedCommands.length > 0 && `${selectedCommands.length} commands selected`}
           {canSimplify && selectedSubPaths.length === 1 && `Entire subpath selected`}
