@@ -287,7 +287,7 @@ export function normalizeZCommandsForSmoothing(segment: SVGCommand[]): SVGComman
   if (lastCommand && (lastCommand.command === 'Z' || lastCommand.command === 'z')) {
     // Buscar el comando M (moveTo) para obtener punto de inicio
     const firstCommand = normalizedSegment.find((cmd: SVGCommand) => 
-      cmd.command === 'M' || cmd.command === 'm'
+      cmd.command === 'M'
     );
     
     if (firstCommand && 'x' in firstCommand && 'y' in firstCommand && 

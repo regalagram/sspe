@@ -1,5 +1,5 @@
 import { SVGSubPath, SVGCommand, PathStyle, SVGCommandType, SVGPath } from '../types';
-import { parsePath, absolutize, serialize } from 'path-data-parser';
+import { parsePath, absolutize, normalize, serialize } from 'path-data-parser';
 import { generateId } from './id-utils';
 import { decomposeIntoSubPaths } from './subpath-utils';
 import { convertRgbToHex, parseColorWithOpacity } from './color-utils';
@@ -237,33 +237,29 @@ function convertShapesToPaths(svgElement: Element, debugMode = false): void {
 
 /**
  * Enhanced function to parse a path data string into commands using path-data-parser
+ * Now normalizes all commands to M, L, C, Z using path-data-parser normalize function
  */
 export function parsePathData(pathData: string): SVGCommand[] {
   const commands: SVGCommand[] = [];
   
   try {
-    // Use path-data-parser for robust parsing
+    // Use path-data-parser for robust parsing with normalization
     const parsed = parsePath(pathData);
+    const absolutized = absolutize(parsed);
+    const normalized = normalize(absolutized); // This converts everything to M, L, C, Z
     
-    for (const segment of parsed) {
+    for (const segment of normalized) {
       const command: Partial<SVGCommand> = {
         id: generateId(),
         command: segment.key as SVGCommandType,
       };
 
-      // Map values based on command type
+      // Map values based on command type - now only M, L, C, Z
       switch (segment.key.toUpperCase()) {
         case 'M':
         case 'L':
-        case 'T':
           command.x = segment.data[0];
           command.y = segment.data[1];
-          break;
-        case 'H':
-          command.x = segment.data[0];
-          break;
-        case 'V':
-          command.y = segment.data[0];
           break;
         case 'C':
           command.x1 = segment.data[0];
@@ -273,30 +269,13 @@ export function parsePathData(pathData: string): SVGCommand[] {
           command.x = segment.data[4];
           command.y = segment.data[5];
           break;
-        case 'S':
-          command.x2 = segment.data[0];
-          command.y2 = segment.data[1];
-          command.x = segment.data[2];
-          command.y = segment.data[3];
-          break;
-        case 'Q':
-          command.x1 = segment.data[0];
-          command.y1 = segment.data[1];
-          command.x = segment.data[2];
-          command.y = segment.data[3];
-          break;
-        case 'A':
-          command.rx = segment.data[0];
-          command.ry = segment.data[1];
-          command.xAxisRotation = segment.data[2];
-          command.largeArcFlag = segment.data[3];
-          command.sweepFlag = segment.data[4];
-          command.x = segment.data[5];
-          command.y = segment.data[6];
-          break;
         case 'Z':
           // No additional values needed
           break;
+        default:
+          // This should not happen with normalize, but skip if it does
+          console.warn(`Unexpected command after normalization: ${segment.key}`);
+          continue;
       }
 
       commands.push(command as SVGCommand);
@@ -761,13 +740,14 @@ export function parseSVGToSubPaths(svgString: string, useComputedStyles = false)
 }
 
 /**
- * Get absolute path data from a path string
+ * Get absolute path data from a path string, normalized to M, L, C, Z commands
  */
 export function getAbsolutePathData(pathData: string): string {
   try {
     const parsed = parsePath(pathData);
     const absolutized = absolutize(parsed);
-    return normalizeScientificNotation(serialize(absolutized));
+    const normalized = normalize(absolutized); // Convert to M, L, C, Z only
+    return normalizeScientificNotation(serialize(normalized));
   } catch (error) {
     console.error('Error converting path data to absolute:', error);
     return pathData;
@@ -789,7 +769,8 @@ function normalizePathWithTransform(pathNode: Element): string | null {
     try {
       const parsed = parsePath(d);
       const absolutized = absolutize(parsed);
-      return normalizeScientificNotation(serialize(absolutized)).replace(/,/g, ' ');
+      const normalized = normalize(absolutized); // Convert to M, L, C, Z only
+      return normalizeScientificNotation(serialize(normalized)).replace(/,/g, ' ');
     } catch (error) {
       console.warn('Failed to normalize path without transform:', error);
       return d;
@@ -802,31 +783,19 @@ function normalizePathWithTransform(pathNode: Element): string | null {
     // Parse the path
     const parsed = parsePath(d);
     const absolutized = absolutize(parsed);
+    const normalized = normalize(absolutized); // Convert to M, L, C, Z only
     
     // Apply transformation to each command
-    const transformedCommands = absolutized.map(segment => {
+    const transformedCommands = normalized.map(segment => {
       const newSegment = { ...segment };
       
       // Transform coordinate pairs based on command type
       switch (segment.key.toUpperCase()) {
         case 'M':
         case 'L':
-        case 'T':
           if (segment.data.length >= 2) {
             const transformed = transformPoint(segment.data[0], segment.data[1], transformMatrix);
             newSegment.data = [transformed.x, transformed.y];
-          }
-          break;
-        case 'H':
-          if (segment.data.length >= 1) {
-            const transformed = transformPoint(segment.data[0], 0, transformMatrix);
-            newSegment.data = [transformed.x];
-          }
-          break;
-        case 'V':
-          if (segment.data.length >= 1) {
-            const transformed = transformPoint(0, segment.data[0], transformMatrix);
-            newSegment.data = [transformed.y];
           }
           break;
         case 'C':
@@ -837,32 +806,12 @@ function normalizePathWithTransform(pathNode: Element): string | null {
             newSegment.data = [cp1.x, cp1.y, cp2.x, cp2.y, end.x, end.y];
           }
           break;
-        case 'S':
-        case 'Q':
-          if (segment.data.length >= 4) {
-            const cp = transformPoint(segment.data[0], segment.data[1], transformMatrix);
-            const end = transformPoint(segment.data[2], segment.data[3], transformMatrix);
-            newSegment.data = [cp.x, cp.y, end.x, end.y];
-          }
-          break;
-        case 'A':
-          if (segment.data.length >= 7) {
-            // For arcs, we need to transform the end point and potentially adjust radii
-            // This is a simplified transformation that may not be perfectly accurate for all cases
-            const end = transformPoint(segment.data[5], segment.data[6], transformMatrix);
-            newSegment.data = [
-              segment.data[0], // rx - may need scaling
-              segment.data[1], // ry - may need scaling  
-              segment.data[2], // x-axis-rotation
-              segment.data[3], // large-arc-flag
-              segment.data[4], // sweep-flag
-              end.x,           // x
-              end.y            // y
-            ];
-          }
-          break;
         case 'Z':
           // No coordinates to transform
+          break;
+        default:
+          // Should not happen with normalize, but handle gracefully
+          console.warn(`Unexpected command in transform: ${segment.key}`);
           break;
       }
       
@@ -906,7 +855,8 @@ export async function processPathsInfo(
       try {
         const parsed = parsePath(originalD);
         const absolutized = absolutize(parsed);
-        absoluteD = normalizeScientificNotation(serialize(absolutized));
+        const normalized = normalize(absolutized); // Convert to M, L, C, Z only
+        absoluteD = normalizeScientificNotation(serialize(normalized));
       } catch (parseError) {
         console.error(
           `Error converting path data to absolute for index ${index}:`,

@@ -16,15 +16,8 @@ const CommandPanel: React.FC<CommandPanelProps> = ({ command, pathId, subPathId 
     const descriptions: Record<string, string> = {
       'M': 'Move To (absolute)',
       'L': 'Line To (absolute)',
-      'H': 'Horizontal Line To (absolute)',
-      'V': 'Vertical Line To (absolute)',
       'C': 'Cubic Bézier Curve (absolute)',
-      'S': 'Smooth Cubic Bézier Curve (absolute)',
-      'Q': 'Quadratic Bézier Curve (absolute)',
-      'T': 'Smooth Quadratic Bézier Curve (absolute)',
-      'A': 'Elliptical Arc (absolute)',
-      'Z': 'Close Path',
-      'z': 'Close Path'
+      'Z': 'Close Path'
     };
     return descriptions[cmd.command] || `Unknown command: ${cmd.command}`;
   };
@@ -87,59 +80,6 @@ const CommandPanel: React.FC<CommandPanelProps> = ({ command, pathId, subPathId 
           </div>
           <div style={{ fontSize: '12px', fontFamily: 'monospace' }}>
             x2: {cmd.x2?.toFixed(2) || 'N/A'}, y2: {cmd.y2?.toFixed(2) || 'N/A'}
-          </div>
-        </div>
-      );
-    }
-
-    // Show arc-specific properties
-    if (cmd.rx !== undefined || cmd.ry !== undefined) {
-      properties.push(
-        <div key="radii" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
-            Radii:
-          </div>
-          <div style={{ fontSize: '12px', fontFamily: 'monospace' }}>
-            rx: {cmd.rx?.toFixed(2) || 'N/A'}, ry: {cmd.ry?.toFixed(2) || 'N/A'}
-          </div>
-        </div>
-      );
-    }
-
-    if (cmd.xAxisRotation !== undefined) {
-      properties.push(
-        <div key="rotation" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
-            X-Axis Rotation:
-          </div>
-          <div style={{ fontSize: '12px' }}>
-            {cmd.xAxisRotation}°
-          </div>
-        </div>
-      );
-    }
-
-    if (cmd.largeArcFlag !== undefined) {
-      properties.push(
-        <div key="large-arc" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
-            Large Arc Flag:
-          </div>
-          <div style={{ fontSize: '12px' }}>
-            {cmd.largeArcFlag ? 'Yes' : 'No'}
-          </div>
-        </div>
-      );
-    }
-
-    if (cmd.sweepFlag !== undefined) {
-      properties.push(
-        <div key="sweep" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
-            Sweep Direction:
-          </div>
-          <div style={{ fontSize: '12px' }}>
-            {cmd.sweepFlag ? 'Clockwise' : 'Counter-clockwise'}
           </div>
         </div>
       );

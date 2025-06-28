@@ -77,14 +77,6 @@ function scaleCommand(
     newCmd.y2 = scaledPoint.y;
   }
   
-  // Scale arc radii
-  if (cmd.rx !== undefined) {
-    newCmd.rx = cmd.rx * Math.abs(scaleX);
-  }
-  if (cmd.ry !== undefined) {
-    newCmd.ry = cmd.ry * Math.abs(scaleY);
-  }
-  
   return newCmd;
 }
 
@@ -117,11 +109,6 @@ function rotateCommand(
     const rotatedPoint = rotatePoint({ x: cmd.x2, y: cmd.y2 }, cos, sin, center);
     newCmd.x2 = rotatedPoint.x;
     newCmd.y2 = rotatedPoint.y;
-  }
-  
-  // Update arc rotation if present
-  if (cmd.xAxisRotation !== undefined) {
-    newCmd.xAxisRotation = (cmd.xAxisRotation + (Math.acos(cos) * 180 / Math.PI)) % 360;
   }
   
   return newCmd;

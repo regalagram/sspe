@@ -62,25 +62,15 @@ class CreationModeManager {
         y: point.y,
       };
       
-      // Add properties based on command type
+      // Add properties based on command type - only M, L, C, Z supported
       if (commandType === 'C') {
         // For cubic bezier, we need control points
         newCommand.x1 = point.x - 20;
         newCommand.y1 = point.y - 20;
         newCommand.x2 = point.x + 20;
         newCommand.y2 = point.y + 20;
-      } else if (commandType === 'Q') {
-        // For quadratic bezier, we need one control point
-        newCommand.x1 = point.x;
-        newCommand.y1 = point.y - 20;
-      } else if (commandType === 'A') {
-        // For arc, we need radius and flags
-        newCommand.rx = 20;
-        newCommand.ry = 20;
-        newCommand.xAxisRotation = 0;
-        newCommand.largeArcFlag = 0;
-        newCommand.sweepFlag = 1;
       }
+      // M, L, Z commands don't need additional properties
       
       addCommand(activeSubPath.id, newCommand);
       pushToHistory();

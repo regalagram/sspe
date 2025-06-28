@@ -1,4 +1,5 @@
 import { SVGPath, SVGCommand, SVGSubPath, Point, BoundingBox } from "../types";
+import { parsePathData } from "./svg-parser";
 
 export const pathToString = (path: SVGPath): string => {
   return path.subPaths
@@ -317,19 +318,6 @@ const getDistanceToSubPathContour = (subPath: SVGSubPath, point: Point): number 
             );
             break;
             
-          case 'A':
-            // Arc
-            if (command.rx !== undefined && command.ry !== undefined) {
-              segmentDistance = distanceToArc(
-                point, currentPoint, absolutePos,
-                command.rx, command.ry,
-                command.xAxisRotation || 0,
-                command.largeArcFlag || 0,
-                command.sweepFlag || 0
-              );
-            }
-            break;
-            
           default:
             // For other commands, fall back to line segment
             segmentDistance = distanceToLineSegment(point, currentPoint, absolutePos);
@@ -477,33 +465,11 @@ export const commandToString = (command: SVGCommand): string => {
   
   switch (cmd) {
     case 'M':
-    case 'm':
     case 'L':
-    case 'l':
       return `${cmd} ${params.x} ${params.y}`;
-    case 'H':
-    case 'h':
-      return `${cmd} ${params.x}`;
-    case 'V':
-    case 'v':
-      return `${cmd} ${params.y}`;
     case 'C':
-    case 'c':
       return `${cmd} ${params.x1} ${params.y1} ${params.x2} ${params.y2} ${params.x} ${params.y}`;
-    case 'S':
-    case 's':
-      return `${cmd} ${params.x2} ${params.y2} ${params.x} ${params.y}`;
-    case 'Q':
-    case 'q':
-      return `${cmd} ${params.x1} ${params.y1} ${params.x} ${params.y}`;
-    case 'T':
-    case 't':
-      return `${cmd} ${params.x} ${params.y}`;
-    case 'A':
-    case 'a':
-      return `${cmd} ${params.rx} ${params.ry} ${params.xAxisRotation} ${params.largeArcFlag} ${params.sweepFlag} ${params.x} ${params.y}`;
     case 'Z':
-    case 'z':
       return cmd;
     default:
       return '';
@@ -511,7 +477,7 @@ export const commandToString = (command: SVGCommand): string => {
 };
 
 export const parsePathString = (d: string): SVGPath => {
-  const commands = parsePathCommands(d);
+  const commands = parsePathData(d); // Use the normalized path parser
   const subPaths = [];
   let currentSubPath: SVGCommand[] = [];
   
@@ -542,199 +508,6 @@ export const parsePathString = (d: string): SVGPath => {
     subPaths,
     style: { fill: 'none', stroke: '#000', strokeWidth: 1 }
   };
-};
-
-export const parsePathCommands = (d: string): SVGCommand[] => {
-  // Simple regex to parse SVG path commands
-  const regex = /([MmLlHhVvCcSsQqTtAaZz])([^MmLlHhVvCcSsQqTtAaZz]*)/g;
-  const commands: SVGCommand[] = [];
-  let match;
-  let currentX = 0;
-  let currentY = 0;
-  let subPathStartX = 0;
-  let subPathStartY = 0;
-  
-  while ((match = regex.exec(d)) !== null) {
-    const command = match[1];
-    const params = match[2].trim().split(/[\s,]+/).filter(p => p !== '').map(parseFloat);
-    const isRelative = command === command.toLowerCase() && command !== 'z';
-    
-    if (command.toLowerCase() === 'm' || command.toLowerCase() === 'l') {
-      for (let i = 0; i < params.length; i += 2) {
-        let x = params[i];
-        let y = params[i + 1];
-        
-        if (isRelative) {
-          x += currentX;
-          y += currentY;
-        }
-        
-        // For M commands, update subpath start position
-        if (command.toLowerCase() === 'm') {
-          subPathStartX = x;
-          subPathStartY = y;
-        }
-        
-        commands.push({
-          id: `cmd-${commands.length}`,
-          command: command.toLowerCase() === 'm' ? 'M' : 'L', // Normalize to absolute
-          x,
-          y
-        });
-        
-        currentX = x;
-        currentY = y;
-      }
-    } else if (command.toLowerCase() === 'h') {
-      for (let i = 0; i < params.length; i++) {
-        let x = params[i];
-        
-        if (isRelative) {
-          x += currentX;
-        }
-        
-        commands.push({
-          id: `cmd-${commands.length}`,
-          command: 'L', // Convert H to L for internal consistency
-          x,
-          y: currentY
-        });
-        
-        currentX = x;
-      }
-    } else if (command.toLowerCase() === 'v') {
-      for (let i = 0; i < params.length; i++) {
-        let y = params[i];
-        
-        if (isRelative) {
-          y += currentY;
-        }
-        
-        commands.push({
-          id: `cmd-${commands.length}`,
-          command: 'L', // Convert V to L for internal consistency
-          x: currentX,
-          y
-        });
-        
-        currentY = y;
-      }
-    } else if (command.toLowerCase() === 'c') {
-      for (let i = 0; i < params.length; i += 6) {
-        let x1 = params[i];
-        let y1 = params[i + 1];
-        let x2 = params[i + 2];
-        let y2 = params[i + 3];
-        let x = params[i + 4];
-        let y = params[i + 5];
-        
-        if (isRelative) {
-          x1 += currentX;
-          y1 += currentY;
-          x2 += currentX;
-          y2 += currentY;
-          x += currentX;
-          y += currentY;
-        }
-        
-        commands.push({
-          id: `cmd-${commands.length}`,
-          command: 'C', // Normalize to absolute
-          x1,
-          y1,
-          x2,
-          y2,
-          x,
-          y
-        });
-        
-        currentX = x;
-        currentY = y;
-      }
-    } else if (command.toLowerCase() === 's' || command.toLowerCase() === 'q') {
-      for (let i = 0; i < params.length; i += 4) {
-        let x1 = params[i];
-        let y1 = params[i + 1];
-        let x = params[i + 2];
-        let y = params[i + 3];
-        
-        if (isRelative) {
-          x1 += currentX;
-          y1 += currentY;
-          x += currentX;
-          y += currentY;
-        }
-        
-        commands.push({
-          id: `cmd-${commands.length}`,
-          command: command.toLowerCase() === 's' ? 'S' : 'Q', // Normalize to absolute
-          x1,
-          y1,
-          x,
-          y
-        });
-        
-        currentX = x;
-        currentY = y;
-      }
-    } else if (command.toLowerCase() === 't') {
-      for (let i = 0; i < params.length; i += 2) {
-        let x = params[i];
-        let y = params[i + 1];
-        
-        if (isRelative) {
-          x += currentX;
-          y += currentY;
-        }
-        
-        commands.push({
-          id: `cmd-${commands.length}`,
-          command: 'T', // Normalize to absolute
-          x,
-          y
-        });
-        
-        currentX = x;
-        currentY = y;
-      }
-    } else if (command.toLowerCase() === 'a') {
-      for (let i = 0; i < params.length; i += 7) {
-        let x = params[i + 5];
-        let y = params[i + 6];
-        
-        if (isRelative) {
-          x += currentX;
-          y += currentY;
-        }
-        
-        commands.push({
-          id: `cmd-${commands.length}`,
-          command: 'A', // Normalize to absolute
-          rx: params[i],
-          ry: params[i + 1],
-          xAxisRotation: params[i + 2],
-          largeArcFlag: params[i + 3],
-          sweepFlag: params[i + 4],
-          x,
-          y
-        });
-        
-        currentX = x;
-        currentY = y;
-      }
-    } else if (command.toLowerCase() === 'z') {
-      commands.push({
-        id: `cmd-${commands.length}`,
-        command: 'Z'
-      });
-      
-      // Z command returns to subpath start
-      currentX = subPathStartX;
-      currentY = subPathStartY;
-    }
-  }
-  
-  return commands;
 };
 
 export const getPathBounds = (path: SVGPath): BoundingBox => {
@@ -1140,23 +913,6 @@ const getSubPathPolygonPoints = (subPath: SVGSubPath, allSubPaths?: SVGSubPath[]
         const reflectedCP = getReflectedControlPoint(subPath.commands, i, currentPoint);
         const curvePoints = sampleQuadraticBezier(currentPoint, reflectedCP, absolutePos, 10);
         points.push(...curvePoints);
-        break;
-        
-      case 'A':
-        // Arc - sample points along the arc
-        if (command.rx !== undefined && command.ry !== undefined) {
-          const arcPoints = sampleArc(
-            currentPoint, 
-            absolutePos, 
-            command.rx, 
-            command.ry, 
-            command.xAxisRotation || 0, 
-            command.largeArcFlag || 0, 
-            command.sweepFlag || 0, 
-            10
-          );
-          points.push(...arcPoints);
-        }
         break;
         
       case 'Z':

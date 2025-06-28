@@ -88,7 +88,7 @@ export const ControlPointsRenderer: React.FC = () => {
             return (
               <g key={`control-${command.id}`}>
                 {/* Render control points for cubic curves */}
-                {(command.command === 'C' || command.command === 'c') && controlPoints.length >= 2 && (
+                {command.command === 'C' && controlPoints.length >= 2 && (
                   <>
                     {/* First control point connects to previous command position */}
                     {prevPosition && (
@@ -145,32 +145,6 @@ export const ControlPointsRenderer: React.FC = () => {
                   </>
                 )}
                 
-                {/* Render control point for quadratic curves */}
-                {(command.command === 'Q' || command.command === 'q') && controlPoints.length >= 1 && (
-                  <>
-                    <line
-                      x1={position.x}
-                      y1={position.y}
-                      x2={controlPoints[0].x}
-                      y2={controlPoints[0].y}
-                      stroke="#999"
-                      strokeWidth={1 / viewport.zoom}
-                      strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
-                      pointerEvents="none"
-                    />
-                    <circle
-                      cx={controlPoints[0].x}
-                      cy={controlPoints[0].y}
-                      r={radius * 0.7}
-                      fill="#999"
-                      stroke="#666"
-                      strokeWidth={1 / viewport.zoom}
-                      style={{ cursor: 'grab' }}
-                      data-command-id={command.id}
-                      data-control-point="x1y1"
-                    />
-                  </>
-                )}
               </g>
             );
           });

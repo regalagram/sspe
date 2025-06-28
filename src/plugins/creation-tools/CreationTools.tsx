@@ -24,248 +24,60 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
   onSelectTool,
   onExitCreateMode,
 }) => {
-  const baseTools: Array<{ command: SVGCommandType; label: string; category: string }> = [
-    { command: 'M', label: 'Move To', category: 'Start & End' },
-    { command: 'Z', label: 'Close Path', category: 'Start & End' },
-    { command: 'L', label: 'Line To', category: 'Lines' },
-    { command: 'H', label: 'Horizontal Line', category: 'Lines' },
-    { command: 'V', label: 'Vertical Line', category: 'Lines' },
-    { command: 'C', label: 'Cubic Bezier', category: 'Curves' },
-    { command: 'S', label: 'Smooth Cubic', category: 'Curves' },
-    { command: 'Q', label: 'Quadratic Bezier', category: 'Curves' },
-    { command: 'T', label: 'Smooth Quadratic', category: 'Curves' },
-    { command: 'A', label: 'Arc', category: 'Arcs' },
-  ];
-
-  // All tools are absolute since we work internally with absolute coordinates
-  const tools = baseTools.map(tool => ({
-    ...tool,
-    label: `${tool.label} (absolute)`
-  }));
-
-  // Reorganizar herramientas en grupos para la grilla
-  const toolGroups = [
-    {
-      title: 'Start & End',
-      tools: tools.filter(tool => ['M', 'm', 'Z', 'z'].includes(tool.command))
-    },
-    {
-      title: 'Lines',
-      tools: tools.filter(tool => ['L', 'l', 'H', 'h', 'V', 'v'].includes(tool.command))
-    },
-    {
-      title: 'Curves',
-      tools: tools.filter(tool => ['C', 'c', 'S', 's', 'Q', 'q', 'T', 't'].includes(tool.command))
-    },
-    {
-      title: 'Arcs',
-      tools: tools.filter(tool => ['A', 'a'].includes(tool.command))
-    }
+  const tools: Array<{ command: SVGCommandType; label: string; description: string }> = [
+    { command: 'M', label: 'M', description: 'Start' },
+    { command: 'L', label: 'L', description: 'Line' },
+    { command: 'C', label: 'C', description: 'Curve' },
+    { command: 'Z', label: 'Z', description: 'End' },
   ];
 
   // Colores para los botones de herramientas
   const toolColor = '#007acc';
 
   return (
-    <div className="creation-tools" style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
+    <div className="creation-tools" style={{
+      display: 'flex',
+      flexDirection: 'column',
     }}>
-      {/* Grilla de herramientas - disposición vertical por filas */}
+      {/* Tools arranged vertically, one per line */}
       <div style={{
         display: 'flex',
         flexDirection: 'column',
+        gap: '6px'
       }}>
-        {/* Start & End */}
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '4px'
-        }}>
-          <div style={{ 
-            fontSize: '10px', 
-            color: '#666', 
-            fontWeight: '500',
-            textAlign: 'left'
-          }}>
-            Start & End
-          </div>
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'row',
-            gap: '6px'
-          }}>
-            {toolGroups[0].tools.map(tool => (
-              <PluginButton
-                key={tool.command}
-                icon={<SVGCommandIcon command={tool.command} size={14} color={currentMode === 'create' && createMode?.commandType === tool.command ? 'white' : '#333'} />}
-                text={tool.command}
-                color={toolColor}
-                active={currentMode === 'create' && createMode?.commandType === tool.command}
-                disabled={false}
-                onClick={() => onSelectTool(tool.command)}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Lines */}
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '4px',
-          marginTop: '8px'
-        }}>
-          <div style={{ 
-            fontSize: '10px', 
-            color: '#666', 
-            fontWeight: '500',
-            textAlign: 'left'
-          }}>
-            Lines
-          </div>
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            gap: '4px'
-          }}>
-            {Array.from({ length: Math.ceil(toolGroups[1].tools.length / 2) }, (_, rowIndex) => (
-              <div key={rowIndex} style={{ 
-                display: 'flex', 
-                flexDirection: 'row',
-                gap: '6px'
-              }}>
-                {toolGroups[1].tools.slice(rowIndex * 2, (rowIndex + 1) * 2).map(tool => (
-                  <PluginButton
-                    key={tool.command}
-                    icon={<SVGCommandIcon command={tool.command} size={14} color={currentMode === 'create' && createMode?.commandType === tool.command ? 'white' : '#333'} />}
-                    text={tool.command}
-                    color={toolColor}
-                    active={currentMode === 'create' && createMode?.commandType === tool.command}
-                    disabled={false}
-                    onClick={() => onSelectTool(tool.command)}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Curves */}
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '4px',
-          marginTop: '8px'
-        }}>
-          <div style={{ 
-            fontSize: '10px', 
-            color: '#666', 
-            fontWeight: '500',
-            textAlign: 'left'
-          }}>
-            Curves
-          </div>
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-            gap: '4px'
-          }}>
-            {Array.from({ length: Math.ceil(toolGroups[2].tools.length / 2) }, (_, rowIndex) => (
-              <div key={rowIndex} style={{ 
-                display: 'flex', 
-                flexDirection: 'row',
-                gap: '6px'
-              }}>
-                {toolGroups[2].tools.slice(rowIndex * 2, (rowIndex + 1) * 2).map(tool => (
-                  <PluginButton
-                    key={tool.command}
-                    icon={<SVGCommandIcon command={tool.command} size={14} color={currentMode === 'create' && createMode?.commandType === tool.command ? 'white' : '#333'} />}
-                    text={tool.command}
-                    color={toolColor}
-                    active={currentMode === 'create' && createMode?.commandType === tool.command}
-                    disabled={false}
-                    onClick={() => onSelectTool(tool.command)}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Arcs */}
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '4px',
-          marginTop: '8px'
-        }}>
-          <div style={{ 
-            fontSize: '10px', 
-            color: '#666', 
-            fontWeight: '500',
-            textAlign: 'left'
-          }}>
-            Arcs
-          </div>
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'row',
-            gap: '6px'
-          }}>
-            {toolGroups[3].tools.map(tool => (
-              <PluginButton
-                key={tool.command}
-                icon={<SVGCommandIcon command={tool.command} size={14} color={currentMode === 'create' && createMode?.commandType === tool.command ? 'white' : '#333'} />}
-                text={tool.command}
-                color={toolColor}
-                active={currentMode === 'create' && createMode?.commandType === tool.command}
-                disabled={false}
-                onClick={() => onSelectTool(tool.command)}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Mode */}
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          gap: '4px',
-          marginTop: '8px'
-        }}>
-          <div style={{ 
-            fontSize: '10px', 
-            color: '#666', 
-            fontWeight: '500',
-            textAlign: 'left'
-          }}>
-            Mode
-          </div>
-        </div>
+        {tools.map(tool => (
+          <PluginButton
+            key={tool.command}
+            icon={<SVGCommandIcon command={tool.command} size={14} color={currentMode === 'create' && createMode?.commandType === tool.command ? 'white' : '#333'} />}
+            text={`${tool.label} - ${tool.description}`}
+            color={toolColor}
+            active={currentMode === 'create' && createMode?.commandType === tool.command}
+            disabled={false}
+            onClick={() => onSelectTool(tool.command)}
+          />
+        ))}
+        {currentMode === 'create' && (
+          <PluginButton
+            icon={<LogOut size={16} />}
+            text="Exit Create Mode"
+            color="#dc3545"
+            active={false}
+            disabled={false}
+            onClick={onExitCreateMode}
+          />
+        )}
       </div>
-      
-      {currentMode === 'create' && (
-        <div style={{ marginTop: '8px' }}>
-        <PluginButton
-          icon={<LogOut size={16} />}
-          text="Exit Create Mode"
-          color="#dc3545"
-          active={false}
-          disabled={false}
-          onClick={onExitCreateMode}
-        />
-        </div>
-      )}
+
+
     </div>
   );
 };
 
 export const CreationToolsComponent: React.FC = () => {
   const { mode, setCreateMode, exitCreateMode } = useEditorStore();
-  
+
   return (
-    <DraggablePanel 
+    <DraggablePanel
       title="Creation Tools"
       initialPosition={{ x: 980, y: 140 }}
       id="creation-tools"
@@ -285,7 +97,7 @@ export const CreationToolsPlugin: Plugin = {
   name: 'Creation Tools',
   version: '1.0.0',
   enabled: true,
-  
+
   shortcuts: [
     {
       key: 'm',
@@ -312,19 +124,11 @@ export const CreationToolsPlugin: Plugin = {
       }
     },
     {
-      key: 'q',
-      description: 'Quadratic Bezier Tool',
+      key: 'z',
+      description: 'Close Path Tool',
       action: () => {
         const store = useEditorStore.getState();
-        store.setCreateMode('Q');
-      }
-    },
-    {
-      key: 'a',
-      description: 'Arc Tool',
-      action: () => {
-        const store = useEditorStore.getState();
-        store.setCreateMode('A');
+        store.setCreateMode('Z');
       }
     },
     {
@@ -336,7 +140,7 @@ export const CreationToolsPlugin: Plugin = {
       }
     }
   ],
-  
+
   tools: [
     {
       id: 'move-to',
@@ -367,9 +171,19 @@ export const CreationToolsPlugin: Plugin = {
         const store = useEditorStore.getState();
         store.setCreateMode('C');
       }
+    },
+    {
+      id: 'close-path',
+      name: 'Close Path',
+      category: 'create',
+      shortcut: 'Z',
+      onActivate: () => {
+        const store = useEditorStore.getState();
+        store.setCreateMode('Z');
+      }
     }
   ],
-  
+
   ui: [
     {
       id: 'creation-tools',

@@ -29,26 +29,8 @@ export const generateSubpathString = (commands: SVGCommand[], options?: { startX
       case 'L':
         pathString += isFirstCommand ? `M ${cmd.x} ${cmd.y}` : ` L ${cmd.x} ${cmd.y}`;
         break;
-      case 'H':
-        pathString += isFirstCommand ? `M ${cmd.x} ${options?.startY || 0}` : ` H ${cmd.x}`;
-        break;
-      case 'V':
-        pathString += isFirstCommand ? `M ${options?.startX || 0} ${cmd.y}` : ` V ${cmd.y}`;
-        break;
       case 'C':
         pathString += isFirstCommand ? `M ${cmd.x} ${cmd.y}` : ` C ${cmd.x1} ${cmd.y1} ${cmd.x2} ${cmd.y2} ${cmd.x} ${cmd.y}`;
-        break;
-      case 'S':
-        pathString += isFirstCommand ? `M ${cmd.x} ${cmd.y}` : ` S ${cmd.x2} ${cmd.y2} ${cmd.x} ${cmd.y}`;
-        break;
-      case 'Q':
-        pathString += isFirstCommand ? `M ${cmd.x} ${cmd.y}` : ` Q ${cmd.x1} ${cmd.y1} ${cmd.x} ${cmd.y}`;
-        break;
-      case 'T':
-        pathString += isFirstCommand ? `M ${cmd.x} ${cmd.y}` : ` T ${cmd.x} ${cmd.y}`;
-        break;
-      case 'A':
-        pathString += isFirstCommand ? `M ${cmd.x} ${cmd.y}` : ` A ${cmd.rx} ${cmd.ry} ${cmd.xAxisRotation} ${cmd.largeArcFlag} ${cmd.sweepFlag} ${cmd.x} ${cmd.y}`;
         break;
       case 'Z':
         if (!isFirstCommand) {
@@ -75,12 +57,6 @@ export const generateSegmentString = (segment: SVGCommand[], generateSubpathStri
   if ('x' in firstCmd && 'y' in firstCmd) {
     startX = firstCmd.x!;
     startY = firstCmd.y!;
-  } else if (firstCmd.command === 'H' && 'x' in firstCmd) {
-    startX = firstCmd.x!;
-    startY = 0;
-  } else if (firstCmd.command === 'V' && 'y' in firstCmd) {
-    startY = firstCmd.y!;
-    startX = 0;
   }
 
   if (firstCmd.command === 'M') {
@@ -104,7 +80,7 @@ export const simplifySegmentWithPointsOnPath = (
   
   // Store original Z command state
   const originalEndsWithZ = segment[segment.length - 1]?.command === 'Z' || 
-                             segment[segment.length - 1]?.command === 'z';
+                             segment[segment.length - 1]?.command === 'Z';
   
   // Prepare segment for processing - remove Z if present
   let workingSegment = [...segment];
@@ -206,7 +182,7 @@ export const generateSmoothPath = (
   // Los comandos Z deben convertirse a L para mejor suavizado
   const normalizedSegment = normalizeZCommandsForSmoothing(subpathSegment);
   const originalEndsWithZ = (subpathSegment[subpathSegment.length - 1]?.command === 'Z' || 
-                             subpathSegment[subpathSegment.length - 1]?.command === 'z');
+                             subpathSegment[subpathSegment.length - 1]?.command === 'Z');
   
   console.log('Original ends with Z:', originalEndsWithZ);
   console.log('Normalized segment:', normalizedSegment.map(c => `${c.command}(${c.x},${c.y})`));

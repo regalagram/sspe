@@ -504,7 +504,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       const precision = get().precision;
       
       // Si es un comando "M", debemos crear un nuevo sub-path
-      if (command.command === 'M' || command.command === 'm') {
+      if (command.command === 'M') {
         // Primero encontramos el path que contiene el subPathId
         let pathId = null;
         
@@ -562,9 +562,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
                     y1: roundToPrecision(command.y1, precision),
                     x2: roundToPrecision(command.x2, precision),
                     y2: roundToPrecision(command.y2, precision),
-                    rx: roundToPrecision(command.rx, precision),
-                    ry: roundToPrecision(command.ry, precision),
-                    xAxisRotation: roundToPrecision(command.xAxisRotation, precision),
                   }],
                 }
               : subPath
@@ -658,9 +655,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
                       y1: roundToPrecision(cmd.y1, precision),
                       x2: roundToPrecision(cmd.x2, precision),
                       y2: roundToPrecision(cmd.y2, precision),
-                      rx: roundToPrecision(cmd.rx, precision),
-                      ry: roundToPrecision(cmd.ry, precision),
-                      xAxisRotation: roundToPrecision(cmd.xAxisRotation, precision),
                     })),
                   }
                 : subPath
@@ -702,9 +696,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
                 y1: round(cmd.y1),
                 x2: round(cmd.x2),
                 y2: round(cmd.y2),
-                rx: round(cmd.rx),
-                ry: round(cmd.ry),
-                xAxisRotation: round(cmd.xAxisRotation),
               })),
             })),
           })),
@@ -1359,9 +1350,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
               y1: round(cmd.y1),
               x2: round(cmd.x2),
               y2: round(cmd.y2),
-              rx: round(cmd.rx),
-              ry: round(cmd.ry),
-              xAxisRotation: round(cmd.xAxisRotation),
             })),
           })),
         }));

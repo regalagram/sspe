@@ -1,5 +1,4 @@
-export type SVGCommandType = 'M' | 'L' | 'H' | 'V' | 'C' | 'S' | 'Q' | 'T' | 'A' | 'Z' | 
-                             'm' | 'l' | 'h' | 'v' | 'c' | 's' | 'q' | 't' | 'a' | 'z';
+export type SVGCommandType = 'M' | 'L' | 'C' | 'Z';
 
 export interface SVGCommand {
   id: string;
@@ -10,11 +9,6 @@ export interface SVGCommand {
   y1?: number;  // Control point 1 y for curves
   x2?: number;  // Control point 2 x for curves
   y2?: number;  // Control point 2 y for curves
-  rx?: number;  // X radius for arcs
-  ry?: number;  // Y radius for arcs
-  xAxisRotation?: number;  // X-axis rotation for arcs
-  largeArcFlag?: number;   // Large arc flag for arcs
-  sweepFlag?: number;      // Sweep flag for arcs
 }
 
 export interface SVGSubPath {

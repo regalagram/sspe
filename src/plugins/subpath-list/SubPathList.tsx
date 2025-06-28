@@ -67,20 +67,6 @@ const SubPathWireframe: React.FC<SubPathWireframeProps> = ({ subPath, isSelected
       maxY = Math.max(maxY, cmd.y2);
     }
     
-    // Special handling for arc commands (A)
-    if (cmd.command === 'A' && cmd.x !== undefined && cmd.y !== undefined && cmd.rx !== undefined && cmd.ry !== undefined) {
-      // For arcs, add the radii to ensure the full arc is visible
-      const centerX = cmd.x;
-      const centerY = cmd.y;
-      const rx = Math.abs(cmd.rx);
-      const ry = Math.abs(cmd.ry);
-      
-      // Expand bounds to include potential arc extremes
-      minX = Math.min(minX, centerX - rx);
-      maxX = Math.max(maxX, centerX + rx);
-      minY = Math.min(minY, centerY - ry);
-      maxY = Math.max(maxY, centerY + ry);
-    }
   });
 
   // Fallback if bounds couldn't be calculated

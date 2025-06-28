@@ -10,7 +10,7 @@ export function decomposeIntoSubPaths(commands: SVGCommand[]): SVGSubPath[] {
   let currentSubPath: SVGCommand[] = [];
 
   for (const command of commands) {
-    if (command.command === 'M' || command.command === 'm') {
+    if (command.command === 'M') {
       // If we have commands in the current sub-path, save it
       if (currentSubPath.length > 0) {
         subPaths.push({
@@ -51,14 +51,14 @@ export function validateSubPath(subPath: SVGSubPath): boolean {
   if (subPath.commands.length === 0) return false;
   
   const firstCommand = subPath.commands[0];
-  if (firstCommand.command !== 'M' && firstCommand.command !== 'm') {
+  if (firstCommand.command !== 'M') {
     return false;
   }
 
   // Check that there are no other 'M' commands
   for (let i = 1; i < subPath.commands.length; i++) {
     const command = subPath.commands[i];
-    if (command.command === 'M' || command.command === 'm') {
+    if (command.command === 'M') {
       return false;
     }
   }
