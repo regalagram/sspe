@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { PathStyle } from '../../types';
+import { PathStyle, SVGPath } from '../../types';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { convertRgbToHex } from '../../utils/color-utils';
 
@@ -204,61 +204,131 @@ export const PathStyleControls: React.FC<PathStyleControlsProps> = ({
 export const PathStyleComponent: React.FC = () => {
   const { paths, selection, updatePathStyle } = useEditorStore();
   
-  // Find the selected sub-path and its parent path
-  let selectedSubPath = selection.selectedSubPaths[0] || null;
-  let selectedPath = selection.selectedPaths[0] || null;
-  let pathId = null;
+  // Helper function to compare two style objects
+  const areStylesEqual = (style1: PathStyle, style2: PathStyle): boolean => {
+    const keys1 = Object.keys(style1);
+    const keys2 = Object.keys(style2);
+    
+    if (keys1.length !== keys2.length) return false;
+    
+    return keys1.every(key => {
+      const val1 = style1[key as keyof PathStyle];
+      const val2 = style2[key as keyof PathStyle];
+      return val1 === val2;
+    });
+  };
   
-  // Si hay un sub-path seleccionado, encontrar su path padre
-  if (selectedSubPath) {
-    for (const path of paths) {
-      const foundSubPath = path.subPaths.find(sp => sp.id === selectedSubPath);
-      if (foundSubPath) {
-        pathId = path.id;
-        break;
-      }
-    }
-  } else if (selectedPath) {
-    pathId = selectedPath;
-  } else if (selection.selectedCommands.length > 0) {
-    const selectedCommandId = selection.selectedCommands[0];
-    for (const path of paths) {
-      let found = false;
-      for (const subPath of path.subPaths) {
-        if (subPath.commands.some(cmd => cmd.id === selectedCommandId)) {
-          pathId = path.id;
-          selectedSubPath = subPath.id;
-          found = true;
-          break;
+  // Find all paths that contain selected sub-paths
+  const getPathsWithSelectedSubPaths = () => {
+    const pathsWithSubPaths = new Map<string, SVGPath>();
+    
+    // Check selected sub-paths
+    if (selection.selectedSubPaths.length > 0) {
+      for (const subPathId of selection.selectedSubPaths) {
+        for (const path of paths) {
+          const foundSubPath = path.subPaths.find(sp => sp.id === subPathId);
+          if (foundSubPath) {
+            pathsWithSubPaths.set(path.id, path);
+            break;
+          }
         }
       }
-      if (found) break;
     }
-  }
-  const path = pathId ? paths.find(p => p.id === pathId) : null;
-  const hasSelection = !!pathId;
+    // Check selected paths directly
+    else if (selection.selectedPaths.length > 0) {
+      for (const pathId of selection.selectedPaths) {
+        const path = paths.find(p => p.id === pathId);
+        if (path) {
+          pathsWithSubPaths.set(path.id, path);
+        }
+      }
+    }
+    // Check selected commands
+    else if (selection.selectedCommands.length > 0) {
+      for (const commandId of selection.selectedCommands) {
+        for (const path of paths) {
+          let found = false;
+          for (const subPath of path.subPaths) {
+            if (subPath.commands.some(cmd => cmd.id === commandId)) {
+              pathsWithSubPaths.set(path.id, path);
+              found = true;
+              break;
+            }
+          }
+          if (found) break;
+        }
+      }
+    }
+    
+    return Array.from(pathsWithSubPaths.values());
+  };
   
-  // Only show the panel when there's a selection
-  if (!hasSelection) {
+  const selectedPaths = getPathsWithSelectedSubPaths();
+  
+  // Don't show if no selection
+  if (selectedPaths.length === 0) {
     return null;
   }
   
+  // Check if all selected paths have the same style
+  const firstPathStyle = selectedPaths[0]?.style || {};
+  const allPathsHaveSameStyle = selectedPaths.every(path => 
+    areStylesEqual(path.style || {}, firstPathStyle)
+  );
+  
+  // Only show the panel when all paths have the same style
+  if (!allPathsHaveSameStyle) {
+    return (
+      <DraggablePanel 
+        title="Path Style"
+        initialPosition={{ x: 980, y: 220 }}
+        id="path-style"
+      >
+        <div style={{ 
+          padding: '16px 8px',
+          fontSize: '12px', 
+          color: '#666', 
+          textAlign: 'center',
+          fontStyle: 'italic'
+        }}>
+          Selected sub-paths have different styles.
+          <br />
+          Select sub-paths from paths with matching styles to edit.
+        </div>
+      </DraggablePanel>
+    );
+  }
+  
   // Force re-render when selection changes by creating a key that changes
-  const renderKey = `${pathId}-${selectedSubPath}-${selection.selectedCommands.join(',')}-${selection.selectedSubPaths.join(',')}-${JSON.stringify(path?.style)}`;
+  const pathIds = selectedPaths.map(p => p.id).sort().join(',');
+  const renderKey = `${pathIds}-${selection.selectedSubPaths.join(',')}-${selection.selectedCommands.join(',')}-${JSON.stringify(firstPathStyle)}`;
+  
   const handleStyleChange = (styleUpdates: Partial<PathStyle>) => {
-    if (!pathId) return;
-    updatePathStyle(pathId, styleUpdates);
+    // Apply style changes to all paths that contain selected sub-paths
+    selectedPaths.forEach(path => {
+      updatePathStyle(path.id, styleUpdates);
+    });
   };
+
   return (
     <DraggablePanel 
       title="Path Style"
       initialPosition={{ x: 980, y: 220 }}
       id="path-style"
     >
+      <div style={{ 
+        fontSize: '10px', 
+        color: '#999', 
+        textAlign: 'center',
+        marginBottom: '8px',
+        fontStyle: 'italic'
+      }}>
+        Editing {selectedPaths.length} path{selectedPaths.length !== 1 ? 's' : ''} with matching styles
+      </div>
       <PathStyleControls
         key={renderKey}
-        hasSelection={hasSelection}
-        pathStyle={path?.style || {}}
+        hasSelection={true}
+        pathStyle={firstPathStyle}
         onStyleChange={handleStyleChange}
       />
     </DraggablePanel>
