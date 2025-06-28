@@ -18,15 +18,15 @@ export const ControlPointsControls: React.FC<ControlPointsProps> = ({
       <label style={{ 
         display: 'flex', 
         alignItems: 'center', 
-        gap: '8px', 
-        fontSize: '14px',
+        gap: 4, 
+        fontSize: 11,
         cursor: 'pointer'
       }}>
         <input
           type="checkbox"
           checked={enabled}
           onChange={onToggle}
-          style={{ cursor: 'pointer' }}
+          style={{ cursor: 'pointer', accentColor: '#2196f3', marginRight: 4 }}
         />
         Show Control Points
       </label>

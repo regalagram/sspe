@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
-import { Maximize, Minimize } from 'lucide-react';
 
 interface FullscreenControlProps {
   isFullscreen: boolean;
@@ -13,33 +12,18 @@ export const FullscreenControl: React.FC<FullscreenControlProps> = ({
   isFullscreen,
   onToggle,
 }) => {
-  const buttonStyle: React.CSSProperties = {
-    padding: '8px 16px',
-    background: isFullscreen ? '#dc3545' : '#28a745',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    transition: 'all 0.2s ease',
-    width: '100%',
-  };
-
   return (
-    <button
-      className="fullscreen-control"
-      onClick={onToggle}
-      title={isFullscreen ? 'Exit Fullscreen (F11)' : 'Enter Fullscreen (F11)'}
-      style={buttonStyle}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = isFullscreen ? '#c82333' : '#218838';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = isFullscreen ? '#dc3545' : '#28a745';
-      }}
-    >
-      {isFullscreen ? <><Minimize size={16} /> Exit Fullscreen</> : <><Maximize size={16} /> Enter Fullscreen</>}
-    </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={isFullscreen}
+          onChange={onToggle}
+          style={{ accentColor: '#2196f3', marginRight: 4, cursor: 'pointer' }}
+        />
+        Fullscreen
+      </label>
+    </div>
   );
 };
 

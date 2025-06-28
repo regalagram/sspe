@@ -2,7 +2,6 @@ import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
-import { ToggleLeft, ToggleRight } from 'lucide-react';
 
 interface WireframeControlsProps {
   enabled: boolean;
@@ -10,42 +9,17 @@ interface WireframeControlsProps {
 }
 
 const WireframeControls: React.FC<WireframeControlsProps> = ({ enabled, onToggle }) => {
-  const buttonStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '8px 12px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    transition: 'all 0.2s ease',
-    width: '100%',
-    justifyContent: 'center',
-    background: enabled ? '#007acc' : 'white',
-    color: enabled ? 'white' : 'black',
-    borderColor: enabled ? '#005299' : '#ddd',
-  };
-
-  const hoverStyle: React.CSSProperties = {
-    ...buttonStyle,
-    background: enabled ? '#005299' : '#f5f5f5',
-  };
-
-  const [isHovered, setIsHovered] = React.useState(false);
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <button
-        onClick={onToggle}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        style={isHovered ? hoverStyle : buttonStyle}
-        title={enabled ? 'Disable wireframe mode' : 'Enable wireframe mode'}
-      >
-        {enabled ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
-        Wireframe
-      </button>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={onToggle}
+          style={{ accentColor: '#2196f3', marginRight: 4, cursor: 'pointer' }}
+        />
+        View wireframe
+      </label>
     </div>
   );
 };
