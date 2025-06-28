@@ -388,6 +388,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     
     // Transform actions
     scaleSubPath: (subPathId, scaleX, scaleY, center) => {
+      get().pushToHistory();
       set((state) => {
         // Find the subpath to get its center if not provided
         let actualCenter = center;
@@ -418,6 +419,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     },
     
     rotateSubPath: (subPathId, angle, center) => {
+      get().pushToHistory();
       set((state) => {
         // Find the subpath to get its center if not provided
         let actualCenter = center;
@@ -448,6 +450,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     },
     
     translateSubPath: (subPathId, delta) => {
+      get().pushToHistory();
       set((state) => ({
         paths: state.paths.map((path) => ({
           ...path,
@@ -1288,6 +1291,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
 
     // Precision control
     setPrecision: (precision: number) => {
+      get().pushToHistory();
       set((state) => {
         // Ajustar todos los puntos de todos los paths a la nueva precisión
         const round = (val: number | undefined) =>
