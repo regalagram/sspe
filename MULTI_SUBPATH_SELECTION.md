@@ -10,10 +10,13 @@ Se ha implementado exitosamente la funcionalidad completa de selección múltipl
 
 ## 🎯 Características Implementadas
 
-### 1. **Selección Múltiple con Shift+Click**
+### 1. **Selección Múltiple Unificada con Shift+Click**
+- ✅ **UNIFICADO**: Tanto puntos como sub-paths usan la tecla **Shift** para multi-selección
+- ✅ Mantener presionada la tecla **Shift** + Click para agregar/remover puntos de la selección
 - ✅ Mantener presionada la tecla **Shift** + Click para agregar/remover sub-paths de la selección
 - ✅ Funciona tanto en el SVG principal como en la lista lateral de sub-paths
 - ✅ Feedback visual inmediato con contadores dinámicos
+- ✅ Sigue el estándar de herramientas de diseño (Figma, Illustrator, Sketch)
 
 ### 2. **Arrastre de Múltiples Sub-Paths**
 - ✅ Al arrastrar un sub-path seleccionado, se mueven TODOS los sub-paths seleccionados
@@ -26,6 +29,14 @@ Se ha implementado exitosamente la funcionalidad completa de selección múltipl
 - ✅ Muestra mensaje informativo cuando hay conflictos de estilo
 
 ## 🔧 Cambios Técnicos Realizados
+
+### Unificación del Modificador de Selección
+- **ANTES**: Puntos usaban `Cmd/Ctrl + Click`, Sub-paths usaban `Shift + Click`
+- **AHORA**: Todo usa `Shift + Click` siguiendo estándares de diseño
+- **Archivos actualizados**:
+  - `MouseInteraction.tsx`: Cambio de `e.ctrlKey || e.metaKey` a `e.shiftKey`
+  - `RectSelection.tsx`: Actualización de condiciones para respetar Shift+Click
+  - Documentación actualizada para reflejar el estándar unificado
 
 ### Store (editorStore.ts)
 ```typescript
@@ -69,9 +80,13 @@ selectSubPathByPoint: (pathId: string, point: Point, isShiftPressed?: boolean) =
 
 | Combinación | Acción |
 |-------------|--------|
+| `Shift + Click` | **Selección múltiple universal** (puntos y sub-paths) |
+| `Shift + Click` | Selección múltiple de puntos individuales |
 | `Shift + Click` | Selección múltiple de sub-paths |
 | `Ctrl + Shift + A` | Seleccionar todos los sub-paths |
 | `Ctrl + Shift + P` | Enfocar panel de sub-paths |
+
+> **Nota**: Se unificó el modificador de selección. Anteriormente los puntos usaban `Cmd/Ctrl + Click` y los sub-paths `Shift + Click`. Ahora **todo usa `Shift + Click`** siguiendo los estándares de herramientas de diseño.
 
 ## 🎨 Feedback Visual
 

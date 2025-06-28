@@ -117,7 +117,7 @@ class MouseInteractionManager {
       // Selecting/dragging a command point
       let finalSelectedIds: string[] = [];
       
-      if (e.ctrlKey || e.metaKey) {
+      if (e.shiftKey) {
         // Multiple selection
         if (selection.selectedCommands.includes(commandId)) {
           finalSelectedIds = selection.selectedCommands.filter((id: string) => id !== commandId);
@@ -163,8 +163,13 @@ class MouseInteractionManager {
     } else if (mode.current === 'create' && mode.createMode && !this.state.isSpacePressed) {
       // Let creation mode plugin handle this
       return false;
-    } else if (!commandId && !controlPoint && e.button === 0 && !(e.ctrlKey || e.metaKey) && !this.state.isSpacePressed) {
-      // Let rect selection plugin handle this  
+    } else if (!commandId && !controlPoint && e.button === 0 && !this.state.isSpacePressed) {
+      // Let rect selection plugin handle this only if Shift is not pressed
+      // If Shift is pressed, let other plugins (like PathRenderer) handle the event first
+      if (!e.shiftKey) {
+        return false; // Let rect selection handle it
+      }
+      // If Shift is pressed, don't handle it here - let it bubble to other plugins
       return false;
     } else if (!commandId && !controlPoint && !this.state.isSpacePressed) {
       // Clear selection only if clicking on empty space (no command, no control point)

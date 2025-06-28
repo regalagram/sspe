@@ -46,7 +46,7 @@ class RectSelectionManager {
     const { mode } = this.editorStore;
 
     // Only handle rect selection if we're in select mode, no command or control point is being clicked
-    if (mode.current === 'select' && !commandId && !controlPoint && e.button === 0 && !(e.ctrlKey || e.metaKey)) {
+    if (mode.current === 'select' && !commandId && !controlPoint && e.button === 0 && !e.shiftKey) {
       const svgPoint = this.getSVGPoint(e, context.svgRef);
       this.state.isSelecting = true;
       this.state.selectionStart = svgPoint;
