@@ -22,19 +22,6 @@ export const RelativeTools: React.FC<RelativeToolsProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      {!hasSelection && (
-        <div style={{ 
-          fontSize: '12px', 
-          color: '#999',
-          fontStyle: 'italic',
-          padding: '8px',
-          background: '#f8f9fa',
-          borderRadius: '4px',
-          textAlign: 'center'
-        }}>
-          Select a sub-path
-        </div>
-      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
         <PluginButton
           icon={<MapPin size={18} />}

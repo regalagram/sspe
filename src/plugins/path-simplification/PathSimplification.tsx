@@ -190,7 +190,7 @@ export const PathSimplificationControls: React.FC = () => {
   const labelStyle: React.CSSProperties = {
     fontSize: '11px',
     color: '#666',
-    fontWeight: 'bold',
+    fontWeight: '500',
   };
 
   const inputStyle: React.CSSProperties = {
@@ -206,22 +206,21 @@ export const PathSimplificationControls: React.FC = () => {
       id="path-simplification"
       initialPosition={{ x: 980, y: 300 }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div style={infoStyle}>
-          {selectedCommands.length === 0 && selectedSubPaths.length === 0 && 'commands or subpath'}
-          {selectedCommands.length === 1 && selectedSubPaths.length === 0 && 'Select at least 2 commands'}
-          {selectedCommands.length >= 2 && !canSimplify && 'must be in same subpath'}
-          {selectedSubPaths.length > 1 && 'Select only one subpath at a time'}
-          {canSimplify && selectedCommands.length > 0 && `${selectedCommands.length} commands selected`}
-          {canSimplify && selectedSubPaths.length === 1 && `Entire subpath selected`}
-        </div>
-
-        {/* Tolerance Controls */}
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
         <div style={controlStyle}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label style={labelStyle}>
-              Tolerance: {simplifyTolerance}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={{ ...labelStyle, minWidth: 55 }}>
+              Tolerance
             </label>
+            <input
+              type="number"
+              min="0.01"
+              max="1"
+              step="0.01"
+              value={simplifyTolerance}
+              onChange={(e) => setSimplifyTolerance(parseFloat(e.target.value))}
+              style={{ ...inputStyle, width: 60 }}
+            />
             <button
               onClick={() => setSimplifyTolerance(0.1)}
               style={{ 
@@ -230,29 +229,30 @@ export const PathSimplificationControls: React.FC = () => {
                 border: '1px solid #ddd', 
                 borderRadius: '3px', 
                 background: '#f8f9fa',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                marginLeft: 1
               }}
               title="Reset to default (0.1)"
             >
               Reset
             </button>
           </div>
-          <input
-            type="range"
-            min="0.01"
-            max="1"
-            step="0.01"
-            value={simplifyTolerance}
-            onChange={(e) => setSimplifyTolerance(parseFloat(e.target.value))}
-            style={inputStyle}
-          />
         </div>
 
         <div style={controlStyle}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label style={labelStyle}>
-              Distance: {simplifyDistance}px
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={{ ...labelStyle, minWidth: 55 }}>
+              Distance
             </label>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              step="1"
+              value={simplifyDistance}
+              onChange={(e) => setSimplifyDistance(parseInt(e.target.value))}
+              style={{ ...inputStyle, width: 60 }}
+            />
             <button
               onClick={() => setSimplifyDistance(10)}
               style={{ 
@@ -261,22 +261,14 @@ export const PathSimplificationControls: React.FC = () => {
                 border: '1px solid #ddd', 
                 borderRadius: '3px', 
                 background: '#f8f9fa',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                marginLeft: 1
               }}
               title="Reset to default (10px)"
             >
               Reset
             </button>
           </div>
-          <input
-            type="range"
-            min="1"
-            max="50"
-            step="1"
-            value={simplifyDistance}
-            onChange={(e) => setSimplifyDistance(parseInt(e.target.value))}
-            style={inputStyle}
-          />
         </div>
 
         <PluginButton

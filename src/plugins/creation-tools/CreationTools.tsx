@@ -332,6 +332,7 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
       </div>
       
       {currentMode === 'create' && (
+        <div style={{ marginTop: '8px' }}>
         <PluginButton
           icon={<LogOut size={16} />}
           text="Exit Create Mode"
@@ -340,6 +341,7 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
           disabled={false}
           onClick={onExitCreateMode}
         />
+        </div>
       )}
     </div>
   );

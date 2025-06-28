@@ -137,14 +137,6 @@ export const PathSmoothingControls: React.FC = () => {
       initialPosition={{ x: 980, y: 520 }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div style={infoStyle}>
-          {selectedCommands.length === 0 && selectedSubPaths.length === 0 && 'commands or subpath'}
-          {selectedCommands.length === 1 && selectedSubPaths.length === 0 && 'Select at least 2 commands'}
-          {selectedCommands.length >= 2 && !canSmooth && 'must be in same subpath'}
-          {selectedSubPaths.length > 1 && 'Select only one subpath at a time'}
-          {canSmooth && selectedCommands.length > 0 && `${selectedCommands.length} commands selected`}
-          {canSmooth && selectedSubPaths.length === 1 && `Entire subpath selected`}
-        </div>
         <PluginButton
           icon={<Waves size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
           text="Smooth"
@@ -153,11 +145,6 @@ export const PathSmoothingControls: React.FC = () => {
           disabled={!canSmooth}
           onClick={handleSmooth}
         />
-        {canSmooth && (
-          <div style={{ ...infoStyle, background: '#e8f5e8' }}>
-            {selectedCommands.length} commands
-          </div>
-        )}
       </div>
     </DraggablePanel>
   );
