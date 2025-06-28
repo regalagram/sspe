@@ -153,29 +153,32 @@ export const GridControls: React.FC<GridControlsProps> = ({
 }) => {
   return (
     <div className="grid-controls" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
         <input
           type="checkbox"
           checked={enabled}
           onChange={onToggleGrid}
+          style={{ accentColor: '#2196f3', marginRight: 4, cursor: 'pointer' }}
         />
         Show Grid
       </label>
-      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
         <input
           type="checkbox"
           checked={snapToGrid}
           onChange={onToggleSnap}
           disabled={!enabled}
+          style={{ accentColor: '#2196f3', marginRight: 4, cursor: 'pointer' }}
         />
         Snap to Grid
       </label>
-      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px' }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, cursor: 'pointer' }}>
         <input
           type="checkbox"
           checked={showLabels}
           onChange={onToggleLabels}
           disabled={!enabled}
+          style={{ accentColor: '#2196f3', marginRight: 4, cursor: 'pointer' }}
         />
         Show Ruler Labels
       </label>
