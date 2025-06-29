@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { subPathToString } from '../../utils/path-utils';
 import { parseSVGToSubPaths } from '../../utils/svg-parser';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
-import { RotateCcw, CheckCircle2, Trash2 } from 'lucide-react';
+import { RotateCcw, CheckCircle2, Trash2, Upload, Download } from 'lucide-react';
 import { savePreferences, loadPreferences } from '../../utils/persistence';
 
 interface PrecisionControlProps {
@@ -38,15 +38,16 @@ const PrecisionControl: React.FC<PrecisionControlProps> = ({ precision, onPrecis
   const topRowStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: '8px',
-    marginBottom: '8px'
+    marginBottom: '8px',
+    marginTop: '8px'
   };
 
   const labelStyle: React.CSSProperties = {
     fontSize: '11px',
     color: '#666',
-    fontWeight: '500',
-    minWidth: '55px'
+    fontWeight: '500'
   };
 
   const inputStyle: React.CSSProperties = {
@@ -172,6 +173,7 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
 
 export const SVGComponent: React.FC = () => {
   const { paths, viewport, replacePaths, resetViewportCompletely, precision, setPrecision } = useEditorStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Generate SVG string from current paths
   const generateSVGCode = (): string => {
@@ -252,6 +254,51 @@ ${pathElements}
     console.log('All paths cleared and viewport reset successfully');
   };
 
+  const handleUploadSVG = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'image/svg+xml' && !file.name.toLowerCase().endsWith('.svg')) {
+      alert('Please select a valid SVG file.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const svgContent = e.target?.result as string;
+      if (svgContent) {
+        handleSVGChange(svgContent);
+      }
+    };
+    reader.onerror = () => {
+      alert('Error reading the file.');
+    };
+    reader.readAsText(file);
+    
+    // Reset the input value so the same file can be selected again
+    event.target.value = '';
+  };
+
+  const handleDownloadSVG = () => {
+    const svgContent = generateSVGCode();
+    const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'svg-editor-export.svg';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up the object URL
+    URL.revokeObjectURL(url);
+  };
+
   const currentSVG = generateSVGCode();
 
   return (
@@ -260,14 +307,47 @@ ${pathElements}
       initialPosition={{ x: 980, y: 300 }}
       id="svg-editor"
     >
-      <PrecisionControl
-        precision={precision}
-        onPrecisionChange={setPrecision}
+      {/* Upload/Download buttons */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+        <PluginButton
+          icon={<Upload size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
+          text="Upload SVG"
+          color="#007bff"
+          active={false}
+          disabled={false}
+          onClick={handleUploadSVG}
+          fullWidth={true}
+        />
+        <PluginButton
+          icon={<Download size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
+          text="Download SVG"
+          color="#28a745"
+          active={false}
+          disabled={paths.length === 0}
+          onClick={handleDownloadSVG}
+          fullWidth={true}
+        />
+      </div>
+      
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".svg,image/svg+xml"
+        style={{ display: 'none' }}
+        onChange={handleFileSelect}
       />
+      
       <SVGEditor
         svgCode={currentSVG}
         onSVGChange={handleSVGChange}
       />
+      
+      <PrecisionControl
+        precision={precision}
+        onPrecisionChange={setPrecision}
+      />
+      
       <div style={{ marginTop: '8px' }}>
         <PluginButton
           icon={<Trash2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}

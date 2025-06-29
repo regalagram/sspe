@@ -95,8 +95,8 @@ const createInitialState = (): EditorState => {
   // Hardcoded SVG to load as initial state
   const hardcodedSVG = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
-      <path d="M 190 160 C 200 150 280 150 290 160 C 300 170 300 250 290 260 C 280 270 180 300 170 290 C 160 280 180 170 190 160 M 20 190 L 100 190 L 100 270 L 20 270 L 20 190 M 40 200 L 40 240 L 70 260 L 90 210 L 40 200 M 380 170 L 380 250 L 460 250 A 50 30 0 0 0 380 170 M 90 40 C 90 130 120 130 140 130 S 170 60 190 60 Q 160 130 240 130 T 290 40 Z" fill="rgba(0, 120, 204, 0.3)" stroke="blue" stroke-width="3" />
-      <path d="M 490 160 C 360 80 470 30 490 90 C 500 30 600 60 490 160 Z" fill="rgb(255, 100, 100)" stroke="rgba(200, 50, 50, 0.9)" stroke-width="2" />
+      <path d="M 155 295 C 165 285 245 285 255 295 C 265 305 265 385 255 395 C 245 405 145 435 135 425 C 125 415 145 305 155 295 M 20 190 L 100 190 L 100 270 L 20 270 L 20 190 M 40 200 L 40 240 L 70 260 L 90 210 L 40 200 M 355 255 L 355 335 L 435 335 C 485 315 485 270 435 255 C 410 245 380 245 355 255 M 90 40 C 90 130 120 130 140 130 C 160 130 170 60 190 60 C 170 106.667 186.667 130 240 130 C 293.333 130 310 100 290 40 Z" fill="#0078cc" stroke="#0000ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill-opacity="0.3" />
+      <path d="M 435 160 C 305 80 415 30 435 90 C 445 30 545 60 435 160 Z" fill="#ff6464" stroke="#c83232" stroke-width="2" stroke-opacity="0.9" />
     </svg>
   `;
 
