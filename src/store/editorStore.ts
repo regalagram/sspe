@@ -622,6 +622,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         let movingCommand: SVGCommand | undefined;
         let movingCommandIndex = -1;
         let movingSubPathIndex = -1;
+        let movingPathIndex = -1;
         
         state.paths.forEach((path, pathIndex) => {
           path.subPaths.forEach((subPath, subPathIndex) => {
@@ -630,6 +631,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
                 movingCommand = cmd;
                 movingCommandIndex = cmdIndex;
                 movingSubPathIndex = subPathIndex;
+                movingPathIndex = pathIndex;
               }
             });
           });
@@ -643,7 +645,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         const deltaY = position.y - movingCommand.y;
         
         return {
-          paths: state.paths.map((path) => ({
+          paths: state.paths.map((path, pathIndex) => ({
             ...path,
             subPaths: path.subPaths.map((subPath, subPathIndex) => ({
               ...subPath,
@@ -668,8 +670,9 @@ export const useEditorStore = create<EditorState & EditorActions>()(
                   }
                 }
                 
-                // Check if this is the next command after the one being moved in the same subpath
-                if (subPathIndex === movingSubPathIndex && 
+                // Check if this is the next command after the one being moved in the same path and subpath
+                if (pathIndex === movingPathIndex &&
+                    subPathIndex === movingSubPathIndex && 
                     cmdIndex === movingCommandIndex + 1 && 
                     cmd.command === 'C') {
                   return {
