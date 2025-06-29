@@ -7,6 +7,7 @@ interface PluginButtonProps {
   active?: boolean;
   disabled?: boolean;
   onClick?: () => void;
+  fullWidth?: boolean;
 }
 
 export const PluginButton: React.FC<PluginButtonProps> = ({
@@ -16,6 +17,7 @@ export const PluginButton: React.FC<PluginButtonProps> = ({
   active = false,
   disabled = false,
   onClick,
+  fullWidth = false,
 }) => {
   return (
     <button
@@ -38,6 +40,7 @@ export const PluginButton: React.FC<PluginButtonProps> = ({
         boxShadow: active ? '0 2px 8px rgba(0,0,0,0.08)' : undefined,
         transition: 'all 0.2s',
         outline: active ? `2px solid ${color}` : 'none',
+        width: fullWidth ? '100%' : 'auto',
       }}
       title={text}
       type="button"

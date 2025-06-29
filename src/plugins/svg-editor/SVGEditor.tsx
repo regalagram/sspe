@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { pathToString, subPathToString } from '../../utils/path-utils';
+import { subPathToString } from '../../utils/path-utils';
 import { parseSVGToSubPaths } from '../../utils/svg-parser';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
@@ -26,41 +26,20 @@ const PrecisionControl: React.FC<PrecisionControlProps> = ({ precision, onPrecis
     if (isNaN(val) || val < 0) val = 0;
     if (val > 8) val = 8;
     setInputValue(val);
-  };
-
-  const handleReset = () => {
-    setInputValue(2);
-  };
-
-  const handleApply = () => {
-    onPrecisionChange(inputValue);
+    
+    // Auto-apply the change immediately
+    onPrecisionChange(val);
     try {
       const prefs = loadPreferences();
-      savePreferences({ ...prefs, precision: inputValue });
+      savePreferences({ ...prefs, precision: val });
     } catch {}
-  };
-
-  const controlStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-    marginBottom: '12px',
-    padding: '8px',
-    backgroundColor: '#f8f9fa',
-    borderRadius: '4px',
-    border: '1px solid #e9ecef'
   };
 
   const topRowStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px'
-  };
-
-  const bottomRowStyle: React.CSSProperties = {
-    display: 'flex',
-    gap: '6px',
-    justifyContent: 'flex-end'
+    gap: '8px',
+    marginBottom: '8px'
   };
 
   const labelStyle: React.CSSProperties = {
@@ -80,7 +59,7 @@ const PrecisionControl: React.FC<PrecisionControlProps> = ({ precision, onPrecis
   };
 
   return (
-    <div style={controlStyle}>
+    <div >
       <div style={topRowStyle}>
         <label style={labelStyle}>
           Precision
@@ -93,38 +72,6 @@ const PrecisionControl: React.FC<PrecisionControlProps> = ({ precision, onPrecis
           onChange={handleChange}
           style={inputStyle}
         />
-      </div>
-      <div style={bottomRowStyle}>
-        <button
-          onClick={handleReset}
-          style={{
-            fontSize: '10px',
-            padding: '2px 6px',
-            border: '1px solid #ddd',
-            borderRadius: '3px',
-            background: '#f8f9fa',
-            cursor: 'pointer'
-          }}
-          title="Reset to default (2)"
-        >
-          Reset
-        </button>
-        <button
-          onClick={handleApply}
-          disabled={inputValue === precision}
-          style={{
-            fontSize: '10px',
-            padding: '2px 8px',
-            border: '1px solid #2196f3',
-            borderRadius: '3px',
-            background: inputValue !== precision ? '#2196f3' : '#f8f9fa',
-            color: inputValue !== precision ? 'white' : '#666',
-            cursor: inputValue !== precision ? 'pointer' : 'not-allowed'
-          }}
-          title="Apply precision changes"
-        >
-          Apply
-        </button>
       </div>
     </div>
   );
@@ -321,7 +268,7 @@ ${pathElements}
         svgCode={currentSVG}
         onSVGChange={handleSVGChange}
       />
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+      <div style={{ marginTop: '8px' }}>
         <PluginButton
           icon={<Trash2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
           text="Clear All Paths"
@@ -329,6 +276,7 @@ ${pathElements}
           active={false}
           disabled={false}
           onClick={handleClearAll}
+          fullWidth={true}
         />
       </div>
     </DraggablePanel>
