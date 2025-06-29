@@ -17,6 +17,7 @@ import { CommandPlugin } from '../plugins/command/Command';
 import { GlobalKeyboardPlugin } from '../plugins/global-keyboard/GlobalKeyboard';
 import { VisualDebugPlugin } from '../plugins/visual-debug/VisualDebug';
 import { SubPathTransformPlugin } from '../plugins/subpath-transform/SubPathTransform';
+import { PointTransformPlugin } from '../plugins/point-transform/PointTransform';
 
 // Register plugins immediately during module loading
 const initializePlugins = () => {
@@ -36,6 +37,7 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(SVGPlugin);
   pluginManager.registerPlugin(SubPathListPlugin);
   pluginManager.registerPlugin(SubPathTransformPlugin);
+  pluginManager.registerPlugin(PointTransformPlugin);
 };
 
 // Initialize plugins during module load
