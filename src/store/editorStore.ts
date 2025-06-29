@@ -617,20 +617,71 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     moveCommand: (commandId, position) =>
       set((state) => {
         const precision = state.precision;
+        
+        // First, find the command being moved to calculate the delta
+        let movingCommand: SVGCommand | undefined;
+        let movingCommandIndex = -1;
+        let movingSubPathIndex = -1;
+        
+        state.paths.forEach((path, pathIndex) => {
+          path.subPaths.forEach((subPath, subPathIndex) => {
+            subPath.commands.forEach((cmd, cmdIndex) => {
+              if (cmd.id === commandId) {
+                movingCommand = cmd;
+                movingCommandIndex = cmdIndex;
+                movingSubPathIndex = subPathIndex;
+              }
+            });
+          });
+        });
+        
+        if (!movingCommand || movingCommand.x === undefined || movingCommand.y === undefined) {
+          return state; // Command not found or invalid
+        }
+        
+        const deltaX = position.x - movingCommand.x;
+        const deltaY = position.y - movingCommand.y;
+        
         return {
           paths: state.paths.map((path) => ({
             ...path,
-            subPaths: path.subPaths.map((subPath) => ({
+            subPaths: path.subPaths.map((subPath, subPathIndex) => ({
               ...subPath,
-              commands: subPath.commands.map((cmd) =>
-                cmd.id === commandId
-                  ? {
+              commands: subPath.commands.map((cmd, cmdIndex) => {
+                // Move the main command
+                if (cmd.id === commandId) {
+                  if (cmd.command === 'C') {
+                    return {
                       ...cmd,
                       x: roundToPrecision(position.x, precision),
                       y: roundToPrecision(position.y, precision),
-                    }
-                  : cmd
-              ),
+                      // Move only the outgoing control point (x2, y2) that belongs to this command
+                      x2: cmd.x2 !== undefined ? roundToPrecision(cmd.x2 + deltaX, precision) : cmd.x2,
+                      y2: cmd.y2 !== undefined ? roundToPrecision(cmd.y2 + deltaY, precision) : cmd.y2,
+                    };
+                  } else {
+                    return {
+                      ...cmd,
+                      x: roundToPrecision(position.x, precision),
+                      y: roundToPrecision(position.y, precision),
+                    };
+                  }
+                }
+                
+                // Check if this is the next command after the one being moved in the same subpath
+                if (subPathIndex === movingSubPathIndex && 
+                    cmdIndex === movingCommandIndex + 1 && 
+                    cmd.command === 'C') {
+                  return {
+                    ...cmd,
+                    // Move the incoming control point (x1, y1) that connects to the previous command
+                    x1: cmd.x1 !== undefined ? roundToPrecision(cmd.x1 + deltaX, precision) : cmd.x1,
+                    y1: cmd.y1 !== undefined ? roundToPrecision(cmd.y1 + deltaY, precision) : cmd.y1,
+                  };
+                }
+                
+                return cmd;
+              }),
             })),
           })),
         };
