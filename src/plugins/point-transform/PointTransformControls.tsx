@@ -77,25 +77,63 @@ export const PointTransformControls: React.FC<PointTransformControlsProps> = () 
     
     pushToHistory();
     
-    selectedCommands.forEach(({ command }) => {
+    selectedCommands.forEach(({ command, pathId, subPathId }) => {
+      // Si ya es un comando C, no hacer nada para preservar los puntos de control existentes
+      if (command.command === 'C') {
+        return;
+      }
+      
       if (command.command === 'L') {
-        // Find the previous command to calculate control points
-        const prevCommand = findPreviousCommand(command.id);
+        // Para puntos L, aplicar lógica de suavizado más sofisticada
+        const { prevCommand, nextCommand, subPathCommands } = getCommandContext(command.id, pathId, subPathId);
         
         if (prevCommand && command.x !== undefined && command.y !== undefined) {
-          // Calculate reasonable control points (1/3 of the way from start to end)
-          const startX = prevCommand.x || 0;
-          const startY = prevCommand.y || 0;
-          const endX = command.x;
-          const endY = command.y;
+          let x1, y1, x2, y2;
           
-          const deltaX = endX - startX;
-          const deltaY = endY - startY;
-          
-          const x1 = startX + deltaX / 3;
-          const y1 = startY + deltaY / 3;
-          const x2 = endX - deltaX / 3;
-          const y2 = endY - deltaY / 3;
+          // Usar lógica de suavizado basada en comandos adyacentes
+          if (nextCommand && nextCommand.x !== undefined && nextCommand.y !== undefined) {
+            // Tenemos comando anterior y siguiente - usar suavizado Catmull-Rom simplificado
+            const p0 = { x: prevCommand.x || 0, y: prevCommand.y || 0 };
+            const p1 = { x: command.x, y: command.y };
+            const p2 = { x: nextCommand.x, y: nextCommand.y };
+            
+            // Factor de tensión para suavizado
+            const tension = 0.3;
+            
+            // Calcular tangentes basadas en los puntos adyacentes
+            const tangentStart = {
+              x: (p1.x - p0.x) * tension,
+              y: (p1.y - p0.y) * tension
+            };
+            
+            const tangentEnd = {
+              x: (p2.x - p1.x) * tension,
+              y: (p2.y - p1.y) * tension
+            };
+            
+            // Puntos de control basados en las tangentes
+            x1 = p0.x + tangentStart.x;
+            y1 = p0.y + tangentStart.y;
+            x2 = p1.x - tangentEnd.x;
+            y2 = p1.y - tangentEnd.y;
+          } else {
+            // Solo tenemos comando anterior - usar aproximación simple pero mejorada
+            const startX = prevCommand.x || 0;
+            const startY = prevCommand.y || 0;
+            const endX = command.x;
+            const endY = command.y;
+            
+            const deltaX = endX - startX;
+            const deltaY = endY - startY;
+            
+            // Usar una proporción más natural para los puntos de control
+            const controlRatio = 0.4; // 40% en lugar de 33%
+            
+            x1 = startX + deltaX * controlRatio;
+            y1 = startY + deltaY * controlRatio;
+            x2 = endX - deltaX * controlRatio;
+            y2 = endY - deltaY * controlRatio;
+          }
           
           const updates: Partial<SVGCommand> = {
             command: 'C',
@@ -109,6 +147,27 @@ export const PointTransformControls: React.FC<PointTransformControlsProps> = () 
         }
       }
     });
+  };
+
+  // Helper function to get command context (previous, current, next commands)
+  const getCommandContext = (commandId: string, pathId: string, subPathId: string) => {
+    const path = paths.find(p => p.id === pathId);
+    if (!path) return { prevCommand: null, nextCommand: null, subPathCommands: [] };
+    
+    const subPath = path.subPaths.find(sp => sp.id === subPathId);
+    if (!subPath) return { prevCommand: null, nextCommand: null, subPathCommands: [] };
+    
+    const commandIndex = subPath.commands.findIndex(cmd => cmd.id === commandId);
+    if (commandIndex === -1) return { prevCommand: null, nextCommand: null, subPathCommands: subPath.commands };
+    
+    const prevCommand = commandIndex > 0 ? subPath.commands[commandIndex - 1] : null;
+    const nextCommand = commandIndex < subPath.commands.length - 1 ? subPath.commands[commandIndex + 1] : null;
+    
+    return {
+      prevCommand,
+      nextCommand,
+      subPathCommands: subPath.commands
+    };
   };
 
   // Helper function to find the previous command in the same subpath
@@ -197,7 +256,7 @@ export const PointTransformControls: React.FC<PointTransformControlsProps> = () 
             color="#0078cc"
             onClick={transformToCurve}
             disabled={!selectedCommands.some(({ command }) => 
-              command.command === 'L' // Only allow converting lines to curves
+              command.command === 'L' // Solo permite convertir líneas a curvas (los comandos C se preservan sin cambios)
             )}
             fullWidth={true}
           />
