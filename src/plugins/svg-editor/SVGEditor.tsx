@@ -3,6 +3,7 @@ import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { subPathToString } from '../../utils/path-utils';
 import { parseSVGToSubPaths } from '../../utils/svg-parser';
+import { calculateViewBoxFromSVGString } from '../../utils/viewbox-utils';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
 import { RotateCcw, CheckCircle2, Trash2, Upload, Download } from 'lucide-react';
@@ -177,8 +178,7 @@ export const SVGComponent: React.FC = () => {
 
   // Generate SVG string from current paths
   const generateSVGCode = (): string => {
-    const { viewBox } = viewport;
-    
+    // First, generate a basic SVG to calculate the proper viewBox
     const pathElements = paths.map((path) => {
       // Crear una cadena con todos los sub-paths del path
       const pathData = path.subPaths.map(subPath => subPathToString(subPath)).join(' ');
@@ -199,7 +199,18 @@ export const SVGComponent: React.FC = () => {
       return `  <path ${attributes} />`;
     }).join('\n');
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}">
+    // Create a temporary SVG with default viewBox to calculate proper bounds
+    const tempSvgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+${pathElements}
+</svg>`;
+
+    // Calculate the proper viewBox using DOM-based method with precision
+    const viewBoxData = calculateViewBoxFromSVGString(tempSvgContent, precision);
+    
+    // Use calculated viewBox or fallback to default
+    const viewBoxString = viewBoxData ? viewBoxData.viewBox : "0 0 800 600";
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBoxString}">
 ${pathElements}
 </svg>`;
   };
