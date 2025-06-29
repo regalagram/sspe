@@ -149,7 +149,6 @@ export const PointTransformControls: React.FC<PointTransformControlsProps> = () 
       initialPosition={{ x: 20, y: 400 }}
     >
       <div style={{ 
-        minWidth: '180px',
         display: 'flex',
         flexDirection: 'column',
         gap: '8px'
