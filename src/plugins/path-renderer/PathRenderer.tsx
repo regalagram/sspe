@@ -182,16 +182,19 @@ export const PathRenderer: React.FC = () => {
 
           // Use context-aware string generation for proper visual feedback
           const d = subPathToStringInContext(subPath, path.subPaths);
-          
-          // Determine the primary color of this path for contrast calculation
-          const pathStroke = path.style.stroke || '#000000';
-          const pathFill = path.style.fill;
-          
-          // Use stroke color if available, otherwise use fill color
-          const primaryColor = (pathStroke && pathStroke !== 'none') ? pathStroke : 
-                              (pathFill && pathFill !== 'none') ? pathFill : '#000000';
-          
-          const contrastColor = getContrastColor(primaryColor);
+                
+                // Determine the primary color of this path for contrast calculation
+                // In wireframe mode, all paths are rendered with black stroke, so use black for contrast
+                const pathStroke = path.style.stroke || '#000000';
+                const pathFill = path.style.fill;
+                
+                // Use stroke color if available, otherwise use fill color
+                // But in wireframe mode, always use black since that's what's actually rendered
+                const primaryColor = enabledFeatures.has('wireframe') ? '#000000' : 
+                                    (pathStroke && pathStroke !== 'none') ? pathStroke : 
+                                    (pathFill && pathFill !== 'none') ? pathFill : '#000000';
+                
+                const contrastColor = getContrastColor(primaryColor);
           
           return (
             <g key={`selected-subpath-${subPath.id}-v${renderVersion}`}>
