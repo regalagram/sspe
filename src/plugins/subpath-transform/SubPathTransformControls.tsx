@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
-import { Move, RotateCw, Maximize2, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Waves, Minimize2 } from 'lucide-react';
+import { Move, RotateCw, Maximize2, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Waves, Minimize2, FlipHorizontal, FlipVertical } from 'lucide-react';
 import { 
   generateSmoothPath, 
   areCommandsInSameSubPath,
@@ -42,6 +42,8 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
     scaleSubPath,
     rotateSubPath,
     translateSubPath,
+    mirrorSubPathHorizontal,
+    mirrorSubPathVertical,
     replaceSubPathCommands,
     pushToHistory
   } = useEditorStore();
@@ -57,6 +59,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
   const [scaleExpanded, setScaleExpanded] = useState(false);
   const [rotationExpanded, setRotationExpanded] = useState(false);
   const [translationExpanded, setTranslationExpanded] = useState(false);
+  const [mirrorExpanded, setMirrorExpanded] = useState(false);
   const [smoothingExpanded, setSmoothingExpanded] = useState(false);
   const [simplificationExpanded, setSimplificationExpanded] = useState(false);
   
@@ -87,6 +90,22 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
     
     selection.selectedSubPaths.forEach(subPathId => {
       translateSubPath(subPathId, { x: translateX, y: translateY });
+    });
+  };
+
+  const handleMirrorHorizontal = () => {
+    if (!hasSelectedSubPaths) return;
+    
+    selection.selectedSubPaths.forEach(subPathId => {
+      mirrorSubPathHorizontal(subPathId);
+    });
+  };
+
+  const handleMirrorVertical = () => {
+    if (!hasSelectedSubPaths) return;
+    
+    selection.selectedSubPaths.forEach(subPathId => {
+      mirrorSubPathVertical(subPathId);
     });
   };
 
@@ -460,6 +479,20 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
            simplifyDistance !== 10;
   };
 
+  // Event listeners for keyboard shortcuts
+  useEffect(() => {
+    const handleMirrorHorizontalEvent = () => handleMirrorHorizontal();
+    const handleMirrorVerticalEvent = () => handleMirrorVertical();
+    
+    document.addEventListener('mirror-horizontal-trigger', handleMirrorHorizontalEvent);
+    document.addEventListener('mirror-vertical-trigger', handleMirrorVerticalEvent);
+    
+    return () => {
+      document.removeEventListener('mirror-horizontal-trigger', handleMirrorHorizontalEvent);
+      document.removeEventListener('mirror-vertical-trigger', handleMirrorVerticalEvent);
+    };
+  }, [handleMirrorHorizontal, handleMirrorVertical]);
+
   return (
     <DraggablePanel
       title="Transform"
@@ -808,6 +841,48 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                     active={false}
                     disabled={false}
                     onClick={handleTranslate}
+                  />
+                </>
+              )}
+            </div>
+
+            {/* Mirroring Section */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div 
+                style={{ 
+                  fontSize: '12px', 
+                  color: '#666', 
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                onClick={() => setMirrorExpanded(!mirrorExpanded)}
+              >
+                <span style={{ transform: mirrorExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
+                Mirroring
+              </div>
+              
+              {mirrorExpanded && (
+                <>
+                  <PluginButton
+                    icon={<FlipHorizontal size={14} />}
+                    text="Mirror Horizontal"
+                    color="#007acc"
+                    active={false}
+                    disabled={false}
+                    onClick={handleMirrorHorizontal}
+                  />
+                  
+                  <PluginButton
+                    icon={<FlipVertical size={14} />}
+                    text="Mirror Vertical"
+                    color="#007acc"
+                    active={false}
+                    disabled={false}
+                    onClick={handleMirrorVertical}
                   />
                 </>
               )}

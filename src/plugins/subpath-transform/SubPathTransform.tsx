@@ -83,6 +83,26 @@ export const SubPathTransformPlugin: Plugin = {
           scaleInput.select();
         }
       }
+    },
+    {
+      key: 'h',
+      modifiers: ['ctrl', 'shift'],
+      description: 'Mirror horizontally',
+      action: () => {
+        // Trigger horizontal mirror
+        const event = new CustomEvent('mirror-horizontal-trigger');
+        document.dispatchEvent(event);
+      }
+    },
+    {
+      key: 'v',
+      modifiers: ['ctrl', 'shift'],
+      description: 'Mirror vertically',
+      action: () => {
+        // Trigger vertical mirror
+        const event = new CustomEvent('mirror-vertical-trigger');
+        document.dispatchEvent(event);
+      }
     }
   ]
 };

@@ -47,6 +47,32 @@ export function translateSubPath(
 }
 
 /**
+ * Mirror a subpath horizontally around a center point
+ */
+export function mirrorSubPathHorizontal(
+  subPath: SVGSubPath, 
+  center: Point
+): SVGSubPath {
+  return {
+    ...subPath,
+    commands: subPath.commands.map((cmd: SVGCommand) => mirrorCommandHorizontal(cmd, center))
+  };
+}
+
+/**
+ * Mirror a subpath vertically around a center point
+ */
+export function mirrorSubPathVertical(
+  subPath: SVGSubPath, 
+  center: Point
+): SVGSubPath {
+  return {
+    ...subPath,
+    commands: subPath.commands.map((cmd: SVGCommand) => mirrorCommandVertical(cmd, center))
+  };
+}
+
+/**
  * Scale a single command around a center point
  */
 function scaleCommand(
@@ -129,6 +155,70 @@ function translateCommand(cmd: SVGCommand, delta: Point): SVGCommand {
   if (cmd.y1 !== undefined) newCmd.y1 = cmd.y1 + delta.y;
   if (cmd.x2 !== undefined) newCmd.x2 = cmd.x2 + delta.x;
   if (cmd.y2 !== undefined) newCmd.y2 = cmd.y2 + delta.y;
+  
+  return newCmd;
+}
+
+/**
+ * Mirror a single command horizontally around a center point
+ */
+function mirrorCommandHorizontal(cmd: SVGCommand, center: Point): SVGCommand {
+  const newCmd = { ...cmd };
+  
+  // Mirror main coordinates
+  if (cmd.x !== undefined) {
+    newCmd.x = center.x + (center.x - cmd.x);
+  }
+  if (cmd.y !== undefined) {
+    newCmd.y = cmd.y; // Y remains the same for horizontal mirror
+  }
+  
+  // Mirror control points
+  if (cmd.x1 !== undefined) {
+    newCmd.x1 = center.x + (center.x - cmd.x1);
+  }
+  if (cmd.y1 !== undefined) {
+    newCmd.y1 = cmd.y1; // Y remains the same for horizontal mirror
+  }
+  
+  if (cmd.x2 !== undefined) {
+    newCmd.x2 = center.x + (center.x - cmd.x2);
+  }
+  if (cmd.y2 !== undefined) {
+    newCmd.y2 = cmd.y2; // Y remains the same for horizontal mirror
+  }
+  
+  return newCmd;
+}
+
+/**
+ * Mirror a single command vertically around a center point
+ */
+function mirrorCommandVertical(cmd: SVGCommand, center: Point): SVGCommand {
+  const newCmd = { ...cmd };
+  
+  // Mirror main coordinates
+  if (cmd.x !== undefined) {
+    newCmd.x = cmd.x; // X remains the same for vertical mirror
+  }
+  if (cmd.y !== undefined) {
+    newCmd.y = center.y + (center.y - cmd.y);
+  }
+  
+  // Mirror control points
+  if (cmd.x1 !== undefined) {
+    newCmd.x1 = cmd.x1; // X remains the same for vertical mirror
+  }
+  if (cmd.y1 !== undefined) {
+    newCmd.y1 = center.y + (center.y - cmd.y1);
+  }
+  
+  if (cmd.x2 !== undefined) {
+    newCmd.x2 = cmd.x2; // X remains the same for vertical mirror
+  }
+  if (cmd.y2 !== undefined) {
+    newCmd.y2 = center.y + (center.y - cmd.y2);
+  }
   
   return newCmd;
 }
