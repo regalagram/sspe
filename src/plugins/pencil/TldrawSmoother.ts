@@ -11,10 +11,11 @@ export interface SmoothedPoint extends Point {
 }
 
 export class TldrawStyleSmoother {
-  private readonly simplifyTolerance = 2.0; // Increased for better simplification
-  private readonly smoothingFactor = 0.85; // Higher for smoother curves
-  private readonly minDistance = 1.5; // Reduced for more detail
-  private readonly pressureDecay = 0.7; // Faster pressure changes
+  private simplifyTolerance = 2.0; // Increased for better simplification
+  private smoothingFactor = 0.85; // Higher for smoother curves
+  private minDistance = 1.5; // Reduced for more detail
+  private pressureDecay = 0.7; // Faster pressure changes
+  private lowPassAlpha = 0.3; // Low-pass filter strength
 
   /**
    * Simplify a series of points using the Ramer-Douglas-Peucker algorithm
@@ -47,7 +48,7 @@ export class TldrawStyleSmoother {
   /**
    * Apply a simple low-pass filter to reduce noise in the input
    */
-  private lowPassFilter(points: Point[], alpha: number = 0.3): Point[] {
+  private lowPassFilter(points: Point[], alpha: number = this.lowPassAlpha): Point[] {
     if (points.length < 2) return points;
     
     const filtered: Point[] = [points[0]]; // Keep first point
@@ -250,6 +251,74 @@ export class TldrawStyleSmoother {
     }
 
     return result;
+  }
+
+  /**
+   * Configuration methods for real-time parameter adjustment
+   */
+  setSimplifyTolerance(tolerance: number) {
+    this.simplifyTolerance = Math.max(0.1, Math.min(10, tolerance));
+  }
+
+  setSmoothingFactor(factor: number) {
+    this.smoothingFactor = Math.max(0, Math.min(1, factor));
+  }
+
+  setMinDistance(distance: number) {
+    this.minDistance = Math.max(0.5, Math.min(5, distance));
+  }
+
+  setPressureDecay(decay: number) {
+    this.pressureDecay = Math.max(0.1, Math.min(1, decay));
+  }
+
+  setLowPassAlpha(alpha: number) {
+    this.lowPassAlpha = Math.max(0.1, Math.min(1, alpha));
+  }
+
+  getParameters() {
+    return {
+      simplifyTolerance: this.simplifyTolerance,
+      smoothingFactor: this.smoothingFactor,
+      minDistance: this.minDistance,
+      pressureDecay: this.pressureDecay,
+      lowPassAlpha: this.lowPassAlpha
+    };
+  }
+
+  resetToDefaults() {
+    this.simplifyTolerance = 2.0;
+    this.smoothingFactor = 0.85;
+    this.minDistance = 1.5;
+    this.pressureDecay = 0.7;
+    this.lowPassAlpha = 0.3;
+  }
+
+  /**
+   * Preset configurations for different drawing styles
+   */
+  applyPreciseDrawingPreset() {
+    this.smoothingFactor = 0.4;
+    this.simplifyTolerance = 0.8;
+    this.minDistance = 0.8;
+    this.pressureDecay = 0.6;
+    this.lowPassAlpha = 0.2;
+  }
+
+  applyFluidDrawingPreset() {
+    this.smoothingFactor = 0.8;
+    this.simplifyTolerance = 2.5;
+    this.minDistance = 2.0;
+    this.pressureDecay = 0.7;
+    this.lowPassAlpha = 0.3;
+  }
+
+  applyQuickSketchPreset() {
+    this.smoothingFactor = 0.9;
+    this.simplifyTolerance = 4.0;
+    this.minDistance = 2.5;
+    this.pressureDecay = 0.8;
+    this.lowPassAlpha = 0.4;
   }
 }
 

@@ -4,6 +4,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { generateId } from '../../utils/id-utils';
 import { SVGCommand, EditorCommandType, Point } from '../../types';
 import { tldrawSmoother, SmoothedPoint } from './TldrawSmoother';
+import { PencilStorage, PencilStorageData } from './PencilStorage';
 
 interface PencilState {
   isDrawing: boolean;
@@ -42,6 +43,44 @@ class PencilManager {
   private readonly maxPoints = 500; // Reduced for better performance
   private lastUpdateTime = 0;
   private readonly updateThrottle = 12; // Increased frequency for smoother drawing
+
+  constructor() {
+    this.loadFromStorage();
+  }
+
+  /**
+   * Load settings from localStorage
+   */
+  private loadFromStorage() {
+    const savedData = PencilStorage.load();
+    if (savedData) {
+      // Apply stroke style
+      this.state.strokeStyle = { ...savedData.strokeStyle };
+      
+      // Apply smoother parameters
+      tldrawSmoother.setSimplifyTolerance(savedData.smootherParams.simplifyTolerance);
+      tldrawSmoother.setSmoothingFactor(savedData.smootherParams.smoothingFactor);
+      tldrawSmoother.setMinDistance(savedData.smootherParams.minDistance);
+      tldrawSmoother.setPressureDecay(savedData.smootherParams.pressureDecay);
+      tldrawSmoother.setLowPassAlpha(savedData.smootherParams.lowPassAlpha);
+      
+      console.log('PencilManager: Loaded settings from localStorage');
+    } else {
+      console.log('PencilManager: Using default settings');
+    }
+  }
+
+  /**
+   * Save current settings to localStorage
+   */
+  private saveToStorage() {
+    const data: PencilStorageData = {
+      strokeStyle: { ...this.state.strokeStyle },
+      smootherParams: tldrawSmoother.getParameters()
+    };
+    PencilStorage.save(data);
+  }
+
   private svgRef: React.RefObject<SVGSVGElement | null> | null = null;
 
   setEditorStore(store: any) {
@@ -271,6 +310,7 @@ class PencilManager {
   // Method to change pencil stroke style
   setStrokeStyle(style: Partial<PencilState['strokeStyle']>) {
     this.state.strokeStyle = { ...this.state.strokeStyle, ...style };
+    this.saveToStorage(); // Auto-save when style changes
   }
 
   getStrokeStyle() {
@@ -280,6 +320,72 @@ class PencilManager {
   // Method to set smoothing parameters
   setSmoothingFactor(factor: number) {
     this.smoothingFactor = Math.max(0, Math.min(1, factor));
+  }
+
+  // Methods for accessing smoother parameters
+  getSmootherParameters() {
+    return tldrawSmoother.getParameters();
+  }
+
+  setSmootherParameter(param: string, value: number) {
+    switch (param) {
+      case 'simplifyTolerance':
+        tldrawSmoother.setSimplifyTolerance(value);
+        break;
+      case 'smoothingFactor':
+        tldrawSmoother.setSmoothingFactor(value);
+        break;
+      case 'minDistance':
+        tldrawSmoother.setMinDistance(value);
+        break;
+      case 'pressureDecay':
+        tldrawSmoother.setPressureDecay(value);
+        break;
+      case 'lowPassAlpha':
+        tldrawSmoother.setLowPassAlpha(value);
+        break;
+    }
+    this.saveToStorage(); // Auto-save when parameters change
+  }
+
+  resetSmootherToDefaults() {
+    tldrawSmoother.resetToDefaults();
+    this.saveToStorage(); // Auto-save when reset
+  }
+
+  // Preset methods
+  applyPreciseDrawingPreset() {
+    tldrawSmoother.applyPreciseDrawingPreset();
+    this.saveToStorage(); // Auto-save when preset applied
+  }
+
+  applyFluidDrawingPreset() {
+    tldrawSmoother.applyFluidDrawingPreset();
+    this.saveToStorage(); // Auto-save when preset applied
+  }
+
+  applyQuickSketchPreset() {
+    tldrawSmoother.applyQuickSketchPreset();
+    this.saveToStorage(); // Auto-save when preset applied
+  }
+
+  /**
+   * Clear saved settings and reset to defaults
+   */
+  clearSavedSettings() {
+    PencilStorage.clear();
+    
+    // Reset to defaults
+    const defaults = PencilStorage.getDefaults();
+    this.state.strokeStyle = { ...defaults.strokeStyle };
+    
+    tldrawSmoother.setSimplifyTolerance(defaults.smootherParams.simplifyTolerance);
+    tldrawSmoother.setSmoothingFactor(defaults.smootherParams.smoothingFactor);
+    tldrawSmoother.setMinDistance(defaults.smootherParams.minDistance);
+    tldrawSmoother.setPressureDecay(defaults.smootherParams.pressureDecay);
+    tldrawSmoother.setLowPassAlpha(defaults.smootherParams.lowPassAlpha);
+    
+    console.log('PencilManager: Cleared saved settings and reset to defaults');
   }
 
   // Clean up method
