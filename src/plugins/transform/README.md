@@ -31,10 +31,11 @@ El plugin de transformación permite escalar y rotar selecciones directamente en
 - Rotación libre de 360 grados
 
 ### 🎨 Compatibilidad
-- **Selección de comandos**: Transforma puntos individuales seleccionados
+- **Selección múltiple de comandos**: Transforma múltiples puntos seleccionados (mínimo 2 puntos)
 - **Selección de sub-paths**: Transforma sub-paths completos
 - **Selección múltiple**: Aplica transformaciones a todos los elementos seleccionados
 - **Puntos de control**: Incluye automáticamente los puntos de control de curvas Bézier
+- **Nota**: Los controles de transformación no aparecen para selecciones de un solo punto, ya que no tiene sentido transformar un punto individual
 
 ### ⌨️ Atajos de Teclado
 - `Shift`: Mantener proporciones durante el escalado
@@ -45,6 +46,11 @@ El plugin de transformación permite escalar y rotar selecciones directamente en
 - Rotar elementos para cambiar su orientación
 - Ajustar rápidamente el tamaño de selecciones complejas
 - Transformar múltiples elementos a la vez
+
+### ⚠️ Limitaciones
+- **Selección individual**: Los controles no aparecen cuando solo hay un punto seleccionado, ya que transformar un punto individual no tiene sentido geométrico
+- **Mínimo requerido**: Se necesitan al menos 2 puntos o 1 sub-path completo para mostrar los controles
+- **Área de transformación**: Solo se crean controles cuando hay suficiente área para definir un cuadro delimitador
 
 ### 🔄 Integración con el Sistema
 - Se registra automáticamente en el sistema de plugins

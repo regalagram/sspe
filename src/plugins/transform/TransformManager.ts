@@ -78,12 +78,20 @@ export class TransformManager {
     const store = this.editorStore || useEditorStore.getState();
     const { selection, paths } = store;
     
+    console.log('TransformManager: calculateBounds called', { 
+      selectedCommands: selection.selectedCommands, 
+      selectedSubPaths: selection.selectedSubPaths,
+      pathsCount: paths.length 
+    });
+    
     const allPoints: Point[] = [];
 
-    // Collect points from selected commands
-    if (selection.selectedCommands.length > 0) {
+    // Collect points from selected commands (only if multiple commands)
+    if (selection.selectedCommands.length > 1) {
+      console.log('TransformManager: Processing multiple selected commands');
       for (const commandId of selection.selectedCommands) {
         const command = this.findCommandById(commandId, paths);
+        console.log('TransformManager: Found command', { commandId, command });
         if (command) {
           if (command.x !== undefined && command.y !== undefined) {
             allPoints.push({ x: command.x, y: command.y });
@@ -100,8 +108,10 @@ export class TransformManager {
 
     // Collect points from selected subpaths
     if (selection.selectedSubPaths.length > 0) {
+      console.log('TransformManager: Processing selected subpaths');
       for (const subPathId of selection.selectedSubPaths) {
         const subPath = this.findSubPathById(subPathId, paths);
+        console.log('TransformManager: Found subpath', { subPathId, subPath });
         if (subPath) {
           for (const command of subPath.commands) {
             if (command.x !== undefined && command.y !== undefined) {
@@ -118,7 +128,18 @@ export class TransformManager {
       }
     }
 
-    if (allPoints.length === 0) return null;
+    console.log('TransformManager: Collected points', allPoints);
+
+    if (allPoints.length === 0) {
+      console.log('TransformManager: No points found, returning null');
+      return null;
+    }
+
+    // For meaningful transformation, we need at least 2 points to create a bounding area
+    if (allPoints.length < 2) {
+      console.log('TransformManager: Insufficient points for transformation, returning null');
+      return null;
+    }
 
     // Calculate bounding box
     const minX = Math.min(...allPoints.map(p => p.x));
@@ -205,15 +226,37 @@ export class TransformManager {
 
   // Update transform state
   updateTransformState() {
+    console.log('TransformManager: updateTransformState called');
     this.state.bounds = this.calculateBounds();
     this.state.handles = this.generateHandles();
+    console.log('TransformManager: updateTransformState result', {
+      bounds: this.state.bounds,
+      handlesCount: this.state.handles.length
+    });
   }
 
   // Check if there's a valid selection for transformation
   hasValidSelection(): boolean {
     const store = this.editorStore || useEditorStore.getState();
     const { selection } = store;
-    return selection.selectedCommands.length > 0 || selection.selectedSubPaths.length > 0;
+    
+    // Need at least one subpath OR multiple commands to show transform controls
+    // Single point selection doesn't make sense for transformation
+    const hasValidSelection = (
+      selection.selectedSubPaths.length > 0 || 
+      selection.selectedCommands.length > 1
+    );
+    
+    console.log('TransformManager: hasValidSelection check', {
+      selectedCommands: selection.selectedCommands,
+      selectedSubPaths: selection.selectedSubPaths,
+      hasValidSelection,
+      reason: selection.selectedSubPaths.length > 0 ? 'subpaths selected' : 
+              selection.selectedCommands.length > 1 ? 'multiple commands' :
+              selection.selectedCommands.length === 1 ? 'single command (invalid)' : 'no selection'
+    });
+    
+    return hasValidSelection;
   }
 
   // Get current bounds

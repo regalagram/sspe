@@ -15,6 +15,7 @@ const TransformPlugin: React.FC = () => {
 
   // Initialize transform manager with editor store
   useEffect(() => {
+    console.log('Transform Plugin: Initializing transform manager');
     transformManager.setEditorStore(useEditorStore.getState());
     return () => {
       transformManager.cleanup();
@@ -23,14 +24,41 @@ const TransformPlugin: React.FC = () => {
 
   // Update transform state when selection or paths change
   useEffect(() => {
-    if (transformManager.hasValidSelection()) {
+    console.log('Transform Plugin: Selection changed', {
+      selectedCommands: selection.selectedCommands,
+      selectedSubPaths: selection.selectedSubPaths,
+      pathsCount: paths.length
+    });
+    
+    // Always pass the current store state to transform manager
+    transformManager.setEditorStore(useEditorStore.getState());
+    
+    const hasValidSelection = transformManager.hasValidSelection();
+    console.log('Transform Plugin: Has valid selection:', hasValidSelection);
+    
+    if (hasValidSelection) {
       transformManager.updateTransformState();
-      setBounds(transformManager.getBounds());
-      setHandles(transformManager.getHandles());
+      const newBounds = transformManager.getBounds();
+      const newHandles = transformManager.getHandles();
+      console.log('Transform Plugin: Updated bounds and handles', { newBounds, handlesCount: newHandles.length });
+      setBounds(newBounds);
+      setHandles(newHandles);
     } else {
+      console.log('Transform Plugin: Clearing bounds and handles');
       setBounds(null);
       setHandles([]);
     }
+    
+    // Debug: Add a global function to test transform manually
+    (window as any).testTransform = () => {
+      transformManager.setEditorStore(useEditorStore.getState());
+      console.log('Manual transform test', {
+        selection: useEditorStore.getState().selection,
+        hasValid: transformManager.hasValidSelection(),
+        bounds: transformManager.getBounds(),
+        handles: transformManager.getHandles()
+      });
+    };
   }, [selection.selectedCommands, selection.selectedSubPaths, paths]);
 
   // Update during transformation

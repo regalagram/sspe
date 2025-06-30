@@ -11,7 +11,12 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
   const { viewport } = useEditorStore();
   const [hoveredHandle, setHoveredHandle] = useState<string | null>(null);
 
-  if (!bounds || handles.length === 0) return null;
+  console.log('TransformHandles: Rendering with', { bounds, handlesCount: handles.length });
+
+  if (!bounds || handles.length === 0) {
+    console.log('TransformHandles: Not rendering - no bounds or handles');
+    return null;
+  }
 
   const handleSize = 8 / viewport.zoom;
   const strokeWidth = 1.5 / viewport.zoom;
