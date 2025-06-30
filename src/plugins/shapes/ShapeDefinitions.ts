@@ -127,32 +127,46 @@ const createStar = (center: Point, size: number): Omit<SVGCommand, 'id'>[] => {
 
 // Helper function to create a heart
 const createHeart = (center: Point, size: number): Omit<SVGCommand, 'id'>[] => {
-  const scale = size / 100;
+  // Scale factor based on the original example size (which appears to be about 457px wide)
+  const scale = size / 457;
   const cx = center.x;
   const cy = center.y;
   
-  // Heart shape based on parametric equations
+  // Offset to center the heart shape (original shape seems to start around x=20, y=20)
+  const offsetX = -248.5; // Center of the original shape width
+  const offsetY = -231.5; // Center of the original shape height
+  
   return [
-    { command: 'M', x: cx, y: cy + 15 * scale },
+    { command: 'M', x: cx + (140 + offsetX) * scale, y: cy + (20 + offsetY) * scale },
     { command: 'C', 
-      x1: cx - 20 * scale, y1: cy + 15 * scale,
-      x2: cx - 40 * scale, y2: cy + 5 * scale,
-      x: cx - 40 * scale, y: cy - 10 * scale
+      x1: cx + (73 + offsetX) * scale, y1: cy + (20 + offsetY) * scale,
+      x2: cx + (20 + offsetX) * scale, y2: cy + (74 + offsetY) * scale,
+      x: cx + (20 + offsetX) * scale, y: cy + (140 + offsetY) * scale
     },
     { command: 'C', 
-      x1: cx - 40 * scale, y1: cy - 25 * scale,
-      x2: cx - 20 * scale, y2: cy - 40 * scale,
-      x: cx, y: cy - 40 * scale
+      x1: cx + (20 + offsetX) * scale, y1: cy + (275 + offsetY) * scale,
+      x2: cx + (156 + offsetX) * scale, y2: cy + (310 + offsetY) * scale,
+      x: cx + (248 + offsetX) * scale, y: cy + (443 + offsetY) * scale
     },
     { command: 'C', 
-      x1: cx + 20 * scale, y1: cy - 40 * scale,
-      x2: cx + 40 * scale, y2: cy - 25 * scale,
-      x: cx + 40 * scale, y: cy - 10 * scale
+      x1: cx + (336 + offsetX) * scale, y1: cy + (311 + offsetY) * scale,
+      x2: cx + (477 + offsetX) * scale, y2: cy + (270 + offsetY) * scale,
+      x: cx + (477 + offsetX) * scale, y: cy + (140 + offsetY) * scale
     },
     { command: 'C', 
-      x1: cx + 40 * scale, y1: cy + 5 * scale,
-      x2: cx + 20 * scale, y2: cy + 15 * scale,
-      x: cx, y: cy + 15 * scale
+      x1: cx + (477 + offsetX) * scale, y1: cy + (74 + offsetY) * scale,
+      x2: cx + (423 + offsetX) * scale, y2: cy + (20 + offsetY) * scale,
+      x: cx + (357 + offsetX) * scale, y: cy + (20 + offsetY) * scale
+    },
+    { command: 'C', 
+      x1: cx + (309 + offsetX) * scale, y1: cy + (20 + offsetY) * scale,
+      x2: cx + (267 + offsetX) * scale, y2: cy + (48 + offsetY) * scale,
+      x: cx + (248 + offsetX) * scale, y: cy + (89 + offsetY) * scale
+    },
+    { command: 'C', 
+      x1: cx + (229 + offsetX) * scale, y1: cy + (48 + offsetY) * scale,
+      x2: cx + (188 + offsetX) * scale, y2: cy + (20 + offsetY) * scale,
+      x: cx + (140 + offsetX) * scale, y: cy + (20 + offsetY) * scale
     },
     { command: 'Z' }
   ];
