@@ -36,8 +36,12 @@ El plugin de transformación permite escalar y rotar selecciones directamente en
 - **Selección múltiple de comandos**: Transforma múltiples puntos seleccionados (mínimo 2 puntos)
 - **Selección de sub-paths**: Transforma sub-paths completos
 - **Selección múltiple**: Aplica transformaciones a todos los elementos seleccionados
+<<<<<<< HEAD
 - **Cálculo de área preciso**: Usa el DOM nativo del navegador con SVG temporal para obtener el bounding box real de curvas complejas
 - **Fallback robusto**: Si el cálculo DOM falla, usa cálculo manual con todos los puntos de control
+=======
+- **Puntos de control**: Incluye automáticamente los puntos de control de curvas Bézier
+>>>>>>> 0b6e7ef (feat: enhance Transform plugin with detailed logging and selection validation for better user feedback)
 - **Nota**: Los controles de transformación no aparecen para selecciones de un solo punto, ya que no tiene sentido transformar un punto individual
 
 ### ⌨️ Atajos de Teclado
@@ -53,9 +57,13 @@ El plugin de transformación permite escalar y rotar selecciones directamente en
 ### ⚠️ Limitaciones
 - **Selección individual**: Los controles no aparecen cuando solo hay un punto seleccionado, ya que transformar un punto individual no tiene sentido geométrico
 - **Mínimo requerido**: Se necesitan al menos 2 puntos o 1 sub-path completo para mostrar los controles
+<<<<<<< HEAD
 - **Puntos únicos**: Los puntos deben estar en posiciones diferentes (no superpuestos) para crear un área transformable
 - **Área mínima**: El cuadro delimitador debe tener un tamaño mínimo (1 unidad) en al menos una dimensión
 - **Tolerancia de posición**: Se considera que dos puntos están en la misma posición si están dentro de 0.1 unidades de distancia
+=======
+- **Área de transformación**: Solo se crean controles cuando hay suficiente área para definir un cuadro delimitador
+>>>>>>> 0b6e7ef (feat: enhance Transform plugin with detailed logging and selection validation for better user feedback)
 
 ### 🔄 Integración con el Sistema
 - Se registra automáticamente en el sistema de plugins

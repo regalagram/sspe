@@ -123,6 +123,7 @@ export class TransformManager {
     const store = this.editorStore || useEditorStore.getState();
     const { selection, paths } = store;
     
+<<<<<<< HEAD
     console.log('📐 MANUAL CALCULATION START: Using point iteration for bounds');
     console.log('📐 MANUAL METHOD: Selection state', { 
       selectedCommands: selection.selectedCommands, 
@@ -130,13 +131,23 @@ export class TransformManager {
       pathsCount: paths.length,
       technique: 'Min/Max point iteration',
       precision: 'MEDIUM (control points only)'
+=======
+    console.log('TransformManager: calculateBounds called', { 
+      selectedCommands: selection.selectedCommands, 
+      selectedSubPaths: selection.selectedSubPaths,
+      pathsCount: paths.length 
+>>>>>>> 0b6e7ef (feat: enhance Transform plugin with detailed logging and selection validation for better user feedback)
     });
     
     const allPoints: Point[] = [];
 
     // Collect points from selected commands (only if multiple commands)
     if (selection.selectedCommands.length > 1) {
+<<<<<<< HEAD
       console.log('📐 MANUAL METHOD: Processing multiple selected commands');
+=======
+      console.log('TransformManager: Processing multiple selected commands');
+>>>>>>> 0b6e7ef (feat: enhance Transform plugin with detailed logging and selection validation for better user feedback)
       for (const commandId of selection.selectedCommands) {
         const command = this.findCommandById(commandId, paths);
         console.log('TransformManager: Found command', { commandId, command });
@@ -158,7 +169,11 @@ export class TransformManager {
 
     // Collect points from selected subpaths
     if (selection.selectedSubPaths.length > 0) {
+<<<<<<< HEAD
       console.log('📐 MANUAL METHOD: Processing selected subpaths');
+=======
+      console.log('TransformManager: Processing selected subpaths');
+>>>>>>> 0b6e7ef (feat: enhance Transform plugin with detailed logging and selection validation for better user feedback)
       for (const subPathId of selection.selectedSubPaths) {
         const subPath = this.findSubPathById(subPathId, paths);
         console.log('TransformManager: Found subpath', { subPathId, subPath });
@@ -180,6 +195,7 @@ export class TransformManager {
       }
     }
 
+<<<<<<< HEAD
     console.log('📐 MANUAL METHOD: Collected points', {
       totalPoints: allPoints.length,
       samplePoints: allPoints.slice(0, 3),
@@ -188,11 +204,18 @@ export class TransformManager {
 
     if (allPoints.length === 0) {
       console.log('📐 MANUAL METHOD ABORT: No points found');
+=======
+    console.log('TransformManager: Collected points', allPoints);
+
+    if (allPoints.length === 0) {
+      console.log('TransformManager: No points found, returning null');
+>>>>>>> 0b6e7ef (feat: enhance Transform plugin with detailed logging and selection validation for better user feedback)
       return null;
     }
 
     // For meaningful transformation, we need at least 2 points to create a bounding area
     if (allPoints.length < 2) {
+<<<<<<< HEAD
       console.log('📐 MANUAL METHOD ABORT: Insufficient points for transformation');
       return null;
     }
@@ -205,6 +228,9 @@ export class TransformManager {
         uniquePoints: uniquePoints.length,
         firstPoint: allPoints[0]
       });
+=======
+      console.log('TransformManager: Insufficient points for transformation, returning null');
+>>>>>>> 0b6e7ef (feat: enhance Transform plugin with detailed logging and selection validation for better user feedback)
       return null;
     }
 

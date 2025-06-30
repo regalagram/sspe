@@ -24,17 +24,25 @@ const TransformPlugin: React.FC = () => {
 
   // Update transform state when selection or paths change
   useEffect(() => {
+<<<<<<< HEAD
     console.log('🔄 Transform Plugin: Selection changed', {
       selectedCommands: selection.selectedCommands,
       selectedSubPaths: selection.selectedSubPaths,
       pathsCount: paths.length,
       viewportZoom: viewport.zoom
+=======
+    console.log('Transform Plugin: Selection changed', {
+      selectedCommands: selection.selectedCommands,
+      selectedSubPaths: selection.selectedSubPaths,
+      pathsCount: paths.length
+>>>>>>> 0b6e7ef (feat: enhance Transform plugin with detailed logging and selection validation for better user feedback)
     });
     
     // Always pass the current store state to transform manager
     transformManager.setEditorStore(useEditorStore.getState());
     
     const hasValidSelection = transformManager.hasValidSelection();
+<<<<<<< HEAD
     console.log('🔄 Transform Plugin: Has valid selection:', hasValidSelection);
     
     if (hasValidSelection) {
@@ -51,6 +59,19 @@ const TransformPlugin: React.FC = () => {
       setHandles(newHandles);
     } else {
       console.log('🔄 Transform Plugin: Clearing bounds and handles');
+=======
+    console.log('Transform Plugin: Has valid selection:', hasValidSelection);
+    
+    if (hasValidSelection) {
+      transformManager.updateTransformState();
+      const newBounds = transformManager.getBounds();
+      const newHandles = transformManager.getHandles();
+      console.log('Transform Plugin: Updated bounds and handles', { newBounds, handlesCount: newHandles.length });
+      setBounds(newBounds);
+      setHandles(newHandles);
+    } else {
+      console.log('Transform Plugin: Clearing bounds and handles');
+>>>>>>> 0b6e7ef (feat: enhance Transform plugin with detailed logging and selection validation for better user feedback)
       setBounds(null);
       setHandles([]);
     }
