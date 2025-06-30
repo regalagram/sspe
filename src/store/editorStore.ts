@@ -346,7 +346,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
                   ...path.subPaths,
                   {
                     id: subPathId,
-                    commands: [{ id: generateId(), command: 'M', x: 100, y: 100 }],
+                    commands: [], // Start with empty commands array
                   },
                 ],
               }

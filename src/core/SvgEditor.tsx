@@ -20,11 +20,13 @@ import { SubPathTransformPlugin } from '../plugins/subpath-transform/SubPathTran
 import { PointTransformPlugin } from '../plugins/point-transform/PointTransform';
 import { PencilPlugin } from '../plugins/pencil/Pencil';
 import { usePencilCursor } from '../plugins/pencil/usePencilCursor';
+import { ShapesPlugin } from '../plugins/shapes/Shapes';
 
 // Register plugins immediately during module loading
 const initializePlugins = () => {
   // Register all plugins before any component renders
   pluginManager.registerPlugin(PencilPlugin); // Register pencil plugin FIRST for priority
+  pluginManager.registerPlugin(ShapesPlugin); // Register shapes plugin early for mouse event priority
   pluginManager.registerPlugin(MouseInteractionPlugin);
   pluginManager.registerPlugin(SelectionPlugin);
   pluginManager.registerPlugin(PathRendererPlugin);
