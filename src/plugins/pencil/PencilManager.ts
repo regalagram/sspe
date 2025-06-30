@@ -2,14 +2,14 @@ import { MouseEvent } from 'react';
 import { MouseEventContext } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { generateId } from '../../utils/id-utils';
-import { getPointSmooth } from '../../utils/point-smooth';
 import { SVGCommand, EditorCommandType, Point } from '../../types';
+import { tldrawSmoother, SmoothedPoint } from './TldrawSmoother';
 
 interface PencilState {
   isDrawing: boolean;
   currentPath: string | null;
   currentSubPath: string | null;
-  rawPoints: Point[];
+  rawPoints: SmoothedPoint[];
   lastPoint: Point | null;
   strokeStyle: {
     stroke: string;
@@ -37,11 +37,11 @@ class PencilManager {
   };
 
   private editorStore: any;
-  private readonly minDistance = 3; // Minimum distance between points to reduce noise
-  private smoothingFactor = 0.5; // Smoothing intensity (0-1)
-  private readonly maxPoints = 1000; // Maximum points before simplification
+  private readonly minDistance = 1.5; // Reduced for more detail capture
+  private smoothingFactor = 0.85; // Increased for smoother result
+  private readonly maxPoints = 500; // Reduced for better performance
   private lastUpdateTime = 0;
-  private readonly updateThrottle = 16; // ~60fps throttling (16ms)
+  private readonly updateThrottle = 12; // Increased frequency for smoother drawing
   private svgRef: React.RefObject<SVGSVGElement | null> | null = null;
 
   setEditorStore(store: any) {
@@ -84,7 +84,7 @@ class PencilManager {
 
     // Start new drawing session
     this.state.isDrawing = true;
-    this.state.rawPoints = [svgPoint];
+    this.state.rawPoints = [{ ...svgPoint, timestamp: Date.now() }];
     this.state.lastPoint = svgPoint;
 
     // Create new path and subpath
@@ -142,7 +142,7 @@ class PencilManager {
     if (distance < this.minDistance) return true;
 
     // Add point to raw points collection
-    this.state.rawPoints.push(svgPoint);
+    this.state.rawPoints.push({ ...svgPoint, timestamp: Date.now() });
     this.state.lastPoint = svgPoint;
 
     // Limit the number of points for performance
@@ -191,44 +191,74 @@ class PencilManager {
 
     const { replaceSubPathCommands } = this.editorStore;
 
-    // Convert raw points to basic line commands
-    const rawCommands: Omit<SVGCommand, 'id'>[] = [];
+    // Apply tldraw-style smoothing and simplification
+    const smoothedPoints = tldrawSmoother.smoothPoints(this.state.rawPoints);
     
-    // Start with move command
-    rawCommands.push({
-      command: 'M',
-      x: this.state.rawPoints[0].x,
-      y: this.state.rawPoints[0].y
-    });
+    // Calculate pressure for potential variable stroke width
+    const pointsWithPressure = tldrawSmoother.calculatePressure(smoothedPoints);
 
-    // Add line commands for each subsequent point
-    for (let i = 1; i < this.state.rawPoints.length; i++) {
-      rawCommands.push({
-        command: 'L',
-        x: this.state.rawPoints[i].x,
-        y: this.state.rawPoints[i].y
+    // Convert smoothed points to SVG commands
+    const svgCommands: Omit<SVGCommand, 'id'>[] = [];
+    
+    if (pointsWithPressure.length > 0) {
+      // Start with move command
+      svgCommands.push({
+        command: 'M',
+        x: pointsWithPressure[0].x,
+        y: pointsWithPressure[0].y
       });
-    }
 
-    // Convert to SVGCommand format with IDs for smoothing
-    const commandsWithIds: SVGCommand[] = rawCommands.map(cmd => ({
-      id: generateId(),
-      ...cmd
-    }));
+      // Create smooth curves using cubic bezier commands for better smoothness
+      if (pointsWithPressure.length >= 4) {
+        for (let i = 1; i < pointsWithPressure.length - 2; i += 3) {
+          const p0 = pointsWithPressure[i - 1] || pointsWithPressure[0];
+          const p1 = pointsWithPressure[i];
+          const p2 = pointsWithPressure[i + 1];
+          const p3 = pointsWithPressure[i + 2] || pointsWithPressure[pointsWithPressure.length - 1];
+          
+          // Calculate smooth control points
+          const cp1x = p0.x + (p1.x - p0.x) * 0.6;
+          const cp1y = p0.y + (p1.y - p0.y) * 0.6;
+          const cp2x = p3.x - (p3.x - p2.x) * 0.6;
+          const cp2y = p3.y - (p3.y - p2.y) * 0.6;
 
-    // Apply smoothing only if we have enough points
-    let finalCommands = commandsWithIds;
-    if (commandsWithIds.length > 3) {
-      try {
-        finalCommands = getPointSmooth(commandsWithIds);
-      } catch (error) {
-        console.warn('Smoothing failed, using raw commands:', error);
+          svgCommands.push({
+            command: 'C',
+            x1: cp1x,
+            y1: cp1y,
+            x2: cp2x,
+            y2: cp2y,
+            x: p3.x,
+            y: p3.y
+          });
+        }
+        
+        // Add final line to last point if needed
+        const lastPoint = pointsWithPressure[pointsWithPressure.length - 1];
+        const secondLastPoint = pointsWithPressure[pointsWithPressure.length - 2];
+        if (lastPoint && secondLastPoint && 
+            (Math.abs(lastPoint.x - secondLastPoint.x) > 1 || 
+             Math.abs(lastPoint.y - secondLastPoint.y) > 1)) {
+          svgCommands.push({
+            command: 'L',
+            x: lastPoint.x,
+            y: lastPoint.y
+          });
+        }
+      } else {
+        // Simple lines for short strokes
+        for (let i = 1; i < pointsWithPressure.length; i++) {
+          svgCommands.push({
+            command: 'L',
+            x: pointsWithPressure[i].x,
+            y: pointsWithPressure[i].y
+          });
+        }
       }
     }
 
     // Replace subpath commands with smoothed version
-    const commandsWithoutIds = finalCommands.map(({ id, ...cmd }) => cmd);
-    replaceSubPathCommands(this.state.currentSubPath, commandsWithoutIds);
+    replaceSubPathCommands(this.state.currentSubPath, svgCommands);
   }
 
   private resetDrawingState() {
@@ -351,7 +381,7 @@ class PencilManager {
     if (distance < this.minDistance) return;
 
     // Add point to raw points collection
-    this.state.rawPoints.push(svgPoint);
+    this.state.rawPoints.push({ ...svgPoint, timestamp: Date.now() });
     this.state.lastPoint = svgPoint;
 
     // Limit the number of points for performance

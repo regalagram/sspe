@@ -71,7 +71,7 @@ export const PencilPlugin: Plugin = {
     {
       id: 'pencil-tools',
       component: PencilUI,
-      position: 'toolbar',
+      position: 'sidebar',
       order: 4
     },
     {
