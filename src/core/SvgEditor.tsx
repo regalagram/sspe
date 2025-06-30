@@ -18,10 +18,13 @@ import { GlobalKeyboardPlugin } from '../plugins/global-keyboard/GlobalKeyboard'
 import { VisualDebugPlugin } from '../plugins/visual-debug/VisualDebug';
 import { SubPathTransformPlugin } from '../plugins/subpath-transform/SubPathTransform';
 import { PointTransformPlugin } from '../plugins/point-transform/PointTransform';
+import { PencilPlugin } from '../plugins/pencil/Pencil';
+import { usePencilCursor } from '../plugins/pencil/usePencilCursor';
 
 // Register plugins immediately during module loading
 const initializePlugins = () => {
   // Register all plugins before any component renders
+  pluginManager.registerPlugin(PencilPlugin); // Register pencil plugin FIRST for priority
   pluginManager.registerPlugin(MouseInteractionPlugin);
   pluginManager.registerPlugin(SelectionPlugin);
   pluginManager.registerPlugin(PathRendererPlugin);
@@ -51,12 +54,15 @@ export const SvgEditor: React.FC = () => {
   // Get cursor from plugins
   const mouseInteraction = useMouseInteraction();
   const rectSelection = useRectSelection();
+  const pencilCursor = usePencilCursor();
   
   // Combine cursors from different plugins
   const getCursor = () => {
     const mouseCursor = mouseInteraction.getCursor();
     const rectCursor = rectSelection.getCursor();
+    const pencilCursorValue = pencilCursor.getCursor();
     
+    if (pencilCursorValue !== 'default') return pencilCursorValue;
     if (mouseCursor !== 'default') return mouseCursor;
     if (rectCursor !== 'default') return rectCursor;
     return 'default';

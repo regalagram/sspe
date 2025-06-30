@@ -1,6 +1,6 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { SVGCommandType } from '../../types';
+import { SVGCommandType, EditorCommandType } from '../../types';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import SVGCommandIcon from '../../components/SVGCommandIcons';
 import { PluginButton } from '../../components/PluginButton';
@@ -9,7 +9,7 @@ import { LogOut } from 'lucide-react';
 interface CreationToolsProps {
   currentMode: string;
   createMode?: {
-    commandType: SVGCommandType;
+    commandType: EditorCommandType;
     isDrawing: boolean;
   };
   onSelectTool: (commandType: SVGCommandType) => void;

@@ -1,5 +1,8 @@
 export type SVGCommandType = 'M' | 'L' | 'C' | 'Z';
 
+// Extended command types for editor modes (not actual SVG commands)
+export type EditorCommandType = SVGCommandType | 'PENCIL';
+
 export interface SVGCommand {
   id: string;
   command: SVGCommandType;
@@ -80,7 +83,7 @@ export interface GridState {
 export interface EditorMode {
   current: 'select' | 'create' | 'edit' | 'pan' | 'zoom';
   createMode?: {
-    commandType: SVGCommandType;
+    commandType: EditorCommandType;
     isDrawing: boolean;
     previewCommand?: SVGCommand;
   };

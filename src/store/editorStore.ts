@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { EditorState, SVGCommand, SVGPath, Point, SVGCommandType, PathStyle } from '../types';
+import { EditorState, SVGCommand, SVGPath, Point, EditorCommandType, PathStyle } from '../types';
 import { generateId } from '../utils/id-utils.js';
 import { loadPreferences, savePreferences, UserPreferences } from '../utils/persistence';
 import { createNewPath } from '../utils/subpath-utils';
@@ -53,7 +53,7 @@ interface EditorActions {
   
   // Mode actions
   setMode: (mode: EditorState['mode']['current']) => void;
-  setCreateMode: (commandType: SVGCommandType) => void;
+  setCreateMode: (commandType: EditorCommandType) => void;
   exitCreateMode: () => void;
   
   // Grid actions
