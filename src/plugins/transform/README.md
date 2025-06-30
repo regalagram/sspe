@@ -12,7 +12,8 @@ El plugin de transformación permite escalar y rotar selecciones directamente en
 ### 🎮 Controles Visuales
 - **Cuadro delimitador**: Se muestra automáticamente al seleccionar elementos
 - **Handles de esquina**: Cuadrados azules para escalado
-- **Indicador de rotación**: Círculo verde que aparece cerca de las esquinas
+- **Handles de rotación**: Círculos verdes posicionados fuera de las esquinas
+- **Indicador de rotación**: Círculo verde que aparece cerca de las esquinas al hacer hover
 - **Feedback visual**: Los handles crecen al pasar el mouse sobre ellos
 - **Estado de transformación**: Indicador en tiempo real del modo activo
 
@@ -25,8 +26,9 @@ El plugin de transformación permite escalar y rotar selecciones directamente en
 - Soporte para escala negativa (reflejo)
 
 #### Rotación
-- Acerca el mouse a cualquier handle de esquina para activar el modo rotación
-- Aparece un círculo indicador verde con el símbolo de rotación (↻)
+- Haz click y arrastra los handles de rotación (círculos verdes) posicionados fuera de las esquinas
+- También puedes mantener el mouse cerca de los handles de esquina para activar el modo rotación temporal
+- Aparece un círculo indicador verde con el símbolo de rotación (↻) 
 - Arrastra para rotar alrededor del centro de la selección
 - Rotación libre de 360 grados
 
@@ -34,7 +36,8 @@ El plugin de transformación permite escalar y rotar selecciones directamente en
 - **Selección múltiple de comandos**: Transforma múltiples puntos seleccionados (mínimo 2 puntos)
 - **Selección de sub-paths**: Transforma sub-paths completos
 - **Selección múltiple**: Aplica transformaciones a todos los elementos seleccionados
-- **Puntos de control**: Incluye automáticamente los puntos de control de curvas Bézier
+- **Cálculo de área preciso**: Usa el DOM nativo del navegador con SVG temporal para obtener el bounding box real de curvas complejas
+- **Fallback robusto**: Si el cálculo DOM falla, usa cálculo manual con todos los puntos de control
 - **Nota**: Los controles de transformación no aparecen para selecciones de un solo punto, ya que no tiene sentido transformar un punto individual
 
 ### ⌨️ Atajos de Teclado
@@ -50,7 +53,9 @@ El plugin de transformación permite escalar y rotar selecciones directamente en
 ### ⚠️ Limitaciones
 - **Selección individual**: Los controles no aparecen cuando solo hay un punto seleccionado, ya que transformar un punto individual no tiene sentido geométrico
 - **Mínimo requerido**: Se necesitan al menos 2 puntos o 1 sub-path completo para mostrar los controles
-- **Área de transformación**: Solo se crean controles cuando hay suficiente área para definir un cuadro delimitador
+- **Puntos únicos**: Los puntos deben estar en posiciones diferentes (no superpuestos) para crear un área transformable
+- **Área mínima**: El cuadro delimitador debe tener un tamaño mínimo (1 unidad) en al menos una dimensión
+- **Tolerancia de posición**: Se considera que dos puntos están en la misma posición si están dentro de 0.1 unidades de distancia
 
 ### 🔄 Integración con el Sistema
 - Se registra automáticamente en el sistema de plugins
@@ -69,7 +74,8 @@ El plugin de transformación permite escalar y rotar selecciones directamente en
 ### Componentes Principales
 
 1. **TransformManager.ts**: Lógica central de transformación
-   - Cálculo de bounds
+   - Cálculo de bounds con DOM nativo (SVG temporal)
+   - Fallback a cálculo manual para robustez
    - Generación de handles
    - Aplicación de transformaciones
    - Detección de eventos de teclado
@@ -88,13 +94,32 @@ El plugin de transformación permite escalar y rotar selecciones directamente en
 ### Flujo de Transformación
 
 1. **Detección**: Usuario selecciona elementos
-2. **Cálculo**: Se calculan los bounds y handles
-3. **Interacción**: Usuario hace click en un handle
-4. **Transformación**: Se aplican las matemáticas de transformación
-5. **Actualización**: Se actualizan todos los comandos afectados
-6. **Historial**: Se guarda el estado para undo/redo
+2. **Cálculo DOM**: Se crea un SVG temporal y se calcula el bounding box real usando `getBBox()`
+3. **Fallback**: Si el cálculo DOM falla, se usa cálculo manual con todos los puntos
+4. **Generación de handles**: Se crean handles de esquina y rotación basados en los bounds
+5. **Interacción**: Usuario hace click en un handle
+6. **Transformación**: Se aplican las matemáticas de transformación
+7. **Actualización**: Se actualizan todos los comandos afectados
+8. **Historial**: Se guarda el estado para undo/redo
 
 ### Matemáticas de Transformación
+
+#### Validaciones Previas
+```typescript
+// Verificación de selección válida
+hasValidSelection = selectedSubPaths.length > 0 || selectedCommands.length > 1
+
+// Cálculo de bounds con DOM nativo (método principal)
+tempSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+tempSvg.appendChild(pathElement) // Para cada selección
+boundingBox = tempSvg.getBBox() // Obtiene bounds reales
+
+// Filtrado de puntos únicos (tolerancia 0.1) - solo en fallback
+uniquePoints = points.filter(p => !isDuplicateWithin(p, tolerance))
+
+// Validación de área mínima
+boundingBox.width >= 1 || boundingBox.height >= 1
+```
 
 #### Escalado
 ```typescript
@@ -118,10 +143,12 @@ pluginManager.registerPlugin(Transform); // Early registration for mouse priorit
 
 ## Compatibilidad
 
-- ✅ Puntos individuales (comandos M, L, C)
+- ✅ Múltiples puntos de comando (mínimo 2)
 - ✅ Sub-paths completos
 - ✅ Selecciones múltiples
-- ✅ Puntos de control de curvas
+- ✅ Cálculo de bounds con DOM nativo (preciso)
+- ✅ Fallback a cálculo manual (robusto)
+- ✅ Handles de rotación dedicados
 - ✅ Zoom responsivo
 - ✅ Grid snapping (respeta la configuración)
 - ✅ Historial de deshacer/rehacer

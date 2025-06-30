@@ -90,10 +90,11 @@ class MouseInteractionManager {
         pushToHistory
       } = this.editorStore;
 
-    e.stopPropagation();
+    // Only stop propagation when we actually handle the event
     
     // Space + Left Mouse Button for panning (Mac-friendly)
     if (this.state.isSpacePressed && e.button === 0) {
+      e.stopPropagation(); // Handle panning
       this.state.isPanning = true;
       this.state.lastMousePosition = { x: e.clientX, y: e.clientY };
       // Update cursor to grabbing
@@ -103,6 +104,7 @@ class MouseInteractionManager {
     }
     
     if (e.button === 1) { // Middle mouse button for panning (for mice that have it)
+      e.stopPropagation(); // Handle middle mouse panning
       this.state.isPanning = true;
       this.state.lastMousePosition = { x: e.clientX, y: e.clientY };
       return true;
@@ -110,11 +112,13 @@ class MouseInteractionManager {
 
     if (commandId && controlPoint && !this.state.isSpacePressed) {
       // Dragging control point
+      e.stopPropagation(); // Handle control point dragging
       this.state.draggingControlPoint = { commandId, point: controlPoint };
       pushToHistory();
       return true;
     } else if (commandId && !this.state.isSpacePressed) {
       // Selecting/dragging a command point
+      e.stopPropagation(); // Handle command point interaction
       let finalSelectedIds: string[] = [];
       
       if (e.shiftKey) {
@@ -173,10 +177,12 @@ class MouseInteractionManager {
       return false;
     } else if (!commandId && !controlPoint && !this.state.isSpacePressed) {
       // Clear selection only if clicking on empty space (no command, no control point)
+      e.stopPropagation(); // Handle selection clearing
       clearSelection();
       return true;
     }
 
+    // Don't stop propagation for unhandled events - let other plugins handle them
     return false;
   };
 

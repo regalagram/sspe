@@ -52,8 +52,8 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
             {handle.type === 'corner' ? (
               // Square corner handles for scaling
               <rect
-                x={handle.position.x - (currentSize - handleSize) / 2}
-                y={handle.position.y - (currentSize - handleSize) / 2}
+                x={handle.position.x - currentSize / 2}
+                y={handle.position.y - currentSize / 2}
                 width={currentSize}
                 height={currentSize}
                 fill="white"
@@ -69,8 +69,8 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
             ) : (
               // Circular rotation handles
               <circle
-                cx={handle.position.x + handleSize / 2}
-                cy={handle.position.y + handleSize / 2}
+                cx={handle.position.x}
+                cy={handle.position.y}
                 r={currentSize / 2}
                 fill="white"
                 stroke="#28a745"
@@ -88,8 +88,8 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
             {handle.type === 'corner' && isHovered && (
               <g opacity="0.7">
                 <circle
-                  cx={handle.position.x + handleSize / 2}
-                  cy={handle.position.y + handleSize / 2}
+                  cx={handle.position.x}
+                  cy={handle.position.y}
                   r={handleSize * 2}
                   fill="none"
                   stroke="#28a745"
@@ -98,8 +98,8 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
                   pointerEvents="none"
                 />
                 <text
-                  x={handle.position.x + handleSize / 2}
-                  y={handle.position.y + handleSize / 2 + 3 / viewport.zoom}
+                  x={handle.position.x}
+                  y={handle.position.y + 3 / viewport.zoom}
                   textAnchor="middle"
                   fontSize={8 / viewport.zoom}
                   fill="#28a745"

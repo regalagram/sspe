@@ -24,27 +24,33 @@ const TransformPlugin: React.FC = () => {
 
   // Update transform state when selection or paths change
   useEffect(() => {
-    console.log('Transform Plugin: Selection changed', {
+    console.log('🔄 Transform Plugin: Selection changed', {
       selectedCommands: selection.selectedCommands,
       selectedSubPaths: selection.selectedSubPaths,
-      pathsCount: paths.length
+      pathsCount: paths.length,
+      viewportZoom: viewport.zoom
     });
     
     // Always pass the current store state to transform manager
     transformManager.setEditorStore(useEditorStore.getState());
     
     const hasValidSelection = transformManager.hasValidSelection();
-    console.log('Transform Plugin: Has valid selection:', hasValidSelection);
+    console.log('🔄 Transform Plugin: Has valid selection:', hasValidSelection);
     
     if (hasValidSelection) {
+      console.log('🔄 Transform Plugin: Updating transform state...');
       transformManager.updateTransformState();
       const newBounds = transformManager.getBounds();
       const newHandles = transformManager.getHandles();
-      console.log('Transform Plugin: Updated bounds and handles', { newBounds, handlesCount: newHandles.length });
+      console.log('🔄 Transform Plugin: Updated bounds and handles', { 
+        newBounds, 
+        handlesCount: newHandles.length,
+        handlesDetails: newHandles.map(h => ({ id: h.id, type: h.type, position: h.position }))
+      });
       setBounds(newBounds);
       setHandles(newHandles);
     } else {
-      console.log('Transform Plugin: Clearing bounds and handles');
+      console.log('🔄 Transform Plugin: Clearing bounds and handles');
       setBounds(null);
       setHandles([]);
     }
