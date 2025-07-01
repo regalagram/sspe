@@ -3,6 +3,7 @@ import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { subPathToString, getContrastColor, subPathToStringInContext, findSubPathAtPoint } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
+import { transformManager } from '../transform/TransformManager';
 
 export const PathRenderer: React.FC = () => {
   const { 
@@ -59,6 +60,9 @@ export const PathRenderer: React.FC = () => {
         svgElement: svgElement,
       });
       
+      // Notify transform manager that movement started (subpath drag)
+      transformManager.setMoving(true);
+      
       // Save to history when starting to drag
       pushToHistory();
     }
@@ -92,6 +96,11 @@ export const PathRenderer: React.FC = () => {
 
   // Handle mouse up to stop dragging
   const handleMouseUp = useCallback(() => {
+    // Notify transform manager that movement ended
+    if (dragState.isDragging) {
+      transformManager.setMoving(false);
+    }
+    
     setDragState({
       isDragging: false,
       subPathId: null,
@@ -99,7 +108,7 @@ export const PathRenderer: React.FC = () => {
       lastPoint: null,
       svgElement: null,
     });
-  }, []);
+  }, [dragState.isDragging]);
 
   // Add global mouse event listeners for dragging
   React.useEffect(() => {

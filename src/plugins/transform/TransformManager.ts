@@ -32,6 +32,8 @@ interface TransformState {
   currentPoint: Point | null; // Track current mouse position during transform
   initialBounds: TransformBounds | null;
   initialCommands: { [commandId: string]: SVGCommand };
+  onStateChange?: () => void; // Callback for state changes
+  isMoving: boolean; // Track if selection is being moved (drag & drop)
 }
 
 export class TransformManager {
@@ -44,7 +46,9 @@ export class TransformManager {
     dragStart: null,
     currentPoint: null,
     initialBounds: null,
-    initialCommands: {}
+    initialCommands: {},
+    onStateChange: undefined,
+    isMoving: false
   };
 
   private editorStore: any = null;
@@ -288,6 +292,28 @@ export class TransformManager {
       handlesCount: this.state.handles.length,
       handles: this.state.handles.map(h => ({ id: h.id, position: h.position }))
     });
+
+    // Call the state change callback if defined
+    if (this.state.onStateChange) {
+      this.state.onStateChange();
+    }
+  }
+
+  // Set callback for state changes (useful for React components)
+  setStateChangeCallback(callback: () => void) {
+    this.state.onStateChange = callback;
+  }
+
+  // Clear the state change callback
+  clearStateChangeCallback() {
+    this.state.onStateChange = undefined;
+  }
+
+  // Trigger state change callback if set
+  private triggerStateChange() {
+    if (this.state.onStateChange) {
+      this.state.onStateChange();
+    }
   }
 
   // Check if there's a valid selection for transformation
@@ -312,6 +338,17 @@ export class TransformManager {
     });
     
     return hasValidSelection;
+  }
+
+  // Check if a point is within the current bounds
+  private isPointInBounds(point: Point): boolean {
+    if (!this.state.bounds) return false;
+    
+    const { x, y, width, height } = this.state.bounds;
+    return point.x >= x && 
+           point.x <= x + width && 
+           point.y >= y && 
+           point.y <= y + height;
   }
 
   // Get current bounds
@@ -378,6 +415,15 @@ export class TransformManager {
       return true;
     }
 
+    // Check if clicking within the bounds (for potential move operation)
+    if (this.isPointInBounds(clickPoint)) {
+      console.log('TransformManager: Click within bounds - potential move operation');
+      // Don't handle the event here, but prepare for potential movement
+      // The actual movement will be handled by other plugins (like mouse-interaction)
+      // We just need to be ready to hide handles when movement starts
+      return false; // Let other plugins handle the movement
+    }
+
     console.log('TransformManager: No handle found at click point');
     return false;
   };
@@ -401,6 +447,28 @@ export class TransformManager {
     this.endTransform();
     return true;
   };
+
+  // Check if handles should be visible (hidden during active transformation or movement)
+  shouldShowHandles(): boolean {
+    return !this.state.isTransforming && !this.state.isMoving;
+  }
+
+  // Methods to control movement state (called by other plugins like mouse-interaction)
+  setMoving(isMoving: boolean) {
+    if (this.state.isMoving !== isMoving) {
+      console.log('TransformManager: Movement state changed', { 
+        from: this.state.isMoving, 
+        to: isMoving 
+      });
+      this.state.isMoving = isMoving;
+      this.triggerStateChange();
+    }
+  }
+
+  // Check if currently moving selection
+  isMoving(): boolean {
+    return this.state.isMoving;
+  }
 
   // Helper methods
   private findCommandById(commandId: string, paths: any[]): SVGCommand | null {
@@ -497,6 +565,9 @@ export class TransformManager {
       handle: handle.id,
       handleType: handle.type
     });
+
+    // Trigger state change to hide handles
+    this.triggerStateChange();
   }
 
   private updateTransform(currentPoint: Point) {
@@ -713,6 +784,9 @@ export class TransformManager {
     this.state.currentPoint = null;
     this.state.initialBounds = null;
     this.state.initialCommands = {};
+
+    // Trigger state change to show handles again
+    this.triggerStateChange();
   }
 
   private storeInitialCommands() {

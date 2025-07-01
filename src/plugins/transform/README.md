@@ -65,6 +65,8 @@ El plugin de transformación permite escalar y rotar selecciones directamente en
 - **Informativo**: Estado actual visible durante la transformación
 - **Diferenciación visual**: Handles de esquina cuadrados azules vs handle de rotación circular verde
 - **Línea guía**: Línea punteada conecta el handle de rotación con el cuadro delimitador
+- **UI limpia durante transformación**: Los handles y cuadro delimitador se ocultan durante el drag para mejor visibilidad
+- **Feedback instantáneo**: Los controles reaparecen inmediatamente al soltar el mouse
 
 ## Arquitectura
 

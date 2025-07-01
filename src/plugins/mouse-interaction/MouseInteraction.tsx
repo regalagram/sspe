@@ -3,6 +3,7 @@ import { Plugin, MouseEventHandler, MouseEventContext } from '../../core/PluginS
 import { useEditorStore } from '../../store/editorStore';
 import { snapToGrid, getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
+import { transformManager } from '../transform/TransformManager';
 
 interface MouseInteractionState {
   draggingCommand: string | null;
@@ -111,6 +112,10 @@ class MouseInteractionManager {
     if (commandId && controlPoint && !this.state.isSpacePressed) {
       // Dragging control point
       this.state.draggingControlPoint = { commandId, point: controlPoint };
+      
+      // Notify transform manager that movement started (control point drag)
+      transformManager.setMoving(true);
+      
       pushToHistory();
       return true;
     } else if (commandId && !this.state.isSpacePressed) {
@@ -158,6 +163,10 @@ class MouseInteractionManager {
       
       this.state.dragStartPositions = positions;
       this.state.dragOrigin = this.getSVGPoint(e, context.svgRef);
+      
+      // Notify transform manager that movement started
+      transformManager.setMoving(true);
+      
       pushToHistory();
       return true;
     } else if (mode.current === 'create' && mode.createMode && !this.state.isSpacePressed) {
@@ -236,12 +245,19 @@ class MouseInteractionManager {
 
   handleMouseUp = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
     const wasHandling = !!(this.state.draggingCommand || this.state.draggingControlPoint || this.state.isPanning);
+    const wasDraggingCommand = !!this.state.draggingCommand;
+    const wasDraggingControlPoint = !!this.state.draggingControlPoint;
 
     this.state.draggingCommand = null;
     this.state.draggingControlPoint = null;
     this.state.isPanning = false;
     this.state.dragStartPositions = {};
     this.state.dragOrigin = null;
+
+    // Notify transform manager that movement ended
+    if (wasDraggingCommand || wasDraggingControlPoint) {
+      transformManager.setMoving(false);
+    }
 
     // Reset cursor if space is still pressed but not panning
     if (this.state.isSpacePressed) {

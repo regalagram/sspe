@@ -9,6 +9,7 @@ const TransformPlugin: React.FC = () => {
   const [handles, setHandles] = useState<TransformHandle[]>([]);
   const [isTransforming, setIsTransforming] = useState(false);
   const [transformMode, setTransformMode] = useState<string | null>(null);
+  const [forceUpdate, setForceUpdate] = useState(0); // Force re-render when handles should hide/show
   const selection = useEditorStore((state) => state.selection);
   const paths = useEditorStore((state) => state.paths);
   const viewport = useEditorStore((state) => state.viewport);
@@ -17,7 +18,17 @@ const TransformPlugin: React.FC = () => {
   useEffect(() => {
     console.log('Transform Plugin: Initializing transform manager');
     transformManager.setEditorStore(useEditorStore.getState());
+    
+    // Set up callback for transform state changes (hide/show handles)
+    transformManager.setStateChangeCallback(() => {
+      console.log('Transform Plugin: State change callback triggered');
+      setForceUpdate(prev => prev + 1);
+      setIsTransforming(transformManager.isTransforming());
+      setTransformMode(transformManager.getTransformMode());
+    });
+    
     return () => {
+      transformManager.clearStateChangeCallback();
       transformManager.cleanup();
     };
   }, []);
@@ -65,14 +76,11 @@ const TransformPlugin: React.FC = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       const isCurrentlyTransforming = transformManager.isTransforming();
-      setIsTransforming(isCurrentlyTransforming);
       
       if (isCurrentlyTransforming) {
+        // Only update bounds/handles during transformation for live feedback
         setBounds(transformManager.getBounds());
         setHandles(transformManager.getHandles());
-        setTransformMode(transformManager.getTransformMode());
-      } else {
-        setTransformMode(null);
       }
     }, 16); // ~60fps
 

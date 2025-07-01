@@ -14,11 +14,19 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
   console.log('TransformHandles: Rendering with', { 
     bounds, 
     handlesCount: handles.length,
-    handles: handles.map(h => ({ id: h.id, position: h.position }))
+    handles: handles.map(h => ({ id: h.id, position: h.position })),
+    shouldShow: transformManager.shouldShowHandles(),
+    isTransforming: transformManager.isTransforming()
   });
 
   if (!bounds || handles.length === 0) {
     console.log('TransformHandles: Not rendering - no bounds or handles');
+    return null;
+  }
+
+  // Hide handles during active transformation (drag operations)
+  if (!transformManager.shouldShowHandles()) {
+    console.log('TransformHandles: Hiding handles during transformation');
     return null;
   }
 
