@@ -1,5 +1,5 @@
 import React, { MouseEvent, WheelEvent } from 'react';
-import { getRawSVGPoint } from '../utils/transform-utils';
+import { getSVGPoint } from '../utils/transform-utils';
 
 export interface SVGPoint {
   x: number;
@@ -81,8 +81,8 @@ export class PluginManager {
   }
 
   getSVGPoint(e: MouseEvent<SVGElement>): SVGPoint {
-    if (!this.svgRef) return { x: 0, y: 0 };
-    return getRawSVGPoint(e, this.svgRef);
+    if (!this.svgRef || !this.editorStore) return { x: 0, y: 0 };
+    return getSVGPoint(e, this.svgRef, this.editorStore.viewport);
   }
 
   handleMouseEvent(
@@ -98,11 +98,24 @@ export class PluginManager {
       controlPoint
     };
 
+    // Check if clicking on a transform handle
+    const target = e.target as SVGElement;
+    const handleType = target.getAttribute('data-handle-type');
+    const handleId = target.getAttribute('data-handle-id');
+    
     // Process plugins in order, stop if any plugin handles the event
-    // If there's a commandId, prioritize MouseInteraction plugin
     let pluginsToProcess = this.getEnabledPlugins();
     
-    if (commandId && eventType === 'mouseDown') {
+    if (handleType === 'transform' && eventType === 'mouseDown') {
+      // When clicking on a transform handle, prioritize Transform plugin
+      const transformPlugin = pluginsToProcess.find(p => p.id === 'transform');
+      const otherPlugins = pluginsToProcess.filter(p => p.id !== 'transform');
+      
+      if (transformPlugin) {
+        console.log('PluginSystem: Prioritizing Transform plugin for handle', handleId);
+        pluginsToProcess = [transformPlugin, ...otherPlugins];
+      }
+    } else if (commandId && eventType === 'mouseDown') {
       // When clicking on a command, process MouseInteraction first, then others
       const mouseInteractionPlugin = pluginsToProcess.find(p => p.id === 'mouse-interaction');
       const otherPlugins = pluginsToProcess.filter(p => p.id !== 'mouse-interaction');
@@ -131,7 +144,10 @@ export class PluginManager {
           break;
       }
 
-      if (handled) return true;
+      if (handled) {
+        console.log(`PluginSystem: Event ${eventType} handled by plugin: ${plugin.id}`);
+        return true;
+      }
     }
 
     return false;

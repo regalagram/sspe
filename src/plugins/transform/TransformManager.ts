@@ -1,7 +1,9 @@
 import { MouseEvent } from 'react';
 import { MouseEventHandler, MouseEventContext } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { SVGCommand, Point } from '../../types';
+import { SVGCommand, Point, BoundingBox } from '../../types';
+import { calculateGlobalViewBox } from '../../utils/viewbox-utils';
+import { pathToString, subPathToString } from '../../utils/path-utils';
 
 export interface TransformBounds {
   x: number;
@@ -75,217 +77,150 @@ export class TransformManager {
     document.removeEventListener('keyup', this.handleKeyUp);
   }
 
-  // Calculate bounds from selected commands or subpaths
+  // Calculate bounds from selected commands or subpaths using DOM-based calculation
   calculateBounds(): TransformBounds | null {
-    console.log('=== TransformManager: calculateBounds START ===');
-    
-    const store = this.editorStore || useEditorStore.getState();
-    console.log('🔍 Store state check:', {
-      hasStore: !!store,
-      selection: store?.selection,
-      pathsCount: store?.paths?.length || 0
-    });
-    
-    // Try DOM-based calculation first (more accurate)
-    console.log('🌐 DOM CALCULATION: Starting DOM-based bounds calculation using SVG getBBox()...');
-    const domBounds = this.calculateBoundsWithDOM();
-    
-    if (domBounds) {
-      console.log('🟢 DOM CALCULATION SUCCESS!', {
-        method: '🌐 DOM_NATIVE (getBBox)',
-        bounds: domBounds,
-        precision: 'HIGH - includes curve calculations',
-        advantage: 'Browser-native SVG geometry calculation'
-      });
-      console.log('=== TransformManager: calculateBounds END (DOM SUCCESS) ===');
-      return domBounds;
-    }
-
-    // Fallback to manual calculation
-    console.log('🟡 DOM CALCULATION FAILED: Falling back to manual point-based calculation');
-    const manualBounds = this.calculateBoundsManual();
-    
-    if (manualBounds) {
-      console.log('🟠 MANUAL CALCULATION SUCCESS!', {
-        method: '📐 MANUAL_FALLBACK (point iteration)',
-        bounds: manualBounds,
-        precision: 'MEDIUM - control points only',
-        reason: 'DOM calculation failed or returned invalid bounds'
-      });
-    } else {
-      console.log('🔴 BOTH CALCULATIONS FAILED: Neither DOM nor manual bounds calculation succeeded');
-    }
-    
-    console.log('=== TransformManager: calculateBounds END (MANUAL FALLBACK) ===');
-    return manualBounds;
-  }
-
-  // Manual bounds calculation (fallback)
-  private calculateBoundsManual(): TransformBounds | null {
     const store = this.editorStore || useEditorStore.getState();
     const { selection, paths } = store;
     
-<<<<<<< HEAD
-    console.log('📐 MANUAL CALCULATION START: Using point iteration for bounds');
-    console.log('📐 MANUAL METHOD: Selection state', { 
-      selectedCommands: selection.selectedCommands, 
-      selectedSubPaths: selection.selectedSubPaths,
-      pathsCount: paths.length,
-      technique: 'Min/Max point iteration',
-      precision: 'MEDIUM (control points only)'
-=======
     console.log('TransformManager: calculateBounds called', { 
       selectedCommands: selection.selectedCommands, 
       selectedSubPaths: selection.selectedSubPaths,
       pathsCount: paths.length 
->>>>>>> 0b6e7ef (feat: enhance Transform plugin with detailed logging and selection validation for better user feedback)
     });
     
-    const allPoints: Point[] = [];
-
-    // Collect points from selected commands (only if multiple commands)
-    if (selection.selectedCommands.length > 1) {
-<<<<<<< HEAD
-      console.log('📐 MANUAL METHOD: Processing multiple selected commands');
-=======
-      console.log('TransformManager: Processing multiple selected commands');
->>>>>>> 0b6e7ef (feat: enhance Transform plugin with detailed logging and selection validation for better user feedback)
-      for (const commandId of selection.selectedCommands) {
-        const command = this.findCommandById(commandId, paths);
-        console.log('TransformManager: Found command', { commandId, command });
-        if (command) {
-          // Include all points (main command point + control points) for visual area calculation
-          // This gives us the complete visual bounds including curve control points
-          if (command.x !== undefined && command.y !== undefined) {
-            allPoints.push({ x: command.x, y: command.y });
-          }
-          if (command.x1 !== undefined && command.y1 !== undefined) {
-            allPoints.push({ x: command.x1, y: command.y1 });
-          }
-          if (command.x2 !== undefined && command.y2 !== undefined) {
-            allPoints.push({ x: command.x2, y: command.y2 });
-          }
-        }
-      }
-    }
-
-    // Collect points from selected subpaths
-    if (selection.selectedSubPaths.length > 0) {
-<<<<<<< HEAD
-      console.log('📐 MANUAL METHOD: Processing selected subpaths');
-=======
-      console.log('TransformManager: Processing selected subpaths');
->>>>>>> 0b6e7ef (feat: enhance Transform plugin with detailed logging and selection validation for better user feedback)
-      for (const subPathId of selection.selectedSubPaths) {
-        const subPath = this.findSubPathById(subPathId, paths);
-        console.log('TransformManager: Found subpath', { subPathId, subPath });
-        if (subPath) {
-          for (const command of subPath.commands) {
-            // Include all points (main command point + control points) for visual area calculation
-            if (command.x !== undefined && command.y !== undefined) {
-              allPoints.push({ x: command.x, y: command.y });
-            }
-            // Include control points for curves to get the complete visual bounds
-            if (command.x1 !== undefined && command.y1 !== undefined) {
-              allPoints.push({ x: command.x1, y: command.y1 });
-            }
-            if (command.x2 !== undefined && command.y2 !== undefined) {
-              allPoints.push({ x: command.x2, y: command.y2 });
-            }
-          }
-        }
-      }
-    }
-
-<<<<<<< HEAD
-    console.log('📐 MANUAL METHOD: Collected points', {
-      totalPoints: allPoints.length,
-      samplePoints: allPoints.slice(0, 3),
-      technique: 'Point iteration'
-    });
-
-    if (allPoints.length === 0) {
-      console.log('📐 MANUAL METHOD ABORT: No points found');
-=======
-    console.log('TransformManager: Collected points', allPoints);
-
-    if (allPoints.length === 0) {
-      console.log('TransformManager: No points found, returning null');
->>>>>>> 0b6e7ef (feat: enhance Transform plugin with detailed logging and selection validation for better user feedback)
+    // Create a temporary SVG element to calculate bounds using DOM
+    const tempSvg = this.createTempSVGForSelection(paths, selection);
+    if (!tempSvg) {
+      console.log('TransformManager: No valid SVG element created for selection');
       return null;
     }
 
-    // For meaningful transformation, we need at least 2 points to create a bounding area
-    if (allPoints.length < 2) {
-<<<<<<< HEAD
-      console.log('📐 MANUAL METHOD ABORT: Insufficient points for transformation');
+    // Use the DOM-based viewbox calculation
+    const viewBoxResult = calculateGlobalViewBox(tempSvg);
+    
+    // Clean up
+    if (tempSvg.parentNode) {
+      tempSvg.parentNode.removeChild(tempSvg);
+    }
+
+    if (!viewBoxResult || viewBoxResult.width <= 0 || viewBoxResult.height <= 0) {
+      console.log('TransformManager: No valid bounding box found from DOM calculation');
       return null;
     }
 
-    // Check if all points are in the same position (no transformable area)
-    const uniquePoints = this.getUniquePoints(allPoints);
-    if (uniquePoints.length < 2) {
-      console.log('📐 MANUAL METHOD ABORT: All points are in the same position, no transformable area', {
-        totalPoints: allPoints.length,
-        uniquePoints: uniquePoints.length,
-        firstPoint: allPoints[0]
-      });
-=======
-      console.log('TransformManager: Insufficient points for transformation, returning null');
->>>>>>> 0b6e7ef (feat: enhance Transform plugin with detailed logging and selection validation for better user feedback)
-      return null;
-    }
+    // Parse the viewBox to get coordinates
+    const viewBoxParts = viewBoxResult.viewBox.split(' ').map(Number);
+    const [x, y, width, height] = viewBoxParts;
 
-    // Calculate bounding box
-    console.log('📐 MANUAL METHOD: Calculating min/max bounds from', allPoints.length, 'points');
-    const minX = Math.min(...allPoints.map(p => p.x));
-    const maxX = Math.max(...allPoints.map(p => p.x));
-    const minY = Math.min(...allPoints.map(p => p.y));
-    const maxY = Math.max(...allPoints.map(p => p.y));
+    // Convert to TransformBounds (remove padding that calculateGlobalViewBox adds)
+    const padding = Math.max(2, Math.max(width, height) * 0.05);
+    const actualX = x + padding;
+    const actualY = y + padding;
+    const actualWidth = width - padding * 2;
+    const actualHeight = height - padding * 2;
 
-    const width = maxX - minX;
-    const height = maxY - minY;
-
-    // Ensure the bounding box has a minimum size for meaningful transformation
-    const minSize = 1; // Minimum 1 unit in any dimension
-    if (width < minSize && height < minSize) {
-      console.log('📐 MANUAL METHOD ABORT: Bounding box too small for transformation', {
-        width,
-        height,
-        minSize
-      });
-      return null;
-    }
-
-    const result = {
-      x: minX,
-      y: minY,
-      width,
-      height,
+    const transformBounds: TransformBounds = {
+      x: actualX,
+      y: actualY,
+      width: actualWidth,
+      height: actualHeight,
       center: {
-        x: minX + width / 2,
-        y: minY + height / 2
+        x: actualX + actualWidth / 2,
+        y: actualY + actualHeight / 2
       }
     };
 
-    console.log('🟠 MANUAL METHOD SUCCESS: Calculated bounds using point iteration', {
-      result,
-      method: 'MANUAL FALLBACK',
-      limitation: 'Does not include true curve geometry'
-    });
+    console.log('TransformManager: Final transform bounds from DOM calculation', transformBounds);
+    return transformBounds;
+  }
 
-    return result;
+  // Create a temporary SVG element containing only the selected elements
+  private createTempSVGForSelection(paths: any[], selection: any): SVGSVGElement | null {
+    if (typeof document === 'undefined') return null;
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const tempSvg = document.createElementNS(svgNS, 'svg') as SVGSVGElement;
+    tempSvg.style.position = 'absolute';
+    tempSvg.style.top = '-9999px';
+    tempSvg.style.left = '-9999px';
+    tempSvg.style.width = '1px';
+    tempSvg.style.height = '1px';
+    document.body.appendChild(tempSvg);
+
+    let hasContent = false;
+
+    // For selected commands (only if multiple commands for meaningful transformation)
+    if (selection.selectedCommands.length > 1) {
+      console.log('TransformManager: Creating DOM elements for multiple selected commands');
+      
+      // Group commands by subpath to create proper path elements
+      const commandsBySubPath = new Map();
+      
+      for (const commandId of selection.selectedCommands) {
+        const command = this.findCommandById(commandId, paths);
+        if (command) {
+          // Find which subpath this command belongs to
+          for (const path of paths) {
+            for (const subPath of path.subPaths) {
+              if (subPath.commands.some((cmd: any) => cmd.id === commandId)) {
+                if (!commandsBySubPath.has(subPath.id)) {
+                  commandsBySubPath.set(subPath.id, []);
+                }
+                commandsBySubPath.get(subPath.id).push(command);
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      // Create path elements for each subpath that has selected commands
+      for (const [subPathId, commands] of commandsBySubPath) {
+        const pathElement = document.createElementNS(svgNS, 'path');
+        // Create a temporary subpath with only the selected commands
+        const tempSubPath = { 
+          id: subPathId + '_temp', 
+          commands: commands,
+          closed: false // Default value for temporary subpath
+        };
+        const pathData = subPathToString(tempSubPath);
+        if (pathData) {
+          pathElement.setAttribute('d', pathData);
+          tempSvg.appendChild(pathElement);
+          hasContent = true;
+        }
+      }
+    }
+    // For selected subpaths
+    else if (selection.selectedSubPaths.length > 0) {
+      console.log('TransformManager: Creating DOM elements for selected subpaths');
+      
+      for (const subPathId of selection.selectedSubPaths) {
+        const subPath = this.findSubPathById(subPathId, paths);
+        if (subPath) {
+          const pathElement = document.createElementNS(svgNS, 'path');
+          const pathData = subPathToString(subPath);
+          if (pathData) {
+            pathElement.setAttribute('d', pathData);
+            tempSvg.appendChild(pathElement);
+            hasContent = true;
+          }
+        }
+      }
+    }
+
+    if (!hasContent) {
+      document.body.removeChild(tempSvg);
+      return null;
+    }
+
+    return tempSvg;
   }
 
   // Generate transform handles based on current bounds
   generateHandles(): TransformHandle[] {
     if (!this.state.bounds) return [];
 
-<<<<<<< HEAD
-    const { x, y, width, height, center } = this.state.bounds;
-    const handleSize = 8;
-    const rotationOffset = 30; // Increased distance to avoid conflicts
-=======
     const store = this.editorStore || useEditorStore.getState();
     const { viewport } = store;
     const { x, y, width, height } = this.state.bounds;
@@ -293,71 +228,33 @@ export class TransformManager {
     // Use the same handleSize calculation as TransformHandles for consistency
     const handleSize = 8 / viewport.zoom;
     const rotationHandleOffset = 30 / viewport.zoom; // Distance above the bounding box
->>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
 
     const handles: TransformHandle[] = [
       // Corner handles for scaling
       {
         id: 'nw',
         type: 'corner',
-        position: { x: x, y: y },
+        position: { x: x - handleSize / 2, y: y - handleSize / 2 },
         cursor: 'nw-resize'
       },
       {
         id: 'ne',
-        type: 'corner', 
-        position: { x: x + width, y: y },
+        type: 'corner',
+        position: { x: x + width - handleSize / 2, y: y - handleSize / 2 },
         cursor: 'ne-resize'
       },
       {
         id: 'sw',
         type: 'corner',
-        position: { x: x, y: y + height },
+        position: { x: x - handleSize / 2, y: y + height - handleSize / 2 },
         cursor: 'sw-resize'
       },
       {
         id: 'se',
         type: 'corner',
-        position: { x: x + width, y: y + height },
+        position: { x: x + width - handleSize / 2, y: y + height - handleSize / 2 },
         cursor: 'se-resize'
       },
-<<<<<<< HEAD
-      // Rotation handles (positioned further outside the corners)
-      {
-        id: 'rotate-nw',
-        type: 'rotation',
-        position: { x: x - rotationOffset, y: y - rotationOffset },
-        cursor: 'grab'
-      },
-      {
-        id: 'rotate-ne',
-        type: 'rotation',
-        position: { x: x + width + rotationOffset, y: y - rotationOffset },
-        cursor: 'grab'
-      },
-      {
-        id: 'rotate-sw',
-        type: 'rotation',
-        position: { x: x - rotationOffset, y: y + height + rotationOffset },
-        cursor: 'grab'
-      },
-      {
-        id: 'rotate-se',
-        type: 'rotation',
-        position: { x: x + width + rotationOffset, y: y + height + rotationOffset },
-        cursor: 'grab'
-      }
-    ];
-
-    console.log('🎯 Generated handles:', {
-      totalHandles: handles.length,
-      cornerHandles: handles.filter(h => h.type === 'corner').length,
-      rotationHandles: handles.filter(h => h.type === 'rotation').length,
-      bounds: this.state.bounds,
-      rotationOffset
-    });
-
-=======
       // Rotation handle - positioned above the center of the top edge
       {
         id: 'rotation',
@@ -370,18 +267,26 @@ export class TransformManager {
       }
     ];
 
->>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
     return handles;
   }
 
   // Update transform state
   updateTransformState() {
     console.log('TransformManager: updateTransformState called');
+    
+    // Ensure we have the latest store state
+    if (!this.editorStore) {
+      console.warn('TransformManager: No editor store available');
+      return;
+    }
+    
     this.state.bounds = this.calculateBounds();
     this.state.handles = this.generateHandles();
+    
     console.log('TransformManager: updateTransformState result', {
       bounds: this.state.bounds,
-      handlesCount: this.state.handles.length
+      handlesCount: this.state.handles.length,
+      handles: this.state.handles.map(h => ({ id: h.id, position: h.position }))
     });
   }
 
@@ -447,117 +352,53 @@ export class TransformManager {
 
   // Mouse event handlers
   handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
-    const store = this.editorStore || useEditorStore.getState();
-    
-    console.log('🖱️ TransformManager handleMouseDown called', {
-      point: context.svgPoint,
+    console.log('TransformManager: handleMouseDown called', { 
       hasValidSelection: this.hasValidSelection(),
-      bounds: this.state.bounds,
-      handlesCount: this.state.handles.length,
-      selection: {
-        selectedCommands: store.selection.selectedCommands,
-        selectedSubPaths: store.selection.selectedSubPaths
-      },
-      contextInfo: {
-        commandId: context.commandId,
-        controlPoint: context.controlPoint
-      }
+      svgPoint: context.svgPoint 
     });
-
+    
     if (!this.hasValidSelection()) {
-      console.log('🖱️ TransformManager: No valid selection, skipping', {
-        selectedCommands: store.selection.selectedCommands.length,
-        selectedSubPaths: store.selection.selectedSubPaths.length,
-        reason: 'Need at least 1 subpath OR 2+ commands'
-      });
-      return false;
-    }
-
-    // Only handle events when there's no specific command/control point interaction
-    // This allows MouseInteraction to handle direct point manipulation
-    if (context.commandId || context.controlPoint) {
-      console.log('🖱️ TransformManager: Command/control point detected, letting MouseInteraction handle it', {
-        commandId: context.commandId,
-        controlPoint: context.controlPoint
-      });
+      console.log('TransformManager: No valid selection, returning false');
       return false;
     }
 
     // Check if clicking on a transform handle
     const clickPoint = context.svgPoint;
-    
-    // Log all available handles for debugging
-    console.log('🖱️ TransformManager: Available handles:', this.state.handles.map(h => ({
-      id: h.id,
-      type: h.type,
-      position: h.position,
-      distanceFromClick: Math.sqrt(
-        Math.pow(h.position.x - clickPoint.x, 2) + 
-        Math.pow(h.position.y - clickPoint.y, 2)
-      )
-    })));
-    
     const handle = this.getHandleAtPoint(clickPoint);
     
+    console.log('TransformManager: Handle detection', { 
+      clickPoint, 
+      handle,
+      availableHandles: this.state.handles.map(h => ({ id: h.id, position: h.position }))
+    });
+    
     if (handle) {
-      console.log('🖱️ TransformManager: Handle found and starting transform!', {
-        handleId: handle.id,
-        handleType: handle.type,
-        expectedMode: handle.type === 'corner' ? 'scale' : 'rotate',
-        clickPoint
-      });
-      
+      console.log('TransformManager: Starting transform with handle', handle.id);
       this.startTransform(handle, clickPoint);
-      
-      // Prevent event propagation to other plugins
-      e.stopPropagation();
-      e.preventDefault();
-      
       return true;
     }
 
-    console.log('🖱️ TransformManager: No handle found at point:', clickPoint);
+    console.log('TransformManager: No handle found at click point');
     return false;
   };
 
   handleMouseMove = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
-    if (!this.state.isTransforming) {
-      return false;
-    }
+    if (!this.state.isTransforming) return false;
 
-    console.log('🖱️ TransformManager handleMouseMove during transform:', {
-      mode: this.state.mode,
-      activeHandle: this.state.activeHandle,
+    console.log('TransformManager: handleMouseMove during transform', {
       currentPoint: context.svgPoint,
-      isTransforming: this.state.isTransforming
+      mode: this.state.mode
     });
 
     this.updateTransform(context.svgPoint);
-    
-    // Prevent event propagation during transform
-    e.stopPropagation();
-    e.preventDefault();
-    
     return true;
   };
 
   handleMouseUp = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
-    if (!this.state.isTransforming) {
-      return false;
-    }
+    if (!this.state.isTransforming) return false;
 
-    console.log('🖱️ TransformManager handleMouseUp ending transform:', {
-      mode: this.state.mode,
-      activeHandle: this.state.activeHandle,
-      finalPoint: context.svgPoint
-    });
-
+    console.log('TransformManager: handleMouseUp, ending transform');
     this.endTransform();
-    
-    // Prevent event propagation
-    e.stopPropagation();
-    e.preventDefault();
-    
     return true;
   };
 
@@ -587,55 +428,51 @@ export class TransformManager {
   }
 
   private getHandleAtPoint(point: Point): TransformHandle | null {
-    const handleSize = 8;
-    const tolerance = handleSize * 1.5; // Slightly larger tolerance for easier clicking
+    const store = this.editorStore || useEditorStore.getState();
+    const { viewport } = store;
+    
+    // Use the same handleSize calculation as generateHandles for consistency
+    const handleSize = 8 / viewport.zoom;
+    
+    // Tolerance should be larger when zoomed out, smaller when zoomed in
+    const tolerance = 12 / viewport.zoom; 
 
-    console.log('🎯 getHandleAtPoint: Checking', {
-      clickPoint: point,
+    console.log('TransformManager: getHandleAtPoint checking', {
+      point,
+      viewport,
+      handlesCount: this.state.handles.length,
+      handleSize,
       tolerance,
-      totalHandles: this.state.handles.length
+      zoom: viewport.zoom
     });
 
-    // Sort handles by distance to prioritize closer ones
-    const handlesWithDistance = this.state.handles.map(handle => {
-      const dx = point.x - handle.position.x;
-      const dy = point.y - handle.position.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+    for (const handle of this.state.handles) {
+      // Calculate the center of the handle using the same logic as the render
+      const handleCenterX = handle.position.x + handleSize / 2;
+      const handleCenterY = handle.position.y + handleSize / 2;
       
-      return { handle, distance };
-    }).sort((a, b) => a.distance - b.distance);
+      const dx = point.x - handleCenterX;
+      const dy = point.y - handleCenterY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
 
-    console.log('🎯 getHandleAtPoint: Handle distances:', handlesWithDistance.map(h => ({
-      id: h.handle.id,
-      type: h.handle.type,
-      position: h.handle.position,
-      distance: h.distance,
-      withinTolerance: h.distance <= tolerance
-    })));
+      console.log('TransformManager: Checking handle', {
+        handleId: handle.id,
+        handlePosition: handle.position,
+        handleCenter: { x: handleCenterX, y: handleCenterY },
+        clickPoint: point,
+        delta: { dx, dy },
+        distance,
+        tolerance,
+        willDetect: distance <= tolerance
+      });
 
-    // Find the closest handle within tolerance
-    for (const { handle, distance } of handlesWithDistance) {
       if (distance <= tolerance) {
-        console.log('🎯 Handle clicked:', {
-          handleId: handle.id,
-          handleType: handle.type,
-          distance,
-          tolerance,
-          clickPoint: point,
-          handlePosition: handle.position
-        });
-        
-        // Return the handle as-is - no conversion between types
+        console.log('TransformManager: Handle found!', handle.id);
         return handle;
       }
     }
 
-    console.log('❌ No handle found within tolerance at point:', {
-      point,
-      tolerance,
-      closestDistance: handlesWithDistance[0]?.distance || 'N/A'
-    });
-
+    console.log('TransformManager: No handle found');
     return null;
   }
 
@@ -644,21 +481,9 @@ export class TransformManager {
     
     this.state.isTransforming = true;
     this.state.activeHandle = handle.id;
-<<<<<<< HEAD
-    this.state.mode = handle.type === 'corner' ? 'scale' : 'rotate';
-=======
     this.state.mode = handle.type === 'rotation' ? 'rotate' : 'scale';
->>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
     this.state.dragStart = startPoint;
     this.state.initialBounds = { ...this.state.bounds! };
-    
-    console.log('🚀 Transform started:', {
-      handleId: handle.id,
-      handleType: handle.type,
-      transformMode: this.state.mode,
-      startPoint,
-      bounds: this.state.initialBounds
-    });
     
     // Store initial command positions
     this.state.initialCommands = {};
@@ -677,26 +502,12 @@ export class TransformManager {
   private updateTransform(currentPoint: Point) {
     if (!this.state.dragStart || !this.state.initialBounds) return;
 
-<<<<<<< HEAD
-    console.log('🔄 Updating transform:', {
-      mode: this.state.mode,
-      activeHandle: this.state.activeHandle,
-      currentPoint,
-      dragStart: this.state.dragStart
-    });
-=======
     // Store current point for mirror state calculation
     this.state.currentPoint = currentPoint;
->>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
 
     if (this.state.mode === 'scale') {
-      console.log('📏 Applying scale transformation');
       this.applyScale(currentPoint);
     } else if (this.state.mode === 'rotate') {
-<<<<<<< HEAD
-      console.log('🔄 Applying rotation transformation');
-=======
->>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
       this.applyRotation(currentPoint);
     }
 
@@ -810,39 +621,6 @@ export class TransformManager {
   }
 
   private applyRotation(currentPoint: Point) {
-<<<<<<< HEAD
-    if (!this.state.dragStart || !this.state.initialBounds) return;
-
-    const center = this.state.initialBounds.center;
-    
-    // Calculate rotation angle
-    const startAngle = Math.atan2(
-      this.state.dragStart.y - center.y,
-      this.state.dragStart.x - center.x
-    );
-    
-    const currentAngle = Math.atan2(
-      currentPoint.y - center.y,
-      currentPoint.x - center.x
-    );
-    
-    let rotationAngle = currentAngle - startAngle;
-
-    // Optional: Snap to 15-degree increments when Shift is pressed
-    if (this.isShiftPressed) {
-      const snapAngle = Math.PI / 12; // 15 degrees in radians
-      rotationAngle = Math.round(rotationAngle / snapAngle) * snapAngle;
-    }
-
-    // Apply rotation to all selected commands
-    this.applyTransformToCommands((x: number, y: number) => {
-      const dx = x - center.x;
-      const dy = y - center.y;
-      
-      const cos = Math.cos(rotationAngle);
-      const sin = Math.sin(rotationAngle);
-      
-=======
     if (!this.state.dragStart || !this.state.initialBounds || !this.state.activeHandle) return;
 
     const store = this.editorStore || useEditorStore.getState();
@@ -884,7 +662,6 @@ export class TransformManager {
       // Apply rotation
       const cos = Math.cos(rotationAngle);
       const sin = Math.sin(rotationAngle);
->>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
       const newX = center.x + dx * cos - dy * sin;
       const newY = center.y + dx * sin + dy * cos;
       
@@ -929,12 +706,6 @@ export class TransformManager {
   }
 
   private endTransform() {
-    console.log('🏁 Transform ended:', {
-      previousMode: this.state.mode,
-      previousHandle: this.state.activeHandle,
-      wasTransforming: this.state.isTransforming
-    });
-    
     this.state.isTransforming = false;
     this.state.mode = null;
     this.state.activeHandle = null;
@@ -942,8 +713,6 @@ export class TransformManager {
     this.state.currentPoint = null;
     this.state.initialBounds = null;
     this.state.initialCommands = {};
-    
-    console.log('🏁 Transform state cleared');
   }
 
   private storeInitialCommands() {
@@ -969,409 +738,6 @@ export class TransformManager {
     }
   }
 
-<<<<<<< HEAD
-  // Helper methods
-  private getUniquePoints(points: Point[], tolerance: number = 0.1): Point[] {
-    const unique: Point[] = [];
-    
-    for (const point of points) {
-      const isDuplicate = unique.some(existing => 
-        Math.abs(existing.x - point.x) < tolerance && 
-        Math.abs(existing.y - point.y) < tolerance
-      );
-      
-      if (!isDuplicate) {
-        unique.push(point);
-      }
-    }
-    
-    return unique;
-  }
-
-  // Helper methods
-  private calculateBoundsWithDOM(): TransformBounds | null {
-    const store = this.editorStore || useEditorStore.getState();
-    const { selection, paths } = store;
-    
-    console.log('🌐 DOM CALCULATION START: Using browser getBBox() for precise bounds');
-    console.log('🌐 DOM METHOD: Selection state', {
-      selectedCommands: selection.selectedCommands,
-      selectedSubPaths: selection.selectedSubPaths,
-      totalPaths: paths.length,
-      technique: 'SVG temporary element + getBBox()'
-    });
-
-    // Check if we have anything to process
-    if (selection.selectedCommands.length <= 1 && selection.selectedSubPaths.length === 0) {
-      console.log('🌐 DOM METHOD ABORT: Invalid selection for DOM calculation (need multiple items)', {
-        selectedCommandsCount: selection.selectedCommands.length,
-        selectedSubPathsCount: selection.selectedSubPaths.length,
-        reason: 'Need either multiple commands OR at least one subpath'
-      });
-      return null;
-    }
-    
-    console.log('🌐 DOM METHOD: Selection validation passed', {
-      selectedCommandsCount: selection.selectedCommands.length,
-      selectedSubPathsCount: selection.selectedSubPaths.length,
-      willProcessCommands: selection.selectedCommands.length > 1,
-      willProcessSubPaths: selection.selectedSubPaths.length > 0
-    });
-
-    // Create a temporary SVG element for precise bounding box calculation
-    const svgNS = 'http://www.w3.org/2000/svg';
-    const tempSvg = document.createElementNS(svgNS, 'svg') as SVGSVGElement;
-    tempSvg.style.position = 'absolute';
-    tempSvg.style.top = '-9999px';
-    tempSvg.style.left = '-9999px';
-    tempSvg.style.visibility = 'hidden';
-    tempSvg.style.pointerEvents = 'none';
-    document.body.appendChild(tempSvg);
-
-    console.log('🌐 DOM METHOD: Created temporary SVG element for getBBox() calculation');
-
-    try {
-      let pathElementsCreated = 0;
-
-      // Create path elements for selected commands/subpaths
-      if (selection.selectedCommands.length > 1) {
-        console.log('🔍 DOM Method: Processing multiple selected commands');
-        
-        // For multiple selected commands, create a path with just those commands
-        const selectedCommands = selection.selectedCommands
-          .map((commandId: string) => this.findCommandById(commandId, paths))
-          .filter((cmd: SVGCommand | null) => cmd !== null);
-
-        console.log('🔍 DOM Method: Found commands', {
-          requestedCommands: selection.selectedCommands.length,
-          foundCommands: selectedCommands.length
-        });
-
-        if (selectedCommands.length > 0) {
-          console.log('🌐 DOM METHOD: Processing', selectedCommands.length, 'selected commands');
-          
-          // Group commands by subpath to maintain proper path structure
-          const commandsBySubPath = new Map<string, any[]>();
-          
-          selectedCommands.forEach((command: SVGCommand | null) => {
-            if (command) {
-              const subPath = this.findSubPathByCommandId(command.id, paths);
-              console.log('🌐 DOM METHOD: Command analysis', {
-                commandId: command.id,
-                commandData: command,
-                subPathFound: !!subPath,
-                subPathId: subPath?.id
-              });
-              
-              if (subPath) {
-                if (!commandsBySubPath.has(subPath.id)) {
-                  commandsBySubPath.set(subPath.id, []);
-                }
-                commandsBySubPath.get(subPath.id)!.push(command);
-              } else {
-                console.log('🔴 DOM METHOD: Command without subpath', { command });
-              }
-            }
-          });
-
-          console.log('🔍 DOM Method: Grouped commands by subpath', {
-            subPathGroups: commandsBySubPath.size
-          });
-
-          // Create a path for each subpath with selected commands
-          console.log('🌐 DOM METHOD: Creating path elements from command groups');
-          commandsBySubPath.forEach((commands, subPathId) => {
-            console.log('🌐 DOM METHOD: Processing command group', {
-              subPathId,
-              commandCount: commands.length,
-              commands: commands.map(cmd => ({ id: cmd.id, ...cmd }))
-            });
-            
-            const pathString = commands
-              .map(cmd => {
-                const cmdString = this.commandToString(cmd);
-                console.log('🌐 DOM METHOD: Command to string', {
-                  commandId: cmd.id,
-                  command: cmd,
-                  generatedString: cmdString
-                });
-                return cmdString;
-              })
-              .join(' ');
-            
-            console.log('🌐 DOM METHOD: Generated path string', {
-              subPathId,
-              commandCount: commands.length,
-              pathString: pathString,
-              pathStringLength: pathString.length,
-              isValid: pathString.trim().length > 0
-            });
-            
-            if (pathString.trim()) {
-              const pathElement = document.createElementNS(svgNS, 'path');
-              pathElement.setAttribute('d', pathString);
-              tempSvg.appendChild(pathElement);
-              pathElementsCreated++;
-              console.log('🔍 DOM Method: Created path element for commands');
-            }
-          });
-        }
-      }
-
-      // For selected subpaths, add complete subpaths
-      if (selection.selectedSubPaths.length > 0) {
-        console.log('🔍 DOM Method: Processing selected subpaths');
-        
-        selection.selectedSubPaths.forEach((subPathId: string) => {
-          const subPath = this.findSubPathById(subPathId, paths);
-          if (subPath) {
-            const pathString = this.subPathToString(subPath);
-            
-            console.log('🔍 DOM Method: Generated subpath string', {
-              subPathId,
-              commandCount: subPath.commands?.length || 0,
-              pathString: pathString.substring(0, 100) + (pathString.length > 100 ? '...' : '')
-            });
-            
-            if (pathString.trim()) {
-              const pathElement = document.createElementNS(svgNS, 'path');
-              pathElement.setAttribute('d', pathString);
-              tempSvg.appendChild(pathElement);
-              pathElementsCreated++;
-              console.log('🔍 DOM Method: Created path element for subpath');
-            }
-          } else {
-            console.log('⚠️ DOM Method: SubPath not found', { subPathId });
-          }
-        });
-      }
-
-      console.log('🌐 DOM METHOD: Total path elements created:', pathElementsCreated);
-      console.log('🌐 DOM METHOD: Temporary SVG content:', {
-        childElementCount: tempSvg.childElementCount,
-        innerHTML: tempSvg.innerHTML.substring(0, 500) + (tempSvg.innerHTML.length > 500 ? '...' : ''),
-        pathElements: Array.from(tempSvg.children).map(el => {
-          const dAttr = el.getAttribute('d');
-          return {
-            tagName: el.tagName,
-            dAttribute: dAttr ? (dAttr.length > 100 ? dAttr.substring(0, 100) + '...' : dAttr) : 'null'
-          };
-        })
-      });
-
-      // If no path elements were created with the complex approach, try a simple approach
-      if (pathElementsCreated === 0) {
-        console.log('🌐 DOM METHOD: Trying fallback approach - individual path elements');
-        
-        // Try creating simple path elements for individual commands/subpaths
-        if (selection.selectedCommands.length > 1) {
-          selection.selectedCommands.forEach((commandId: string) => {
-            const command = this.findCommandById(commandId, paths);
-            if (command) {
-              const cmdString = this.commandToString(command);
-              if (cmdString.trim()) {
-                // For individual commands, we need to create a minimal valid path
-                const pathElement = document.createElementNS(svgNS, 'path');
-                pathElement.setAttribute('d', `M 0 0 ${cmdString}`); // Add a move to make it valid
-                tempSvg.appendChild(pathElement);
-                pathElementsCreated++;
-                console.log('🌐 DOM METHOD: Created individual command path', { commandId, cmdString });
-              }
-            }
-          });
-        }
-        
-        if (selection.selectedSubPaths.length > 0) {
-          selection.selectedSubPaths.forEach((subPathId: string) => {
-            const subPath = this.findSubPathById(subPathId, paths);
-            if (subPath) {
-              const pathString = this.subPathToString(subPath);
-              if (pathString.trim()) {
-                const pathElement = document.createElementNS(svgNS, 'path');
-                pathElement.setAttribute('d', pathString);
-                tempSvg.appendChild(pathElement);
-                pathElementsCreated++;
-                console.log('🌐 DOM METHOD: Created individual subpath', { subPathId, pathString: pathString.substring(0, 100) });
-              }
-            }
-          });
-        }
-        
-        console.log('🌐 DOM METHOD: Fallback approach created', pathElementsCreated, 'additional path elements');
-      }
-
-      if (pathElementsCreated === 0) {
-        console.log('🔴 DOM METHOD ABORT: No valid path elements created');
-        return null;
-      }
-
-      // Get the precise bounding box using DOM
-      console.log('🌐 DOM METHOD: Executing getBBox() on temporary SVG with', pathElementsCreated, 'path elements...');
-      const bbox = tempSvg.getBBox();
-      
-      console.log('🌐 DOM METHOD: getBBox() native result', {
-        x: bbox.x,
-        y: bbox.y,
-        width: bbox.width,
-        height: bbox.height,
-        isFinite: {
-          x: isFinite(bbox.x),
-          y: isFinite(bbox.y),
-          width: isFinite(bbox.width),
-          height: isFinite(bbox.height)
-        },
-        sizeValid: bbox.width >= 1 && bbox.height >= 1,
-        technique: 'Browser native SVG getBBox()',
-        precision: 'HIGH (includes curve geometry)'
-      });
-      
-      if (bbox && 
-          isFinite(bbox.x) && isFinite(bbox.y) && 
-          isFinite(bbox.width) && isFinite(bbox.height) &&
-          bbox.width >= 1 && bbox.height >= 1) {
-        
-        const result = {
-          x: bbox.x,
-          y: bbox.y,
-          width: bbox.width,
-          height: bbox.height,
-          center: {
-            x: bbox.x + bbox.width / 2,
-            y: bbox.y + bbox.height / 2
-          }
-        };
-        
-        console.log('🟢 DOM METHOD SUCCESS: Calculated precise bounds using getBBox()', {
-          result,
-          method: 'DOM NATIVE',
-          advantage: 'Includes exact curve calculations'
-        });
-        return result;
-      } else {
-        console.log('🔴 DOM METHOD FAILED: Invalid bbox result from getBBox()');
-        return null;
-      }
-
-    } catch (error) {
-      console.error('🔴 DOM METHOD ERROR: Exception during DOM bounds calculation', error);
-      return null;
-    } finally {
-      // Always clean up the temporary SVG
-      document.body.removeChild(tempSvg);
-      console.log('🔍 DOM Method: Cleaned up temporary SVG element');
-    }
-  }
-
-  private findSubPathByCommandId(commandId: string, paths: any[]): any | null {
-    for (const path of paths) {
-      for (const subPath of path.subPaths) {
-        if (subPath.commands.some((cmd: any) => cmd.id === commandId)) {
-          return subPath;
-        }
-      }
-    }
-    return null;
-  }
-
-  private commandToString(command: any): string {
-    if (!command) {
-      console.log('🔴 commandToString: null/undefined command');
-      return '';
-    }
-    
-    // Use 'command' property instead of 'type' based on SVGCommand interface
-    const { command: type, x, y, x1, y1, x2, y2 } = command;
-    
-    console.log('🔍 commandToString: Processing command', {
-      id: command.id,
-      command: type,
-      x, y, x1, y1, x2, y2
-    });
-    
-    switch (type) {
-      case 'M':
-        if (x !== undefined && y !== undefined) {
-          const result = `M ${x} ${y}`;
-          console.log('🟢 commandToString: M command success', { result });
-          return result;
-        }
-        console.log('🔴 commandToString: M command missing x/y', { command });
-        return '';
-      case 'L':
-        if (x !== undefined && y !== undefined) {
-          const result = `L ${x} ${y}`;
-          console.log('🟢 commandToString: L command success', { result });
-          return result;
-        }
-        console.log('🔴 commandToString: L command missing x/y', { command });
-        return '';
-      case 'C':
-        if (x1 !== undefined && y1 !== undefined && x2 !== undefined && y2 !== undefined && x !== undefined && y !== undefined) {
-          const result = `C ${x1} ${y1} ${x2} ${y2} ${x} ${y}`;
-          console.log('🟢 commandToString: C command success', { result });
-          return result;
-        }
-        console.log('🔴 commandToString: C command missing coordinates', { command });
-        return '';
-      case 'Q':
-        if (x1 !== undefined && y1 !== undefined && x !== undefined && y !== undefined) {
-          const result = `Q ${x1} ${y1} ${x} ${y}`;
-          console.log('🟢 commandToString: Q command success', { result });
-          return result;
-        }
-        console.log('🔴 commandToString: Q command missing coordinates', { command });
-        return '';
-      case 'Z':
-        console.log('🟢 commandToString: Z command success');
-        return 'Z';
-      default:
-        console.log('🔴 commandToString: Unknown command type', { command: type, fullCommand: command });
-        return '';
-    }
-  }
-
-  private subPathToString(subPath: any): string {
-    if (!subPath) {
-      console.log('🔴 subPathToString: null/undefined subPath');
-      return '';
-    }
-    
-    if (!subPath.commands || subPath.commands.length === 0) {
-      console.log('🔴 subPathToString: subPath has no commands', { subPath });
-      return '';
-    }
-    
-    console.log('🔍 subPathToString: Processing subPath', {
-      id: subPath.id,
-      commandCount: subPath.commands.length,
-      commands: subPath.commands.map((cmd: any) => ({ id: cmd.id, command: cmd.command }))
-    });
-    
-    const pathString = subPath.commands
-      .map((command: any) => {
-        const cmdString = this.commandToString(command);
-        console.log('🔍 subPathToString: Command processed', {
-          commandId: command.id,
-          command: command.command,
-          generatedString: cmdString
-        });
-        return cmdString;
-      })
-      .filter((str: string) => str.trim().length > 0) // Filter out empty commands
-      .join(' ')
-      .trim();
-      
-    console.log('🔍 subPathToString: Final result', {
-      subPathId: subPath.id,
-      pathString,
-      pathStringLength: pathString.length
-    });
-    
-    return pathString;
-  }
-
-  // ...existing code...
-=======
   // Helper method to check if mirroring is active
   private getMirrorState(currentPoint?: Point): { mirrorX: boolean; mirrorY: boolean } {
     if (!this.state.dragStart || !this.state.initialBounds || !this.state.activeHandle) {
@@ -1440,7 +806,6 @@ export class TransformManager {
       }
     };
   }
->>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
 }
 
 export const transformManager = new TransformManager();

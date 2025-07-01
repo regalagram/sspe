@@ -11,7 +11,11 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
   const { viewport } = useEditorStore();
   const [hoveredHandle, setHoveredHandle] = useState<string | null>(null);
 
-  console.log('TransformHandles: Rendering with', { bounds, handlesCount: handles.length });
+  console.log('TransformHandles: Rendering with', { 
+    bounds, 
+    handlesCount: handles.length,
+    handles: handles.map(h => ({ id: h.id, position: h.position }))
+  });
 
   if (!bounds || handles.length === 0) {
     console.log('TransformHandles: Not rendering - no bounds or handles');
@@ -48,29 +52,20 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
             style={{ pointerEvents: 'all', cursor: handle.cursor }}
             onMouseEnter={() => setHoveredHandle(handle.id)}
             onMouseLeave={() => setHoveredHandle(null)}
+            data-transform-handle={handle.id}
           >
             {handle.type === 'corner' ? (
-<<<<<<< HEAD
-              // Square corner handles for scaling
-              <rect
-                x={handle.position.x - currentSize / 2}
-                y={handle.position.y - currentSize / 2}
-=======
               /* Square corner handles for scaling */
               <rect
                 x={handle.position.x}
                 y={handle.position.y}
->>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
                 width={currentSize}
                 height={currentSize}
                 fill="white"
                 stroke="#007acc"
                 strokeWidth={strokeWidth}
                 data-handle-id={handle.id}
-<<<<<<< HEAD
-=======
                 data-handle-type="transform"
->>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
                 style={{
                   pointerEvents: 'all',
                   cursor: handle.cursor,
@@ -78,45 +73,6 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
                 }}
               />
             ) : (
-<<<<<<< HEAD
-              // Circular rotation handles
-              <circle
-                cx={handle.position.x}
-                cy={handle.position.y}
-                r={currentSize / 2}
-                fill="white"
-                stroke="#28a745"
-                strokeWidth={strokeWidth}
-                data-handle-id={handle.id}
-                style={{
-                  pointerEvents: 'all',
-                  cursor: handle.cursor,
-                  transition: 'all 0.1s ease'
-                }}
-              />
-            )}
-            
-            {/* Show rotation indicator when hovering near corners */}
-            {handle.type === 'corner' && isHovered && (
-              <g opacity="0.7">
-                <circle
-                  cx={handle.position.x}
-                  cy={handle.position.y}
-                  r={handleSize * 2}
-                  fill="none"
-                  stroke="#28a745"
-                  strokeWidth={strokeWidth / 2}
-                  strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
-                  pointerEvents="none"
-                />
-                <text
-                  x={handle.position.x}
-                  y={handle.position.y + 3 / viewport.zoom}
-                  textAnchor="middle"
-                  fontSize={8 / viewport.zoom}
-                  fill="#28a745"
-                  pointerEvents="none"
-=======
               /* Circular rotation handle */
               <g>
                 {/* Connection line from bounding box to rotation handle */}
@@ -159,7 +115,6 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
                     fontFamily: 'monospace',
                     fontWeight: 'bold'
                   }}
->>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
                 >
                   ↻
                 </text>
