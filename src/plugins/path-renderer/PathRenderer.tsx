@@ -26,12 +26,14 @@ export const PathRenderer: React.FC = () => {
     startPoint: { x: number; y: number } | null;
     lastPoint: { x: number; y: number } | null;
     svgElement: SVGSVGElement | null;
+    dragStarted: boolean; // Track if actual dragging has begun
   }>({
     isDragging: false,
     subPathId: null,
     startPoint: null,
     lastPoint: null,
     svgElement: null,
+    dragStarted: false,
   });
 
   const getTransformedPoint = (e: React.MouseEvent<SVGElement>, svgElement: SVGSVGElement) => {
@@ -40,13 +42,15 @@ export const PathRenderer: React.FC = () => {
     return getSVGPoint(e, svgRef, viewport);
   };
 
-  // Handle mouse down on selected subpath for dragging
+  // Handle mouse down on subpath for dragging (selected or unselected)
   const handleSubPathMouseDown = useCallback((e: React.MouseEvent<SVGElement>, subPathId: string) => {
     e.stopPropagation();
     
     const svgElement = (e.target as SVGPathElement).closest('svg');
     if (svgElement) {
-      // If the subpath being dragged is not selected, select it (considering Shift key)
+      // Always ensure the subpath being dragged is selected
+      // If it's not selected and shift is not pressed, select it replacing current selection
+      // If shift is pressed, add it to current selection
       if (!selection.selectedSubPaths.includes(subPathId)) {
         selectSubPathMultiple(subPathId, e.shiftKey);
       }
@@ -58,21 +62,52 @@ export const PathRenderer: React.FC = () => {
         startPoint: point,
         lastPoint: point,
         svgElement: svgElement,
+        dragStarted: false, // Will be set to true when actual movement begins
       });
+      
+      // Note: We don't call pushToHistory() or transformManager.setMoving(true) here
+      // That will be done when we detect actual dragging movement in handleMouseMove
+    }
+  }, [viewport, selection.selectedSubPaths, selectSubPathMultiple]);
+
+  // Handle mouse move for dragging
+  const handleMouseMove = useCallback((e: React.MouseEvent<SVGElement>) => {
+    if (!dragState.isDragging || !dragState.subPathId || !dragState.startPoint || !dragState.svgElement) return;
+    
+    const currentPoint = getTransformedPoint(e, dragState.svgElement);
+    
+    // Check if we've moved enough to start actual dragging (threshold in SVG units)
+    if (!dragState.dragStarted) {
+      const distance = Math.sqrt(
+        Math.pow(currentPoint.x - dragState.startPoint.x, 2) + 
+        Math.pow(currentPoint.y - dragState.startPoint.y, 2)
+      );
+      
+      // Threshold of 5 SVG units to start dragging
+      const dragThreshold = 5;
+      
+      if (distance < dragThreshold) {
+        return; // Not enough movement yet
+      }
+      
+      // Start actual dragging
+      setDragState(prev => ({
+        ...prev,
+        dragStarted: true,
+        lastPoint: currentPoint,
+      }));
       
       // Notify transform manager that movement started (subpath drag)
       transformManager.setMoving(true);
       
       // Save to history when starting to drag
       pushToHistory();
+      
+      return; // Don't move on the first frame where we detect drag start
     }
-  }, [pushToHistory, viewport, selection.selectedSubPaths, selectSubPathMultiple]);
-
-  // Handle mouse move for dragging
-  const handleMouseMove = useCallback((e: React.MouseEvent<SVGElement>) => {
-    if (!dragState.isDragging || !dragState.subPathId || !dragState.lastPoint || !dragState.svgElement) return;
     
-    const currentPoint = getTransformedPoint(e, dragState.svgElement);
+    if (!dragState.lastPoint) return;
+    
     const delta = {
       x: currentPoint.x - dragState.lastPoint.x,
       y: currentPoint.y - dragState.lastPoint.y,
@@ -92,12 +127,12 @@ export const PathRenderer: React.FC = () => {
       ...prev,
       lastPoint: currentPoint,
     }));
-  }, [dragState, moveSubPath, selection.selectedSubPaths, viewport]);
+  }, [dragState, moveSubPath, selection.selectedSubPaths, viewport, pushToHistory]);
 
   // Handle mouse up to stop dragging
   const handleMouseUp = useCallback(() => {
-    // Notify transform manager that movement ended
-    if (dragState.isDragging) {
+    // Notify transform manager that movement ended only if actual dragging occurred
+    if (dragState.isDragging && dragState.dragStarted) {
       transformManager.setMoving(false);
     }
     
@@ -107,8 +142,9 @@ export const PathRenderer: React.FC = () => {
       startPoint: null,
       lastPoint: null,
       svgElement: null,
+      dragStarted: false,
     });
-  }, [dragState.isDragging]);
+  }, [dragState.isDragging, dragState.dragStarted]);
 
   // Add global mouse event listeners for dragging
   React.useEffect(() => {
@@ -166,18 +202,43 @@ export const PathRenderer: React.FC = () => {
             strokeOpacity={isWireframeMode ? 1 : path.style.strokeOpacity}
             fillRule={path.style.fillRule || 'nonzero'}
             style={{
-              cursor: 'pointer',
+              cursor: 'grab', // Show that paths can be dragged directly
               pointerEvents: 'all',
             }}
-            onClick={(e) => {
+            onMouseDown={(e) => {
+              // Only handle left mouse button
+              if (e.button !== 0) return;
+              
               e.stopPropagation();
               
               // Get the SVG element from the path's parent
               const svgElement = (e.target as SVGPathElement).closest('svg');
               if (svgElement) {
                 const point = getTransformedPoint(e as React.MouseEvent<SVGElement>, svgElement);
-                selectSubPathByPoint(path.id, point, e.shiftKey);
+                const foundSubPath = findSubPathAtPoint(path, point, 15);
+                
+                if (foundSubPath) {
+                  // If Shift is pressed, just select without starting drag
+                  if (e.shiftKey) {
+                    selectSubPathByPoint(path.id, point, true);
+                    return;
+                  }
+                  
+                  // If subpath is not selected, select it and start drag immediately
+                  if (!selection.selectedSubPaths.includes(foundSubPath.id)) {
+                    selectSubPathMultiple(foundSubPath.id, false);
+                    // Start drag immediately
+                    handleSubPathMouseDown(e, foundSubPath.id);
+                  } else {
+                    // If already selected, just start drag
+                    handleSubPathMouseDown(e, foundSubPath.id);
+                  }
+                }
               }
+            }}
+            onClick={(e) => {
+              // This is now only for fallback cases where mousedown didn't handle it
+              e.stopPropagation();
             }}
           />
         );
@@ -228,7 +289,9 @@ export const PathRenderer: React.FC = () => {
                 strokeDasharray={`${6 / viewport.zoom},${4 / viewport.zoom}`}
                 style={{
                   pointerEvents: 'all',
-                  cursor: dragState.isDragging && dragState.subPathId === subPath.id ? 'grabbing' : 'grab',
+                  cursor: dragState.isDragging && dragState.subPathId === subPath.id && dragState.dragStarted 
+                    ? 'grabbing' 
+                    : 'grab',
                   filter: `drop-shadow(0 0 ${3 / viewport.zoom}px ${contrastColor})`,
                 }}
                 onMouseDown={(e) => {
