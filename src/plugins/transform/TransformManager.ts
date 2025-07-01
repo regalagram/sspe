@@ -27,6 +27,7 @@ interface TransformState {
   bounds: TransformBounds | null;
   handles: TransformHandle[];
   dragStart: Point | null;
+  currentPoint: Point | null; // Track current mouse position during transform
   initialBounds: TransformBounds | null;
   initialCommands: { [commandId: string]: SVGCommand };
 }
@@ -39,6 +40,7 @@ export class TransformManager {
     bounds: null,
     handles: [],
     dragStart: null,
+    currentPoint: null,
     initialBounds: null,
     initialCommands: {}
   };
@@ -279,9 +281,19 @@ export class TransformManager {
   generateHandles(): TransformHandle[] {
     if (!this.state.bounds) return [];
 
+<<<<<<< HEAD
     const { x, y, width, height, center } = this.state.bounds;
     const handleSize = 8;
     const rotationOffset = 30; // Increased distance to avoid conflicts
+=======
+    const store = this.editorStore || useEditorStore.getState();
+    const { viewport } = store;
+    const { x, y, width, height } = this.state.bounds;
+    
+    // Use the same handleSize calculation as TransformHandles for consistency
+    const handleSize = 8 / viewport.zoom;
+    const rotationHandleOffset = 30 / viewport.zoom; // Distance above the bounding box
+>>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
 
     const handles: TransformHandle[] = [
       // Corner handles for scaling
@@ -309,6 +321,7 @@ export class TransformManager {
         position: { x: x + width, y: y + height },
         cursor: 'se-resize'
       },
+<<<<<<< HEAD
       // Rotation handles (positioned further outside the corners)
       {
         id: 'rotate-nw',
@@ -344,6 +357,20 @@ export class TransformManager {
       rotationOffset
     });
 
+=======
+      // Rotation handle - positioned above the center of the top edge
+      {
+        id: 'rotation',
+        type: 'rotation',
+        position: { 
+          x: x + width / 2 - handleSize / 2, 
+          y: y - rotationHandleOffset - handleSize / 2 
+        },
+        cursor: 'crosshair'
+      }
+    ];
+
+>>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
     return handles;
   }
 
@@ -405,6 +432,17 @@ export class TransformManager {
   // Check if shift is pressed
   getShiftPressed(): boolean {
     return this.isShiftPressed;
+  }
+
+  // Get current mirror state (useful for visual feedback)
+  getMirrorStatus(): { mirrorX: boolean; mirrorY: boolean } {
+    return this.getMirrorState(this.state.currentPoint || undefined);
+  }
+
+  // Check if any mirroring is currently active
+  isMirroring(): boolean {
+    const { mirrorX, mirrorY } = this.getMirrorState(this.state.currentPoint || undefined);
+    return mirrorX || mirrorY;
   }
 
   // Mouse event handlers
@@ -606,7 +644,11 @@ export class TransformManager {
     
     this.state.isTransforming = true;
     this.state.activeHandle = handle.id;
+<<<<<<< HEAD
     this.state.mode = handle.type === 'corner' ? 'scale' : 'rotate';
+=======
+    this.state.mode = handle.type === 'rotation' ? 'rotate' : 'scale';
+>>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
     this.state.dragStart = startPoint;
     this.state.initialBounds = { ...this.state.bounds! };
     
@@ -624,28 +666,49 @@ export class TransformManager {
 
     // Save to history
     store.pushToHistory();
+    
+    console.log('TransformManager: Starting transform', {
+      mode: this.state.mode,
+      handle: handle.id,
+      handleType: handle.type
+    });
   }
 
   private updateTransform(currentPoint: Point) {
     if (!this.state.dragStart || !this.state.initialBounds) return;
 
+<<<<<<< HEAD
     console.log('🔄 Updating transform:', {
       mode: this.state.mode,
       activeHandle: this.state.activeHandle,
       currentPoint,
       dragStart: this.state.dragStart
     });
+=======
+    // Store current point for mirror state calculation
+    this.state.currentPoint = currentPoint;
+>>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
 
     if (this.state.mode === 'scale') {
       console.log('📏 Applying scale transformation');
       this.applyScale(currentPoint);
     } else if (this.state.mode === 'rotate') {
+<<<<<<< HEAD
       console.log('🔄 Applying rotation transformation');
+=======
+>>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
       this.applyRotation(currentPoint);
     }
 
-    // Update bounds after transformation
+    // Update bounds after transformation and normalize if mirroring occurred (only for scale)
     this.updateTransformState();
+    
+    // Normalize bounds to handle negative scaling (mirroring) - only for scale mode
+    if (this.state.mode === 'scale' && this.state.bounds) {
+      this.state.bounds = this.normalizeBounds(this.state.bounds);
+      // Regenerate handles with normalized bounds
+      this.state.handles = this.generateHandles();
+    }
   }
 
   private applyScale(currentPoint: Point) {
@@ -691,9 +754,15 @@ export class TransformManager {
       scaleY = scaleY < 0 ? -scale : scale;
     }
 
-    // Ensure minimum scale
-    scaleX = Math.max(0.1, scaleX);
-    scaleY = Math.max(0.1, scaleY);
+    // Allow negative scaling for mirror effect (remove minimum scale restriction)
+    // Only apply minimum scale to prevent collapse to zero, but allow mirroring
+    const minScale = 0.01; // Very small but not zero to prevent division issues
+    if (Math.abs(scaleX) < minScale) {
+      scaleX = scaleX < 0 ? -minScale : minScale;
+    }
+    if (Math.abs(scaleY) < minScale) {
+      scaleY = scaleY < 0 ? -minScale : minScale;
+    }
 
     // Calculate transform origin based on the opposite corner
     let originX = initialX;
@@ -718,6 +787,20 @@ export class TransformManager {
         break;
     }
 
+    // Log mirroring state for debugging
+    const mirrorState = this.getMirrorState(currentPoint);
+    const isMirroredX = mirrorState.mirrorX;
+    const isMirroredY = mirrorState.mirrorY;
+    if (isMirroredX || isMirroredY) {
+      console.log('TransformManager: Mirror effect active', {
+        scaleX,
+        scaleY,
+        mirroredX: isMirroredX,
+        mirroredY: isMirroredY,
+        handle: this.state.activeHandle
+      });
+    }
+
     // Apply scaling to all selected commands
     this.applyTransformToCommands((x: number, y: number) => {
       const newX = originX + (x - originX) * scaleX;
@@ -727,6 +810,7 @@ export class TransformManager {
   }
 
   private applyRotation(currentPoint: Point) {
+<<<<<<< HEAD
     if (!this.state.dragStart || !this.state.initialBounds) return;
 
     const center = this.state.initialBounds.center;
@@ -758,6 +842,49 @@ export class TransformManager {
       const cos = Math.cos(rotationAngle);
       const sin = Math.sin(rotationAngle);
       
+=======
+    if (!this.state.dragStart || !this.state.initialBounds || !this.state.activeHandle) return;
+
+    const store = this.editorStore || useEditorStore.getState();
+    const { updateCommand } = store;
+
+    // Calculate rotation angle based on mouse movement
+    const center = this.state.initialBounds.center;
+    
+    // Vector from center to initial point
+    const initialVector = {
+      x: this.state.dragStart.x - center.x,
+      y: this.state.dragStart.y - center.y
+    };
+    
+    // Vector from center to current point
+    const currentVector = {
+      x: currentPoint.x - center.x,
+      y: currentPoint.y - center.y
+    };
+    
+    // Calculate angle between vectors
+    const initialAngle = Math.atan2(initialVector.y, initialVector.x);
+    const currentAngle = Math.atan2(currentVector.y, currentVector.x);
+    const rotationAngle = currentAngle - initialAngle;
+
+    console.log('TransformManager: Applying rotation', {
+      center,
+      initialAngle: (initialAngle * 180 / Math.PI).toFixed(2) + '°',
+      currentAngle: (currentAngle * 180 / Math.PI).toFixed(2) + '°',
+      rotationAngle: (rotationAngle * 180 / Math.PI).toFixed(2) + '°'
+    });
+
+    // Apply rotation to all selected commands
+    this.applyTransformToCommands((x: number, y: number) => {
+      // Translate to origin (center)
+      const dx = x - center.x;
+      const dy = y - center.y;
+      
+      // Apply rotation
+      const cos = Math.cos(rotationAngle);
+      const sin = Math.sin(rotationAngle);
+>>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
       const newX = center.x + dx * cos - dy * sin;
       const newY = center.y + dx * sin + dy * cos;
       
@@ -812,6 +939,7 @@ export class TransformManager {
     this.state.mode = null;
     this.state.activeHandle = null;
     this.state.dragStart = null;
+    this.state.currentPoint = null;
     this.state.initialBounds = null;
     this.state.initialCommands = {};
     
@@ -841,6 +969,7 @@ export class TransformManager {
     }
   }
 
+<<<<<<< HEAD
   // Helper methods
   private getUniquePoints(points: Point[], tolerance: number = 0.1): Point[] {
     const unique: Point[] = [];
@@ -1242,6 +1371,76 @@ export class TransformManager {
   }
 
   // ...existing code...
+=======
+  // Helper method to check if mirroring is active
+  private getMirrorState(currentPoint?: Point): { mirrorX: boolean; mirrorY: boolean } {
+    if (!this.state.dragStart || !this.state.initialBounds || !this.state.activeHandle) {
+      return { mirrorX: false, mirrorY: false };
+    }
+
+    // Use provided point or fall back to drag start (for when not actively transforming)
+    const point = currentPoint || this.state.dragStart;
+    const deltaX = point.x - this.state.dragStart.x;
+    const deltaY = point.y - this.state.dragStart.y;
+
+    const { width: initialWidth, height: initialHeight } = this.state.initialBounds;
+
+    let scaleX = 1;
+    let scaleY = 1;
+
+    switch (this.state.activeHandle) {
+      case 'nw':
+        scaleX = (initialWidth - deltaX) / initialWidth;
+        scaleY = (initialHeight - deltaY) / initialHeight;
+        break;
+      case 'ne':
+        scaleX = (initialWidth + deltaX) / initialWidth;
+        scaleY = (initialHeight - deltaY) / initialHeight;
+        break;
+      case 'sw':
+        scaleX = (initialWidth - deltaX) / initialWidth;
+        scaleY = (initialHeight + deltaY) / initialHeight;
+        break;
+      case 'se':
+        scaleX = (initialWidth + deltaX) / initialWidth;
+        scaleY = (initialHeight + deltaY) / initialHeight;
+        break;
+    }
+
+    return {
+      mirrorX: scaleX < 0,
+      mirrorY: scaleY < 0
+    };
+  }
+
+  // Helper method to normalize bounds that may have negative width/height due to mirroring
+  private normalizeBounds(bounds: TransformBounds): TransformBounds {
+    let { x, y, width, height } = bounds;
+
+    // If width is negative, we need to flip the x coordinate
+    if (width < 0) {
+      x = x + width;
+      width = Math.abs(width);
+    }
+
+    // If height is negative, we need to flip the y coordinate
+    if (height < 0) {
+      y = y + height;
+      height = Math.abs(height);
+    }
+
+    return {
+      x,
+      y,
+      width,
+      height,
+      center: {
+        x: x + width / 2,
+        y: y + height / 2
+      }
+    };
+  }
+>>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
 }
 
 export const transformManager = new TransformManager();

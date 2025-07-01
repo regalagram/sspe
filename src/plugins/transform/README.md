@@ -6,14 +6,18 @@ El plugin de transformación permite escalar y rotar selecciones directamente en
 
 ### 🎯 Transformaciones Interactivas
 - **Escalado**: Arrastra los handles de las esquinas para cambiar el tamaño
-- **Rotación**: Mantén el mouse cerca de los handles de esquina para activar el modo rotación
+- **Rotación**: Usa el handle dedicado de rotación ubicado arriba del cuadro delimitador
 - **Proporciones**: Mantén presionada la tecla `Shift` para mantener las proporciones al escalar
 
 ### 🎮 Controles Visuales
 - **Cuadro delimitador**: Se muestra automáticamente al seleccionar elementos
 - **Handles de esquina**: Cuadrados azules para escalado
+<<<<<<< HEAD
 - **Handles de rotación**: Círculos verdes posicionados fuera de las esquinas
 - **Indicador de rotación**: Círculo verde que aparece cerca de las esquinas al hacer hover
+=======
+- **Handle de rotación**: Círculo verde ubicado arriba del centro del cuadro delimitador
+>>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
 - **Feedback visual**: Los handles crecen al pasar el mouse sobre ellos
 - **Estado de transformación**: Indicador en tiempo real del modo activo
 
@@ -23,12 +27,17 @@ El plugin de transformación permite escalar y rotar selecciones directamente en
 - Arrastra cualquier handle de esquina para escalar la selección
 - La transformación se aplica desde el punto de anclaje opuesto
 - Mantén `Shift` para escalar manteniendo las proporciones
-- Soporte para escala negativa (reflejo)
+- Soporte para escala negativa (reflejo/mirror)
 
 #### Rotación
+<<<<<<< HEAD
 - Haz click y arrastra los handles de rotación (círculos verdes) posicionados fuera de las esquinas
 - También puedes mantener el mouse cerca de los handles de esquina para activar el modo rotación temporal
 - Aparece un círculo indicador verde con el símbolo de rotación (↻) 
+=======
+- Usa el handle dedicado de rotación ubicado arriba del cuadro delimitador
+- Aparece como un círculo verde con el símbolo de rotación (↻)
+>>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
 - Arrastra para rotar alrededor del centro de la selección
 - Rotación libre de 360 grados
 
@@ -76,6 +85,8 @@ El plugin de transformación permite escalar y rotar selecciones directamente en
 - **Suave**: Transiciones animadas de 0.1s
 - **Intuitivo**: Cursores contextuales para cada modo
 - **Informativo**: Estado actual visible durante la transformación
+- **Diferenciación visual**: Handles de esquina cuadrados azules vs handle de rotación circular verde
+- **Línea guía**: Línea punteada conecta el handle de rotación con el cuadro delimitador
 
 ## Arquitectura
 
@@ -137,9 +148,19 @@ newY = originY + (y - originY) * scaleY
 
 #### Rotación
 ```typescript
+// Translate to center
+dx = x - centerX
+dy = y - centerY
+
+// Apply rotation matrix
 newX = centerX + dx * cos(angle) - dy * sin(angle)
 newY = centerY + dx * sin(angle) + dy * cos(angle)
 ```
+
+#### Mirror/Reflejo
+- Se permite escala negativa para crear efectos de espejo
+- Los bounds se normalizan automáticamente después del mirror
+- Funciona tanto horizontal como verticalmente
 
 ## Configuración
 

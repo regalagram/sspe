@@ -50,16 +50,27 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
             onMouseLeave={() => setHoveredHandle(null)}
           >
             {handle.type === 'corner' ? (
+<<<<<<< HEAD
               // Square corner handles for scaling
               <rect
                 x={handle.position.x - currentSize / 2}
                 y={handle.position.y - currentSize / 2}
+=======
+              /* Square corner handles for scaling */
+              <rect
+                x={handle.position.x}
+                y={handle.position.y}
+>>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
                 width={currentSize}
                 height={currentSize}
                 fill="white"
                 stroke="#007acc"
                 strokeWidth={strokeWidth}
                 data-handle-id={handle.id}
+<<<<<<< HEAD
+=======
+                data-handle-type="transform"
+>>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
                 style={{
                   pointerEvents: 'all',
                   cursor: handle.cursor,
@@ -67,6 +78,7 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
                 }}
               />
             ) : (
+<<<<<<< HEAD
               // Circular rotation handles
               <circle
                 cx={handle.position.x}
@@ -104,6 +116,50 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
                   fontSize={8 / viewport.zoom}
                   fill="#28a745"
                   pointerEvents="none"
+=======
+              /* Circular rotation handle */
+              <g>
+                {/* Connection line from bounding box to rotation handle */}
+                <line
+                  x1={bounds.x + bounds.width / 2}
+                  y1={bounds.y}
+                  x2={handle.position.x + currentSize / 2}
+                  y2={handle.position.y + currentSize / 2}
+                  stroke="#28a745"
+                  strokeWidth={strokeWidth}
+                  strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
+                />
+                {/* Rotation handle circle */}
+                <circle
+                  cx={handle.position.x + currentSize / 2}
+                  cy={handle.position.y + currentSize / 2}
+                  r={currentSize / 2}
+                  fill="white"
+                  stroke="#28a745"
+                  strokeWidth={strokeWidth}
+                  data-handle-id={handle.id}
+                  data-handle-type="rotation"
+                  style={{
+                    pointerEvents: 'all',
+                    cursor: handle.cursor,
+                    transition: 'all 0.1s ease'
+                  }}
+                />
+                {/* Rotation symbol ↻ */}
+                <text
+                  x={handle.position.x + currentSize / 2}
+                  y={handle.position.y + currentSize / 2}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={`${currentSize * 0.8}px`}
+                  fill="#28a745"
+                  style={{ 
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                    fontFamily: 'monospace',
+                    fontWeight: 'bold'
+                  }}
+>>>>>>> a66cfd3 (feat: add rotation handle and support for mirroring in Transform plugin)
                 >
                   ↻
                 </text>
