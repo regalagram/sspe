@@ -187,12 +187,13 @@ export const generateSmoothPath = (
   console.log('Original ends with Z:', originalEndsWithZ);
   console.log('Normalized segment:', normalizedSegment.map(c => `${c.command}(${c.x},${c.y})`));
   
-  console.log('🎨 PASO 2: Aplicar suavizado usando getPointSmooth()');
-  // PASO 2: APLICAR SUAVIZADO USANDO getPointSmooth()
-  // Esta función externa analiza el path y genera curvas Bézier suaves
+  console.log('🎨 PASO 2: Aplicar suavizado usando algoritmo Enhanced');
+  // PASO 2: APLICAR SUAVIZADO USANDO getPointSmooth() (Algoritmo Enhanced)
+  // getPointSmooth ahora implementa el algoritmo Enhanced con tensión adaptativa,
+  // manejo avanzado de puntos fantasma y soporte completo para comandos H/V
   let smoothedSegment = getPointSmooth(normalizedSegment);
   
-  console.log('Smoothed segment after getPointSmooth:', smoothedSegment.map(c => `${c.command}(${c.x},${c.y})`));
+  console.log('Smoothed segment after smoothing:', smoothedSegment.map(c => `${c.command}(${c.x},${c.y})`));
   
   console.log('📐 PASO 3: Ajuste a grilla (Snap to Grid)');
   // PASO 3: AJUSTE A GRILLA (SNAP TO GRID)

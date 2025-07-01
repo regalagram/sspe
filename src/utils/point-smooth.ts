@@ -1,23 +1,42 @@
 import { SVGCommand } from '../types';
 
 /**
- * Creates smooth Bézier curves from line segments using Catmull-Rom spline algorithm
- * Implements the exact algorithm from the provided pseudocode
+ * Creates smooth Bézier curves from line segments using enhanced Catmull-Rom spline algorithm
+ * Implements the exact specification with adaptive tension, proper ghost point handling,
+ * and exact control point calculations
  */
 export function getPointSmooth(commands: SVGCommand[]): SVGCommand[] {
   if (!commands || commands.length < 2) {
     return commands;
   }
 
-  // PASO 1: ANÁLISIS DE SECUENCIA DE PUNTOS
+  // PASO 1: EXTRACCIÓN DE PUNTOS según especificación
   const points: { x: number; y: number; originalCommand: SVGCommand; index: number }[] = [];
   
-  // Extraer coordenadas (x,y) de todos los comandos
   for (let i = 0; i < commands.length; i++) {
     const cmd = commands[i];
+    // Manejo de comandos especiales H, V según especificación
     if ('x' in cmd && 'y' in cmd && cmd.x !== undefined && cmd.y !== undefined) {
       points.push({
         x: cmd.x,
+        y: cmd.y,
+        originalCommand: cmd,
+        index: i
+      });
+    } else if (cmd.command.toUpperCase() === 'H' && 'x' in cmd && cmd.x !== undefined) {
+      // Para comando H, usar Y del comando anterior
+      const prevPoint = points.length > 0 ? points[points.length - 1] : { x: 0, y: 0 };
+      points.push({
+        x: cmd.x,
+        y: prevPoint.y,
+        originalCommand: cmd,
+        index: i
+      });
+    } else if (cmd.command.toUpperCase() === 'V' && 'y' in cmd && cmd.y !== undefined) {
+      // Para comando V, usar X del comando anterior
+      const prevPoint = points.length > 0 ? points[points.length - 1] : { x: 0, y: 0 };
+      points.push({
+        x: prevPoint.x,
         y: cmd.y,
         originalCommand: cmd,
         index: i
@@ -26,243 +45,129 @@ export function getPointSmooth(commands: SVGCommand[]): SVGCommand[] {
   }
 
   if (points.length < 3) {
-    // No hay suficientes puntos para suavizar
     return commands;
   }
 
   const smoothedCommands: SVGCommand[] = [];
   
-  // PASO 2: DETECCIÓN DE SEGMENTOS PARA SUAVIZAR
-  // Factor de tensión (controla "suavidad")
-  const tension = 0.5; // Valor típico entre 0.0 (angular) y 1.0 (muy suave)
-  const smoothingThreshold = Math.PI / 12; // 15 grados - ángulo mínimo reducido para suavizar más
-  const epsilon = 1e-6; // Tolerancia para puntos "iguales"
+  // PASO 2: PARÁMETROS DE CONFIGURACIÓN según especificación
+  const tensionDefault = 0.5; // Tensión por defecto (rango 0.1-0.9)
+  const toleranceComparison = 1e-6; // Tolerancia de comparación
+  const vectorLimits = 10000; // Límites de vector ±10000
   
-  // NUEVO: Forzar conversión de L a C independientemente del ángulo
-  const forceAllToCurves = true; // Cuando es true, convierte todos los L a C
-
-  // DETECTAR SI ES FIGURA CERRADA
-  const esFiguraCerrada = points.length > 2 && (
-    Math.abs(points[0].x - points[points.length - 1].x) < epsilon &&
-    Math.abs(points[0].y - points[points.length - 1].y) < epsilon
+  // PASO 3: DETECTAR SI ES PATH CERRADO
+  const isClosedPath = points.length > 2 && (
+    Math.abs(points[0].x - points[points.length - 1].x) < toleranceComparison &&
+    Math.abs(points[0].y - points[points.length - 1].y) < toleranceComparison
   );
 
-  console.log('Figura cerrada detectada:', esFiguraCerrada);
-
-  // FUNCIÓN AUXILIAR PARA ACCESO CIRCULAR
-  const obtenerPuntoCircular = (índice: number) => {
-    const n = points.length;
-    if (!esFiguraCerrada) {
-      // Para figuras abiertas, usar extrapolación en los extremos
-      if (índice < 0) return points[0];
-      if (índice >= n) return points[n - 1];
-      return points[índice];
-    }
+  // PASO 4: PREPARACIÓN DE PUNTOS FANTASMA según especificación exacta
+  const pointsWithGhosts: typeof points = [];
+  
+  if (isClosedPath) {
+    const firstPoint = points[0];
+    const lastPoint = points[points.length - 1];
+    const areFirstLastEqual = Math.abs(firstPoint.x - lastPoint.x) < toleranceComparison && 
+                             Math.abs(firstPoint.y - lastPoint.y) < toleranceComparison;
     
-    // Para figuras cerradas, usar acceso circular
-    if (índice < 0) {
-      // Envolver hacia el final (excluyendo último punto que duplica al primero)
-      const índiceReal = n - 2 + (índice + 1);
-      return points[Math.max(0, índiceReal)];
+    if (areFirstLastEqual && points.length > 2) {
+      // Agregar el penúltimo punto al inicio
+      pointsWithGhosts.push(points[points.length - 2]);
+      pointsWithGhosts.push(...points);
+      // Agregar el segundo punto al final
+      pointsWithGhosts.push(points[1]);
+    } else {
+      // Agregar el último punto al inicio
+      pointsWithGhosts.push(points[points.length - 1]);
+      pointsWithGhosts.push(...points);
+      // Agregar el primer punto al final
+      pointsWithGhosts.push(points[0]);
     }
-    
-    if (índice >= n - 1) {
-      // Envolver hacia el inicio
-      const índiceReal = índice % (n - 1);
-      return points[índiceReal];
+  } else {
+    // Para paths abiertos: calcular puntos fantasma por extrapolación
+    if (points.length >= 2) {
+      // Punto fantasma inicial = primer_punto - (segundo_punto - primer_punto)
+      const ghostStart = {
+        x: points[0].x - (points[1].x - points[0].x),
+        y: points[0].y - (points[1].y - points[0].y),
+        originalCommand: points[0].originalCommand,
+        index: -1
+      };
+      pointsWithGhosts.push(ghostStart);
+      pointsWithGhosts.push(...points);
+      
+      // Punto fantasma final = último_punto + (último_punto - penúltimo_punto)
+      const lastIdx = points.length - 1;
+      const prevIdx = points.length - 2;
+      const ghostEnd = {
+        x: points[lastIdx].x + (points[lastIdx].x - points[prevIdx].x),
+        y: points[lastIdx].y + (points[lastIdx].y - points[prevIdx].y),
+        originalCommand: points[lastIdx].originalCommand,
+        index: points.length
+      };
+      pointsWithGhosts.push(ghostEnd);
     }
-    
-    return points[índice];
-  };
+  }
 
   // Preservar el primer comando (siempre M)
   if (points.length > 0) {
     smoothedCommands.push({ ...points[0].originalCommand });
   }
 
-  // PASO 3: GENERACIÓN DE CURVAS BÉZIER CÚBICAS
-  // Para cada segmento (desde el segundo punto), calcular si necesita suavizado
-  // IMPORTANTE: Procesar TODOS los puntos, incluyendo primero y último
-  for (let i = 1; i < points.length; i++) {
-    // MANEJO ESPECIAL PARA FIGURAS CERRADAS
-    let P0, P1, P2, P3;
+  // PASO 5: GENERACIÓN DE CURVAS BÉZIER CÚBICAS
+  // Procesar cada par de puntos consecutivos (p1, p2) con contexto (p0, p3)
+  for (let i = 1; i < pointsWithGhosts.length - 2; i++) {
+    const p0 = pointsWithGhosts[i - 1];
+    const p1 = pointsWithGhosts[i];
+    const p2 = pointsWithGhosts[i + 1];
+    const p3 = pointsWithGhosts[i + 2];
     
-    if (esFiguraCerrada) {
-      // Usar acceso circular para figuras cerradas
-      P0 = obtenerPuntoCircular(i - 2);
-      P1 = obtenerPuntoCircular(i - 1);
-      P2 = obtenerPuntoCircular(i);
-      P3 = obtenerPuntoCircular(i + 1);
-    } else {
-      // Usar lógica normal para figuras abiertas
-      P0 = i > 1 ? points[i - 2] : points[i - 1];
-      P1 = points[i - 1];
-      P2 = points[i];
-      P3 = i < points.length - 1 ? points[i + 1] : points[i];
-    }
-
-    // Verificar si necesita suavizado (detectar "esquina")
-    let needsSmoothing = false;
+    // Skip si estamos procesando puntos fantasma en lugar de puntos originales
+    if (p2.index < 0 || p2.index >= points.length) continue;
     
-    // CAMBIO CRÍTICO: Si forceAllToCurves está activo, convertir todos los segmentos
-    if (forceAllToCurves) {
-      needsSmoothing = true;
-    } else {
-      // LÓGICA ORIGINAL: También evaluar primer y último segmento
-      if (points.length >= 3) {
-        // Para el primer segmento (i=1), evaluar si hay continuidad
-        if (i === 1) {
-          if (esFiguraCerrada) {
-            // En figuras cerradas, siempre suavizar el primer segmento
-            needsSmoothing = true;
-          } else {
-            // En figuras abiertas, verificar si hay vector de salida válido
-            const outVec = { x: P3.x - P2.x, y: P3.y - P2.y };
-            const outLength = Math.sqrt(outVec.x * outVec.x + outVec.y * outVec.y);
-            needsSmoothing = outLength > 1e-6 && points.length > 2;
-          }
-        }
-        // Para el último segmento en figuras cerradas, también suavizar
-        else if (i === points.length - 1 && esFiguraCerrada) {
-          needsSmoothing = true;
-        }
-        // Para el último segmento en figuras abiertas
-        else if (i === points.length - 1 && !esFiguraCerrada) {
-          const inVec = { x: P1.x - P0.x, y: P1.y - P0.y };
-          const inLength = Math.sqrt(inVec.x * inVec.x + inVec.y * inVec.y);
-          needsSmoothing = inLength > 1e-6 && points.length > 2;
-        }
-        // Para segmentos intermedios, calcular ángulo entre vectores
-        else if (i > 1 && i < points.length - 1) {
-          const inVec = { x: P1.x - P0.x, y: P1.y - P0.y };
-          const outVec = { x: P2.x - P1.x, y: P2.y - P1.y };
-          
-          const inLength = Math.sqrt(inVec.x * inVec.x + inVec.y * inVec.y);
-          const outLength = Math.sqrt(outVec.x * outVec.x + outVec.y * outVec.y);
-          
-          if (inLength > 1e-6 && outLength > 1e-6) {
-            const inNorm = { x: inVec.x / inLength, y: inVec.y / inLength };
-            const outNorm = { x: outVec.x / outLength, y: outVec.y / outLength };
-            
-            // Calcular ángulo entre vectores
-            const dotProduct = inNorm.x * outNorm.x + inNorm.y * outNorm.y;
-            const angle = Math.acos(Math.max(-1, Math.min(1, dotProduct))); // Clamp para evitar NaN
-            
-            // Si el ángulo es mayor al umbral, necesita suavizado
-            needsSmoothing = angle > smoothingThreshold;
-          }
-        }
-      }
-    }
-
-    if (needsSmoothing) {
-      // CÁLCULO DE PUNTOS DE CONTROL BÉZIER usando Catmull-Rom
-      
-      // Vectores tangentes usando algoritmo Catmull-Rom
-      // tangente1 = (P2 - P0) * tensión
-      // tangente2 = (P3 - P1) * tensión
-      let tangent1 = {
-        x: (P2.x - P0.x) * tension,
-        y: (P2.y - P0.y) * tension
-      };
-      
-      let tangent2 = {
-        x: (P3.x - P1.x) * tension,
-        y: (P3.y - P1.y) * tension
-      };
-      
-      // MEJORA: Para puntos muy cercanos, usar vectores alternativos
-      const distance12 = Math.sqrt((P2.x - P1.x) ** 2 + (P2.y - P1.y) ** 2);
-      const minDistance = 5; // Distancia mínima para considerar "puntos cercanos"
-      
-      if (distance12 < minDistance) {
-        // Para puntos muy cercanos, crear tangentes más suaves basadas en la dirección local
-        const localDirection = {
-          x: P2.x - P1.x,
-          y: P2.y - P1.y
-        };
-        
-        // Normalizar y aplicar un factor de suavizado más conservador
-        const localLength = Math.sqrt(localDirection.x ** 2 + localDirection.y ** 2);
-        if (localLength > epsilon) {
-          const smoothFactor = Math.min(distance12 / 3, 2); // Factor más conservador para puntos cercanos
-          tangent1 = {
-            x: (localDirection.x / localLength) * smoothFactor,
-            y: (localDirection.y / localLength) * smoothFactor
-          };
-          tangent2 = {
-            x: (localDirection.x / localLength) * smoothFactor,
-            y: (localDirection.y / localLength) * smoothFactor
-          };
-        }
-      }
-      
-      // Puntos de control Bézier derivados de tangentes Catmull-Rom
-      // control1 = P1 + tangente1 / 3
-      // control2 = P2 - tangente2 / 3
-      const control1 = {
-        x: P1.x + tangent1.x / 3,
-        y: P1.y + tangent1.y / 3
-      };
-      
-      const control2 = {
-        x: P2.x - tangent2.x / 3,
-        y: P2.y - tangent2.y / 3
-      };
-      
-      // CASO ESPECIAL: Si es figura cerrada y estamos en el último punto
-      // que coincide con el primero, ajustar para continuidad
-      if (esFiguraCerrada && i === points.length - 1) {
-        console.log('Aplicando cálculo especial para último punto en figura cerrada');
-        
-        // El último punto debe coincidir exactamente con el primero
-        const firstPoint = points[0];
-        
-        // Generar comando C que termina exactamente en el primer punto
-        const bezierCommand: SVGCommand = {
-          ...P2.originalCommand,
-          command: 'C',
-          x1: control1.x,
-          y1: control1.y,
-          x2: control2.x,
-          y2: control2.y,
-          x: firstPoint.x,  // Forzar cierre exacto
-          y: firstPoint.y,  // Forzar cierre exacto
-        };
-        
-        smoothedCommands.push(bezierCommand);
-      } else {
-        // Generar comando C normal
-        const bezierCommand: SVGCommand = {
-          ...P2.originalCommand,
-          command: 'C',
-          x1: control1.x,      // Primer punto de control
-          y1: control1.y,
-          x2: control2.x,      // Segundo punto de control  
-          y2: control2.y,
-          x: P2.x,             // Punto final de la curva
-          y: P2.y,
-        };
-        
-        smoothedCommands.push(bezierCommand);
-      }
-    } else {
-      // PASO 4: PRESERVAR SEGMENTOS NO SUAVIZADOS
-      // Los segmentos que ya son curvos o muy cortos se mantienen sin cambios
-      
-      // CASO ESPECIAL: Para figuras cerradas, asegurar que el último punto coincida
-      if (esFiguraCerrada && i === points.length - 1) {
-        const firstPoint = points[0];
-        const preservedCommand = { 
-          ...P2.originalCommand,
-          x: firstPoint.x,  // Forzar cierre exacto
-          y: firstPoint.y   // Forzar cierre exacto
-        };
-        smoothedCommands.push(preservedCommand);
-      } else {
-        smoothedCommands.push({ ...P2.originalCommand });
-      }
-    }
+    // Calcular distancia entre puntos consecutivos
+    const distance = Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
+    
+    // Tensión adaptativa: tensión * (1 + distancia/500), limitada entre 0.1-0.9
+    const tensionAdjusted = Math.max(0.1, Math.min(0.9, tensionDefault * (1 + distance / 500)));
+    
+    // Calcular vectores con límites según especificación
+    const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+    
+    const vector0 = {
+      x: clamp(p2.x - p0.x, -vectorLimits, vectorLimits),
+      y: clamp(p2.y - p0.y, -vectorLimits, vectorLimits)
+    };
+    
+    const vector1 = {
+      x: clamp(p3.x - p1.x, -vectorLimits, vectorLimits),
+      y: clamp(p3.y - p1.y, -vectorLimits, vectorLimits)
+    };
+    
+    // Calcular puntos de control Bézier según especificación exacta
+    const controlPoint1 = {
+      x: p1.x + (vector0.x / 6) * tensionAdjusted,
+      y: p1.y + (vector0.y / 6) * tensionAdjusted
+    };
+    
+    const controlPoint2 = {
+      x: p2.x - (vector1.x / 6) * tensionAdjusted,
+      y: p2.y - (vector1.y / 6) * tensionAdjusted
+    };
+    
+    // Generar comando Bézier cúbico
+    const bezierCommand: SVGCommand = {
+      ...p2.originalCommand,
+      command: 'C',
+      x1: controlPoint1.x,
+      y1: controlPoint1.y,
+      x2: controlPoint2.x,
+      y2: controlPoint2.y,
+      x: p2.x,
+      y: p2.y
+    };
+    
+    smoothedCommands.push(bezierCommand);
   }
 
   return smoothedCommands;

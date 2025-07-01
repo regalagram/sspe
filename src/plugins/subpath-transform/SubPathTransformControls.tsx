@@ -266,7 +266,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
         replaceSubPathCommands(targetSubPath.id, newSubPathCommands);
       };
       
-      // Apply smoothing using the new generateSmoothPath function with void signature
+      // Apply smoothing using the generateSmoothPath function
       generateSmoothPath(
         segmentToSmooth,
         targetSubPath.commands,
@@ -908,14 +908,16 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
               </div>
               
               {smoothingExpanded && (
-                <PluginButton
-                  icon={<Waves size={14} />}
-                  text="Smooth"
-                  color="#007acc"
-                  active={false}
-                  disabled={!canApplySmoothing()}
-                  onClick={handleSmooth}
-                />
+                <>
+                  <PluginButton
+                    icon={<Waves size={14} />}
+                    text="Smooth"
+                    color="#007acc"
+                    active={false}
+                    disabled={!canApplySmoothing()}
+                    onClick={handleSmooth}
+                  />
+                </>
               )}
             </div>
 
