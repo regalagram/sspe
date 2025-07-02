@@ -38,11 +38,11 @@ class PencilManager {
   };
 
   private editorStore: any;
-  private readonly minDistance = 1.5; // Reduced for more detail capture
+  private readonly minDistance = 0.5; // Reduced even more for better capture
   private smoothingFactor = 0.85; // Increased for smoother result
   private readonly maxPoints = 500; // Reduced for better performance
   private lastUpdateTime = 0;
-  private readonly updateThrottle = 12; // Increased frequency for smoother drawing
+  private readonly updateThrottle = 8; // Reduced for more responsive drawing
 
   constructor() {
     this.loadFromStorage();
@@ -63,10 +63,6 @@ class PencilManager {
       tldrawSmoother.setMinDistance(savedData.smootherParams.minDistance);
       tldrawSmoother.setPressureDecay(savedData.smootherParams.pressureDecay);
       tldrawSmoother.setLowPassAlpha(savedData.smootherParams.lowPassAlpha);
-      
-      console.log('PencilManager: Loaded settings from localStorage');
-    } else {
-      console.log('PencilManager: Using default settings');
     }
   }
 
@@ -84,7 +80,6 @@ class PencilManager {
   private svgRef: React.RefObject<SVGSVGElement | null> | null = null;
 
   setEditorStore(store: any) {
-    console.log('PencilManager: Setting editor store:', store);
     this.editorStore = store;
   }
 
@@ -99,8 +94,6 @@ class PencilManager {
   }
 
   handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
-    console.log('PencilManager.handleMouseDown called', { isPencilMode: this.isPencilMode() });
-    
     if (!this.isPencilMode()) return false;
 
     e.preventDefault();
@@ -116,8 +109,6 @@ class PencilManager {
 
     const {
       addPath,
-      addSubPath,
-      addCommand,
       pushToHistory,
     } = this.editorStore;
 
@@ -126,38 +117,36 @@ class PencilManager {
     this.state.rawPoints = [{ ...svgPoint, timestamp: Date.now() }];
     this.state.lastPoint = svgPoint;
 
-    // Create new path and subpath
-    const pathId = addPath(this.state.strokeStyle);
-    const subPathId = addSubPath(pathId);
+    // Create new path with the correct starting position to avoid default M 100,100
+    const pathId = addPath(this.state.strokeStyle, svgPoint.x, svgPoint.y);
+    
+    // Get the existing subpath that was created with the path
+    // Need to get fresh state after addPath call
+    const currentState = useEditorStore.getState();
+    const createdPath = currentState.paths.find((p: any) => p.id === pathId);
+    const subPathId = createdPath?.subPaths[0]?.id;
+    
+    if (!subPathId) {
+      console.error('PencilManager: Failed to find created subpath');
+      return false;
+    }
     
     this.state.currentPath = pathId;
     this.state.currentSubPath = subPathId;
-
-    // Add initial move command
-    const moveCommand: Omit<SVGCommand, 'id'> = {
-      command: 'M',
-      x: svgPoint.x,
-      y: svgPoint.y
-    };
-
-    addCommand(subPathId, moveCommand);
+    
+    // Make the initial point visible
+    this.updateSmoothPath();
+    
     pushToHistory();
 
     // Set up global mouse events for drawing
     this.setupGlobalMouseEvents();
-
-    console.log('Pencil drawing started:', { pathId, subPathId, point: svgPoint });
 
     return true;
   };
 
   handleMouseMove = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
     if (!this.isPencilMode() || !this.state.isDrawing) return false;
-
-    console.log('PencilManager.handleMouseMove called', { 
-      isDrawing: this.state.isDrawing, 
-      pointsCount: this.state.rawPoints.length 
-    });
 
     e.preventDefault();
     e.stopPropagation();
@@ -206,8 +195,6 @@ class PencilManager {
     e.preventDefault();
     e.stopPropagation();
 
-    console.log('Pencil drawing finished, total points:', this.state.rawPoints.length);
-
     // Finish drawing
     this.state.isDrawing = false;
 
@@ -226,9 +213,22 @@ class PencilManager {
   };
 
   private updateSmoothPath() {
-    if (!this.state.currentSubPath || this.state.rawPoints.length < 2 || !this.editorStore) return;
+    if (!this.state.currentSubPath || this.state.rawPoints.length < 1 || !this.editorStore) return;
 
     const { replaceSubPathCommands } = this.editorStore;
+
+    // For a single point, create a small circle to make it visible
+    if (this.state.rawPoints.length === 1) {
+      const point = this.state.rawPoints[0];
+      
+      const svgCommands: Omit<SVGCommand, 'id'>[] = [
+        { command: 'M', x: point.x, y: point.y },
+        { command: 'L', x: point.x + 0.1, y: point.y } // Tiny line to make it visible
+      ];
+      
+      replaceSubPathCommands(this.state.currentSubPath, svgCommands);
+      return;
+    }
 
     // Apply tldraw-style smoothing and simplification
     const smoothedPoints = tldrawSmoother.smoothPoints(this.state.rawPoints);
@@ -240,7 +240,7 @@ class PencilManager {
     const svgCommands: Omit<SVGCommand, 'id'>[] = [];
     
     if (pointsWithPressure.length > 0) {
-      // Start with move command
+      // Start with move command - use the first smoothed point
       svgCommands.push({
         command: 'M',
         x: pointsWithPressure[0].x,
@@ -384,8 +384,6 @@ class PencilManager {
     tldrawSmoother.setMinDistance(defaults.smootherParams.minDistance);
     tldrawSmoother.setPressureDecay(defaults.smootherParams.pressureDecay);
     tldrawSmoother.setLowPassAlpha(defaults.smootherParams.lowPassAlpha);
-    
-    console.log('PencilManager: Cleared saved settings and reset to defaults');
   }
 
   // Clean up method
@@ -415,15 +413,11 @@ class PencilManager {
     const svgRect = svg.getBoundingClientRect();
     const svgPoint = this.clientToSVGPoint(e.clientX, e.clientY, svgRect);
 
-    console.log('Global mouse move:', { svgPoint, clientX: e.clientX, clientY: e.clientY });
-
     this.addPointToPath(svgPoint);
   };
 
   private handleGlobalMouseUp = (e: globalThis.MouseEvent) => {
     if (!this.state.isDrawing) return;
-
-    console.log('Pencil drawing finished via global mouseup, total points:', this.state.rawPoints.length);
 
     // Finish drawing
     this.state.isDrawing = false;
