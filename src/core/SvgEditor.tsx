@@ -22,6 +22,7 @@ import { PencilPlugin } from '../plugins/pencil/Pencil';
 import { usePencilCursor } from '../plugins/pencil/usePencilCursor';
 import { ShapesPlugin } from '../plugins/shapes/Shapes';
 import { Transform } from '../plugins/transform/Transform';
+import { ArrangePlugin } from '../plugins/arrange/Arrange';
 
 // Register plugins immediately during module loading
 const initializePlugins = () => {
@@ -45,6 +46,7 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(SubPathListPlugin);
   pluginManager.registerPlugin(SubPathTransformPlugin);
   pluginManager.registerPlugin(PointTransformPlugin);
+  pluginManager.registerPlugin(ArrangePlugin);
 };
 
 // Initialize plugins during module load
