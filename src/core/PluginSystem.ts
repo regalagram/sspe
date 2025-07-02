@@ -106,13 +106,12 @@ export class PluginManager {
     // Process plugins in order, stop if any plugin handles the event
     let pluginsToProcess = this.getEnabledPlugins();
     
-    if (handleType === 'transform' && eventType === 'mouseDown') {
-      // When clicking on a transform handle, prioritize Transform plugin
+    if ((handleType === 'transform' || handleType === 'rotation') && eventType === 'mouseDown') {
+      // When clicking on a transform or rotation handle, prioritize Transform plugin
       const transformPlugin = pluginsToProcess.find(p => p.id === 'transform');
       const otherPlugins = pluginsToProcess.filter(p => p.id !== 'transform');
       
       if (transformPlugin) {
-        console.log('PluginSystem: Prioritizing Transform plugin for handle', handleId);
         pluginsToProcess = [transformPlugin, ...otherPlugins];
       }
     } else if (commandId && eventType === 'mouseDown') {
@@ -145,7 +144,6 @@ export class PluginManager {
       }
 
       if (handled) {
-        console.log(`PluginSystem: Event ${eventType} handled by plugin: ${plugin.id}`);
         return true;
       }
     }

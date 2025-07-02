@@ -177,25 +177,19 @@ export const generateSmoothPath = (
     return; // Sin hacer nada
   }
   
-  console.log('🔧 PASO 1: Normalización de comandos Z');
   // PASO 1: NORMALIZACIÓN DE COMANDOS Z
   // Los comandos Z deben convertirse a L para mejor suavizado
   const normalizedSegment = normalizeZCommandsForSmoothing(subpathSegment);
   const originalEndsWithZ = (subpathSegment[subpathSegment.length - 1]?.command === 'Z' || 
                              subpathSegment[subpathSegment.length - 1]?.command === 'Z');
   
-  console.log('Original ends with Z:', originalEndsWithZ);
-  console.log('Normalized segment:', normalizedSegment.map(c => `${c.command}(${c.x},${c.y})`));
   
-  console.log('🎨 PASO 2: Aplicar suavizado usando algoritmo Enhanced');
   // PASO 2: APLICAR SUAVIZADO USANDO getPointSmooth() (Algoritmo Enhanced)
   // getPointSmooth ahora implementa el algoritmo Enhanced con tensión adaptativa,
   // manejo avanzado de puntos fantasma y soporte completo para comandos H/V
   let smoothedSegment = getPointSmooth(normalizedSegment);
   
-  console.log('Smoothed segment after smoothing:', smoothedSegment.map(c => `${c.command}(${c.x},${c.y})`));
   
-  console.log('📐 PASO 3: Ajuste a grilla (Snap to Grid)');
   // PASO 3: AJUSTE A GRILLA (SNAP TO GRID)
   // Todos los puntos calculados se ajustan a la grilla definida
   smoothedSegment = smoothedSegment.map((cmd) => {
@@ -214,9 +208,7 @@ export const generateSmoothPath = (
     return snappedCmd;
   });
   
-  console.log('After grid snapping:', smoothedSegment.map(c => `${c.command}(${c.x},${c.y})`));
   
-  console.log('🔄 PASO 4: Manejo de paths cerrados (Caso de borde crítico)');
   // PASO 4: MANEJO DE PATHS CERRADOS (CASO DE BORDE CRÍTICO)
   if (originalEndsWithZ && smoothedSegment.length > 0) {
     const lastCmd = smoothedSegment[smoothedSegment.length - 1];
@@ -232,7 +224,6 @@ export const generateSmoothPath = (
       const distanciaY = Math.abs(lastCmd.y - firstCmd.y);
       const epsilon = 1e-6; // Tolerancia para puntos "iguales"
       
-      console.log(`Distance check: dx=${distanciaX}, dy=${distanciaY}, epsilon=${epsilon}`);
       
       if (distanciaX > epsilon || distanciaY > epsilon) {
         // Agregar línea explícita para cerrar el path
@@ -243,7 +234,6 @@ export const generateSmoothPath = (
           y: firstCmd.y,
         };
         smoothedSegment.push(comandoCierre);
-        console.log('Added closing line:', comandoCierre);
       }
     }
     
@@ -253,7 +243,6 @@ export const generateSmoothPath = (
     //   - El comportamiento visual es idéntico con 'L' al primer punto
   }
   
-  console.log('📍 PASO 5: Preservación de comando M inicial (Caso de borde)');
   // PASO 5: PRESERVACIÓN DE COMANDO M INICIAL (CASO DE BORDE)
   const originalFirstCommand = subpathSegment[0];
   
@@ -274,7 +263,6 @@ export const generateSmoothPath = (
         snapToGridValue(originalFirstCommand.y) !== snapToGridValue(firstSmoothed.y)
       );
       
-      console.log('Coordinates different:', coordenadasDiferentes);
       
       if (coordenadasDiferentes) {
         // Insertar M explícito al inicio
@@ -285,11 +273,9 @@ export const generateSmoothPath = (
           y: snapToGridValue(originalFirstCommand.y),
         };
         smoothedSegment.unshift(comandoM);
-        console.log('Inserted explicit M command:', comandoM);
       } else {
         // Simplemente cambiar el tipo de comando
         firstSmoothed.command = 'M';
-        console.log('Changed first command to M');
       }
     }
   }
@@ -298,10 +284,8 @@ export const generateSmoothPath = (
   if (originalFirstCommand && originalFirstCommand.command !== 'M' && 
       smoothedSegment.length > 0 && smoothedSegment[0].command === 'M') {
     smoothedSegment[0].command = 'L';
-    console.log('Changed M back to L (original was not M)');
   }
   
-  console.log('🧹 PASO 6: Eliminación de comandos L redundantes (Optimización)');
   // PASO 6: ELIMINACIÓN DE COMANDOS L REDUNDANTES (OPTIMIZACIÓN)
   // Evitar M seguido inmediatamente de L al mismo punto
   if (smoothedSegment.length > 1) {
@@ -315,17 +299,14 @@ export const generateSmoothPath = (
         cmd1.x === cmd0.x && cmd1.y === cmd0.y) {
       
       smoothedSegment.splice(1, 1); // Eliminar L redundante
-      console.log('Removed redundant L command after M');
     }
   }
   
-  console.log('🔄 PASO 7: Reemplazo en el array de comandos principal');
   // PASO 7: REEMPLAZO EN EL ARRAY DE COMANDOS PRINCIPAL
   // Encontrar dónde está el segmento original en el array completo
   const startIndex = commands.findIndex((cmd) => cmd === subpathSegment[0]);
   const endIndex = commands.findIndex((cmd) => cmd === subpathSegment[subpathSegment.length - 1]);
   
-  console.log(`Found indices: start=${startIndex}, end=${endIndex}`);
   
   if (startIndex === -1 || endIndex === -1 || startIndex > endIndex) {
     console.error('No se pudieron encontrar índices del segmento');
@@ -336,7 +317,6 @@ export const generateSmoothPath = (
   const newCommands = [...commands];
   newCommands.splice(startIndex, endIndex - startIndex + 1, ...smoothedSegment);
   
-  console.log('Final smoothed commands:', smoothedSegment.map(c => `${c.command}(${c.x},${c.y})`));
   
   // Actualizar el path en el estado (con historial)
   updatePath(newCommands, true);

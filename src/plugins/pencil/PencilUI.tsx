@@ -18,7 +18,6 @@ export const PencilUI: React.FC = () => {
   const toolColor = '#007acc';
 
   const handlePencilClick = () => {
-    console.log('Pencil button clicked');
     setCreateMode('PENCIL');
   };
 
@@ -94,10 +93,6 @@ export const PencilUI: React.FC = () => {
       setSmootherParams(pencilManager.getSmootherParameters());
     }
   }, [isPencilActive]);
-
-  React.useEffect(() => {
-    console.log('PencilUI: Mode changed:', { mode: mode.current, isPencilActive });
-  }, [mode.current, isPencilActive]);
 
   // Helper component for label with tooltip
   const LabelWithTooltip: React.FC<{ paramKey: string; children: React.ReactNode }> = ({ paramKey, children }) => (

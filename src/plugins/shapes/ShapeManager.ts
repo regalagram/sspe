@@ -53,7 +53,6 @@ export class ShapeManager {
 
   setCurrentSize(size: number) {
     this.state.currentSize = Math.max(10, Math.min(300, size));
-    console.log(`🔴 DEBUG: Size set to ${this.state.currentSize}`);
   }
 
   getCursor(): string {
@@ -117,8 +116,6 @@ export class ShapeManager {
     pushToHistory();
 
     try {
-      console.log(`🔴 DEBUG: Inserting shape with size: ${this.state.currentSize}`);
-      
       // Generate the shape commands
       const commands = shapeTemplate.generateCommands(point, this.state.currentSize);
 
@@ -145,8 +142,6 @@ export class ShapeManager {
 
       // Replace the default M 100,100 command with our shape commands
       replaceSubPathCommands(subPathId, commands);
-
-      console.log(`Inserted ${shapeTemplate.name} at (${point.x}, ${point.y}) with size ${this.state.currentSize}`);
     } catch (error) {
       console.error('Error inserting shape:', error);
     }

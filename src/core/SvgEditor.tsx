@@ -27,12 +27,11 @@ import { ReorderPlugin } from '../plugins/reorder/Reorder';
 
 // Register plugins immediately during module loading
 const initializePlugins = () => {
-  // Register all plugins before any component renders
-  pluginManager.registerPlugin(PencilPlugin); // Register pencil plugin FIRST for priority
-  pluginManager.registerPlugin(ShapesPlugin); // Register shapes plugin early for mouse event priority
-  pluginManager.registerPlugin(Transform); // Register transform plugin early for mouse event priority
-  pluginManager.registerPlugin(MouseInteractionPlugin);
-  pluginManager.registerPlugin(SelectionPlugin);
+  // Register base dependencies first
+  pluginManager.registerPlugin(MouseInteractionPlugin); // Required by pencil
+  pluginManager.registerPlugin(SelectionPlugin); // Required by subpath-transform and point-transform
+  
+  // Register other core plugins
   pluginManager.registerPlugin(PathRendererPlugin);
   pluginManager.registerPlugin(VisualDebugPlugin);
   pluginManager.registerPlugin(CommandPlugin);
@@ -45,8 +44,15 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(PathStylePlugin);
   pluginManager.registerPlugin(SVGPlugin);
   pluginManager.registerPlugin(SubPathListPlugin);
-  pluginManager.registerPlugin(SubPathTransformPlugin);
-  pluginManager.registerPlugin(PointTransformPlugin);
+  
+  // Register plugins that depend on others
+  pluginManager.registerPlugin(PencilPlugin); // Depends on mouse-interaction
+  pluginManager.registerPlugin(SubPathTransformPlugin); // Depends on selection
+  pluginManager.registerPlugin(PointTransformPlugin); // Depends on selection
+  
+  // Register remaining plugins
+  pluginManager.registerPlugin(ShapesPlugin);
+  pluginManager.registerPlugin(Transform);
   pluginManager.registerPlugin(ArrangePlugin);
   pluginManager.registerPlugin(ReorderPlugin);
 };

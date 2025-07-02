@@ -234,7 +234,6 @@ ${pathElements}
       // Update the store with the new paths
       replacePaths(newPaths);
       
-      console.log('SVG successfully updated with', newPaths.length, 'paths');
       
     } catch (error) {
       console.error('Error parsing SVG:', error);
@@ -262,7 +261,6 @@ ${pathElements}
     // Reset viewport completely to default state (zoom 1, pan 0,0, and default viewBox)
     resetViewportCompletely();
     
-    console.log('All paths cleared and viewport reset successfully');
   };
 
   const handleUploadSVG = () => {

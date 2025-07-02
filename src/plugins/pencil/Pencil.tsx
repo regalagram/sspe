@@ -13,13 +13,11 @@ export const PencilPlugin: Plugin = {
   dependencies: ['mouse-interaction'],
   
   initialize: (editor) => {
-    console.log('PencilPlugin initialized with editor:', editor);
     pencilManager.setEditorStore(editor);
     // Get SVG ref from plugin manager - we'll set it up later via a different mechanism
   },
 
   destroy: () => {
-    console.log('PencilPlugin destroyed');
     pencilManager.destroy();
   },
   

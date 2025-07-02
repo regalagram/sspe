@@ -7,7 +7,7 @@ export const PointTransformPlugin: Plugin = {
   name: 'Point Transform',
   version: '1.0.0',
   enabled: true,
-  dependencies: ['selection-tools'],
+  dependencies: ['selection'],
   ui: [
     {
       id: 'point-transform-controls',

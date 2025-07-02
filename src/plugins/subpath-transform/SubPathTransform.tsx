@@ -7,7 +7,7 @@ export const SubPathTransformPlugin: Plugin = {
   name: 'Transform & Modify',
   version: '1.0.0',
   enabled: true,
-  dependencies: ['selection-tools'],
+  dependencies: ['selection'],
   ui: [
     {
       id: 'subpath-transform-controls',

@@ -876,7 +876,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       // Get bounding box of all paths
       const bounds = getAllPathsBounds(paths);
       
-      console.log('ZoomToFit - bounds:', bounds);
       
       if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
         // If no valid content, reset to default view
@@ -898,7 +897,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       const svgElement = document.querySelector('svg');
       if (svgElement) {
         const rect = svgElement.getBoundingClientRect();
-        console.log('SVG getBoundingClientRect:', rect);
         if (rect.width > 100 && rect.height > 100) { // Ensure reasonable minimum size
           viewportWidth = rect.width;
           viewportHeight = rect.height;
@@ -912,8 +910,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         viewportHeight = window.innerHeight * 0.8; // 80% of window height
       }
       
-      console.log('ZoomToFit - viewport dimensions:', viewportWidth, viewportHeight);
-      console.log('ZoomToFit - content bounds:', bounds);
       
       // Validate viewport dimensions
       if (!isFinite(viewportWidth) || !isFinite(viewportHeight) || viewportWidth <= 0 || viewportHeight <= 0) {
@@ -925,7 +921,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       const contentWidth = Math.max(bounds.width, 1);
       const contentHeight = Math.max(bounds.height, 1);
       
-      console.log('ZoomToFit - content dimensions:', contentWidth, contentHeight);
       
       // Calculate zoom to fit content in viewport (with some padding)
       const padding = 20; // 20px padding on each side
@@ -936,7 +931,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       const zoomY = availableHeight / contentHeight;
       let newZoom = Math.min(zoomX, zoomY);
       
-      console.log('ZoomToFit - zoom calculations:', { zoomX, zoomY, newZoom, availableWidth, availableHeight });
       
       // Validate zoom calculation
       if (!isFinite(newZoom) || newZoom <= 0) {
@@ -989,10 +983,8 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       // Get bounding box of selected commands
       const bounds = getSelectedElementsBounds(paths, selection.selectedCommands);
       
-      console.log('ZoomToSelection - bounds:', bounds);
       
       if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
-        console.log('No valid selection to zoom to');
         return;
       }
       
@@ -1004,7 +996,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       const svgElement = document.querySelector('svg');
       if (svgElement) {
         const rect = svgElement.getBoundingClientRect();
-        console.log('ZoomToSelection - SVG getBoundingClientRect:', rect);
         if (rect.width > 100 && rect.height > 100) { // Ensure reasonable minimum size
           viewportWidth = rect.width;
           viewportHeight = rect.height;
@@ -1018,14 +1009,11 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         viewportHeight = window.innerHeight * 0.8; // 80% of window height
       }
       
-      console.log('ZoomToSelection - viewport dimensions:', viewportWidth, viewportHeight);
-      console.log('ZoomToSelection - selection bounds:', bounds);
       
       // Use the selection bounds directly without excessive padding
       const selectionWidth = Math.max(bounds.width, 1);
       const selectionHeight = Math.max(bounds.height, 1);
       
-      console.log('ZoomToSelection - selection dimensions:', selectionWidth, selectionHeight);
       
       // Calculate zoom to fit selection in viewport (with some padding)
       const padding = 20; // 20px padding on each side
@@ -1036,7 +1024,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       const zoomY = availableHeight / selectionHeight;
       let newZoom = Math.min(zoomX, zoomY);
       
-      console.log('ZoomToSelection - zoom calculations:', { zoomX, zoomY, newZoom, availableWidth, availableHeight });
       
       // Validate zoom calculation
       if (!isFinite(newZoom) || newZoom <= 0) {
@@ -1089,10 +1076,8 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       // Get bounding box of selected sub-paths
       const bounds = getSelectedSubPathsBounds(paths, selection.selectedSubPaths);
       
-      console.log('ZoomToSubPath - bounds:', bounds);
       
       if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
-        console.log('No valid sub-path selection to zoom to');
         return;
       }
       
@@ -1104,7 +1089,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       const svgElement = document.querySelector('svg');
       if (svgElement) {
         const rect = svgElement.getBoundingClientRect();
-        console.log('ZoomToSubPath - SVG getBoundingClientRect:', rect);
         if (rect.width > 100 && rect.height > 100) { // Ensure reasonable minimum size
           viewportWidth = rect.width;
           viewportHeight = rect.height;
@@ -1118,14 +1102,11 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         viewportHeight = window.innerHeight * 0.8; // 80% of window height
       }
       
-      console.log('ZoomToSubPath - viewport dimensions:', viewportWidth, viewportHeight);
-      console.log('ZoomToSubPath - subpath bounds:', bounds);
       
       // Use the subpath bounds directly
       const subPathWidth = Math.max(bounds.width, 1);
       const subPathHeight = Math.max(bounds.height, 1);
       
-      console.log('ZoomToSubPath - subpath dimensions:', subPathWidth, subPathHeight);
       
       // Calculate zoom to fit subpath in viewport (with some padding)
       const padding = 40; // 40px padding on each side for better visibility
@@ -1137,7 +1118,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       
       let newZoom = Math.min(zoomX, zoomY);
       
-      console.log('ZoomToSubPath - zoom calculations:', { zoomX, zoomY, newZoom, availableWidth, availableHeight });
       
       // Validate zoom calculation
       if (!isFinite(newZoom) || newZoom <= 0) {

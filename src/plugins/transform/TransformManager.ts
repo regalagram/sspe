@@ -86,16 +86,10 @@ export class TransformManager {
     const store = this.editorStore || useEditorStore.getState();
     const { selection, paths } = store;
     
-    console.log('TransformManager: calculateBounds called', { 
-      selectedCommands: selection.selectedCommands, 
-      selectedSubPaths: selection.selectedSubPaths,
-      pathsCount: paths.length 
-    });
     
     // Create a temporary SVG element to calculate bounds using DOM
     const tempSvg = this.createTempSVGForSelection(paths, selection);
     if (!tempSvg) {
-      console.log('TransformManager: No valid SVG element created for selection');
       return null;
     }
 
@@ -108,7 +102,6 @@ export class TransformManager {
     }
 
     if (!viewBoxResult || viewBoxResult.width <= 0 || viewBoxResult.height <= 0) {
-      console.log('TransformManager: No valid bounding box found from DOM calculation');
       return null;
     }
 
@@ -134,7 +127,6 @@ export class TransformManager {
       }
     };
 
-    console.log('TransformManager: Final transform bounds from DOM calculation', transformBounds);
     return transformBounds;
   }
 
@@ -155,7 +147,6 @@ export class TransformManager {
 
     // For selected commands (only if multiple commands for meaningful transformation)
     if (selection.selectedCommands.length > 1) {
-      console.log('TransformManager: Creating DOM elements for multiple selected commands');
       
       // Group commands by subpath to create proper path elements
       const commandsBySubPath = new Map();
@@ -181,10 +172,34 @@ export class TransformManager {
       // Create path elements for each subpath that has selected commands
       for (const [subPathId, commands] of commandsBySubPath) {
         const pathElement = document.createElementNS(svgNS, 'path');
-        // Create a temporary subpath with only the selected commands
+        
+        // Ensure the first command is always a move-to command for valid SVG
+        let processedCommands = [...commands];
+        if (processedCommands.length > 0 && processedCommands[0].command !== 'M') {
+          // If the first command is not a move-to, create one from the first command's position
+          const firstCommand = processedCommands[0];
+          let x = 0, y = 0;
+          
+          // Extract position from the first command
+          if (firstCommand.command === 'L' || firstCommand.command === 'C') {
+            x = firstCommand.x;
+            y = firstCommand.y;
+          }
+          
+          // Create a move-to command and prepend it
+          const moveCommand = {
+            id: firstCommand.id + '_move',
+            command: 'M' as const,
+            x: x,
+            y: y
+          };
+          processedCommands = [moveCommand, ...processedCommands];
+        }
+        
+        // Create a temporary subpath with the processed commands
         const tempSubPath = { 
           id: subPathId + '_temp', 
-          commands: commands,
+          commands: processedCommands,
           closed: false // Default value for temporary subpath
         };
         const pathData = subPathToString(tempSubPath);
@@ -197,7 +212,6 @@ export class TransformManager {
     }
     // For selected subpaths
     else if (selection.selectedSubPaths.length > 0) {
-      console.log('TransformManager: Creating DOM elements for selected subpaths');
       
       for (const subPathId of selection.selectedSubPaths) {
         const subPath = this.findSubPathById(subPathId, paths);
@@ -276,7 +290,6 @@ export class TransformManager {
 
   // Update transform state
   updateTransformState() {
-    console.log('TransformManager: updateTransformState called');
     
     // Ensure we have the latest store state
     if (!this.editorStore) {
@@ -287,11 +300,7 @@ export class TransformManager {
     this.state.bounds = this.calculateBounds();
     this.state.handles = this.generateHandles();
     
-    console.log('TransformManager: updateTransformState result', {
-      bounds: this.state.bounds,
-      handlesCount: this.state.handles.length,
-      handles: this.state.handles.map(h => ({ id: h.id, position: h.position }))
-    });
+    
 
     // Call the state change callback if defined
     if (this.state.onStateChange) {
@@ -328,14 +337,7 @@ export class TransformManager {
       selection.selectedCommands.length > 1
     );
     
-    console.log('TransformManager: hasValidSelection check', {
-      selectedCommands: selection.selectedCommands,
-      selectedSubPaths: selection.selectedSubPaths,
-      hasValidSelection,
-      reason: selection.selectedSubPaths.length > 0 ? 'subpaths selected' : 
-              selection.selectedCommands.length > 1 ? 'multiple commands' :
-              selection.selectedCommands.length === 1 ? 'single command (invalid)' : 'no selection'
-    });
+
     
     return hasValidSelection;
   }
@@ -389,13 +391,8 @@ export class TransformManager {
 
   // Mouse event handlers
   handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
-    console.log('TransformManager: handleMouseDown called', { 
-      hasValidSelection: this.hasValidSelection(),
-      svgPoint: context.svgPoint 
-    });
-    
+  
     if (!this.hasValidSelection()) {
-      console.log('TransformManager: No valid selection, returning false');
       return false;
     }
 
@@ -403,39 +400,28 @@ export class TransformManager {
     const clickPoint = context.svgPoint;
     const handle = this.getHandleAtPoint(clickPoint);
     
-    console.log('TransformManager: Handle detection', { 
-      clickPoint, 
-      handle,
-      availableHandles: this.state.handles.map(h => ({ id: h.id, position: h.position }))
-    });
+   
     
     if (handle) {
-      console.log('TransformManager: Starting transform with handle', handle.id);
       this.startTransform(handle, clickPoint);
       return true;
     }
 
     // Check if clicking within the bounds (for potential move operation)
     if (this.isPointInBounds(clickPoint)) {
-      console.log('TransformManager: Click within bounds - potential move operation');
       // Don't handle the event here, but prepare for potential movement
       // The actual movement will be handled by other plugins (like mouse-interaction)
       // We just need to be ready to hide handles when movement starts
       return false; // Let other plugins handle the movement
     }
 
-    console.log('TransformManager: No handle found at click point');
     return false;
   };
 
   handleMouseMove = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
     if (!this.state.isTransforming) return false;
 
-    console.log('TransformManager: handleMouseMove during transform', {
-      currentPoint: context.svgPoint,
-      mode: this.state.mode
-    });
-
+  
     this.updateTransform(context.svgPoint);
     return true;
   };
@@ -443,7 +429,6 @@ export class TransformManager {
   handleMouseUp = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
     if (!this.state.isTransforming) return false;
 
-    console.log('TransformManager: handleMouseUp, ending transform');
     this.endTransform();
     return true;
   };
@@ -456,10 +441,7 @@ export class TransformManager {
   // Methods to control movement state (called by other plugins like mouse-interaction)
   setMoving(isMoving: boolean) {
     if (this.state.isMoving !== isMoving) {
-      console.log('TransformManager: Movement state changed', { 
-        from: this.state.isMoving, 
-        to: isMoving 
-      });
+   
       this.state.isMoving = isMoving;
       this.triggerStateChange();
     }
@@ -505,14 +487,7 @@ export class TransformManager {
     // Tolerance should be larger when zoomed out, smaller when zoomed in
     const tolerance = 12 / viewport.zoom; 
 
-    console.log('TransformManager: getHandleAtPoint checking', {
-      point,
-      viewport,
-      handlesCount: this.state.handles.length,
-      handleSize,
-      tolerance,
-      zoom: viewport.zoom
-    });
+  
 
     for (const handle of this.state.handles) {
       // Calculate the center of the handle using the same logic as the render
@@ -523,24 +498,13 @@ export class TransformManager {
       const dy = point.y - handleCenterY;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      console.log('TransformManager: Checking handle', {
-        handleId: handle.id,
-        handlePosition: handle.position,
-        handleCenter: { x: handleCenterX, y: handleCenterY },
-        clickPoint: point,
-        delta: { dx, dy },
-        distance,
-        tolerance,
-        willDetect: distance <= tolerance
-      });
+   
 
       if (distance <= tolerance) {
-        console.log('TransformManager: Handle found!', handle.id);
         return handle;
       }
     }
 
-    console.log('TransformManager: No handle found');
     return null;
   }
 
@@ -560,11 +524,7 @@ export class TransformManager {
     // Save to history
     store.pushToHistory();
     
-    console.log('TransformManager: Starting transform', {
-      mode: this.state.mode,
-      handle: handle.id,
-      handleType: handle.type
-    });
+   
 
     // Trigger state change to hide handles
     this.triggerStateChange();
@@ -673,15 +633,7 @@ export class TransformManager {
     const mirrorState = this.getMirrorState(currentPoint);
     const isMirroredX = mirrorState.mirrorX;
     const isMirroredY = mirrorState.mirrorY;
-    if (isMirroredX || isMirroredY) {
-      console.log('TransformManager: Mirror effect active', {
-        scaleX,
-        scaleY,
-        mirroredX: isMirroredX,
-        mirroredY: isMirroredY,
-        handle: this.state.activeHandle
-      });
-    }
+
 
     // Apply scaling to all selected commands
     this.applyTransformToCommands((x: number, y: number) => {
@@ -717,12 +669,7 @@ export class TransformManager {
     const currentAngle = Math.atan2(currentVector.y, currentVector.x);
     const rotationAngle = currentAngle - initialAngle;
 
-    console.log('TransformManager: Applying rotation', {
-      center,
-      initialAngle: (initialAngle * 180 / Math.PI).toFixed(2) + '°',
-      currentAngle: (currentAngle * 180 / Math.PI).toFixed(2) + '°',
-      rotationAngle: (rotationAngle * 180 / Math.PI).toFixed(2) + '°'
-    });
+    
 
     // Apply rotation to all selected commands
     this.applyTransformToCommands((x: number, y: number) => {

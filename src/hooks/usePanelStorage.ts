@@ -122,7 +122,6 @@ export const resetAllPanelsToDefault = () => {
     
     keysToRemove.forEach(key => localStorage.removeItem(key));
     
-    console.log('All panel positions reset to defaults');
   } catch (error) {
     console.warn('Failed to reset panel positions:', error);
   }

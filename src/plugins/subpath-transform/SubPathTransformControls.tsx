@@ -214,7 +214,6 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
             }
           }
 
-          console.log(`Smoothing subpath ${subPath.id}:`, newCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
           
           // Replace all commands in this subpath
           replaceSubPathCommands(subPath.id, newCommands);
@@ -230,8 +229,6 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
       });
     } else if (!isMultipleSubPaths && targetSubPath && targetCommands && startIndex !== undefined && endIndex !== undefined) {
       // Handle single subpath or selected commands (original logic)
-      console.log('Smoothing - sorted commands by path order:', targetCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
-      console.log('Smoothing - startIndex:', startIndex, 'endIndex:', endIndex);
 
       // Extract the segment to smooth
       const segmentToSmooth = [...targetCommands];
@@ -260,7 +257,6 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
           }
         }
 
-        console.log('Final subpath commands:', newSubPathCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
         
         // Replace all commands in the subpath
         replaceSubPathCommands(targetSubPath.id, newSubPathCommands);
@@ -340,13 +336,11 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
 
     if (isMultiSubPath) {
       // Handle multiple sub-paths
-      console.log('Simplifying multiple sub-paths:', targetSubPaths.length);
       
       for (const subPath of targetSubPaths) {
         if (subPath.commands.length < 2) continue;
         
         const commands = subPath.commands;
-        console.log('Simplification - processing subpath:', subPath.id, 'with', commands.length, 'commands');
         
         // Use points-on-path algorithm for simplification (Ramer-Douglas-Peucker)
         const simplifiedCommands = simplifySegmentWithPointsOnPath(
@@ -357,7 +351,6 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
         );
 
         if (simplifiedCommands.length === 0) continue;
-        console.log('Simplified commands for', subPath.id, ':', simplifiedCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
 
         // CRITICAL: Ensure the subpath ALWAYS starts with M
         if (simplifiedCommands.length > 0 && simplifiedCommands[0].command !== 'M') {
@@ -371,15 +364,12 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
           }
         }
 
-        console.log('Final subpath commands for', subPath.id, ':', simplifiedCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
         
         // Replace all commands in this subpath
         replaceSubPathCommands(subPath.id, simplifiedCommands);
       }
     } else if (targetSubPath && targetCommands && startIndex !== undefined && endIndex !== undefined) {
       // Handle single sub-path (existing logic)
-      console.log('Simplification - sorted commands by path order:', targetCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
-      console.log('Simplification - startIndex:', startIndex, 'endIndex:', endIndex);
 
       // Check if the selection starts with the subpath's M command
       const isStartingFromM = startIndex === 0 && targetCommands[0].command === 'M';
@@ -394,7 +384,6 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
         if (subpathMCommand && subpathMCommand.command === 'M') {
           commandsToSimplify.unshift(subpathMCommand);
           needsContextM = true;
-          console.log('Added M for context:', subpathMCommand);
         }
       }
 
@@ -407,7 +396,6 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
       );
 
       if (simplifiedCommands.length === 0) return;
-      console.log('Simplified commands:', simplifiedCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
 
       // Create the new commands array for the entire subpath
       let newSubPathCommands = [...targetSubPath.commands];
@@ -419,11 +407,9 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
       if (needsContextM && simplifiedCommands.length > 0 && simplifiedCommands[0].command === 'M') {
         // We added M for context, so skip it in the replacement since it's not part of selection
         commandsToReplace = simplifiedCommands.slice(1);
-        console.log('Skipping context M, replacement commands:', commandsToReplace.map((c: any) => `${c.command}(${c.x},${c.y})`));
       }
       
       // Replace the selected range with simplified commands
-      console.log('Replacing range [', startIndex, ',', endIndex, '] with', commandsToReplace.length, 'commands');
       newSubPathCommands.splice(startIndex, endIndex - startIndex + 1, ...commandsToReplace);
       
       // CRITICAL: Ensure the subpath ALWAYS starts with M
@@ -438,7 +424,6 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
         }
       }
 
-      console.log('Final subpath commands:', newSubPathCommands.map((c: any) => `${c.command}(${c.x},${c.y})`));
       
       // Replace all commands in the subpath
       replaceSubPathCommands(targetSubPath.id, newSubPathCommands);

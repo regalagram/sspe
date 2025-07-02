@@ -340,7 +340,6 @@ const createPlus = (center: Point, size: number): Omit<SVGCommand, 'id'>[] => {
 
 // Helper function for debugging - creates a simple dot at the click point
 const createDebugDot = (center: Point, size: number): Omit<SVGCommand, 'id'>[] => {
-  console.log(`DEBUG createDebugDot: center=(${center.x}, ${center.y}), size=${size}`);
   
   // Create a tiny square centered exactly at the click point
   const halfSize = 5; // Fixed 10px dot
@@ -355,7 +354,6 @@ const createDebugDot = (center: Point, size: number): Omit<SVGCommand, 'id'>[] =
     { command: 'Z' as const }
   ];
   
-  console.log(`DEBUG createDebugDot: commands=`, commands);
   return commands;
 };
 

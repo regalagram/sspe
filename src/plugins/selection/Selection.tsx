@@ -47,6 +47,16 @@ class RectSelectionManager {
     const { commandId, controlPoint } = context;
     const { mode } = this.editorStore;
 
+    // Check if clicking on a transform handle - if so, don't start rectangle selection
+    const target = e.target as SVGElement;
+    const handleType = target.getAttribute('data-handle-type');
+    const handleId = target.getAttribute('data-handle-id');
+    
+    
+    if (handleType === 'transform' || handleType === 'rotation' || handleId) {
+      return false; // Let transform plugin handle this
+    }
+
     if (mode.current === 'select' && !commandId && !controlPoint && e.button === 0 && !e.shiftKey) {
       const svgPoint = this.getSVGPoint(e, context.svgRef);
       this.state.isSelecting = true;
