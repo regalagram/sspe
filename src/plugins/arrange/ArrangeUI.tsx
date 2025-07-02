@@ -129,9 +129,7 @@ export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
     cursor: 'not-allowed',
   };
 
-  const containerStyle = {
-    width: '174px',
-  };
+  const containerStyle = {};
 
   const sectionStyle = {
     marginBottom: '8px',

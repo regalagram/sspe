@@ -209,6 +209,103 @@ button.active:hover {
   pointer-events: none;
 }
 
+/* Accordion Panel Mode Styles */
+.accordion-panel-content .draggable-panel,
+.accordion-panel-wrapper {
+  position: static !important;
+  transform: none !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: auto !important;
+  z-index: auto !important;
+  margin: 0 !important;
+  opacity: 1 !important;
+  left: auto !important;
+  top: auto !important;
+}
+
+.accordion-panel-content .drag-handle,
+.accordion-panel-wrapper .drag-handle {
+  display: none !important;
+}
+
+.accordion-panel-content .draggable-panel > div:last-child,
+.accordion-panel-wrapper .draggable-panel > div:last-child {
+  padding: 0 !important;
+}
+
+/* Override any draggable panel styles when in accordion mode */
+.accordion-panel-wrapper * {
+  position: static !important;
+  transform: none !important;
+}
+
+/* Accordion sidebar specific styles */
+.accordion-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 320px;
+  height: 100vh;
+  background: white;
+  border-left: 1px solid #e0e0e0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: -2px 0 8px rgba(0,0,0,0.1);
+}
+
+.accordion-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.accordion-sidebar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.accordion-sidebar::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.accordion-sidebar::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Panel mode specific styles */
+.panel-visibility-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+.panel-visibility-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.panel-visibility-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.panel-visibility-scroll::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.panel-visibility-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Panel mode transition */
+.svg-editor {
+  transition: margin-right 0.3s ease;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .sidebar-container {

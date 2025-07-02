@@ -57,7 +57,7 @@ export const ReorderUI: React.FC<ReorderUIProps> = ({ onClose }) => {
   };
 
   const containerStyle = {
-    width: '174px',
+    width: '100%', // Use full width available in accordion mode
   };
 
   const sectionStyle = {

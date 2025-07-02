@@ -24,6 +24,9 @@ import { ShapesPlugin } from '../plugins/shapes/Shapes';
 import { Transform } from '../plugins/transform/Transform';
 import { ArrangePlugin } from '../plugins/arrange/Arrange';
 import { ReorderPlugin } from '../plugins/reorder/Reorder';
+import { PanelModePlugin } from '../plugins/panelmode/PanelMode';
+import { usePanelModeStore } from '../plugins/panelmode/PanelManager';
+import { AccordionSidebar } from '../plugins/panelmode/AccordionSidebar';
 
 // Register plugins immediately during module loading
 const initializePlugins = () => {
@@ -55,6 +58,7 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(Transform);
   pluginManager.registerPlugin(ArrangePlugin);
   pluginManager.registerPlugin(ReorderPlugin);
+  pluginManager.registerPlugin(PanelModePlugin);
 };
 
 // Initialize plugins during module load
@@ -64,6 +68,9 @@ export const SvgEditor: React.FC = () => {
   const editorStore = useEditorStore();
   const { isFullscreen } = editorStore;
   const svgRef = useRef<SVGSVGElement>(null);
+  
+  // Get panel mode from store
+  const { mode: panelMode } = usePanelModeStore();
   
   // Get cursor from plugins
   const mouseInteraction = useMouseInteraction();
@@ -128,11 +135,42 @@ export const SvgEditor: React.FC = () => {
 
   // Render plugin UI components
   const renderPluginUI = (position: string) => {
-    return pluginManager.getEnabledPlugins()
+    const { getVisiblePanels } = usePanelModeStore.getState();
+    const visiblePanels = getVisiblePanels();
+    
+    const plugins = pluginManager.getEnabledPlugins()
       .flatMap(plugin => plugin.ui || [])
       .filter(ui => ui.position === position)
-      .sort((a, b) => (a.order || 0) - (b.order || 0))
-      .map(ui => <ui.component key={ui.id} />);
+      .filter(ui => {
+        // In draggable mode, respect visibility settings
+        if (panelMode === 'draggable') {
+          return visiblePanels.some(panel => panel.id === ui.id);
+        }
+        return true; // In accordion mode, filtering is handled by AccordionSidebar
+      })
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    // Special handling for sidebar in accordion mode - include toolbar panels too
+    if (position === 'sidebar' && panelMode === 'accordion') {
+      // Get all draggable panels (sidebar + toolbar) including panel-mode-ui
+      const allDraggablePanels = pluginManager.getEnabledPlugins()
+        .flatMap(plugin => plugin.ui || [])
+        .filter(ui => 
+          (ui.position === 'sidebar' || ui.position === 'toolbar')
+          // Include all panels, including panel-mode-ui in accordion
+        )
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+      
+      return <AccordionSidebar plugins={allDraggablePanels} />;
+    }
+    
+    // In accordion mode, hide toolbar panels since they're shown in the accordion
+    if (position === 'toolbar' && panelMode === 'accordion') {
+      return null;
+    }
+    
+    // Default draggable mode
+    return plugins.map(ui => <ui.component key={ui.id} />);
   };
 
   const editorStyle: React.CSSProperties = {
@@ -141,11 +179,15 @@ export const SvgEditor: React.FC = () => {
     position: 'relative',
     overflow: 'hidden',
     background: '#f5f5f5',
+    // Adjust right margin when accordion mode is active
+    marginRight: panelMode === 'accordion' ? '320px' : '0',
+    transition: 'margin-right 0.3s ease',
     ...(isFullscreen ? {
       position: 'fixed',
       top: 0,
       left: 0,
       zIndex: 9999,
+      marginRight: 0, // No margin in fullscreen
     } : {})
   };
 

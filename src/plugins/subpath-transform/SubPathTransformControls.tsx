@@ -487,9 +487,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
       <div style={{ 
         display: 'flex', 
         flexDirection: 'column', 
-        gap: '12px',
-        maxWidth: '174px',
-        minWidth: '174px'
+        gap: '12px'
       }}>
         {!hasSelectedSubPaths && (
           <div style={{ 

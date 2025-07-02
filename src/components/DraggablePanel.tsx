@@ -3,6 +3,47 @@ import { useDraggable } from '../hooks/useDraggable';
 import { usePanelStorage, resetAllPanelsToDefault } from '../hooks/usePanelStorage';
 import { Pin, ChevronDown, ChevronUp } from 'lucide-react';
 
+// Hook to check if we're in accordion mode - avoiding circular imports
+const useAccordionMode = (): boolean => {
+  const [isAccordion, setIsAccordion] = React.useState(() => {
+    try {
+      const saved = localStorage.getItem('sspe-panel-mode');
+      return saved === 'accordion';
+    } catch {
+      return false;
+    }
+  });
+
+  React.useEffect(() => {
+    const checkMode = () => {
+      try {
+        const saved = localStorage.getItem('sspe-panel-mode');
+        const newMode = saved === 'accordion';
+        if (newMode !== isAccordion) {
+          setIsAccordion(newMode);
+        }
+      } catch {
+        if (isAccordion) {
+          setIsAccordion(false);
+        }
+      }
+    };
+
+    // Listen for storage changes
+    window.addEventListener('storage', checkMode);
+    
+    // Check mode periodically (reduced frequency)
+    const interval = setInterval(checkMode, 500);
+
+    return () => {
+      window.removeEventListener('storage', checkMode);
+      clearInterval(interval);
+    };
+  }, [isAccordion]);
+
+  return isAccordion;
+};
+
 interface DraggablePanelProps {
   children: ReactNode;
   title: string;
@@ -46,6 +87,18 @@ export const DraggablePanel: React.FC<DraggablePanelProps> = ({
   style = {},
   id = title.toLowerCase().replace(/\s+/g, '-')
 }) => {
+  const isAccordionMode = useAccordionMode();
+  
+  // In accordion mode, just render the children without draggable functionality
+  if (isAccordionMode) {
+    return (
+      <div className="accordion-panel-wrapper" style={{ width: '100%' }}>
+        {children}
+      </div>
+    );
+  }
+
+  // Normal draggable mode
   const {
     panelState,
     updatePosition,
@@ -76,7 +129,8 @@ export const DraggablePanel: React.FC<DraggablePanelProps> = ({
       : '0 2px 8px rgba(0,0,0,0.15)',
     border: '1px solid #e0e0e0',
     minWidth: '200px',
-    maxWidth: '300px',
+    maxWidth: '300px', // Standard max width for draggable panels
+    width: 'auto', // Allow panels to size themselves within constraints
     transition: isDragging ? 'none' : 'box-shadow 0.2s ease',
     zIndex: panelState.zIndex,
     opacity: panelState.isCollapsed ? 0.9 : 1,

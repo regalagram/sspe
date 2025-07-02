@@ -144,9 +144,7 @@ export const PencilUI: React.FC = () => {
     >
       <div style={{
         display: 'flex',
-        flexDirection: 'column',
-        maxWidth: '174px',
-        width: '174px'
+        flexDirection: 'column'
       }}>
         {/* Pencil Tool Button using PluginButton component */}
         <div style={{
