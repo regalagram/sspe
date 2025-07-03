@@ -10,7 +10,7 @@ export const CreationRenderer: React.FC = () => {
     <circle
       cx={mode.createMode.previewCommand.x}
       cy={mode.createMode.previewCommand.y}
-      r={4 / viewport.zoom}
+      r={2 / viewport.zoom}
       fill="rgba(0, 122, 204, 0.5)"
       stroke="#007acc"
       strokeWidth={1 / viewport.zoom}
