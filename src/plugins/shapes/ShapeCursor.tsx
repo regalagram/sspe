@@ -89,6 +89,10 @@ export const useShapeCursor = () => {
     }
 
     const handleMouseMove = (e: MouseEvent) => {
+      // Ignore synthetic mouse events from touch to prevent double processing
+      const syntheticMouseEvent = e as any;
+      if (syntheticMouseEvent.fromTouch) return;
+
       // Get SVG reference
       const svgElement = document.querySelector('svg.main-svg') as SVGSVGElement;
       if (!svgElement) return;
@@ -140,6 +144,10 @@ export const ShapePreview: React.FC = () => {
     }
 
     const handleMouseMove = (e: MouseEvent) => {
+      // Ignore synthetic mouse events from touch to prevent double processing
+      const syntheticMouseEvent = e as any;
+      if (syntheticMouseEvent.fromTouch) return;
+
       const svgElement = document.querySelector('svg.main-svg') as SVGSVGElement;
       if (!svgElement) return;
 

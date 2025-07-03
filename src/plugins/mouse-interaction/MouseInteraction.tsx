@@ -78,10 +78,21 @@ class MouseInteractionManager {
   }
 
   handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
-    // Skip duplicate touch events
-    if ((e as any).fromTouch && (e as any).fromTouchProcessed) return false;
+    // Skip duplicate touch events using element-specific deduplication
     if ((e as any).fromTouch) {
-      (e as any).fromTouchProcessed = true;
+      const touchEventId = (e as any).touchEventId;
+      const elementId = (e.currentTarget as any)?.dataset?.elementId || 'mouse-interaction';
+      const deduplicationKey = `${elementId}-mousedown`;
+      
+      if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
+        return false; // Already processed this touch event for this element and event type
+      }
+      if (touchEventId) {
+        if (!(window as any).lastProcessedTouchEvents) {
+          (window as any).lastProcessedTouchEvents = {};
+        }
+        (window as any).lastProcessedTouchEvents[deduplicationKey] = touchEventId;
+      }
     }
     
     const { commandId, controlPoint } = context;
@@ -196,10 +207,21 @@ class MouseInteractionManager {
   };
 
   handleMouseMove = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
-    // Skip duplicate touch events
-    if ((e as any).fromTouch && (e as any).fromTouchProcessed) return false;
+    // Skip duplicate touch events using element-specific deduplication
     if ((e as any).fromTouch) {
-      (e as any).fromTouchProcessed = true;
+      const touchEventId = (e as any).touchEventId;
+      const elementId = (e.currentTarget as any)?.dataset?.elementId || 'mouse-interaction';
+      const deduplicationKey = `${elementId}-mousemove`;
+      
+      if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
+        return false; // Already processed this touch event for this element and event type
+      }
+      if (touchEventId) {
+        if (!(window as any).lastProcessedTouchEvents) {
+          (window as any).lastProcessedTouchEvents = {};
+        }
+        (window as any).lastProcessedTouchEvents[deduplicationKey] = touchEventId;
+      }
     }
     
     const { grid, selection, pan, updateCommand, moveCommand } = this.editorStore;
@@ -256,10 +278,21 @@ class MouseInteractionManager {
   };
 
   handleMouseUp = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
-    // Skip duplicate touch events
-    if ((e as any).fromTouch && (e as any).fromTouchProcessed) return false;
+    // Skip duplicate touch events using element-specific deduplication
     if ((e as any).fromTouch) {
-      (e as any).fromTouchProcessed = true;
+      const touchEventId = (e as any).touchEventId;
+      const elementId = (e.currentTarget as any)?.dataset?.elementId || 'mouse-interaction';
+      const deduplicationKey = `${elementId}-mouseup`;
+      
+      if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
+        return false; // Already processed this touch event for this element and event type
+      }
+      if (touchEventId) {
+        if (!(window as any).lastProcessedTouchEvents) {
+          (window as any).lastProcessedTouchEvents = {};
+        }
+        (window as any).lastProcessedTouchEvents[deduplicationKey] = touchEventId;
+      }
     }
     
     const wasHandling = !!(this.state.draggingCommand || this.state.draggingControlPoint || this.state.isPanning);

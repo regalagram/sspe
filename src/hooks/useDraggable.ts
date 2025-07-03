@@ -100,6 +100,10 @@ export const useDraggable = (options: UseDraggableOptions = {}): UseDraggableRet
 
     // Add global event listeners
     const handleMouseMove = (e: MouseEvent) => {
+      // Ignore synthetic mouse events from touch to prevent double processing
+      const syntheticMouseEvent = e as any;
+      if (syntheticMouseEvent.fromTouch) return;
+
       const newPosition = {
         x: e.clientX - currentDragStart.x,
         y: e.clientY - currentDragStart.y

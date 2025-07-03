@@ -1,6 +1,33 @@
 // touch-to-mouse-global.ts
 // Sistema mejorado de mapeo touch→mouse para drag continuo en controles
 
+// Global deduplication system
+let currentTouchEventId: string | null = null;
+let processedElements = new Set<Element>();
+
+// Global flag to indicate we're in the context of processing a touch event
+let isProcessingTouchEvent = false;
+let currentTouchEventType: string = '';
+
+const generateTouchEventId = (touchEvent: TouchEvent, eventType: string): string => {
+  const touch = touchEvent.touches[0] || touchEvent.changedTouches[0];
+  if (!touch) return '';
+  return `${eventType}_${touch.identifier}_${touchEvent.timeStamp}`;
+};
+
+// Export function to check if we're currently processing a touch event
+export function isCurrentlyProcessingTouch(): boolean {
+  return isProcessingTouchEvent;
+}
+
+export function getCurrentTouchEventId(): string | null {
+  return currentTouchEventId;
+}
+
+export function getCurrentTouchEventType(): string {
+  return currentTouchEventType;
+}
+
 const mapTouchToMouseEvent = (touchEvent: TouchEvent, mouseEventType: string, touch?: Touch) => {
   const targetTouch = touch || touchEvent.touches[0] || touchEvent.changedTouches[0];
   if (!targetTouch) return null;
@@ -24,6 +51,12 @@ const mapTouchToMouseEvent = (touchEvent: TouchEvent, mouseEventType: string, to
     writable: false
   });
   
+  // Agregar ID del evento touch actual para deduplicación
+  Object.defineProperty(mouseEvent, 'touchEventId', {
+    value: currentTouchEventId,
+    writable: false
+  });
+  
   return mouseEvent;
 };
 
@@ -36,12 +69,20 @@ export function enableGlobalTouchToMouse() {
   // Solo instalar una vez
   if ((window as any)._touchToMouseInstalled) return;
   (window as any)._touchToMouseInstalled = true;
+  
+  console.log('Enabling global touch-to-mouse system');
 
   // Solo para dispositivos touch
-  if (!('ontouchstart' in window || navigator.maxTouchPoints > 0)) return;
+  if (!('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+    console.log('No touch support detected, skipping touch-to-mouse setup');
+    return;
+  }
+  
+  console.log('Touch support detected, setting up touch-to-mouse listeners');
 
   // Mapeo de eventos
   document.addEventListener('touchstart', (e) => {
+    console.log('Touch start detected:', e.touches.length, 'touches');
     if (e.touches.length !== 1) return;
     e.preventDefault(); // Prevenir scroll/zoom nativo
     
@@ -50,45 +91,46 @@ export function enableGlobalTouchToMouse() {
     dragStartTouch = touch;
     isDragging = false;
     
-    const mouseEvent = mapTouchToMouseEvent(e, 'mousedown', touch);
-    if (mouseEvent && dragStartElement) {
-      // Asegurar que el target sea el elemento original
-      Object.defineProperty(mouseEvent, 'target', {
-        value: dragStartElement,
-        writable: false
-      });
-      Object.defineProperty(mouseEvent, 'currentTarget', {
-        value: dragStartElement,
-        writable: false
-      });
-      
-      // Dispatch al elemento específico
-      dragStartElement.dispatchEvent(mouseEvent);
-      
-      // Si es un SVG element, también dispatch al SVG parent para React handlers
-      const svgElement = dragStartElement.closest('svg');
-      if (svgElement && svgElement !== dragStartElement) {
-        const svgMouseEvent = new MouseEvent('mousedown', {
-          clientX: touch.clientX,
-          clientY: touch.clientY,
-          screenX: touch.screenX,
-          screenY: touch.screenY,
-          button: 0,
-          buttons: 1,
-          bubbles: true,
-          cancelable: true,
-          view: window,
-          detail: 0,
-        });
-        Object.defineProperty(svgMouseEvent, 'target', {
+    console.log('Processing touchstart:', {
+      target: dragStartElement.tagName,
+      className: dragStartElement.className,
+      clientX: touch.clientX,
+      clientY: touch.clientY
+    });
+    
+    // Set up deduplication for this touch event
+    currentTouchEventId = generateTouchEventId(e, 'mousedown');
+    currentTouchEventType = 'mousedown';
+    processedElements.clear();
+    
+    // Find the SVG element to dispatch the event to (where React listeners are)
+    const svgElement = dragStartElement.closest('svg');
+    if (svgElement) {
+      const mouseEvent = mapTouchToMouseEvent(e, 'mousedown', touch);
+      if (mouseEvent) {
+        // Keep the original target for React handlers to know what was actually touched
+        Object.defineProperty(mouseEvent, 'target', {
           value: dragStartElement,
           writable: false
         });
-        Object.defineProperty(svgMouseEvent, 'fromTouch', {
-          value: true,
+        Object.defineProperty(mouseEvent, 'currentTarget', {
+          value: svgElement,
           writable: false
         });
-        svgElement.dispatchEvent(svgMouseEvent);
+        
+        console.log('Dispatching synthetic mousedown to SVG with target:', dragStartElement.tagName);
+        
+        // Set global flag to indicate we're processing a touch event
+        isProcessingTouchEvent = true;
+        
+        // Dispatch to the SVG where React has its listeners
+        svgElement.dispatchEvent(mouseEvent);
+        processedElements.add(svgElement);
+        
+        // Reset flag after a short timeout to handle async React processing
+        setTimeout(() => {
+          isProcessingTouchEvent = false;
+        }, 0);
       }
     }
   }, { passive: false });
@@ -106,49 +148,43 @@ export function enableGlobalTouchToMouse() {
       const deltaY = Math.abs(touch.clientY - dragStartTouch.clientY);
       if (deltaX > 5 || deltaY > 5) {
         isDragging = true;
+        console.log('Started dragging');
       }
     }
     
-    const mouseEvent = mapTouchToMouseEvent(e, 'mousemove', touch);
-    if (mouseEvent) {
-      // Asegurar que el target sea el elemento original
-      Object.defineProperty(mouseEvent, 'target', {
-        value: dragStartElement,
-        writable: false
-      });
-      Object.defineProperty(mouseEvent, 'currentTarget', {
-        value: dragStartElement,
-        writable: false
-      });
-      
-      // Solo disparar una vez - elegir la mejor estrategia según el elemento
-      const svgElement = dragStartElement.closest('svg');
-      if (svgElement && svgElement !== dragStartElement) {
-        // Si estamos en un elemento SVG, disparar al SVG parent que maneja React events
-        const svgMouseEvent = new MouseEvent('mousemove', {
-          clientX: touch.clientX,
-          clientY: touch.clientY,
-          screenX: touch.screenX,
-          screenY: touch.screenY,
-          button: 0,
-          buttons: 1,
-          bubbles: true,
-          cancelable: true,
-          view: window,
-          detail: 0,
-        });
-        Object.defineProperty(svgMouseEvent, 'target', {
+    // Set up deduplication for this touch event
+    currentTouchEventId = generateTouchEventId(e, 'mousemove');
+    currentTouchEventType = 'mousemove';
+    processedElements.clear();
+    
+    // Find the SVG element to dispatch the event to (where React listeners are)
+    const svgElement = dragStartElement.closest('svg');
+    if (svgElement) {
+      const mouseEvent = mapTouchToMouseEvent(e, 'mousemove', touch);
+      if (mouseEvent) {
+        // Keep the original target for React handlers to know what was actually touched
+        Object.defineProperty(mouseEvent, 'target', {
           value: dragStartElement,
           writable: false
         });
-        Object.defineProperty(svgMouseEvent, 'fromTouch', {
-          value: true,
+        Object.defineProperty(mouseEvent, 'currentTarget', {
+          value: svgElement,
           writable: false
         });
-        svgElement.dispatchEvent(svgMouseEvent);
-      } else {
-        // Para otros elementos, disparar al elemento original
-        dragStartElement.dispatchEvent(mouseEvent);
+        
+        console.log('Dispatching synthetic mousemove to SVG');
+        
+        // Set global flag to indicate we're processing a touch event
+        isProcessingTouchEvent = true;
+        
+        // Dispatch to the SVG where React has its listeners
+        svgElement.dispatchEvent(mouseEvent);
+        processedElements.add(svgElement);
+        
+        // Reset flag after a short timeout to handle async React processing
+        setTimeout(() => {
+          isProcessingTouchEvent = false;
+        }, 0);
       }
     }
   }, { passive: false });
@@ -159,46 +195,41 @@ export function enableGlobalTouchToMouse() {
     const touch = e.changedTouches[0];
     if (!touch || !dragStartElement) return;
     
-    const mouseEvent = mapTouchToMouseEvent(e, 'mouseup', touch);
-    if (mouseEvent) {
-      // Asegurar que el target sea el elemento original
-      Object.defineProperty(mouseEvent, 'target', {
-        value: dragStartElement,
-        writable: false
-      });
-      Object.defineProperty(mouseEvent, 'currentTarget', {
-        value: dragStartElement,
-        writable: false
-      });
-      
-      // Solo disparar una vez - elegir la mejor estrategia según el elemento
-      const svgElement = dragStartElement.closest('svg');
-      if (svgElement && svgElement !== dragStartElement) {
-        // Si estamos en un elemento SVG, disparar al SVG parent que maneja React events
-        const svgMouseEvent = new MouseEvent('mouseup', {
-          clientX: touch.clientX,
-          clientY: touch.clientY,
-          screenX: touch.screenX,
-          screenY: touch.screenY,
-          button: 0,
-          buttons: 0,
-          bubbles: true,
-          cancelable: true,
-          view: window,
-          detail: 0,
-        });
-        Object.defineProperty(svgMouseEvent, 'target', {
+    console.log('Touch end detected');
+    
+    // Set up deduplication for this touch event
+    currentTouchEventId = generateTouchEventId(e, 'mouseup');
+    currentTouchEventType = 'mouseup';
+    processedElements.clear();
+    
+    // Find the SVG element to dispatch the event to (where React listeners are)
+    const svgElement = dragStartElement.closest('svg');
+    if (svgElement) {
+      const mouseEvent = mapTouchToMouseEvent(e, 'mouseup', touch);
+      if (mouseEvent) {
+        // Keep the original target for React handlers to know what was actually touched
+        Object.defineProperty(mouseEvent, 'target', {
           value: dragStartElement,
           writable: false
         });
-        Object.defineProperty(svgMouseEvent, 'fromTouch', {
-          value: true,
+        Object.defineProperty(mouseEvent, 'currentTarget', {
+          value: svgElement,
           writable: false
         });
-        svgElement.dispatchEvent(svgMouseEvent);
-      } else {
-        // Para otros elementos, disparar al elemento original
-        dragStartElement.dispatchEvent(mouseEvent);
+        
+        console.log('Dispatching synthetic mouseup to SVG');
+        
+        // Set global flag to indicate we're processing a touch event
+        isProcessingTouchEvent = true;
+        
+        // Dispatch to the SVG where React has its listeners
+        svgElement.dispatchEvent(mouseEvent);
+        processedElements.add(svgElement);
+        
+        // Reset flag after a short timeout to handle async React processing
+        setTimeout(() => {
+          isProcessingTouchEvent = false;
+        }, 0);
       }
     }
     
@@ -226,6 +257,8 @@ export function enableGlobalTouchToMouse() {
     isDragging = false;
     dragStartElement = null;
     dragStartTouch = null;
+    currentTouchEventId = null;
+    processedElements.clear();
   }, { passive: false });
 
   document.addEventListener('touchcancel', (e) => {
@@ -235,5 +268,7 @@ export function enableGlobalTouchToMouse() {
     isDragging = false;
     dragStartElement = null;
     dragStartTouch = null;
+    currentTouchEventId = null;
+    processedElements.clear();
   }, { passive: false });
 }

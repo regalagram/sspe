@@ -123,6 +123,7 @@ export const SvgEditor: React.FC = () => {
     pluginManager.handleMouseEvent('mouseDown', e, commandId, controlPoint);
   };
   const handleMouseMove = (e: React.MouseEvent<SVGElement>) => {
+    console.log('SvgEditor handleMouseMove called');
     pluginManager.handleMouseEvent('mouseMove', e);
   };
   const handleMouseUp = (e: React.MouseEvent<SVGElement>) => {
@@ -135,6 +136,9 @@ export const SvgEditor: React.FC = () => {
   // Native listeners para eventos mouse que salen del SVG durante drag
   useEffect(() => {
     const handleNativeMove = (e: MouseEvent) => {
+      // Skip synthetic touch events to prevent double processing
+      if ((e as any).fromTouch) return;
+      
       if (e.buttons === 1) {
         const mouseEvent = {
           ...e,
@@ -152,6 +156,9 @@ export const SvgEditor: React.FC = () => {
       }
     };
     const handleNativeUp = (e: MouseEvent) => {
+      // Skip synthetic touch events to prevent double processing
+      if ((e as any).fromTouch) return;
+      
       const mouseEvent = {
         ...e,
         nativeEvent: e,
