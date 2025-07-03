@@ -18,7 +18,8 @@ export class CreationManager {
     const { mode, grid, paths, addCommand, addPath, pushToHistory, setCreateMode } = this.editorStore;
     
     // Only handle if we're in create mode and no specific element is being clicked
-    if (mode.current !== 'create' || !mode.createMode || context.commandId || context.controlPoint) {
+    // Also exclude PENCIL mode as it's handled by the pencil plugin
+    if (mode.current !== 'create' || !mode.createMode || context.commandId || context.controlPoint || mode.createMode.commandType === 'PENCIL') {
       return false;
     }
 

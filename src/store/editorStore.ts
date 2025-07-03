@@ -1235,7 +1235,8 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         },
       })),
     
-    setCreateMode: (commandType) =>
+    setCreateMode: (commandType) => {
+      console.log('🏪 EditorStore: setCreateMode called with:', commandType);
       set((state) => ({
         mode: {
           current: 'create',
@@ -1244,7 +1245,8 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             isDrawing: false,
           },
         },
-      })),
+      }));
+    },
     
     exitCreateMode: () =>
       set(() => ({

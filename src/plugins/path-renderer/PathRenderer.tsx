@@ -298,6 +298,13 @@ export const PathRenderer: React.FC = () => {
         // Join all sub-paths into a single d string
         const d = path.subPaths.map(subPathToString).join(' ');
         
+        // Debug log for paths with empty or minimal d string
+        if (!d || d.trim().length < 10) {
+          console.log('🖼️ PathRenderer: Path with minimal/empty d string:', { pathId: path.id, d, subPaths: path.subPaths });
+        } else {
+          console.log('🖼️ PathRenderer: Rendering path:', { pathId: path.id, d: d.substring(0, 50) + '...', style: path.style });
+        }
+        
         // Wireframe mode overrides path styles
         const isWireframeMode = enabledFeatures.has('wireframe');
         const wireframeStrokeWidth = 2 / viewport.zoom; // Fixed visual thickness independent of zoom

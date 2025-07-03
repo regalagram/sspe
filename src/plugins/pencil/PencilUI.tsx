@@ -18,10 +18,12 @@ export const PencilUI: React.FC = () => {
   const toolColor = '#007acc';
 
   const handlePencilClick = () => {
+    console.log('🎨 PencilUI: Activating pencil mode');
     setCreateMode('PENCIL');
   };
 
   const handleExitPencil = () => {
+    console.log('🎨 PencilUI: Exiting pencil mode');
     exitCreateMode();
   };
 

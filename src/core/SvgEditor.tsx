@@ -48,6 +48,7 @@ export const SvgEditor: React.FC = () => {
 
   // Handle mouse events through plugin system (React events)
   const handleMouseDown = (e: React.MouseEvent<SVGElement>) => {
+    console.log('📱 SvgEditor: handleMouseDown called');
     const target = e.target as SVGElement;
     const commandId = target.getAttribute('data-command-id') || undefined;
     const controlPoint = target.getAttribute('data-control-point') as 'x1y1' | 'x2y2' | undefined;
@@ -55,11 +56,12 @@ export const SvgEditor: React.FC = () => {
   };
   
   const handleMouseMove = (e: React.MouseEvent<SVGElement>) => {
-    console.log('SvgEditor handleMouseMove called');
+    console.log('📱 SvgEditor: handleMouseMove called');
     pluginManager.handleMouseEvent('mouseMove', e);
   };
   
   const handleMouseUp = (e: React.MouseEvent<SVGElement>) => {
+    console.log('📱 SvgEditor: handleMouseUp called');
     pluginManager.handleMouseEvent('mouseUp', e);
   };
   
