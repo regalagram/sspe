@@ -2,6 +2,7 @@ import React from 'react';
 import { UIComponentDefinition } from '../../core/PluginSystem';
 import { usePanelModeStore } from './PanelManager';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { useMobileDetection, getButtonSize } from '../../hooks/useMobileDetection';
 
 interface AccordionSidebarProps {
   plugins: UIComponentDefinition[];
@@ -14,6 +15,7 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
     getVisiblePanels 
   } = usePanelModeStore();
 
+  const { isMobile, isTablet } = useMobileDetection();
   const visiblePanels = getVisiblePanels();
   
   // Filter plugins based on visible panels
@@ -56,19 +58,23 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
   const sidebarPlugins = sortedPlugins.filter(p => p.position === 'sidebar' && p.id !== 'panel-mode-ui');
 
   const sidebarStyle: React.CSSProperties = {
-    // Using CSS class instead of inline styles for better override capability
+    width: '200px', // Ancho fijo y adecuado para accordion
+    maxWidth: '200px', // Asegurar que no se expanda más
+    minWidth: '200px', // Asegurar que no se contraiga menos
+    // Using CSS class for additional styles
   };
 
   const headerStyle: React.CSSProperties = {
-    padding: '12px 16px',
+    padding: isMobile ? '16px 20px' : '12px 16px', // Más padding en móviles
     borderBottom: '1px solid #e0e0e0',
     background: '#f8f9fa',
-    fontSize: '14px',
+    fontSize: isMobile ? '16px' : '14px', // Texto más grande en móviles
     fontWeight: 600,
     color: '#333',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
+    minHeight: isMobile ? '48px' : 'auto', // Altura mínima para touch targets
   };
 
   const panelsContainerStyle: React.CSSProperties = {
@@ -197,34 +203,39 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
   isExpanded, 
   onToggle 
 }) => {
+  const { isMobile, isTablet } = useMobileDetection();
   const isPanelMode = plugin.id === 'panel-mode-ui';
   
   const headerStyle: React.CSSProperties = {
-    padding: '12px 16px',
+    padding: isMobile ? '16px 20px' : '12px 16px', // Más padding en móviles
     borderBottom: '1px solid #e0e0e0',
     cursor: 'pointer',
     background: isExpanded ? '#f0f8ff' : (isPanelMode ? '#f8f9fa' : '#fafafa'),
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    fontSize: '13px',
+    fontSize: isMobile ? '15px' : '13px', // Texto más grande en móviles
     fontWeight: isPanelMode ? 600 : 500,
     color: isPanelMode ? '#007acc' : '#666',
     transition: 'background 0.2s ease',
+    minHeight: isMobile ? '48px' : 'auto', // Altura mínima para touch targets
+    touchAction: 'manipulation', // Mejorar respuesta táctil
   };
 
   const contentStyle: React.CSSProperties = {
     display: isExpanded ? 'block' : 'none',
-    padding: '16px',
+    padding: isMobile ? '20px' : '16px', // Más padding en móviles
     borderBottom: '1px solid #e0e0e0',
     background: 'white',
-    maxHeight: isExpanded ? '400px' : '0',
+    maxHeight: isExpanded ? (isMobile ? '60vh' : '400px') : '0', // Más altura disponible en móviles
     overflow: 'auto',
     transition: 'max-height 0.3s ease',
   };
 
   const iconStyle: React.CSSProperties = {
     transition: 'transform 0.2s ease',
+    width: isMobile ? '20px' : '16px', // Iconos más grandes en móviles
+    height: isMobile ? '20px' : '16px',
   };
 
   return (
@@ -246,9 +257,9 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
         <span>{panel?.name || plugin.id}</span>
         <div style={iconStyle}>
           {isExpanded ? (
-            <ChevronDown size={16} />
+            <ChevronDown size={isMobile ? 20 : 16} />
           ) : (
-            <ChevronRight size={16} />
+            <ChevronRight size={isMobile ? 20 : 16} />
           )}
         </div>
       </div>

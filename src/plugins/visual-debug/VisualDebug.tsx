@@ -3,6 +3,7 @@ import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { getAbsoluteCommandPosition, getAbsoluteControlPoints } from '../../utils/path-utils';
+import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';
 
 interface VisualDebugControlsProps {
   commandPointsEnabled: boolean;
@@ -73,6 +74,7 @@ export const VisualDebugControls: React.FC<VisualDebugControlsProps> = ({
 // Command Points Renderer Component
 export const CommandPointsRenderer: React.FC = () => {
   const { paths, selection, viewport, enabledFeatures, renderVersion } = useEditorStore();
+  const { isMobile, isTablet } = useMobileDetection();
 
   if (!paths || paths.length === 0) {
     return null;
@@ -113,7 +115,9 @@ export const CommandPointsRenderer: React.FC = () => {
             
             if (!shouldShowCommand) return null;
 
-            const radius = 4 / viewport.zoom; // Fixed visual size independent of zoom
+            // Calcular radio responsivo basado en el dispositivo
+            const baseRadius = getControlPointSize(isMobile, isTablet);
+            const radius = baseRadius / viewport.zoom; // Fixed visual size independent of zoom
 
             return (
               <circle
@@ -142,6 +146,7 @@ export const CommandPointsRenderer: React.FC = () => {
 // Control Points Renderer Component
 export const ControlPointsRenderer: React.FC = () => {
   const { paths, enabledFeatures, viewport, selection } = useEditorStore();
+  const { isMobile, isTablet } = useMobileDetection();
 
   if (!paths || paths.length === 0) {
     return null;
@@ -181,7 +186,9 @@ export const ControlPointsRenderer: React.FC = () => {
             
             if (!shouldShowCommand) return null;
             
-            const radius = 3 / viewport.zoom; // Fixed visual size independent of zoom
+            // Calcular radio responsivo basado en el dispositivo
+            const baseRadius = getControlPointSize(isMobile, isTablet);
+            const radius = baseRadius / viewport.zoom; // Fixed visual size independent of zoom
             
             // Find previous command position for connecting control points
             const prevCommand = commandIndex > 0 ? subPath.commands[commandIndex - 1] : null;

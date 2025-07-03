@@ -3,6 +3,13 @@ import { subscribeWithSelector } from 'zustand/middleware';
 
 export type PanelMode = 'draggable' | 'accordion';
 
+// Función para detectar si estamos en un dispositivo móvil
+const detectMobileDevice = (): boolean => {
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const isMobileWidth = window.innerWidth <= 768;
+  return isTouchDevice && isMobileWidth;
+};
+
 export interface PanelConfig {
   id: string;
   name: string;
@@ -38,6 +45,11 @@ type PanelModeStore = PanelModeState & PanelModeActions;
 
 // Load saved mode from localStorage
 const loadSavedMode = (): PanelMode => {
+  // En dispositivos móviles, forzar modo accordion
+  if (detectMobileDevice()) {
+    return 'accordion';
+  }
+  
   try {
     const saved = localStorage.getItem('sspe-panel-mode');
     return saved === 'accordion' ? 'accordion' : 'draggable';
@@ -224,3 +236,8 @@ export const panelModeManager = {
   getStore: () => usePanelModeStore.getState(),
   subscribe: usePanelModeStore.subscribe,
 };
+
+// Detect and set accordion mode on mobile devices
+if (detectMobileDevice()) {
+  usePanelModeStore.getState().setMode('accordion');
+}

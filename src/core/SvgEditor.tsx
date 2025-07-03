@@ -28,6 +28,8 @@ import { PanelModePlugin } from '../plugins/panelmode/PanelMode';
 import { usePanelModeStore } from '../plugins/panelmode/PanelManager';
 import { AccordionSidebar } from '../plugins/panelmode/AccordionSidebar';
 import { Menu, X } from 'lucide-react';
+import { TouchSupportPlugin } from '../plugins/touch-support/TouchSupport';
+import { useGlobalTouchSupport } from '../hooks/useGlobalTouchSupport';
 
 // Register plugins immediately during module loading
 const initializePlugins = () => {
@@ -60,6 +62,7 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(ArrangePlugin);
   pluginManager.registerPlugin(ReorderPlugin);
   pluginManager.registerPlugin(PanelModePlugin);
+  pluginManager.registerPlugin(TouchSupportPlugin); // Soporte para dispositivos táctiles
 };
 
 // Initialize plugins during module load
@@ -69,6 +72,9 @@ export const SvgEditor: React.FC = () => {
   const editorStore = useEditorStore();
   const { isFullscreen } = editorStore;
   const svgRef = useRef<SVGSVGElement>(null);
+  
+  // Configurar soporte táctil global
+  useGlobalTouchSupport();
   
   // Get panel mode from store
   const { mode: panelMode, accordionVisible, toggleAccordionVisible } = usePanelModeStore();
@@ -233,7 +239,7 @@ export const SvgEditor: React.FC = () => {
           style={{
             position: 'fixed',
             top: '20px',
-            right: accordionVisible ? '340px' : '20px', // Adjust position based on accordion visibility
+            right: accordionVisible ? '220px' : '20px', // Ajustado para el ancho de 200px + margen
             width: '48px',
             height: '48px',
             borderRadius: '50%',

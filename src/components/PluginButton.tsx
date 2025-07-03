@@ -1,4 +1,5 @@
 import React from 'react';
+import { useMobileDetection, getButtonSize } from '../hooks/useMobileDetection';
 
 interface PluginButtonProps {
   icon: React.ReactNode;
@@ -19,6 +20,14 @@ export const PluginButton: React.FC<PluginButtonProps> = ({
   onClick,
   fullWidth = false,
 }) => {
+  const { isMobile, isTablet } = useMobileDetection();
+  
+  // Calcular tamaños responsivos
+  const buttonHeight = getButtonSize(isMobile, isTablet);
+  const fontSize = isMobile ? 14 : 12;
+  const padding = isMobile ? '8px 24px' : '4px 20px';
+  const borderRadius = isMobile ? 24 : 18;
+
   return (
     <button
       onClick={onClick}
@@ -28,19 +37,21 @@ export const PluginButton: React.FC<PluginButtonProps> = ({
         alignItems: 'center',
         justifyContent: 'center',
         gap: '8px',
-        padding: '4px 20px',
+        padding,
+        minHeight: buttonHeight,
         background: active ? color : '#f5f5f5',
         color: active ? 'white' : color,
         border: 'none',
-        borderRadius: '18px',
+        borderRadius: `${borderRadius}px`,
         cursor: disabled ? 'not-allowed' : 'pointer',
-        fontSize: '12px',
+        fontSize: `${fontSize}px`,
         fontWeight: 800,
         opacity: disabled ? 0.6 : 1,
         boxShadow: active ? '0 2px 8px rgba(0,0,0,0.08)' : undefined,
         transition: 'all 0.2s',
         outline: active ? `2px solid ${color}` : 'none',
         width: fullWidth ? '100%' : 'auto',
+        touchAction: 'manipulation', // Mejorar respuesta táctil
       }}
       title={text}
       type="button"

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { transformManager, TransformHandle, TransformBounds } from './TransformManager';
+import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';
 
 interface TransformHandlesProps {
   bounds: TransformBounds;
@@ -9,6 +10,7 @@ interface TransformHandlesProps {
 
 export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, handles }) => {
   const { viewport } = useEditorStore();
+  const { isMobile, isTablet } = useMobileDetection();
   const [hoveredHandle, setHoveredHandle] = useState<string | null>(null);
 
   if (!bounds || handles.length === 0) {
@@ -20,7 +22,9 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
     return null;
   }
 
-  const handleSize = 8 / viewport.zoom;
+  // Calcular tamaño responsivo para los handles
+  const baseHandleSize = getControlPointSize(isMobile, isTablet);
+  const handleSize = baseHandleSize / viewport.zoom;
   const strokeWidth = 1.5 / viewport.zoom;
   const hoverSize = handleSize * 1.5;
 
