@@ -78,6 +78,12 @@ class MouseInteractionManager {
   }
 
   handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+    // Skip duplicate touch events
+    if ((e as any).fromTouch && (e as any).fromTouchProcessed) return false;
+    if ((e as any).fromTouch) {
+      (e as any).fromTouchProcessed = true;
+    }
+    
     const { commandId, controlPoint } = context;
     const { 
         selection, 
@@ -190,6 +196,12 @@ class MouseInteractionManager {
   };
 
   handleMouseMove = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+    // Skip duplicate touch events
+    if ((e as any).fromTouch && (e as any).fromTouchProcessed) return false;
+    if ((e as any).fromTouch) {
+      (e as any).fromTouchProcessed = true;
+    }
+    
     const { grid, selection, pan, updateCommand, moveCommand } = this.editorStore;
 
     if (this.state.isPanning) {
@@ -244,6 +256,12 @@ class MouseInteractionManager {
   };
 
   handleMouseUp = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+    // Skip duplicate touch events
+    if ((e as any).fromTouch && (e as any).fromTouchProcessed) return false;
+    if ((e as any).fromTouch) {
+      (e as any).fromTouchProcessed = true;
+    }
+    
     const wasHandling = !!(this.state.draggingCommand || this.state.draggingControlPoint || this.state.isPanning);
     const wasDraggingCommand = !!this.state.draggingCommand;
     const wasDraggingControlPoint = !!this.state.draggingControlPoint;

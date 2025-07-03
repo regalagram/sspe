@@ -121,13 +121,10 @@ export function enableGlobalTouchToMouse() {
         writable: false
       });
       
-      // Durante el drag, enviar a elemento original Y a document para captures globales
-      dragStartElement.dispatchEvent(mouseEvent);
-      document.dispatchEvent(mouseEvent);
-      
-      // También enviar al SVG parent para React handlers
+      // Solo disparar una vez - elegir la mejor estrategia según el elemento
       const svgElement = dragStartElement.closest('svg');
       if (svgElement && svgElement !== dragStartElement) {
+        // Si estamos en un elemento SVG, disparar al SVG parent que maneja React events
         const svgMouseEvent = new MouseEvent('mousemove', {
           clientX: touch.clientX,
           clientY: touch.clientY,
@@ -149,6 +146,9 @@ export function enableGlobalTouchToMouse() {
           writable: false
         });
         svgElement.dispatchEvent(svgMouseEvent);
+      } else {
+        // Para otros elementos, disparar al elemento original
+        dragStartElement.dispatchEvent(mouseEvent);
       }
     }
   }, { passive: false });
@@ -171,12 +171,10 @@ export function enableGlobalTouchToMouse() {
         writable: false
       });
       
-      dragStartElement.dispatchEvent(mouseEvent);
-      document.dispatchEvent(mouseEvent);
-      
-      // También enviar al SVG parent para React handlers
+      // Solo disparar una vez - elegir la mejor estrategia según el elemento
       const svgElement = dragStartElement.closest('svg');
       if (svgElement && svgElement !== dragStartElement) {
+        // Si estamos en un elemento SVG, disparar al SVG parent que maneja React events
         const svgMouseEvent = new MouseEvent('mouseup', {
           clientX: touch.clientX,
           clientY: touch.clientY,
@@ -198,6 +196,9 @@ export function enableGlobalTouchToMouse() {
           writable: false
         });
         svgElement.dispatchEvent(svgMouseEvent);
+      } else {
+        // Para otros elementos, disparar al elemento original
+        dragStartElement.dispatchEvent(mouseEvent);
       }
     }
     

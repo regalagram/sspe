@@ -46,6 +46,12 @@ export const PathRenderer: React.FC = () => {
   const handleSubPathMouseDown = useCallback((e: React.MouseEvent<SVGElement>, subPathId: string) => {
     e.stopPropagation();
     
+    // Skip duplicate touch events
+    if ((e as any).fromTouch && (e as any).fromTouchProcessed) return;
+    if ((e as any).fromTouch) {
+      (e as any).fromTouchProcessed = true;
+    }
+    
     const svgElement = (e.target as SVGPathElement).closest('svg');
     if (svgElement) {
       // Always ensure the subpath being dragged is selected
@@ -73,6 +79,12 @@ export const PathRenderer: React.FC = () => {
   // Handle mouse move for dragging
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGElement>) => {
     if (!dragState.isDragging || !dragState.subPathId || !dragState.startPoint || !dragState.svgElement) return;
+    
+    // Skip duplicate touch events - only process the first one
+    if ((e as any).fromTouch && (e as any).fromTouchProcessed) return;
+    if ((e as any).fromTouch) {
+      (e as any).fromTouchProcessed = true;
+    }
     
     const currentPoint = getTransformedPoint(e, dragState.svgElement);
     
@@ -130,7 +142,13 @@ export const PathRenderer: React.FC = () => {
   }, [dragState, moveSubPath, selection.selectedSubPaths, viewport, pushToHistory]);
 
   // Handle mouse up to stop dragging
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((e?: React.MouseEvent<SVGElement>) => {
+    // Skip duplicate touch events
+    if (e && (e as any).fromTouch && (e as any).fromTouchProcessed) return;
+    if (e && (e as any).fromTouch) {
+      (e as any).fromTouchProcessed = true;
+    }
+    
     // Notify transform manager that movement ended only if actual dragging occurred
     if (dragState.isDragging && dragState.dragStarted) {
       transformManager.setMoving(false);
