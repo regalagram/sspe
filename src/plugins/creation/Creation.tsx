@@ -6,7 +6,7 @@ import { CreationUI } from './CreationUI';
 
 export const CreationPlugin: Plugin = {
   id: 'creation',
-  name: 'Creation Tools',
+  name: 'Creation',
   version: '1.0.0',
   enabled: true,
   dependencies: ['mouse-interaction'],

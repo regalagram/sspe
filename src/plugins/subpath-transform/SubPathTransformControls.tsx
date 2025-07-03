@@ -480,7 +480,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
 
   return (
     <DraggablePanel
-      title="Transform"
+      title="Sub-Path Transform"
       initialPosition={{ x: 980, y: 300 }}
       id="subpath-transform"
     >

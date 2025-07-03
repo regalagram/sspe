@@ -26,19 +26,26 @@ const formatPanelName = (id: string): string => {
   // Map of specific IDs to friendly names
   const nameMap: Record<string, string> = {
     'zoom-controls': 'Zoom',
-    'creation-tools': 'Creation Tools',
+    'creation-tools': 'Creation',
     'undo-redo-controls': 'History',
     'fullscreen-control': 'Fullscreen',
     'subpath-list': 'Sub-Paths',
     'grid-controls': 'Grid',
     'selection-tools': 'Selection',
     'visual-debug': 'Visual Debug',
-    'svg-editor': 'SVG Editor',
+    'visual-debug-controls': 'Visual Debug',
+    'svg-editor': 'SVG',
     'arrange-ui': 'Arrange',
     'reorder-ui': 'Reorder',
+    'reorder-component': 'Reorder',
     'pencil-tools': 'Pencil',
     'shapes-ui': 'Shapes',
+    'shapes-panel': 'Shapes',
     'panel-mode-ui': 'Panel Mode',
+    'command-info-panel': 'Point Info',
+    'path-style-controls': 'Style',
+    'point-transform-controls': 'Point Transform',
+    'subpath-transform-controls': 'Sub-Path Transform',
   };
 
   // Return mapped name if available

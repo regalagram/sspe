@@ -374,7 +374,7 @@ ${pathElements}
 
 export const SVGPlugin: Plugin = {
   id: 'svg-editor',
-  name: 'SVG Editor',
+  name: 'SVG',
   version: '1.0.0',
   enabled: true,
   

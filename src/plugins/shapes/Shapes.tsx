@@ -62,7 +62,7 @@ export const ShapesPlugin: Plugin = {
     {
       id: 'shape-cursor-hook',
       component: ShapeCursorWrapper,
-      position: 'sidebar',
+      position: 'svg-content', // Changed from 'sidebar' to 'svg-content'
       order: 999 // Hidden component for cursor management
     },
     {

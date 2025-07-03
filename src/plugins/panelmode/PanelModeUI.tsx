@@ -120,14 +120,7 @@ export const PanelModeUI: React.FC = () => {
           />
         </div>
 
-        {/* Current Mode Status */}
-        <div style={statusStyle}>
-          <strong>Current Mode:</strong><br />
-          {mode === 'draggable' ? 'Draggable Windows' : 'Accordion Sidebar'}<br />
-          <small style={{ fontSize: '10px', opacity: 0.8 }}>
-            {mode === 'draggable' ? 'Panels float independently' : 'Panels stack in right sidebar'}
-          </small>
-        </div>
+
 
         {/* Panel Management Section */}
         <div style={sectionStyle}>
@@ -141,7 +134,6 @@ export const PanelModeUI: React.FC = () => {
                 fontWeight: 400,
                 marginLeft: '4px'
               }}>
-                (scroll)
               </span>
             )}
           </div>
@@ -259,21 +251,6 @@ export const PanelModeUI: React.FC = () => {
               ))
             )}
           </div>
-        </div>
-
-        {/* Instructions */}
-        <div style={{ 
-          fontSize: '10px', 
-          color: '#666', 
-          textAlign: 'center',
-          padding: '8px',
-          background: '#fffbf0',
-          borderRadius: '4px',
-          border: '1px solid #ffd700',
-          lineHeight: '1.4'
-        }}>
-          <strong>Draggable Mode:</strong> Panels float freely<br />
-          <strong>Accordion Mode:</strong> Panels stack in right sidebar
         </div>
       </div>
     </DraggablePanel>

@@ -132,7 +132,7 @@ export const CommandPanelComponent: React.FC = () => {
 
   return (
     <DraggablePanel
-      title="Command"
+      title="Point Info"
       initialPosition={{ x: 20, y: 200 }}
       id="command-panel"
     >
@@ -147,7 +147,7 @@ export const CommandPanelComponent: React.FC = () => {
 
 export const CommandPlugin: Plugin = {
   id: 'command',
-  name: 'Command Info',
+  name: 'Point Info',
   version: '1.0.0',
   enabled: true,
   

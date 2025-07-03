@@ -74,7 +74,7 @@ export const CreationUI: React.FC = () => {
 
   return (
     <DraggablePanel
-      title="Creation Tools"
+      title="Creation"
       initialPosition={{ x: 980, y: 140 }}
       id="creation-tools"
     >

@@ -294,7 +294,7 @@ export const PathStyleComponent: React.FC = () => {
 
   return (
     <DraggablePanel 
-      title="Path Style"
+      title="Style"
       initialPosition={{ x: 980, y: 220 }}
       id="path-style"
     >
@@ -319,7 +319,7 @@ export const PathStyleComponent: React.FC = () => {
 
 export const PathStylePlugin: Plugin = {
   id: 'path-style',
-  name: 'Path Style',
+  name: 'Style',
   version: '1.0.0',
   enabled: true,
   
