@@ -5,6 +5,7 @@ import { SVGCommand, Point, BoundingBox } from '../../types';
 import { calculateGlobalViewBox } from '../../utils/viewbox-utils';
 import { pathToString, subPathToString } from '../../utils/path-utils';
 import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';
+import { isCurrentlyProcessingTouch, getCurrentTouchEventId, getCurrentTouchEventType } from '../../utils/touch-to-mouse-global';
 
 export interface TransformBounds {
   x: number;
@@ -397,6 +398,24 @@ export class TransformManager {
 
   // Mouse event handlers
   handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+    // Skip duplicate touch events using element-specific deduplication
+    const fromTouch = isCurrentlyProcessingTouch();
+    const touchEventId = getCurrentTouchEventId();
+    const touchEventType = getCurrentTouchEventType();
+    
+    if (fromTouch) {
+      const deduplicationKey = `transform-mousedown`;
+      
+      if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
+        return false; // Already processed this touch event
+      }
+      if (touchEventId) {
+        if (!(window as any).lastProcessedTouchEvents) {
+          (window as any).lastProcessedTouchEvents = {};
+        }
+        (window as any).lastProcessedTouchEvents[deduplicationKey] = touchEventId;
+      }
+    }
   
     if (!this.hasValidSelection()) {
       return false;
@@ -404,9 +423,7 @@ export class TransformManager {
 
     // Check if clicking on a transform handle
     const clickPoint = context.svgPoint;
-    const handle = this.getHandleAtPoint(clickPoint);
-    
-   
+    const handle = this.getHandleAtPoint(clickPoint, e.target as Element);
     
     if (handle) {
       this.startTransform(handle, clickPoint);
@@ -427,7 +444,24 @@ export class TransformManager {
   handleMouseMove = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
     if (!this.state.isTransforming) return false;
 
-  
+    // Skip duplicate touch events using element-specific deduplication
+    const fromTouch = isCurrentlyProcessingTouch();
+    const touchEventId = getCurrentTouchEventId();
+    
+    if (fromTouch) {
+      const deduplicationKey = `transform-mousemove`;
+      
+      if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
+        return false; // Already processed this touch event
+      }
+      if (touchEventId) {
+        if (!(window as any).lastProcessedTouchEvents) {
+          (window as any).lastProcessedTouchEvents = {};
+        }
+        (window as any).lastProcessedTouchEvents[deduplicationKey] = touchEventId;
+      }
+    }
+
     this.updateTransform(context.svgPoint);
     return true;
   };
@@ -435,13 +469,31 @@ export class TransformManager {
   handleMouseUp = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
     if (!this.state.isTransforming) return false;
 
+    // Skip duplicate touch events using element-specific deduplication
+    const fromTouch = isCurrentlyProcessingTouch();
+    const touchEventId = getCurrentTouchEventId();
+    
+    if (fromTouch) {
+      const deduplicationKey = `transform-mouseup`;
+      
+      if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
+        return false; // Already processed this touch event
+      }
+      if (touchEventId) {
+        if (!(window as any).lastProcessedTouchEvents) {
+          (window as any).lastProcessedTouchEvents = {};
+        }
+        (window as any).lastProcessedTouchEvents[deduplicationKey] = touchEventId;
+      }
+    }
+
     this.endTransform();
     return true;
   };
 
-  // Check if handles should be visible (hidden during active transformation or movement)
+  // Check if handles should be visible (hidden during movement, but keep visible during transform with opacity)
   shouldShowHandles(): boolean {
-    return !this.state.isTransforming && !this.state.isMoving;
+    return !this.state.isMoving;
   }
 
   // Methods to control movement state (called by other plugins like mouse-interaction)
@@ -483,10 +535,24 @@ export class TransformManager {
     return null;
   }
 
-  private getHandleAtPoint(point: Point): TransformHandle | null {
+  private getHandleAtPoint(point: Point, targetElement?: Element): TransformHandle | null {
     const store = this.editorStore || useEditorStore.getState();
     const { viewport } = store;
     
+    // First, try to get handle from target element data attributes (more reliable)
+    if (targetElement) {
+      const handleId = targetElement.getAttribute('data-handle-id');
+      const handleType = targetElement.getAttribute('data-handle-type');
+      
+      if (handleId && (handleType === 'transform' || handleType === 'rotation')) {
+        const handle = this.state.handles.find(h => h.id === handleId);
+        if (handle) {
+          return handle;
+        }
+      }
+    }
+    
+    // Fallback to position-based detection
     // Get device detection (need to instantiate since this is not in a React component)
     const isMobile = window.innerWidth <= 768 && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
     const isTablet = window.innerWidth > 768 && window.innerWidth <= 1024 && ('ontouchstart' in window || navigator.maxTouchPoints > 0);

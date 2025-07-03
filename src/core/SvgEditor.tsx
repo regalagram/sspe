@@ -37,6 +37,9 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(MouseInteractionPlugin); // Required by pencil
   pluginManager.registerPlugin(SelectionPlugin); // Required by subpath-transform and point-transform
   
+  // Register Transform early so it can handle transform handles before PathRenderer
+  pluginManager.registerPlugin(Transform);
+  
   // Register other core plugins
   pluginManager.registerPlugin(PathRendererPlugin);
   pluginManager.registerPlugin(VisualDebugPlugin);
@@ -58,7 +61,6 @@ const initializePlugins = () => {
   
   // Register remaining plugins
   pluginManager.registerPlugin(ShapesPlugin);
-  pluginManager.registerPlugin(Transform);
   pluginManager.registerPlugin(ArrangePlugin);
   pluginManager.registerPlugin(ReorderPlugin);
   pluginManager.registerPlugin(PanelModePlugin);

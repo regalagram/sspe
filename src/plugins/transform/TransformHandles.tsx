@@ -22,10 +22,10 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
     return null;
   }
 
-  // Hide handles during active transformation (drag operations)
-  if (!transformManager.shouldShowHandles()) {
-    return null;
-  }
+  // Calculate opacity based on transform state - hide visually but keep for touch events
+  const isTransforming = transformManager.isTransforming();
+  const handleOpacity = isTransforming ? 0 : 1;
+  const boundingBoxOpacity = isTransforming ? 0.3 : 1; // Keep bounding box slightly visible during transform
 
   // Calcular tamaño responsivo para los handles
   const baseHandleSize = getControlPointSize(isMobile, isTablet);
@@ -47,6 +47,8 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
         strokeWidth={strokeWidth}
         strokeDasharray={`${4 / viewport.zoom},${2 / viewport.zoom}`}
         pointerEvents="none"
+        opacity={boundingBoxOpacity}
+        style={{ transition: 'opacity 0.2s ease' }}
       />
 
       {/* Transform handles */}
@@ -57,10 +59,14 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
         return (
           <g
             key={handle.id}
-            style={{ pointerEvents: 'all', cursor: handle.cursor }}
+            style={{ 
+              pointerEvents: 'all', 
+              cursor: handle.cursor,
+              opacity: handleOpacity,
+              transition: 'opacity 0.2s ease'
+            }}
             onMouseEnter={() => setHoveredHandle(handle.id)}
             onMouseLeave={() => setHoveredHandle(null)}
-            onMouseDown={() => {}}
             data-transform-handle={handle.id}
           >
             {handle.type === 'corner' ? (
