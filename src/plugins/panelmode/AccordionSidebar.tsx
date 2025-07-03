@@ -3,6 +3,9 @@ import { UIComponentDefinition } from '../../core/PluginSystem';
 import { usePanelModeStore } from './PanelManager';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useMobileDetection, getButtonSize } from '../../hooks/useMobileDetection';
+import { useMobileFormFocusFix } from '../../hooks/useMobileFormFocusFix';
+import { useAndroidTouchEnhancements } from '../../hooks/useAndroidTouchEnhancements';
+import { useMobileControlsEnhancement } from '../../hooks/useMobileControlsEnhancement';
 
 interface AccordionSidebarProps {
   plugins: UIComponentDefinition[];
@@ -16,6 +19,16 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
   } = usePanelModeStore();
 
   const { isMobile, isTablet } = useMobileDetection();
+  
+  // Apply mobile form focus fix for iOS and Android (safe version that excludes checkboxes)
+  useMobileFormFocusFix();
+  
+  // Apply Android-specific touch enhancements
+  useAndroidTouchEnhancements();
+  
+  // Apply NON-INVASIVE controls enhancements for mobile (checkboxes, sliders, etc.)
+  useMobileControlsEnhancement();
+  
   const visiblePanels = getVisiblePanels();
   
   // Filter plugins based on visible panels
@@ -80,6 +93,8 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
   const panelsContainerStyle: React.CSSProperties = {
     flex: 1,
     overflow: 'auto',
+    WebkitOverflowScrolling: 'touch', // Smooth scrolling en iOS
+    touchAction: 'auto', // Permitir scroll táctil
   };
 
   return (
@@ -230,6 +245,8 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
     maxHeight: isExpanded ? (isMobile ? '60vh' : '400px') : '0', // Más altura disponible en móviles
     overflow: 'auto',
     transition: 'max-height 0.3s ease',
+    WebkitOverflowScrolling: 'touch', // Smooth scrolling en iOS
+    touchAction: 'auto', // Permitir scroll táctil
   };
 
   const iconStyle: React.CSSProperties = {
@@ -301,7 +318,11 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
       </div>
       
       {isExpanded && (
-        <div style={contentStyle}>
+        <div 
+          style={contentStyle}
+          className="accordion-panel-content-container"
+          data-mobile-scrollable="true"
+        >
           <AccordionPanelContent plugin={plugin} />
         </div>
       )}
@@ -326,6 +347,7 @@ const AccordionPanelContent: React.FC<AccordionPanelContentProps> = ({ plugin })
         width: '100%',
       }}
       className="accordion-panel-content"
+      data-mobile-scrollable="true"
     >
       <AccordionModeProvider>
         <plugin.component />

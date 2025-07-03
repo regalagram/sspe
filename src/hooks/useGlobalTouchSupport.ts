@@ -56,9 +56,43 @@ export const useGlobalTouchSupport = () => {
           element.getAttribute('role') === 'button'
         );
 
-        // For clickable UI elements, don't prevent default to allow native touch handling
-        // For other elements (SVG, canvas), prevent default and create mousedown
-        if (!isClickableUI) {
+        // Check if this is within an accordion panel or scrollable area
+        const isWithinAccordion = element && (
+          element.closest('.accordion-sidebar') ||
+          element.closest('.accordion-panel-content') ||
+          element.closest('.draggable-panel') ||
+          element.closest('[data-mobile-scrollable="true"]') ||
+          element.hasAttribute('data-mobile-scrollable')
+        );
+
+        // Check if this is an input element or within an input-containing area
+        const isInputElement = element && (
+          element.tagName.toLowerCase() === 'input' ||
+          element.tagName.toLowerCase() === 'textarea' ||
+          element.tagName.toLowerCase() === 'select' ||
+          element.tagName.toLowerCase() === 'button' ||
+          element.closest('input') ||
+          element.closest('textarea') ||
+          element.closest('select') ||
+          element.closest('button') ||
+          element.closest('.control-group') ||
+          element.closest('label') ||
+          // Específico para controles de formulario
+          element.getAttribute('type') === 'color' ||
+          element.getAttribute('type') === 'range' ||
+          element.getAttribute('type') === 'number' ||
+          element.getAttribute('type') === 'text' ||
+          element.getAttribute('type') === 'checkbox'
+        );
+
+        // Para elementos de formulario o acordeón, NO interferir - dejar que iOS/Android maneje nativamente
+        if (isWithinAccordion || isInputElement) {
+          console.log('📱 TouchSupport: Skipping synthetic events for form/accordion element');
+          return; // No crear eventos sintéticos
+        }
+
+        // Para elementos no-UI (SVG, canvas), crear eventos de mouse sintéticos
+        if (!isClickableUI && !isWithinAccordion && !isInputElement) {
           // Create and dispatch mousedown for non-UI elements
           const mouseEvent = createMouseEvent(e, 'mousedown', touch);
           if (element) {
@@ -79,25 +113,43 @@ export const useGlobalTouchSupport = () => {
           const deltaY = Math.abs(touch.clientY - touchData.startY);
           const totalDelta = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
           
-          // Marcar como dragging si se supera el threshold
-          if (!isDragging && totalDelta > dragThreshold) {
+          // Check if we're within an accordion or scrollable area
+          const element = document.elementFromPoint(touch.clientX, touch.clientY);
+          const isWithinAccordion = element && (
+            element.closest('.accordion-sidebar') ||
+            element.closest('.accordion-panel-content') ||
+            element.closest('.draggable-panel') ||
+            element.closest('[data-mobile-scrollable="true"]') ||
+            element.hasAttribute('data-mobile-scrollable')
+          );
+
+          // If within accordion and moving vertically, don't interfere (allow scroll)
+          if (isWithinAccordion && deltaY > deltaX) {
+            return; // Let native scroll handling work
+          }
+          
+          // Marcar como dragging si se supera el threshold (only for SVG/canvas areas)
+          if (!isDragging && totalDelta > dragThreshold && !isWithinAccordion) {
             isDragging = true;
           }
 
-          // Crear y disparar mousemove
-          const mouseEvent = createMouseEvent(e, 'mousemove', touch);
-          
-          // Disparar en el elemento original si existe
-          if (touchData.element) {
-            touchData.element.dispatchEvent(mouseEvent);
-          }
-          
-          // También disparar en document para asegurar propagación global
-          document.dispatchEvent(mouseEvent);
-          
-          // Prevenir comportamiento por defecto durante drag
-          if (isDragging) {
-            e.preventDefault();
+          // Only create synthetic mouse events for non-accordion areas
+          if (!isWithinAccordion) {
+            // Crear y disparar mousemove
+            const mouseEvent = createMouseEvent(e, 'mousemove', touch);
+            
+            // Disparar en el elemento original si existe
+            if (touchData.element) {
+              touchData.element.dispatchEvent(mouseEvent);
+            }
+            
+            // También disparar en document para asegurar propagación global
+            document.dispatchEvent(mouseEvent);
+            
+            // Prevenir comportamiento por defecto durante drag
+            if (isDragging) {
+              e.preventDefault();
+            }
           }
         }
       }
@@ -118,8 +170,38 @@ export const useGlobalTouchSupport = () => {
             touchData.element.getAttribute('role') === 'button'
           );
 
-          // For clickable UI elements, let native touch handling work
-          if (!isClickableUI) {
+          // Check if this is within an accordion panel or input area
+          const isWithinAccordion = touchData.element && (
+            touchData.element.closest('.accordion-sidebar') ||
+            touchData.element.closest('.accordion-panel-content') ||
+            touchData.element.closest('.draggable-panel') ||
+            touchData.element.closest('[data-mobile-scrollable="true"]') ||
+            touchData.element.hasAttribute('data-mobile-scrollable')
+          );
+
+          const isInputElement = touchData.element && (
+            touchData.element.tagName.toLowerCase() === 'input' ||
+            touchData.element.tagName.toLowerCase() === 'textarea' ||
+            touchData.element.tagName.toLowerCase() === 'select' ||
+            touchData.element.tagName.toLowerCase() === 'button' ||
+            touchData.element.closest('input') ||
+            touchData.element.closest('textarea') ||
+            touchData.element.closest('select') ||
+            touchData.element.closest('button') ||
+            touchData.element.closest('.control-group') ||
+            touchData.element.closest('label') ||
+            // Específico para controles de formulario
+            touchData.element.getAttribute('type') === 'color' ||
+            touchData.element.getAttribute('type') === 'range' ||
+            touchData.element.getAttribute('type') === 'number' ||
+            touchData.element.getAttribute('type') === 'text' ||
+            touchData.element.getAttribute('type') === 'checkbox'
+          );
+
+          // For accordion panels or input elements, let native touch handling work
+          if (!isClickableUI || isWithinAccordion || isInputElement) {
+            // Don't create synthetic events - let native behavior work
+          } else {
             // Create and dispatch mouseup for non-UI elements
             const mouseEvent = createMouseEvent(e, 'mouseup', touch);
             
