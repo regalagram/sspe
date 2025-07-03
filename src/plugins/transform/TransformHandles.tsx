@@ -22,10 +22,13 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
     return null;
   }
 
-  // Calculate opacity based on transform state - hide visually but keep for touch events
+  // Calculate opacity based on transform state and movement state - hide visually but keep for touch events
   const isTransforming = transformManager.isTransforming();
-  const handleOpacity = isTransforming ? 0 : 1;
-  const boundingBoxOpacity = isTransforming ? 0.3 : 1; // Keep bounding box slightly visible during transform
+  const isMoving = transformManager.isMoving();
+  const shouldHideHandles = isTransforming || isMoving;
+  const handleOpacity = shouldHideHandles ? 0 : 1;
+  // Keep bounding box slightly visible during transform, fully visible during movement
+  const boundingBoxOpacity = isTransforming ? 0.3 : 1;
 
   // Calcular tamaño responsivo para los handles
   const baseHandleSize = getControlPointSize(isMobile, isTablet);
