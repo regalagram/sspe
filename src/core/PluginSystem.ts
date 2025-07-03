@@ -67,6 +67,7 @@ export class PluginManager {
   private shortcuts: Map<string, ShortcutDefinition> = new Map();
   private svgRef: React.RefObject<SVGSVGElement | null> | null = null;
   private editorStore: any = null;
+  public isShapeCreationMode: boolean = false;
   
   setSVGRef(ref: React.RefObject<SVGSVGElement | null>): void {
     this.svgRef = ref;
@@ -78,6 +79,14 @@ export class PluginManager {
 
   getEditorStore(): any {
     return this.editorStore;
+  }
+
+  setShapeCreationMode(isCreating: boolean): void {
+    this.isShapeCreationMode = isCreating;
+  }
+
+  getShapeCreationMode(): boolean {
+    return this.isShapeCreationMode;
   }
 
   getSVGPoint(e: MouseEvent<SVGElement>): SVGPoint {
@@ -133,6 +142,14 @@ export class PluginManager {
       
       if (mouseInteractionPlugin) {
         pluginsToProcess = [mouseInteractionPlugin, ...otherPlugins];
+      }
+    } else if (!commandId && eventType === 'mouseDown') {
+      // When clicking on empty canvas, prioritize shapes plugin if it's in creation mode
+      const shapesPlugin = pluginsToProcess.find(p => p.id === 'shapes');
+      if (shapesPlugin && this.isShapeCreationMode) {
+        const otherPlugins = pluginsToProcess.filter(p => p.id !== 'shapes');
+        pluginsToProcess = [shapesPlugin, ...otherPlugins];
+        console.log('🔌 PluginSystem: Prioritizing shapes plugin - in creation mode');
       }
     }
     

@@ -175,12 +175,17 @@ export const ShapesUI: React.FC = () => {
   }, [activeShapeId]);
 
   const handleShapeSelect = (shapeId: string) => {
+    console.log('🔷 ShapesUI.handleShapeSelect called with shapeId:', shapeId);
+    console.log('🔷 ShapesUI: Current activeShapeId:', activeShapeId);
+    
     if (activeShapeId === shapeId) {
       // Deselect if clicking the same shape
+      console.log('🔷 ShapesUI: Deselecting shape');
       setActiveShapeId(null);
       shapeManager.stopShapeCreation();
     } else {
       // Select new shape
+      console.log('🔷 ShapesUI: Selecting new shape');
       setActiveShapeId(shapeId);
       shapeManager.setCurrentSize(currentSize);
       shapeManager.startShapeCreation(shapeId);
