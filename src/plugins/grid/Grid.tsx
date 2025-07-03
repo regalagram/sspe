@@ -201,25 +201,32 @@ export const GridControls: React.FC<GridControlsProps> = ({
   );
 };
 
+import { useMobileDetection } from '../../hooks/useMobileDetection';
+
 export const GridComponent: React.FC = () => {
   const { grid, toggleGrid, toggleSnapToGrid, setGridSize, toggleGridLabels } = useEditorStore();
-  
+  const { isMobile, isTablet } = useMobileDetection();
+  // Forzar re-render usando una key dependiente del estado de la grilla
+  const gridKey = `${grid.enabled}-${grid.snapToGrid}-${grid.showLabels}-${grid.size}`;
+
   return (
     <DraggablePanel 
       title="Grid Controls"
       initialPosition={{ x: 980, y: 60 }}
       id="grid-controls"
     >
-      <GridControls
-        enabled={grid.enabled}
-        size={grid.size}
-        snapToGrid={grid.snapToGrid}
-        showLabels={grid.showLabels || false}
-        onToggleGrid={toggleGrid}
-        onToggleSnap={toggleSnapToGrid}
-        onToggleLabels={toggleGridLabels}
-        onSizeChange={setGridSize}
-      />
+      <div key={gridKey}>
+        <GridControls
+          enabled={grid.enabled}
+          size={grid.size}
+          snapToGrid={grid.snapToGrid}
+          showLabels={grid.showLabels || false}
+          onToggleGrid={toggleGrid}
+          onToggleSnap={toggleSnapToGrid}
+          onToggleLabels={toggleGridLabels}
+          onSizeChange={setGridSize}
+        />
+      </div>
     </DraggablePanel>
   );
 };
