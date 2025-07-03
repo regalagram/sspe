@@ -73,6 +73,14 @@ class MouseInteractionManager {
     this.editorStore = store;
   }
 
+  private hasAnySelection(): boolean {
+    if (!this.editorStore) return false;
+    const { selection } = this.editorStore;
+    return selection.selectedCommands.length > 0 || 
+           selection.selectedSubPaths.length > 0 || 
+           selection.selectedPaths.length > 0;
+  }
+
   getSVGPoint(e: MouseEvent<SVGElement>, svgRef: React.RefObject<SVGSVGElement | null>): { x: number; y: number } {
     return getSVGPoint(e, svgRef, this.editorStore.viewport);
   }
@@ -109,6 +117,15 @@ class MouseInteractionManager {
       } = this.editorStore;
 
     e.stopPropagation();
+    
+    // Check if this is a click on empty space (no command, no control point)
+    const isEmptySpaceClick = !commandId && !controlPoint && !this.state.isSpacePressed && e.button === 0;
+    
+    // PRIORITY: Deselection on empty space click
+    if (isEmptySpaceClick && this.hasAnySelection() && !e.shiftKey) {
+      clearSelection();
+      return true;
+    }
     
     // Space + Left Mouse Button for panning (Mac-friendly)
     if (this.state.isSpacePressed && e.button === 0) {
@@ -189,18 +206,12 @@ class MouseInteractionManager {
     } else if (mode.current === 'create' && mode.createMode && !this.state.isSpacePressed) {
       // Let creation mode plugin handle this
       return false;
-    } else if (!commandId && !controlPoint && e.button === 0 && !this.state.isSpacePressed) {
-      // Let rect selection plugin handle this only if Shift is not pressed
-      // If Shift is pressed, let other plugins (like PathRenderer) handle the event first
-      if (!e.shiftKey) {
-        return false; // Let rect selection handle it
-      }
-      // If Shift is pressed, don't handle it here - let it bubble to other plugins
+    } else if (isEmptySpaceClick && !e.shiftKey) {
+      // Let rect selection plugin handle this if no selection exists
       return false;
-    } else if (!commandId && !controlPoint && !this.state.isSpacePressed) {
-      // Clear selection only if clicking on empty space (no command, no control point)
-      clearSelection();
-      return true;
+    } else if (isEmptySpaceClick && e.shiftKey) {
+      // If Shift is pressed on empty space, let other plugins (like PathRenderer) handle the event first
+      return false;
     }
 
     return false;
