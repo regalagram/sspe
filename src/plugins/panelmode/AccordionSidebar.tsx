@@ -238,21 +238,57 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
     height: isMobile ? '20px' : '16px',
   };
 
+  // Handle touch events explicitly for better mobile support
+  const handleTouchStart = (e: React.TouchEvent) => {
+    console.log('AccordionPanel touchstart:', plugin.id);
+    // Add visual feedback for touch
+    if (!isExpanded) {
+      (e.currentTarget as HTMLElement).style.background = '#f0f0f0';
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    console.log('AccordionPanel touchend:', plugin.id);
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Remove visual feedback
+    if (!isExpanded) {
+      (e.currentTarget as HTMLElement).style.background = '#fafafa';
+    }
+    
+    // Trigger the toggle action immediately
+    onToggle();
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    console.log('AccordionPanel click:', plugin.id, 'isTrusted:', (e as any).isTrusted);
+    // For desktop, handle all clicks normally
+    // For mobile, only handle if it's NOT a synthetic click from touch
+    if (!isMobile || (e as any).isTrusted) {
+      onToggle();
+    }
+  };
+
   return (
     <div>
       <div 
+        data-accordion-panel-header="true"
+        data-clickable="true"
         style={headerStyle}
-        onClick={onToggle}
-        onMouseEnter={(e) => {
+        onClick={handleClick}
+        onTouchStart={isMobile ? handleTouchStart : undefined}
+        onTouchEnd={isMobile ? handleTouchEnd : undefined}
+        onMouseEnter={!isMobile ? (e) => {
           if (!isExpanded) {
             e.currentTarget.style.background = '#f5f5f5';
           }
-        }}
-        onMouseLeave={(e) => {
+        } : undefined}
+        onMouseLeave={!isMobile ? (e) => {
           if (!isExpanded) {
             e.currentTarget.style.background = '#fafafa';
           }
-        }}
+        } : undefined}
       >
         <span>{panel?.name || plugin.id}</span>
         <div style={iconStyle}>

@@ -28,9 +28,24 @@ export const PluginButton: React.FC<PluginButtonProps> = ({
   const padding = isMobile ? '8px 24px' : '4px 20px';
   const borderRadius = isMobile ? 24 : 18;
 
+  // Handle touch events for better mobile support
+  const handleClick = (e: React.MouseEvent) => {
+    if (disabled) return;
+    onClick?.();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (disabled) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    onClick?.();
+  };
+
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
+      onTouchEnd={isMobile ? handleTouchEnd : undefined}
       disabled={disabled}
       style={{
         display: 'flex',
@@ -52,6 +67,7 @@ export const PluginButton: React.FC<PluginButtonProps> = ({
         outline: active ? `2px solid ${color}` : 'none',
         width: fullWidth ? '100%' : 'auto',
         touchAction: 'manipulation', // Mejorar respuesta táctil
+        WebkitTapHighlightColor: 'rgba(0,0,0,0.1)', // Subtle tap highlight for iOS
       }}
       title={text}
       type="button"

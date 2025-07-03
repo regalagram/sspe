@@ -3,6 +3,7 @@ import { enableGlobalTouchToMouse } from '../utils/touch-to-mouse-global';
 import { useEditorStore } from '../store/editorStore';
 import { pluginManager } from './PluginSystem';
 import { getSafeTransform } from '../utils/transform-utils';
+import { useMobileDetection } from '../hooks/useMobileDetection';
 import { ZoomPlugin } from '../plugins/zoom/Zoom';
 import { GridPlugin } from '../plugins/grid/Grid';
 import { UndoRedoPlugin } from '../plugins/undo-redo/UndoRedo';
@@ -73,6 +74,7 @@ export const SvgEditor: React.FC = () => {
   const editorStore = useEditorStore();
   const { isFullscreen } = editorStore;
   const svgRef = useRef<SVGSVGElement>(null);
+  const { isMobile } = useMobileDetection();
   
   // Get panel mode from store
   const { mode: panelMode, accordionVisible, toggleAccordionVisible } = usePanelModeStore();
@@ -279,7 +281,23 @@ export const SvgEditor: React.FC = () => {
       {/* Accordion toggle button - only show in accordion mode and not in fullscreen */}
       {panelMode === 'accordion' && !isFullscreen && (
         <button
-          onClick={toggleAccordionVisible}
+          data-accordion-toggle="true"
+          onClick={(e) => {
+            console.log('Toggle button click:', 'isTrusted:', (e as any).isTrusted, 'isMobile:', isMobile);
+            // For desktop or trusted mobile clicks
+            if (!isMobile || (e as any).isTrusted) {
+              toggleAccordionVisible();
+            }
+          }}
+          onTouchStart={isMobile ? (e) => {
+            console.log('Toggle button touchstart');
+          } : undefined}
+          onTouchEnd={isMobile ? (e) => {
+            console.log('Toggle button touchend');
+            e.preventDefault();
+            e.stopPropagation();
+            toggleAccordionVisible();
+          } : undefined}
           style={{
             position: 'fixed',
             top: '20px',
@@ -296,17 +314,19 @@ export const SvgEditor: React.FC = () => {
             justifyContent: 'center',
             zIndex: 1000,
             transition: 'all 0.3s ease',
-            color: 'white'
+            color: 'white',
+            touchAction: 'manipulation', // Better touch responsiveness
+            WebkitTapHighlightColor: 'rgba(0,0,0,0.1)', // Subtle tap highlight
           }}
           title={accordionVisible ? 'Hide accordion sidebar' : 'Show accordion sidebar'}
-          onMouseEnter={(e) => {
+          onMouseEnter={!isMobile ? (e) => {
             e.currentTarget.style.background = '#005a9e';
             e.currentTarget.style.transform = 'scale(1.1)';
-          }}
-          onMouseLeave={(e) => {
+          } : undefined}
+          onMouseLeave={!isMobile ? (e) => {
             e.currentTarget.style.background = '#007acc';
             e.currentTarget.style.transform = 'scale(1)';
-          }}
+          } : undefined}
         >
           {accordionVisible ? <X size={24} /> : <Menu size={24} />}
         </button>

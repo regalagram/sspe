@@ -47,10 +47,23 @@ export const useGlobalTouchSupport = () => {
           element: element
         });
 
-        // Crear y disparar mousedown
-        const mouseEvent = createMouseEvent(e, 'mousedown', touch);
-        if (element) {
-          element.dispatchEvent(mouseEvent);
+        // Check if this is a clickable UI element (button, accordion header, etc.)
+        const isClickableUI = element && (
+          element.tagName.toLowerCase() === 'button' ||
+          element.closest('button') ||
+          element.hasAttribute('data-clickable') ||
+          (element as HTMLElement).style?.cursor === 'pointer' ||
+          element.getAttribute('role') === 'button'
+        );
+
+        // For clickable UI elements, don't prevent default to allow native touch handling
+        // For other elements (SVG, canvas), prevent default and create mousedown
+        if (!isClickableUI) {
+          // Create and dispatch mousedown for non-UI elements
+          const mouseEvent = createMouseEvent(e, 'mousedown', touch);
+          if (element) {
+            element.dispatchEvent(mouseEvent);
+          }
         }
       }
     };
@@ -96,24 +109,36 @@ export const useGlobalTouchSupport = () => {
         const touchData = activeTouches.get(touch.identifier);
         
         if (touchData) {
-          // Crear y disparar mouseup
-          const mouseEvent = createMouseEvent(e, 'mouseup', touch);
-          
-          if (touchData.element) {
-            touchData.element.dispatchEvent(mouseEvent);
-          }
-          
-          // También disparar en document para asegurar que se captura
-          document.dispatchEvent(mouseEvent);
-          
-          // Si no fue un drag, disparar click después de un pequeño delay
-          if (!isDragging) {
-            setTimeout(() => {
-              const clickEvent = createMouseEvent(e, 'click', touch);
-              if (touchData.element) {
-                touchData.element.dispatchEvent(clickEvent);
-              }
-            }, 10);
+          // Check if this is a clickable UI element
+          const isClickableUI = touchData.element && (
+            touchData.element.tagName.toLowerCase() === 'button' ||
+            touchData.element.closest('button') ||
+            touchData.element.hasAttribute('data-clickable') ||
+            (touchData.element as HTMLElement).style?.cursor === 'pointer' ||
+            touchData.element.getAttribute('role') === 'button'
+          );
+
+          // For clickable UI elements, let native touch handling work
+          if (!isClickableUI) {
+            // Create and dispatch mouseup for non-UI elements
+            const mouseEvent = createMouseEvent(e, 'mouseup', touch);
+            
+            if (touchData.element) {
+              touchData.element.dispatchEvent(mouseEvent);
+            }
+            
+            // También disparar en document para asegurar que se captura
+            document.dispatchEvent(mouseEvent);
+            
+            // Si no fue un drag, disparar click después de un pequeño delay
+            if (!isDragging) {
+              setTimeout(() => {
+                const clickEvent = createMouseEvent(e, 'click', touch);
+                if (touchData.element) {
+                  touchData.element.dispatchEvent(clickEvent);
+                }
+              }, 10);
+            }
           }
           
           // Limpiar el toque

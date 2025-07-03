@@ -84,7 +84,6 @@ export function enableGlobalTouchToMouse() {
   document.addEventListener('touchstart', (e) => {
     console.log('Touch start detected:', e.touches.length, 'touches');
     if (e.touches.length !== 1) return;
-    e.preventDefault(); // Prevenir scroll/zoom nativo
     
     const touch = e.touches[0];
     dragStartElement = e.target as Element;
@@ -97,6 +96,23 @@ export function enableGlobalTouchToMouse() {
       clientX: touch.clientX,
       clientY: touch.clientY
     });
+    
+    // Check if this is a UI element that should handle its own touch events
+    const isUIElement = dragStartElement.tagName.toLowerCase() === 'button' ||
+                       dragStartElement.closest('button') ||
+                       dragStartElement.hasAttribute('data-accordion-panel-header') ||
+                       dragStartElement.hasAttribute('data-accordion-toggle') ||
+                       dragStartElement.hasAttribute('data-clickable') ||
+                       (dragStartElement as HTMLElement).style?.cursor === 'pointer';
+    
+    if (isUIElement) {
+      console.log('UI element detected, letting native events handle it');
+      // For UI elements, don't prevent default and let native touch handling work
+      return;
+    }
+    
+    // Only prevent default for non-UI elements (SVG, canvas, etc.)
+    e.preventDefault();
     
     // Set up deduplication for this touch event
     currentTouchEventId = generateTouchEventId(e, 'mousedown');
@@ -137,10 +153,24 @@ export function enableGlobalTouchToMouse() {
 
   document.addEventListener('touchmove', (e) => {
     if (e.touches.length !== 1) return;
-    e.preventDefault(); // Prevenir scroll/zoom nativo
     
     const touch = e.touches[0];
     if (!dragStartElement || !dragStartTouch) return;
+    
+    // Check if this is a UI element that should handle its own touch events
+    const isUIElement = dragStartElement.tagName.toLowerCase() === 'button' ||
+                       dragStartElement.closest('button') ||
+                       dragStartElement.hasAttribute('data-accordion-panel-header') ||
+                       dragStartElement.hasAttribute('data-accordion-toggle') ||
+                       dragStartElement.hasAttribute('data-clickable') ||
+                       (dragStartElement as HTMLElement).style?.cursor === 'pointer';
+    
+    if (isUIElement) {
+      // For UI elements, don't prevent default and let native touch handling work
+      return;
+    }
+    
+    e.preventDefault(); // Prevenir scroll/zoom nativo
     
     // Marcar como dragging si se ha movido más de 5px
     if (!isDragging) {
@@ -190,12 +220,32 @@ export function enableGlobalTouchToMouse() {
   }, { passive: false });
 
   document.addEventListener('touchend', (e) => {
-    e.preventDefault(); // Prevenir scroll/zoom nativo
-    
     const touch = e.changedTouches[0];
     if (!touch || !dragStartElement) return;
     
     console.log('Touch end detected');
+    
+    // Check if this is a UI element that should handle its own touch events
+    const isUIElement = dragStartElement.tagName.toLowerCase() === 'button' ||
+                       dragStartElement.closest('button') ||
+                       dragStartElement.hasAttribute('data-accordion-panel-header') ||
+                       dragStartElement.hasAttribute('data-accordion-toggle') ||
+                       dragStartElement.hasAttribute('data-clickable') ||
+                       (dragStartElement as HTMLElement).style?.cursor === 'pointer';
+    
+    if (isUIElement) {
+      console.log('UI element touchend, letting native events handle it');
+      // For UI elements, don't prevent default and let native touch handling work
+      // Reset state but don't interfere with native handling
+      isDragging = false;
+      dragStartElement = null;
+      dragStartTouch = null;
+      currentTouchEventId = null;
+      processedElements.clear();
+      return;
+    }
+    
+    e.preventDefault(); // Prevenir scroll/zoom nativo
     
     // Set up deduplication for this touch event
     currentTouchEventId = generateTouchEventId(e, 'mouseup');
@@ -262,7 +312,7 @@ export function enableGlobalTouchToMouse() {
   }, { passive: false });
 
   document.addEventListener('touchcancel', (e) => {
-    e.preventDefault();
+    console.log('Touch cancel detected');
     
     // Reset state en cancelación
     isDragging = false;
