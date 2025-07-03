@@ -27,6 +27,7 @@ import { ReorderPlugin } from '../plugins/reorder/Reorder';
 import { PanelModePlugin } from '../plugins/panelmode/PanelMode';
 import { usePanelModeStore } from '../plugins/panelmode/PanelManager';
 import { AccordionSidebar } from '../plugins/panelmode/AccordionSidebar';
+import { Menu, X } from 'lucide-react';
 
 // Register plugins immediately during module loading
 const initializePlugins = () => {
@@ -70,7 +71,7 @@ export const SvgEditor: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
   
   // Get panel mode from store
-  const { mode: panelMode } = usePanelModeStore();
+  const { mode: panelMode, accordionVisible, toggleAccordionVisible } = usePanelModeStore();
   
   // Get cursor from plugins
   const mouseInteraction = useMouseInteraction();
@@ -152,6 +153,11 @@ export const SvgEditor: React.FC = () => {
 
     // Special handling for sidebar in accordion mode - include toolbar panels too
     if (position === 'sidebar' && panelMode === 'accordion') {
+      // Only show accordion if it's visible
+      if (!accordionVisible) {
+        return null;
+      }
+      
       // Get all draggable panels (sidebar + toolbar) including panel-mode-ui
       const allDraggablePanels = pluginManager.getEnabledPlugins()
         .flatMap(plugin => plugin.ui || [])
@@ -179,8 +185,8 @@ export const SvgEditor: React.FC = () => {
     position: 'relative',
     overflow: 'hidden',
     background: '#f5f5f5',
-    // Adjust right margin when accordion mode is active
-    marginRight: panelMode === 'accordion' ? '320px' : '0',
+    // Adjust right margin when accordion mode is active and visible
+    marginRight: (panelMode === 'accordion' && accordionVisible) ? '320px' : '0',
     transition: 'margin-right 0.3s ease',
     ...(isFullscreen ? {
       position: 'fixed',
@@ -219,6 +225,42 @@ export const SvgEditor: React.FC = () => {
       
       {/* Render sidebar plugins */}
       {renderPluginUI('sidebar')}
+
+      {/* Accordion toggle button - only show in accordion mode and not in fullscreen */}
+      {panelMode === 'accordion' && !isFullscreen && (
+        <button
+          onClick={toggleAccordionVisible}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: accordionVisible ? '340px' : '20px', // Adjust position based on accordion visibility
+            width: '48px',
+            height: '48px',
+            borderRadius: '50%',
+            background: '#007acc',
+            border: 'none',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            transition: 'all 0.3s ease',
+            color: 'white'
+          }}
+          title={accordionVisible ? 'Hide accordion sidebar' : 'Show accordion sidebar'}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#005a9e';
+            e.currentTarget.style.transform = 'scale(1.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = '#007acc';
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
+        >
+          {accordionVisible ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      )}
     </div>
   );
 };

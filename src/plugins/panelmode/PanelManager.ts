@@ -16,6 +16,7 @@ interface PanelModeState {
   mode: PanelMode;
   panels: Map<string, PanelConfig>;
   accordionExpandedPanel: string | null;
+  accordionVisible: boolean;
 }
 
 interface PanelModeActions {
@@ -26,6 +27,8 @@ interface PanelModeActions {
   disablePanel: (panelId: string) => void;
   togglePanel: (panelId: string) => void;
   setAccordionExpanded: (panelId: string | null) => void;
+  setAccordionVisible: (visible: boolean) => void;
+  toggleAccordionVisible: () => void;
   reorderPanel: (panelId: string, newOrder: number) => void;
   getPanelsList: () => PanelConfig[];
   getVisiblePanels: () => PanelConfig[];
@@ -62,6 +65,7 @@ export const usePanelModeStore = create<PanelModeStore>()(
     mode: loadSavedMode(),
     panels: loadSavedPanels(),
     accordionExpandedPanel: null,
+    accordionVisible: true, // Default to visible
 
     setMode: (mode: PanelMode) => {
       set({ mode });
@@ -175,6 +179,14 @@ export const usePanelModeStore = create<PanelModeStore>()(
 
     setAccordionExpanded: (panelId: string | null) => {
       set({ accordionExpandedPanel: panelId });
+    },
+
+    setAccordionVisible: (visible: boolean) => {
+      set({ accordionVisible: visible });
+    },
+
+    toggleAccordionVisible: () => {
+      set((state) => ({ accordionVisible: !state.accordionVisible }));
     },
 
     reorderPanel: (panelId: string, newOrder: number) => {
