@@ -23,8 +23,10 @@ const TouchSupport: React.FC<TouchSupportProps> = ({ svgRef }) => {
     isGesturing,
   } = useTouchGestures({
     onPan: (delta) => {
+      // Handle both single-finger and two-finger pan
       if (gestureType === 'pan') {
-        // Aplicar pan usando la función setPan del store
+        console.log('📱 TouchSupport: Pan gesture detected', { delta, gestureType });
+        // Apply pan using the setPan function from store
         const newPan = {
           x: viewport.pan.x - delta.x,
           y: viewport.pan.y - delta.y,
@@ -34,13 +36,21 @@ const TouchSupport: React.FC<TouchSupportProps> = ({ svgRef }) => {
     },
     onZoom: (scale, center) => {
       if (gestureType === 'zoom' || gestureType === 'pan-zoom') {
-        // Calcular nuevo zoom
+        console.log('📱 TouchSupport: Zoom gesture detected', { scale, center, gestureType });
+        // Calculate new zoom level using the scale factor
         const currentZoom = viewport.zoom;
-        const newZoom = Math.max(0.1, Math.min(10, currentZoom * scale));
+        const zoomDelta = scale - 1; // Convert to delta from 1
+        const newZoom = Math.max(0.1, Math.min(10, currentZoom * (1 + zoomDelta * 0.5))); // Dampen zoom speed
         
-        // Usar la función setZoom del store que ya maneja el centrado
+        // Use the setZoom function from store that handles centering
         setZoom(newZoom, { x: center.x, y: center.y });
       }
+    },
+    onGestureStart: () => {
+      console.log('📱 TouchSupport: Gesture started');
+    },
+    onGestureEnd: () => {
+      console.log('📱 TouchSupport: Gesture ended');
     },
     enablePan: true,
     enableZoom: true,
@@ -65,6 +75,9 @@ const TouchSupport: React.FC<TouchSupportProps> = ({ svgRef }) => {
       const touchEvent = e as TouchEvent;
       // Solo procesar si hay múltiples dedos
       if (touchEvent.touches.length >= 2) {
+        console.log('📱 TouchSupport: Multi-touch start', touchEvent.touches.length, 'touches');
+        // Prevent default to avoid browser zoom/pan gestures
+        e.preventDefault();
         onTouchStart(touchEvent);
       }
     };
@@ -73,18 +86,26 @@ const TouchSupport: React.FC<TouchSupportProps> = ({ svgRef }) => {
       const touchEvent = e as TouchEvent;
       // Solo procesar si hay múltiples dedos
       if (touchEvent.touches.length >= 2) {
+        console.log('📱 TouchSupport: Multi-touch move', touchEvent.touches.length, 'touches');
+        // Prevent default to avoid browser zoom/pan gestures
+        e.preventDefault();
         onTouchMove(touchEvent);
       }
     };
 
     const handleMultiTouchEnd = (e: Event) => {
       const touchEvent = e as TouchEvent;
+      console.log('📱 TouchSupport: Multi-touch end', touchEvent.touches.length, 'touches remaining');
+      // Prevent default to avoid browser gestures
+      e.preventDefault();
       // Siempre procesar touchend para limpiar estado de gestos
       onTouchEnd(touchEvent);
     };
 
     const handleMultiTouchCancel = (e: Event) => {
       const touchEvent = e as TouchEvent;
+      console.log('📱 TouchSupport: Multi-touch cancel');
+      e.preventDefault();
       onTouchCancel(touchEvent);
     };
 
@@ -125,9 +146,20 @@ const TouchSupport: React.FC<TouchSupportProps> = ({ svgRef }) => {
         -webkit-tap-highlight-color: transparent;
       }
 
-      /* Mejorar respuesta táctil */
-      .svg-editor-container * {
-        touch-action: none;
+      /* Control total de gestos táctiles en el SVG */
+      .svg-editor svg {
+        touch-action: none !important;
+      }
+
+      /* Permitir gestos nativos solo en elementos específicos */
+      .accordion-sidebar,
+      .accordion-panel-content,
+      .draggable-panel,
+      input,
+      textarea,
+      select,
+      button {
+        touch-action: auto !important;
       }
 
       /* Hacer que los elementos interactivos sean más grandes en móviles */

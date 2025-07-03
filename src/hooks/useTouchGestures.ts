@@ -13,6 +13,9 @@ interface TouchGestureState {
   panDelta: { x: number; y: number };
   isGesturing: boolean;
   gestureType: 'none' | 'pan' | 'zoom' | 'rotate' | 'pan-zoom';
+  gestureStartTime: number;
+  initialTouchDistance: number;
+  initialTouchCenter: { x: number; y: number };
 }
 
 interface TouchEventHandlers {
@@ -58,6 +61,9 @@ export const useTouchGestures = (
     panDelta: { x: 0, y: 0 },
     isGesturing: false,
     gestureType: 'none',
+    gestureStartTime: 0,
+    initialTouchDistance: 0,
+    initialTouchCenter: { x: 0, y: 0 },
   });
 
   const [lastTouches, setLastTouches] = useState<TouchPoint[]>([]);
@@ -87,31 +93,47 @@ export const useTouchGestures = (
   });
 
   const onTouchStart = useCallback((e: TouchEvent) => {
+    console.log('📱 useTouchGestures: onTouchStart called', e.touches.length, 'touches');
     e.preventDefault();
     const touches = Array.from(e.touches).map(getTouchPoint);
     
     setLastTouches(touches);
-    setState(prev => ({ ...prev, touches, isGesturing: true }));
+    setState(prev => ({ 
+      ...prev, 
+      touches, 
+      isGesturing: true,
+      gestureStartTime: Date.now(),
+      gestureType: 'none' // Reset gesture type
+    }));
     
     if (touches.length === 2) {
       const distance = getDistance(touches[0], touches[1]);
       const angle = getAngle(touches[0], touches[1]);
       const center = getCenter(touches[0], touches[1]);
       
+      console.log('📱 useTouchGestures: Two finger touch started', { distance, center });
+      
       setInitialDistance(distance);
       setInitialAngle(angle);
       setInitialCenter(center);
+      
+      setState(prev => ({
+        ...prev,
+        initialTouchDistance: distance,
+        initialTouchCenter: center,
+      }));
     }
     
     onGestureStart?.();
   }, [onGestureStart]);
 
   const onTouchMove = useCallback((e: TouchEvent) => {
+    console.log('📱 useTouchGestures: onTouchMove called', e.touches.length, 'touches');
     e.preventDefault();
     const touches = Array.from(e.touches).map(getTouchPoint);
     
     if (touches.length === 1 && lastTouches.length === 1 && enablePan) {
-      // Pan gesture
+      // Single finger pan gesture
       const delta = {
         x: touches[0].x - lastTouches[0].x,
         y: touches[0].y - lastTouches[0].y,
@@ -128,23 +150,60 @@ export const useTouchGestures = (
     } else if (touches.length === 2 && lastTouches.length === 2) {
       // Multi-touch gestures
       const currentDistance = getDistance(touches[0], touches[1]);
-      const currentAngle = getAngle(touches[0], touches[1]);
       const currentCenter = getCenter(touches[0], touches[1]);
+      const lastCenter = getCenter(lastTouches[0], lastTouches[1]);
+      
+      // Calculate center movement for two-finger pan
+      const centerDelta = {
+        x: currentCenter.x - lastCenter.x,
+        y: currentCenter.y - lastCenter.y,
+      };
+      
+      // Determine if this is primarily a zoom or pan gesture
+      let isZoomGesture = false;
+      let isPanGesture = false;
       
       if (enableZoom && initialDistance > 0) {
-        const scale = Math.max(minScale, Math.min(maxScale, currentDistance / initialDistance));
+        const scale = currentDistance / initialDistance;
+        const scaleChange = Math.abs(scale - 1);
         
-        setState(prev => ({
-          ...prev,
-          touches,
-          scale,
-          gestureType: enableRotate ? 'pan-zoom' : 'zoom',
-        }));
-        
-        onZoom?.(scale, currentCenter);
+        // If the scale change is significant, treat as zoom
+        // Aumentar aún más el threshold para hacer zoom mucho menos sensible
+        if (scaleChange > 0.15) { // Aumentado de 0.1 a 0.15
+          isZoomGesture = true;
+          const clampedScale = Math.max(minScale, Math.min(maxScale, scale));
+          
+          setState(prev => ({
+            ...prev,
+            touches,
+            scale: clampedScale,
+            gestureType: 'zoom',
+          }));
+          
+          onZoom?.(clampedScale, currentCenter);
+        }
       }
       
-      if (enableRotate) {
+      // If not zooming and center has moved significantly, treat as two-finger pan
+      if (!isZoomGesture && enablePan) {
+        const panDistance = Math.sqrt(centerDelta.x * centerDelta.x + centerDelta.y * centerDelta.y);
+        if (panDistance > 3) { // Aumentado de 2 a 3 para evitar jitter
+          isPanGesture = true;
+          
+          setState(prev => ({
+            ...prev,
+            touches,
+            panDelta: centerDelta,
+            gestureType: 'pan',
+          }));
+          
+          onPan?.(centerDelta);
+        }
+      }
+      
+      // Handle rotation if enabled
+      if (enableRotate && !isZoomGesture && !isPanGesture) {
+        const currentAngle = getAngle(touches[0], touches[1]);
         const rotation = currentAngle - initialAngle;
         
         setState(prev => ({
@@ -155,6 +214,14 @@ export const useTouchGestures = (
         }));
         
         onRotate?.(rotation, currentCenter);
+      }
+      
+      // If both zoom and pan are happening, mark as combined gesture
+      if (isZoomGesture && isPanGesture) {
+        setState(prev => ({
+          ...prev,
+          gestureType: 'pan-zoom',
+        }));
       }
     }
     
@@ -171,17 +238,36 @@ export const useTouchGestures = (
         isGesturing: false,
         gestureType: 'none',
         panDelta: { x: 0, y: 0 },
+        scale: 1,
+        rotation: 0,
+        gestureStartTime: 0,
+        initialTouchDistance: 0,
+        initialTouchCenter: { x: 0, y: 0 },
       }));
       
       setLastTouches([]);
       setInitialDistance(0);
       setInitialAngle(0);
       onGestureEnd?.();
+    } else if (touches.length === 1 && lastTouches.length === 2) {
+      // Switching from two-finger to one-finger, reset multi-touch state
+      setState(prev => ({
+        ...prev,
+        touches,
+        gestureType: 'none',
+        scale: 1,
+        rotation: 0,
+        initialTouchDistance: 0,
+        initialTouchCenter: { x: 0, y: 0 },
+      }));
+      setLastTouches(touches);
+      setInitialDistance(0);
+      setInitialAngle(0);
     } else {
       setState(prev => ({ ...prev, touches }));
       setLastTouches(touches);
     }
-  }, [onGestureEnd]);
+  }, [lastTouches, onGestureEnd]);
 
   const onTouchCancel = useCallback((e: TouchEvent) => {
     setState(prev => ({
@@ -190,6 +276,11 @@ export const useTouchGestures = (
       isGesturing: false,
       gestureType: 'none',
       panDelta: { x: 0, y: 0 },
+      scale: 1,
+      rotation: 0,
+      gestureStartTime: 0,
+      initialTouchDistance: 0,
+      initialTouchCenter: { x: 0, y: 0 },
     }));
     
     setLastTouches([]);

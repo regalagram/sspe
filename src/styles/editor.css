@@ -28,14 +28,19 @@ body {
 /* Estilos específicos para móviles */
 @media (max-width: 768px) {
   .svg-editor {
-    /* Prevenir zoom en móviles pero permitir scroll en contenido */
-    touch-action: pan-x pan-y;
+    /* Prevenir zoom del navegador pero permitir gestos personalizados */
+    touch-action: none;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
     -webkit-tap-highlight-color: transparent;
+  }
+  
+  /* SVG específico para gestos táctiles */
+  .svg-editor svg {
+    touch-action: none;
   }
   
   /* Permitir scroll específicamente en areas de UI */
