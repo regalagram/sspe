@@ -6,6 +6,7 @@ import { PluginButton } from '../../components/PluginButton';
 import { MousePointer2, XCircle } from 'lucide-react';
 import { getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
+import { transformManager } from '../transform/TransformManager';
 
 // Rectangle Selection Manager
 interface RectSelectionState {
@@ -52,9 +53,13 @@ class RectSelectionManager {
     const handleType = target.getAttribute('data-handle-type');
     const handleId = target.getAttribute('data-handle-id');
     
-    
     if (handleType === 'transform' || handleType === 'rotation' || handleId) {
       return false; // Let transform plugin handle this
+    }
+
+    // Don't start rectangle selection if something is already being moved/transformed
+    if (transformManager.isMoving() || transformManager.isTransforming()) {
+      return false;
     }
 
     if (mode.current === 'select' && !commandId && !controlPoint && e.button === 0 && !e.shiftKey) {

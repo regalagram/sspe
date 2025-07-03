@@ -100,8 +100,14 @@ export class PluginManager {
 
     // Check if clicking on a transform handle
     const target = e.target as SVGElement;
-    const handleType = target.getAttribute('data-handle-type');
-    const handleId = target.getAttribute('data-handle-id');
+    
+    // Safety check: ensure target is a valid DOM element with getAttribute method
+    const handleType = target && typeof target.getAttribute === 'function' 
+      ? target.getAttribute('data-handle-type') 
+      : null;
+    const handleId = target && typeof target.getAttribute === 'function' 
+      ? target.getAttribute('data-handle-id') 
+      : null;
     
     // Process plugins in order, stop if any plugin handles the event
     let pluginsToProcess = this.getEnabledPlugins();

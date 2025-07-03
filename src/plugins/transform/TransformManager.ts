@@ -4,6 +4,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { SVGCommand, Point, BoundingBox } from '../../types';
 import { calculateGlobalViewBox } from '../../utils/viewbox-utils';
 import { pathToString, subPathToString } from '../../utils/path-utils';
+import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';
 
 export interface TransformBounds {
   x: number;
@@ -243,8 +244,13 @@ export class TransformManager {
     const { viewport } = store;
     const { x, y, width, height } = this.state.bounds;
     
-    // Use the same handleSize calculation as TransformHandles for consistency
-    const handleSize = 8 / viewport.zoom;
+    // Get device detection for responsive handle size
+    const isMobile = window.innerWidth <= 768 && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    const isTablet = window.innerWidth > 768 && window.innerWidth <= 1024 && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    
+    // Use responsive handle size like in TransformHandles.tsx
+    const baseHandleSize = getControlPointSize(isMobile, isTablet);
+    const handleSize = baseHandleSize / viewport.zoom;
     const rotationHandleOffset = 30 / viewport.zoom; // Distance above the bounding box
 
     const handles: TransformHandle[] = [
@@ -481,13 +487,17 @@ export class TransformManager {
     const store = this.editorStore || useEditorStore.getState();
     const { viewport } = store;
     
-    // Use the same handleSize calculation as generateHandles for consistency
-    const handleSize = 8 / viewport.zoom;
+    // Get device detection (need to instantiate since this is not in a React component)
+    const isMobile = window.innerWidth <= 768 && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    const isTablet = window.innerWidth > 768 && window.innerWidth <= 1024 && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
     
-    // Tolerance should be larger when zoomed out, smaller when zoomed in
-    const tolerance = 12 / viewport.zoom; 
-
-  
+    // Use responsive handle size like in TransformHandles.tsx
+    const baseHandleSize = getControlPointSize(isMobile, isTablet);
+    const handleSize = baseHandleSize / viewport.zoom;
+    
+    // Increase tolerance for touch devices
+    const baseTolerance = isMobile ? 24 : isTablet ? 20 : 12;
+    const tolerance = baseTolerance / viewport.zoom;
 
     for (const handle of this.state.handles) {
       // Calculate the center of the handle using the same logic as the render
@@ -497,8 +507,6 @@ export class TransformManager {
       const dx = point.x - handleCenterX;
       const dy = point.y - handleCenterY;
       const distance = Math.sqrt(dx * dx + dy * dy);
-
-   
 
       if (distance <= tolerance) {
         return handle;

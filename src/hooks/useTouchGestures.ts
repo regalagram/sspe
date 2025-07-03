@@ -208,7 +208,8 @@ export const useTouchGestures = (
 };
 
 // Hook para mapear eventos táctiles a eventos de mouse
-export const useTouchToMouseMapping = () => {
+export const useTouchToMouseMapping = (options?: { preventDefault?: boolean }) => {
+  const preventDefault = options?.preventDefault !== false;
   const mapTouchToMouseEvent = useCallback((touchEvent: TouchEvent, mouseEventType: string) => {
     if (touchEvent.touches.length === 0 && touchEvent.changedTouches.length === 0) return null;
     
@@ -245,43 +246,38 @@ export const useTouchToMouseMapping = () => {
   const handleTouchStart = useCallback((e: TouchEvent) => {
     // Solo mapear si es un solo dedo
     if (e.touches.length !== 1) return;
-    
-    e.preventDefault();
+    if (preventDefault) e.preventDefault();
     const mouseEvent = mapTouchToMouseEvent(e, 'mousedown');
     if (mouseEvent && e.target) {
       // Disparar el evento en el elemento específico
       const element = e.target as Element;
       element.dispatchEvent(mouseEvent);
     }
-  }, [mapTouchToMouseEvent]);
+  }, [mapTouchToMouseEvent, preventDefault]);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     // Solo mapear si es un solo dedo
     if (e.touches.length !== 1) return;
-    
-    e.preventDefault();
+    if (preventDefault) e.preventDefault();
     const mouseEvent = mapTouchToMouseEvent(e, 'mousemove');
     if (mouseEvent && e.target) {
       // Para mousemove, también disparar en document para asegurar propagación durante drag
       const element = e.target as Element;
       element.dispatchEvent(mouseEvent);
-      
       // También disparar en document para operaciones de drag que pueden salir del elemento original
       document.dispatchEvent(mouseEvent);
     }
-  }, [mapTouchToMouseEvent]);
+  }, [mapTouchToMouseEvent, preventDefault]);
 
   const handleTouchEnd = useCallback((e: TouchEvent) => {
-    e.preventDefault();
+    if (preventDefault) e.preventDefault();
     const mouseEvent = mapTouchToMouseEvent(e, 'mouseup');
     if (mouseEvent && e.target) {
       const element = e.target as Element;
       element.dispatchEvent(mouseEvent);
-      
       // También disparar en document para asegurar que se captura el mouseup
       document.dispatchEvent(mouseEvent);
     }
-    
     // Después de un pequeño delay, disparar un evento click si no hubo movimiento significativo
     setTimeout(() => {
       const clickEvent = mapTouchToMouseEvent(e, 'click');
@@ -289,7 +285,7 @@ export const useTouchToMouseMapping = () => {
         (e.target as Element).dispatchEvent(clickEvent);
       }
     }, 10);
-  }, [mapTouchToMouseEvent]);
+  }, [mapTouchToMouseEvent, preventDefault]);
 
   return {
     handleTouchStart,

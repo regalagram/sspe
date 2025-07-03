@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
+
 import { useEditorStore } from '../../store/editorStore';
 import { transformManager, TransformHandle, TransformBounds } from './TransformManager';
 import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';
+// Ya no se necesita mapeo touch-to-mouse local, ahora es global
 
 interface TransformHandlesProps {
   bounds: TransformBounds;
   handles: TransformHandle[];
 }
 
+
 export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, handles }) => {
   const { viewport } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   const [hoveredHandle, setHoveredHandle] = useState<string | null>(null);
+
+  // Mapeo touch-to-mouse ahora es global, no se requiere nada especial aquí
 
   if (!bounds || handles.length === 0) {
     return null;
@@ -28,8 +33,9 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
   const strokeWidth = 1.5 / viewport.zoom;
   const hoverSize = handleSize * 1.5;
 
+
   return (
-    <g className="transform-handles" style={{ pointerEvents: 'none' }}>
+    <g className="transform-handles">
       {/* Bounding box outline */}
       <rect
         x={bounds.x}
@@ -47,13 +53,14 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
       {handles.map((handle) => {
         const isHovered = hoveredHandle === handle.id;
         const currentSize = isHovered ? hoverSize : handleSize;
-        
+
         return (
-          <g 
-            key={handle.id} 
+          <g
+            key={handle.id}
             style={{ pointerEvents: 'all', cursor: handle.cursor }}
             onMouseEnter={() => setHoveredHandle(handle.id)}
             onMouseLeave={() => setHoveredHandle(null)}
+            onMouseDown={() => {}}
             data-transform-handle={handle.id}
           >
             {handle.type === 'corner' ? (
@@ -111,7 +118,7 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
                   dominantBaseline="central"
                   fontSize={`${currentSize * 0.8}px`}
                   fill="#28a745"
-                  style={{ 
+                  style={{
                     pointerEvents: 'none',
                     userSelect: 'none',
                     fontFamily: 'monospace',

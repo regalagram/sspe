@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { enableGlobalTouchToMouse } from '../utils/touch-to-mouse-global';
 import { useEditorStore } from '../store/editorStore';
 import { pluginManager } from './PluginSystem';
 import { getSafeTransform } from '../utils/transform-utils';
@@ -28,10 +29,9 @@ import { PanelModePlugin } from '../plugins/panelmode/PanelMode';
 import { usePanelModeStore } from '../plugins/panelmode/PanelManager';
 import { AccordionSidebar } from '../plugins/panelmode/AccordionSidebar';
 import { Menu, X } from 'lucide-react';
-import { TouchSupportPlugin } from '../plugins/touch-support/TouchSupport';
-import { useGlobalTouchSupport } from '../hooks/useGlobalTouchSupport';
 
 // Register plugins immediately during module loading
+enableGlobalTouchToMouse(); // Sistema global simple: touch→mouse
 const initializePlugins = () => {
   // Register base dependencies first
   pluginManager.registerPlugin(MouseInteractionPlugin); // Required by pencil
@@ -62,7 +62,6 @@ const initializePlugins = () => {
   pluginManager.registerPlugin(ArrangePlugin);
   pluginManager.registerPlugin(ReorderPlugin);
   pluginManager.registerPlugin(PanelModePlugin);
-  pluginManager.registerPlugin(TouchSupportPlugin); // Soporte para dispositivos táctiles
 };
 
 // Initialize plugins during module load
@@ -72,9 +71,6 @@ export const SvgEditor: React.FC = () => {
   const editorStore = useEditorStore();
   const { isFullscreen } = editorStore;
   const svgRef = useRef<SVGSVGElement>(null);
-  
-  // Configurar soporte táctil global
-  useGlobalTouchSupport();
   
   // Get panel mode from store
   const { mode: panelMode, accordionVisible, toggleAccordionVisible } = usePanelModeStore();
@@ -118,27 +114,65 @@ export const SvgEditor: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Handle mouse events through plugin system
+
+  // Handle mouse events through plugin system (React events)
   const handleMouseDown = (e: React.MouseEvent<SVGElement>) => {
-    // Extract command ID and control point from data attributes
     const target = e.target as SVGElement;
     const commandId = target.getAttribute('data-command-id') || undefined;
     const controlPoint = target.getAttribute('data-control-point') as 'x1y1' | 'x2y2' | undefined;
-    
     pluginManager.handleMouseEvent('mouseDown', e, commandId, controlPoint);
   };
-
   const handleMouseMove = (e: React.MouseEvent<SVGElement>) => {
     pluginManager.handleMouseEvent('mouseMove', e);
   };
-
   const handleMouseUp = (e: React.MouseEvent<SVGElement>) => {
     pluginManager.handleMouseEvent('mouseUp', e);
   };
-
   const handleWheel = (e: React.WheelEvent<SVGElement>) => {
     pluginManager.handleMouseEvent('wheel', e);
   };
+
+  // Native listeners para eventos mouse que salen del SVG durante drag
+  useEffect(() => {
+    const handleNativeMove = (e: MouseEvent) => {
+      if (e.buttons === 1) {
+        const mouseEvent = {
+          ...e,
+          nativeEvent: e,
+          currentTarget: e.target,
+          target: e.target,
+          clientX: e.clientX,
+          clientY: e.clientY,
+          buttons: e.buttons,
+          button: e.button,
+          preventDefault: () => e.preventDefault(),
+          stopPropagation: () => e.stopPropagation(),
+        } as any;
+        pluginManager.handleMouseEvent('mouseMove', mouseEvent);
+      }
+    };
+    const handleNativeUp = (e: MouseEvent) => {
+      const mouseEvent = {
+        ...e,
+        nativeEvent: e,
+        currentTarget: e.target,
+        target: e.target,
+        clientX: e.clientX,
+        clientY: e.clientY,
+        buttons: e.buttons,
+        button: e.button,
+        preventDefault: () => e.preventDefault(),
+        stopPropagation: () => e.stopPropagation(),
+      } as any;
+      pluginManager.handleMouseEvent('mouseUp', mouseEvent);
+    };
+    document.addEventListener('mousemove', handleNativeMove);
+    document.addEventListener('mouseup', handleNativeUp);
+    return () => {
+      document.removeEventListener('mousemove', handleNativeMove);
+      document.removeEventListener('mouseup', handleNativeUp);
+    };
+  }, []);
 
   // Render plugin UI components
   const renderPluginUI = (position: string) => {
@@ -215,7 +249,8 @@ export const SvgEditor: React.FC = () => {
         height="100%"
         style={{ 
           cursor: getCursor(),
-          background: 'white'
+          background: 'white',
+          touchAction: 'none' // Prevenir comportamientos nativos de touch
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
