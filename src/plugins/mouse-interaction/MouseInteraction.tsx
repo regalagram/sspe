@@ -4,6 +4,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { snapToGrid, getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
+import { figmaHandleManager } from '../figma-handles/FigmaHandleManager';
 
 interface MouseInteractionState {
   draggingCommand: string | null;
@@ -144,8 +145,14 @@ class MouseInteractionManager {
     }
 
     if (commandId && controlPoint && !this.state.isSpacePressed) {
-      // Dragging control point
+      // Dragging control point - usar el nuevo sistema de Figma
       this.state.draggingControlPoint = { commandId, point: controlPoint };
+      
+      // Notificar al FigmaHandleManager sobre el inicio del arrastre
+      const startPoint = this.getSVGPoint(e, context.svgRef);
+      // Para un comando C: x1y1 es el handle saliente, x2y2 es el handle entrante
+      const handleType = controlPoint === 'x1y1' ? 'outgoing' : 'incoming';
+      figmaHandleManager.startDragHandle(commandId, handleType, startPoint);
       
       // Notify transform manager that movement started (control point drag)
       transformManager.setMoving(true);
@@ -254,12 +261,9 @@ class MouseInteractionManager {
         point.y = snappedPoint.y;
       }
       
-      // Update control point
-      if (this.state.draggingControlPoint.point === 'x1y1') {
-        updateCommand(this.state.draggingControlPoint.commandId, { x1: point.x, y1: point.y });
-      } else if (this.state.draggingControlPoint.point === 'x2y2') {
-        updateCommand(this.state.draggingControlPoint.commandId, { x2: point.x, y2: point.y });
-      }
+      // Usar el nuevo sistema de Figma para actualizar handles
+      figmaHandleManager.updateDragHandle(point);
+      
       return true;
     }
 
@@ -309,6 +313,11 @@ class MouseInteractionManager {
     const wasHandling = !!(this.state.draggingCommand || this.state.draggingControlPoint || this.state.isPanning);
     const wasDraggingCommand = !!this.state.draggingCommand;
     const wasDraggingControlPoint = !!this.state.draggingControlPoint;
+
+    // Finalizar arrastre de control points en el sistema de Figma
+    if (wasDraggingControlPoint) {
+      figmaHandleManager.endDragHandle();
+    }
 
     this.state.draggingCommand = null;
     this.state.draggingControlPoint = null;

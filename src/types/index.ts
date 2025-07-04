@@ -108,3 +108,27 @@ export interface EditorState {
     transformRotateFactor: number; // Factor específico para puntos de rotate (transform)
   };
 }
+
+// Nuevos tipos para el sistema de puntos de control tipo Figma
+export type ControlPointType = 'aligned' | 'mirrored' | 'independent';
+
+export interface ControlPointInfo {
+  commandId: string;
+  type: ControlPointType;
+  incomingHandle: Point | null;
+  outgoingHandle: Point | null;
+  anchor: Point;
+  isBreakable: boolean; // Si se puede separar con Option
+}
+
+export interface BezierHandleState {
+  controlPoints: Map<string, ControlPointInfo>;
+  isOptionPressed: boolean;
+  dragState: {
+    isDragging: boolean;
+    commandId: string | null;
+    handleType: 'incoming' | 'outgoing' | null;
+    originalType: ControlPointType | null;
+    startPoint: Point | null;
+  };
+}

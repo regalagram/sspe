@@ -24,6 +24,7 @@ import { PanelModePlugin } from '../plugins/panelmode/PanelMode';
 import { TouchMobilePluginDefinition } from '../plugins/touch-mobile/TouchMobile';
 import { DeletePlugin } from '../plugins/delete/Delete';
 import { BezierNormalizePlugin } from '../plugins/bezier-normalize/BezierNormalize';
+import { FigmaHandlesPlugin } from '../plugins/figma-handles/FigmaHandles';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -60,6 +61,7 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(SubPathTransformPlugin); // Depends on selection
   pluginManager.registerPlugin(PointTransformPlugin); // Depends on selection
   pluginManager.registerPlugin(BezierNormalizePlugin); // Depends on selection
+  pluginManager.registerPlugin(FigmaHandlesPlugin); // Depends on selection and mouse-interaction
   
   // Register remaining plugins
   pluginManager.registerPlugin(ShapesPlugin);
