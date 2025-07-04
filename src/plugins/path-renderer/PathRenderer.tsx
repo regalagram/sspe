@@ -6,14 +6,24 @@ import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
 import { isCurrentlyProcessingTouch, getCurrentTouchEventId, getCurrentTouchEventType } from '../../utils/touch-to-mouse-global';
 
-// Throttle function
+// Throttle function optimized for smooth dragging
 const throttle = <T extends (...args: any[]) => void>(func: T, limit: number): T => {
   let inThrottle: boolean;
+  let lastFunc: number;
+  let lastRan: number;
+  
   return ((...args: any[]) => {
-    if (!inThrottle) {
+    if (!lastRan) {
       func.apply(null, args);
-      inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
+      lastRan = Date.now();
+    } else {
+      clearTimeout(lastFunc);
+      lastFunc = setTimeout(() => {
+        if ((Date.now() - lastRan) >= limit) {
+          func.apply(null, args);
+          lastRan = Date.now();
+        }
+      }, limit - (Date.now() - lastRan));
     }
   }) as T;
 };
@@ -129,11 +139,11 @@ export const PathRenderer: React.FC = () => {
     }
   }, [viewport, selection.selectedSubPaths, selectSubPathMultiple]);
 
-  // Add throttling to prevent excessive calls
+  // Add throttling to prevent excessive calls - optimized for maximum smoothness
   const throttledMoveSubPath = useCallback(
     throttle((subPathId: string, delta: { x: number; y: number }) => {
       moveSubPath(subPathId, delta);
-    }, 32), // ~30fps to reduce update frequency
+    }, 4), // Very aggressive throttling for maximum smoothness (~240fps)
     [moveSubPath]
   );
 

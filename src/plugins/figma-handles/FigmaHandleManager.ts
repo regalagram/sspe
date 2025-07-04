@@ -643,7 +643,7 @@ export class FigmaHandleManager {
     
     this.updateTimer = setTimeout(() => {
       this.processUpdateQueue();
-    }, 32); // ~30fps to reduce update frequency
+    }, 16); // Back to ~60fps for responsive handle updates
   }
   
   private processUpdateQueue() {

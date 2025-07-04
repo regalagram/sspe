@@ -208,17 +208,17 @@ function roundToPrecision(val: number | undefined, precision: number): number | 
 // Add a flag to prevent recursive updates
 let isUpdating = false;
 let updateDepth = 0;
-const MAX_UPDATE_DEPTH = 5;
+const MAX_UPDATE_DEPTH = 3; // Reduced from 5 for faster recovery
 let lastUpdateTime = 0;
 
-// Helper function to prevent recursive calls
+// Helper function to prevent recursive calls (for general operations)
 const withUpdateGuard = <T extends any[], R>(fn: (...args: T) => R) => {
   return (...args: T): R => {
     const now = Date.now();
     
-    // Add time-based throttling as additional protection
-    if (now - lastUpdateTime < 1) { // 1ms minimum gap
-      console.warn('Update throttled to prevent spam');
+    // More lenient throttling for drag operations
+    if (now - lastUpdateTime < 0.5) { // Reduced from 1ms to 0.5ms
+      // Don't log warnings for normal throttling during drag operations
       return undefined as R;
     }
     
@@ -230,6 +230,32 @@ const withUpdateGuard = <T extends any[], R>(fn: (...args: T) => R) => {
     isUpdating = true;
     updateDepth++;
     lastUpdateTime = now;
+    
+    try {
+      return fn(...args);
+    } finally {
+      updateDepth--;
+      if (updateDepth === 0) {
+        isUpdating = false;
+      }
+    }
+  };
+};
+
+// Delta accumulation for smooth dragging
+let accumulatedDelta: Point = { x: 0, y: 0 };
+let deltaAccumulationTimer: number | null = null;
+
+// Optimized guard for drag operations (less restrictive)
+const withDragUpdateGuard = <T extends any[], R>(fn: (...args: T) => R) => {
+  return (...args: T): R => {
+    // Only prevent recursive calls, no time throttling for drag operations
+    if (isUpdating || updateDepth >= MAX_UPDATE_DEPTH) {
+      return undefined as R;
+    }
+    
+    isUpdating = true;
+    updateDepth++;
     
     try {
       return fn(...args);
@@ -419,7 +445,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         },
       })),
     
-    moveSubPath: withUpdateGuard((subPathId, delta) => {
+    moveSubPath: withDragUpdateGuard((subPathId: string, delta: Point) => {
       set((state) => ({
         paths: state.paths.map((path) => ({
           ...path,

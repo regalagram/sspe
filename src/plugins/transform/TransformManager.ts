@@ -629,9 +629,9 @@ export class TransformManager {
   private updateTransform(currentPoint: Point) {
     if (!this.state.dragStart || !this.state.initialBounds) return;
 
-    // Throttle updates to prevent excessive calls
+    // Optimized throttling for smoother transforms
     const now = Date.now();
-    if (now - this.lastUpdateTime < 16) { // ~60fps
+    if (now - this.lastUpdateTime < 8) { // ~120fps for smooth transforms
       return;
     }
     this.lastUpdateTime = now;
