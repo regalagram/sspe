@@ -242,16 +242,19 @@ export class TransformManager {
     if (!this.state.bounds) return [];
 
     const store = this.editorStore || useEditorStore.getState();
-    const { viewport } = store;
+    const { viewport, visualDebugSizes } = store;
     const { x, y, width, height } = this.state.bounds;
     
     // Get device detection for responsive handle size
     const isMobile = window.innerWidth <= 768 && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
     const isTablet = window.innerWidth > 768 && window.innerWidth <= 1024 && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
     
-    // Use responsive handle size like in TransformHandles.tsx
+    // Use responsive handle size with size factors like in TransformHandles.tsx
     const baseHandleSize = getControlPointSize(isMobile, isTablet);
-    const handleSize = baseHandleSize / viewport.zoom;
+    
+    // Calculate sizes for each handle type using factors
+    const resizeHandleSize = (baseHandleSize * visualDebugSizes.globalFactor * visualDebugSizes.transformResizeFactor) / viewport.zoom;
+    const rotateHandleSize = (baseHandleSize * visualDebugSizes.globalFactor * visualDebugSizes.transformRotateFactor) / viewport.zoom;
     const rotationHandleOffset = 30 / viewport.zoom; // Distance above the bounding box
 
     const handles: TransformHandle[] = [
@@ -259,25 +262,25 @@ export class TransformManager {
       {
         id: 'nw',
         type: 'corner',
-        position: { x: x - handleSize / 2, y: y - handleSize / 2 },
+        position: { x: x - resizeHandleSize / 2, y: y - resizeHandleSize / 2 },
         cursor: 'nw-resize'
       },
       {
         id: 'ne',
         type: 'corner',
-        position: { x: x + width - handleSize / 2, y: y - handleSize / 2 },
+        position: { x: x + width - resizeHandleSize / 2, y: y - resizeHandleSize / 2 },
         cursor: 'ne-resize'
       },
       {
         id: 'sw',
         type: 'corner',
-        position: { x: x - handleSize / 2, y: y + height - handleSize / 2 },
+        position: { x: x - resizeHandleSize / 2, y: y + height - resizeHandleSize / 2 },
         cursor: 'sw-resize'
       },
       {
         id: 'se',
         type: 'corner',
-        position: { x: x + width - handleSize / 2, y: y + height - handleSize / 2 },
+        position: { x: x + width - resizeHandleSize / 2, y: y + height - resizeHandleSize / 2 },
         cursor: 'se-resize'
       },
       // Rotation handle - positioned above the center of the top edge
@@ -285,8 +288,8 @@ export class TransformManager {
         id: 'rotation',
         type: 'rotation',
         position: { 
-          x: x + width / 2 - handleSize / 2, 
-          y: y - rotationHandleOffset - handleSize / 2 
+          x: x + width / 2 - rotateHandleSize / 2, 
+          y: y - rotationHandleOffset - rotateHandleSize / 2 
         },
         cursor: 'crosshair'
       }
@@ -537,7 +540,7 @@ export class TransformManager {
 
   private getHandleAtPoint(point: Point, targetElement?: Element): TransformHandle | null {
     const store = this.editorStore || useEditorStore.getState();
-    const { viewport } = store;
+    const { viewport, visualDebugSizes } = store;
     
     // First, try to get handle from target element data attributes (more reliable)
     if (targetElement) {
@@ -559,13 +562,19 @@ export class TransformManager {
     
     // Use responsive handle size like in TransformHandles.tsx
     const baseHandleSize = getControlPointSize(isMobile, isTablet);
-    const handleSize = baseHandleSize / viewport.zoom;
     
-    // Increase tolerance for touch devices
-    const baseTolerance = isMobile ? 24 : isTablet ? 20 : 12;
-    const tolerance = baseTolerance / viewport.zoom;
+    // Increase tolerance for touch devices - increased to match larger handle sizes
+    const baseTolerance = isMobile ? 32 : isTablet ? 24 : 12;
 
     for (const handle of this.state.handles) {
+      // Calcular tamaño específico para cada tipo de handle
+      const sizeFactor = handle.type === 'corner' 
+        ? visualDebugSizes.transformResizeFactor 
+        : visualDebugSizes.transformRotateFactor;
+      
+      const handleSize = (baseHandleSize * visualDebugSizes.globalFactor * sizeFactor) / viewport.zoom;
+      const tolerance = (baseTolerance * visualDebugSizes.globalFactor * sizeFactor) / viewport.zoom;
+      
       // Calculate the center of the handle using the same logic as the render
       const handleCenterX = handle.position.x + handleSize / 2;
       const handleCenterY = handle.position.y + handleSize / 2;

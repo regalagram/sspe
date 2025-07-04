@@ -14,6 +14,144 @@ interface VisualDebugControlsProps {
   onToggleWireframe: () => void;
 }
 
+// Size Controls Component
+interface SizeControlsProps {
+  globalFactor: number;
+  commandPointsFactor: number;
+  controlPointsFactor: number;
+  transformResizeFactor: number;
+  transformRotateFactor: number;
+  onGlobalFactorChange: (factor: number) => void;
+  onCommandPointsFactorChange: (factor: number) => void;
+  onControlPointsFactorChange: (factor: number) => void;
+  onTransformResizeFactorChange: (factor: number) => void;
+  onTransformRotateFactorChange: (factor: number) => void;
+}
+
+export const SizeControls: React.FC<SizeControlsProps> = ({
+  globalFactor,
+  commandPointsFactor,
+  controlPointsFactor,
+  transformResizeFactor,
+  transformRotateFactor,
+  onGlobalFactorChange,
+  onCommandPointsFactorChange,
+  onControlPointsFactorChange,
+  onTransformResizeFactorChange,
+  onTransformRotateFactorChange,
+}) => {
+  const sliderStyle = {
+    width: '100%',
+    marginTop: '4px',
+  };
+
+  const labelStyle = {
+    fontSize: '11px',
+    fontWeight: 'bold' as const,
+    marginBottom: '2px',
+    color: '#333',
+  };
+
+  const valueStyle = {
+    fontSize: '10px',
+    color: '#666',
+    float: 'right' as const,
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
+      <div style={{ fontSize: '12px', fontWeight: 'bold', borderBottom: '1px solid #ddd', paddingBottom: '4px' }}>
+        Size Controls
+      </div>
+      
+      {/* Global Factor */}
+      <div>
+        <div style={labelStyle}>
+          Global Factor
+          <span style={valueStyle}>{globalFactor.toFixed(1)}x</span>
+        </div>
+        <input
+          type="range"
+          min="0.1"
+          max="5.0"
+          step="0.1"
+          value={globalFactor}
+          onChange={(e) => onGlobalFactorChange(parseFloat(e.target.value))}
+          style={sliderStyle}
+        />
+      </div>
+
+      {/* Command Points Factor */}
+      <div>
+        <div style={labelStyle}>
+          Command Points
+          <span style={valueStyle}>{commandPointsFactor.toFixed(1)}x</span>
+        </div>
+        <input
+          type="range"
+          min="0.1"
+          max="5.0"
+          step="0.1"
+          value={commandPointsFactor}
+          onChange={(e) => onCommandPointsFactorChange(parseFloat(e.target.value))}
+          style={sliderStyle}
+        />
+      </div>
+
+      {/* Control Points Factor */}
+      <div>
+        <div style={labelStyle}>
+          Control Points
+          <span style={valueStyle}>{controlPointsFactor.toFixed(1)}x</span>
+        </div>
+        <input
+          type="range"
+          min="0.1"
+          max="5.0"
+          step="0.1"
+          value={controlPointsFactor}
+          onChange={(e) => onControlPointsFactorChange(parseFloat(e.target.value))}
+          style={sliderStyle}
+        />
+      </div>
+
+      {/* Transform Resize Factor */}
+      <div>
+        <div style={labelStyle}>
+          Transform Resize
+          <span style={valueStyle}>{transformResizeFactor.toFixed(1)}x</span>
+        </div>
+        <input
+          type="range"
+          min="0.1"
+          max="5.0"
+          step="0.1"
+          value={transformResizeFactor}
+          onChange={(e) => onTransformResizeFactorChange(parseFloat(e.target.value))}
+          style={sliderStyle}
+        />
+      </div>
+
+      {/* Transform Rotate Factor */}
+      <div>
+        <div style={labelStyle}>
+          Transform Rotate
+          <span style={valueStyle}>{transformRotateFactor.toFixed(1)}x</span>
+        </div>
+        <input
+          type="range"
+          min="0.1"
+          max="5.0"
+          step="0.1"
+          value={transformRotateFactor}
+          onChange={(e) => onTransformRotateFactorChange(parseFloat(e.target.value))}
+          style={sliderStyle}
+        />
+      </div>
+    </div>
+  );
+};
+
 export const VisualDebugControls: React.FC<VisualDebugControlsProps> = ({
   commandPointsEnabled,
   controlPointsEnabled,
@@ -73,7 +211,7 @@ export const VisualDebugControls: React.FC<VisualDebugControlsProps> = ({
 
 // Command Points Renderer Component
 export const CommandPointsRenderer: React.FC = () => {
-  const { paths, selection, viewport, enabledFeatures, renderVersion } = useEditorStore();
+  const { paths, selection, viewport, enabledFeatures, renderVersion, visualDebugSizes } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
 
   if (!paths || paths.length === 0) {
@@ -115,9 +253,9 @@ export const CommandPointsRenderer: React.FC = () => {
             
             if (!shouldShowCommand) return null;
 
-            // Calcular radio responsivo basado en el dispositivo
+            // Calcular radio responsivo basado en el dispositivo con factores de tamaño
             const baseRadius = getControlPointSize(isMobile, isTablet);
-            const radius = baseRadius / viewport.zoom; // Fixed visual size independent of zoom
+            const radius = (baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.commandPointsFactor) / viewport.zoom;
 
             return (
               <circle
@@ -145,7 +283,7 @@ export const CommandPointsRenderer: React.FC = () => {
 
 // Control Points Renderer Component
 export const ControlPointsRenderer: React.FC = () => {
-  const { paths, enabledFeatures, viewport, selection } = useEditorStore();
+  const { paths, enabledFeatures, viewport, selection, visualDebugSizes } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
 
   if (!paths || paths.length === 0) {
@@ -186,9 +324,9 @@ export const ControlPointsRenderer: React.FC = () => {
             
             if (!shouldShowCommand) return null;
             
-            // Calcular radio responsivo basado en el dispositivo
+            // Calcular radio responsivo basado en el dispositivo con factores de tamaño
             const baseRadius = getControlPointSize(isMobile, isTablet);
-            const radius = baseRadius / viewport.zoom; // Fixed visual size independent of zoom
+            const radius = (baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.controlPointsFactor) / viewport.zoom;
             
             // Find previous command position for connecting control points
             const prevCommand = commandIndex > 0 ? subPath.commands[commandIndex - 1] : null;
@@ -267,7 +405,16 @@ export const ControlPointsRenderer: React.FC = () => {
 
 // Main Visual Debug Component
 export const VisualDebugComponent: React.FC = () => {
-  const { enabledFeatures, toggleFeature } = useEditorStore();
+  const { 
+    enabledFeatures, 
+    toggleFeature, 
+    visualDebugSizes,
+    setVisualDebugGlobalFactor,
+    setVisualDebugCommandPointsFactor,
+    setVisualDebugControlPointsFactor,
+    setVisualDebugTransformResizeFactor,
+    setVisualDebugTransformRotateFactor
+  } = useEditorStore();
   
   return (
     <DraggablePanel 
@@ -282,6 +429,19 @@ export const VisualDebugComponent: React.FC = () => {
         onToggleCommandPoints={() => toggleFeature('command-points')}
         onToggleControlPoints={() => toggleFeature('control-points')}
         onToggleWireframe={() => toggleFeature('wireframe')}
+      />
+      
+      <SizeControls
+        globalFactor={visualDebugSizes.globalFactor}
+        commandPointsFactor={visualDebugSizes.commandPointsFactor}
+        controlPointsFactor={visualDebugSizes.controlPointsFactor}
+        transformResizeFactor={visualDebugSizes.transformResizeFactor}
+        transformRotateFactor={visualDebugSizes.transformRotateFactor}
+        onGlobalFactorChange={setVisualDebugGlobalFactor}
+        onCommandPointsFactorChange={setVisualDebugCommandPointsFactor}
+        onControlPointsFactorChange={setVisualDebugControlPointsFactor}
+        onTransformResizeFactorChange={setVisualDebugTransformResizeFactor}
+        onTransformRotateFactorChange={setVisualDebugTransformRotateFactor}
       />
     </DraggablePanel>
   );

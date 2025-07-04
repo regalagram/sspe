@@ -80,6 +80,13 @@ interface EditorActions {
 
   // Precision control
   setPrecision: (precision: number) => void;
+
+  // Visual Debug size controls
+  setVisualDebugGlobalFactor: (factor: number) => void;
+  setVisualDebugCommandPointsFactor: (factor: number) => void;
+  setVisualDebugControlPointsFactor: (factor: number) => void;
+  setVisualDebugTransformResizeFactor: (factor: number) => void;
+  setVisualDebugTransformRotateFactor: (factor: number) => void;
 }
 
 // Load preferences from localStorage
@@ -155,6 +162,13 @@ const createInitialState = (): EditorState => {
     ]),
     renderVersion: 0,
     precision: storedPrecision, // Precisión inicial
+    visualDebugSizes: {
+      globalFactor: 1.0,
+      commandPointsFactor: 1.0,
+      controlPointsFactor: 1.0,
+      transformResizeFactor: 1.0,
+      transformRotateFactor: 1.0,
+    },
   };
 };
 
@@ -1455,6 +1469,57 @@ export const useEditorStore = create<EditorState & EditorActions>()(
           renderVersion: state.renderVersion + 1,
         };
       });
+    },
+
+    // Visual Debug size controls
+    setVisualDebugGlobalFactor: (factor: number) => {
+      set((state) => ({
+        visualDebugSizes: {
+          ...state.visualDebugSizes,
+          globalFactor: Math.max(0.1, Math.min(5.0, factor)),
+        },
+        renderVersion: state.renderVersion + 1,
+      }));
+    },
+
+    setVisualDebugCommandPointsFactor: (factor: number) => {
+      set((state) => ({
+        visualDebugSizes: {
+          ...state.visualDebugSizes,
+          commandPointsFactor: Math.max(0.1, Math.min(5.0, factor)),
+        },
+        renderVersion: state.renderVersion + 1,
+      }));
+    },
+
+    setVisualDebugControlPointsFactor: (factor: number) => {
+      set((state) => ({
+        visualDebugSizes: {
+          ...state.visualDebugSizes,
+          controlPointsFactor: Math.max(0.1, Math.min(5.0, factor)),
+        },
+        renderVersion: state.renderVersion + 1,
+      }));
+    },
+
+    setVisualDebugTransformResizeFactor: (factor: number) => {
+      set((state) => ({
+        visualDebugSizes: {
+          ...state.visualDebugSizes,
+          transformResizeFactor: Math.max(0.1, Math.min(5.0, factor)),
+        },
+        renderVersion: state.renderVersion + 1,
+      }));
+    },
+
+    setVisualDebugTransformRotateFactor: (factor: number) => {
+      set((state) => ({
+        visualDebugSizes: {
+          ...state.visualDebugSizes,
+          transformRotateFactor: Math.max(0.1, Math.min(5.0, factor)),
+        },
+        renderVersion: state.renderVersion + 1,
+      }));
     },
   }))
 );

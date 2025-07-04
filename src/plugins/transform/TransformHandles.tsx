@@ -12,7 +12,7 @@ interface TransformHandlesProps {
 
 
 export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, handles }) => {
-  const { viewport } = useEditorStore();
+  const { viewport, visualDebugSizes } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   const [hoveredHandle, setHoveredHandle] = useState<string | null>(null);
 
@@ -30,11 +30,11 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
   // Keep bounding box slightly visible during transform, fully visible during movement
   const boundingBoxOpacity = isTransforming ? 0.3 : 1;
 
-  // Calcular tamaño responsivo para los handles
+  // Calcular tamaño responsivo para los handles con factores de tamaño
   const baseHandleSize = getControlPointSize(isMobile, isTablet);
-  const handleSize = baseHandleSize / viewport.zoom;
   const strokeWidth = 1.5 / viewport.zoom;
-  const hoverSize = handleSize * 1.5;
+  // Menor multiplier de hover en móviles para evitar que se pongan demasiado grandes
+  const hoverMultiplier = isMobile ? 1.3 : isTablet ? 1.4 : 1.5;
 
 
   return (
@@ -57,6 +57,14 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
       {/* Transform handles */}
       {handles.map((handle) => {
         const isHovered = hoveredHandle === handle.id;
+        
+        // Calcular tamaño específico para cada tipo de handle
+        const sizeFactor = handle.type === 'corner' 
+          ? visualDebugSizes.transformResizeFactor 
+          : visualDebugSizes.transformRotateFactor;
+        
+        const handleSize = (baseHandleSize * visualDebugSizes.globalFactor * sizeFactor) / viewport.zoom;
+        const hoverSize = handleSize * hoverMultiplier;
         const currentSize = isHovered ? hoverSize : handleSize;
 
         return (

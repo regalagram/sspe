@@ -165,6 +165,21 @@ const TouchSupport: React.FC<TouchSupportProps> = ({ svgRef }) => {
       /* Hacer que los elementos interactivos sean más grandes en móviles */
       ${isMobile ? `
         .command-point {
+          r: 8px !important;
+        }
+        
+        .control-point {
+          r: 7px !important;
+        }
+        
+        .transform-handle {
+          width: 32px !important;
+          height: 32px !important;
+        }
+      ` : ''}
+
+      ${isTablet ? `
+        .command-point {
           r: 6px !important;
         }
         
@@ -173,23 +188,8 @@ const TouchSupport: React.FC<TouchSupportProps> = ({ svgRef }) => {
         }
         
         .transform-handle {
-          width: 20px !important;
-          height: 20px !important;
-        }
-      ` : ''}
-
-      ${isTablet ? `
-        .command-point {
-          r: 5px !important;
-        }
-        
-        .control-point {
-          r: 4px !important;
-        }
-        
-        .transform-handle {
-          width: 16px !important;
-          height: 16px !important;
+          width: 24px !important;
+          height: 24px !important;
         }
       ` : ''}
     `;

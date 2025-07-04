@@ -54,9 +54,9 @@ export const useMobileDetection = (): MobileDetectionState => {
 
 // Función utilitaria para obtener el tamaño de los puntos de control en móviles
 export const getControlPointSize = (isMobile: boolean, isTablet: boolean): number => {
-  if (isMobile) return 10; // Puntos más grandes en móviles (reducido 50%)
-  if (isTablet) return 8; // Tamaño intermedio en tablets (reducido 50%)
-  return 6; // Tamaño normal en desktop (reducido 50%)
+  if (isMobile) return 14; // Puntos más grandes en móviles para mejor interacción táctil
+  if (isTablet) return 8; // Tamaño intermedio en tablets
+  return 6; // Tamaño normal en desktop
 };
 
 // Función utilitaria para obtener el tamaño de los botones en móviles

@@ -100,4 +100,11 @@ export interface EditorState {
   enabledFeatures: Set<string>;
   renderVersion: number; // For forcing re-renders after coordinate conversions
   precision: number; // Nuevo campo: precisión de puntos (decimales)
+  visualDebugSizes: {
+    globalFactor: number; // Factor global que afecta a todos los puntos
+    commandPointsFactor: number; // Factor específico para command points
+    controlPointsFactor: number; // Factor específico para control points
+    transformResizeFactor: number; // Factor específico para puntos de resize (transform)
+    transformRotateFactor: number; // Factor específico para puntos de rotate (transform)
+  };
 }
