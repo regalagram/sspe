@@ -363,21 +363,324 @@ export class FigmaHandleManager {
       const updatedInfo = { ...controlPointInfo, type: 'independent' as ControlPointType };
       this.state.controlPoints.set(commandId, updatedInfo);
     } else {
-      // Sin Option: aplicar lógica de acoplamiento según el tipo
-      switch (type) {
-        case 'mirrored':
-          this.updateMirroredHandlesFigma(commandId, handleType, newPoint, anchor);
-          break;
-        case 'aligned':
-          this.updateAlignedHandlesFigma(commandId, handleType, newPoint, anchor);
-          break;
-        case 'independent':
-          this.updateSingleHandle(commandId, handleType, newPoint);
-          break;
-      }
+      // Sin Option: siempre verificar si hay handle pareja y si está alineado
+      this.updateHandleWithAutoAlignment(commandId, handleType, newPoint, anchor, type);
     }
 
     this.notifyListeners();
+  }
+
+  /**
+   * Actualiza un handle verificando automáticamente la alineación con su pareja
+   */
+  private updateHandleWithAutoAlignment(
+    commandId: string,
+    handleType: 'incoming' | 'outgoing',
+    newPoint: Point,
+    anchor: Point,
+    originalType: ControlPointType
+  ) {
+    console.log('🔍 updateHandleWithAutoAlignment:', {
+      commandId,
+      handleType,
+      newPoint,
+      anchor,
+      originalType
+    });
+
+    // Primero actualizar el handle que se está moviendo
+    this.updateSingleHandle(commandId, handleType, newPoint);
+
+    // Buscar el handle pareja
+    const pairedHandle = this.findPairedHandle(commandId, handleType);
+    
+    if (!pairedHandle) {
+      console.log('❌ No paired handle found for:', commandId, handleType);
+      return;
+    }
+
+    console.log('✅ Found paired handle:', pairedHandle);
+
+    // Obtener la posición actual del handle pareja
+    const pairedHandlePosition = this.getHandlePosition(pairedHandle);
+    if (!pairedHandlePosition) {
+      console.log('❌ Could not get paired handle position');
+      return;
+    }
+
+    console.log('📍 Paired handle position:', pairedHandlePosition);
+
+    // Calcular vectores desde el anchor COMPARTIDO
+    // El anchor correcto está en pairedHandle.anchor (calculado en findPairedHandle)
+    const sharedAnchor = pairedHandle.anchor;
+    
+    const currentVector = {
+      x: newPoint.x - sharedAnchor.x,
+      y: newPoint.y - sharedAnchor.y
+    };
+
+    // IMPORTANTE: El vector pareja debe calcularse desde el MISMO anchor point
+    // ya que ambos handles se conectan al mismo punto
+    const pairedVector = {
+      x: pairedHandlePosition.x - sharedAnchor.x,
+      y: pairedHandlePosition.y - sharedAnchor.y
+    };
+
+    console.log('📏 Current vector (from SHARED anchor to dragged handle):', currentVector);
+    console.log('📏 Paired vector (from SHARED anchor to paired handle):', pairedVector);
+    console.log('📍 SHARED anchor point (from pairedHandle.anchor):', sharedAnchor);
+    console.log('📍 Original anchor (command anchor):', anchor);
+
+    // Verificar si están alineados (apuntan en direcciones opuestas)
+    const isAligned = this.areHandlesAligned(currentVector, pairedVector);
+    console.log('🎯 Are handles aligned?', isAligned);
+    
+    if (isAligned) {
+      console.log('✅ Handles are aligned! Applying coupling logic for type:', originalType);
+      
+      // Verificar si deberían ser tratados como 'mirrored' basado en longitudes actuales
+      const currentMagnitude = Math.sqrt(currentVector.x * currentVector.x + currentVector.y * currentVector.y);
+      const pairedMagnitude = Math.sqrt(pairedVector.x * pairedVector.x + pairedVector.y * pairedVector.y);
+      const magnitudeRatio = Math.min(currentMagnitude, pairedMagnitude) / Math.max(currentMagnitude, pairedMagnitude);
+      
+      console.log('� Current magnitude:', currentMagnitude);
+      console.log('📏 Paired magnitude:', pairedMagnitude);
+      console.log('📏 Magnitude ratio:', magnitudeRatio);
+      
+      // Si las magnitudes son similares (dentro del 10%), aplicar lógica 'mirrored'
+      const shouldBeMirrored = magnitudeRatio > 0.9;
+      console.log('🔄 Should be mirrored?', shouldBeMirrored);
+      
+      if (shouldBeMirrored) {
+        console.log('🔄 Applying mirrored coupling (same length scaling)');
+        this.updatePairedHandleMirrored(pairedHandle, currentVector, sharedAnchor);
+      } else {
+        console.log('🔄 Applying aligned coupling (preserve original length)');
+        this.updatePairedHandleAligned(pairedHandle, currentVector, sharedAnchor);
+      }
+    } else {
+      console.log('❌ Handles are not aligned, no coupling applied');
+    }
+  }
+
+  /**
+   * Verifica si dos vectores están alineados (apuntan en direcciones opuestas)
+   */
+  private areHandlesAligned(vector1: Point, vector2: Point): boolean {
+    const magnitude1 = Math.sqrt(vector1.x * vector1.x + vector1.y * vector1.y);
+    const magnitude2 = Math.sqrt(vector2.x * vector2.x + vector2.y * vector2.y);
+    
+    console.log('🔢 Vector magnitudes:', { magnitude1, magnitude2 });
+    
+    if (magnitude1 === 0 || magnitude2 === 0) {
+      console.log('❌ One of the vectors has zero magnitude');
+      return false;
+    }
+    
+    // Normalizar vectores
+    const unit1 = { x: vector1.x / magnitude1, y: vector1.y / magnitude1 };
+    const unit2 = { x: vector2.x / magnitude2, y: vector2.y / magnitude2 };
+    
+    console.log('📐 Normalized vectors:', { unit1, unit2 });
+    
+    // Calcular producto punto con el vector opuesto
+    const dotProduct = unit1.x * (-unit2.x) + unit1.y * (-unit2.y);
+    
+    console.log('🎯 Dot product (should be close to 1 for alignment):', dotProduct);
+    console.log('🎯 Alignment threshold: 0.966 (cos 15°)');
+    
+    // Tolerancia para alineación (cos(15°) ≈ 0.966)
+    const isAligned = dotProduct > 0.966;
+    console.log('✅ Result - handles aligned?', isAligned);
+    
+    return isAligned;
+  }
+
+  /**
+   * Verifica si dos vectores están muy precisamente alineados (para handles independientes)
+   */
+  private areHandlesPreciselyAligned(vector1: Point, vector2: Point): boolean {
+    const magnitude1 = Math.sqrt(vector1.x * vector1.x + vector1.y * vector1.y);
+    const magnitude2 = Math.sqrt(vector2.x * vector2.x + vector2.y * vector2.y);
+    
+    console.log('🔢 [PRECISE] Vector magnitudes:', { magnitude1, magnitude2 });
+    
+    if (magnitude1 === 0 || magnitude2 === 0) {
+      console.log('❌ [PRECISE] One of the vectors has zero magnitude');
+      return false;
+    }
+    
+    // Normalizar vectores
+    const unit1 = { x: vector1.x / magnitude1, y: vector1.y / magnitude1 };
+    const unit2 = { x: vector2.x / magnitude2, y: vector2.y / magnitude2 };
+    
+    console.log('📐 [PRECISE] Normalized vectors:', { unit1, unit2 });
+    
+    // Calcular producto punto con el vector opuesto
+    const dotProduct = unit1.x * (-unit2.x) + unit1.y * (-unit2.y);
+    
+    console.log('🎯 [PRECISE] Dot product (should be close to 1 for alignment):', dotProduct);
+    console.log('🎯 [PRECISE] Precise alignment threshold: 0.996 (cos 5°)');
+    
+    // Tolerancia muy estricta para handles independientes (cos(5°) ≈ 0.996)
+    const isPreciselyAligned = dotProduct > 0.996;
+    console.log('✅ [PRECISE] Result - handles precisely aligned?', isPreciselyAligned);
+    
+    return isPreciselyAligned;
+  }
+
+  /**
+   * Actualiza el handle pareja en modo mirrored (misma longitud)
+   */
+  private updatePairedHandleMirrored(pairedHandle: any, currentVector: Point, sharedAnchor: Point) {
+    console.log('🔄 updatePairedHandleMirrored called with:', { pairedHandle, currentVector, sharedAnchor });
+    
+    const magnitude = Math.sqrt(currentVector.x * currentVector.x + currentVector.y * currentVector.y);
+    if (magnitude === 0) {
+      console.log('❌ Current vector has zero magnitude');
+      return;
+    }
+    
+    const unitVector = {
+      x: currentVector.x / magnitude,
+      y: currentVector.y / magnitude
+    };
+    
+    console.log('📐 Unit vector:', unitVector);
+    console.log('📏 Magnitude (will be used for paired handle):', magnitude);
+    
+    // Para mirrored: el handle pareja va en la dirección OPUESTA con la MISMA magnitud
+    // Dirección opuesta = vector unitario * -1
+    const oppositePoint = {
+      x: sharedAnchor.x + (-unitVector.x * magnitude),
+      y: sharedAnchor.y + (-unitVector.y * magnitude)
+    };
+    
+    console.log('🎯 Calculated opposite point:', oppositePoint);
+    console.log('📍 Shared anchor:', sharedAnchor);
+    console.log('📏 Current vector from anchor:', currentVector);
+    console.log('📏 Opposite vector (should be):', { x: -unitVector.x * magnitude, y: -unitVector.y * magnitude });
+    console.log('🔧 About to update paired handle:', pairedHandle.commandId, pairedHandle.controlPoint);
+    
+    // FORZAR la actualización
+    console.log('🚀 FORCING UPDATE of paired handle...');
+    this.updateSingleHandleByControlPoint(pairedHandle.commandId, pairedHandle.controlPoint, oppositePoint);
+    console.log('✅ FORCED UPDATE completed');
+    
+    // Forzar re-render
+    if (this.editorStore && this.editorStore.forceRender) {
+      console.log('🔄 Forcing render after mirrored update');
+      this.editorStore.forceRender();
+    }
+  }
+
+  /**
+   * Actualiza el handle pareja en modo aligned (preserva longitud original)
+   */
+  private updatePairedHandleAligned(pairedHandle: any, currentVector: Point, sharedAnchor: Point) {
+    console.log('🔄 updatePairedHandleAligned called with:', { pairedHandle, currentVector, sharedAnchor });
+    
+    const magnitude = Math.sqrt(currentVector.x * currentVector.x + currentVector.y * currentVector.y);
+    if (magnitude === 0) {
+      console.log('❌ Current vector has zero magnitude');
+      return;
+    }
+    
+    const unitVector = {
+      x: currentVector.x / magnitude,
+      y: currentVector.y / magnitude
+    };
+    
+    console.log('📐 Unit vector:', unitVector);
+    
+    // Obtener la posición actual del handle pareja
+    const pairedHandlePosition = this.getHandlePosition(pairedHandle);
+    if (!pairedHandlePosition) {
+      console.log('❌ Could not get paired handle position for magnitude calculation');
+      return;
+    }
+    
+    // Calcular longitud original del handle pareja desde el anchor COMPARTIDO
+    const originalPairedVector = {
+      x: pairedHandlePosition.x - sharedAnchor.x,
+      y: pairedHandlePosition.y - sharedAnchor.y
+    };
+    const originalMagnitude = Math.sqrt(originalPairedVector.x * originalPairedVector.x + originalPairedVector.y * originalPairedVector.y);
+    
+    console.log('📏 Original magnitude of paired handle (from shared anchor):', originalMagnitude);
+    
+    // Para aligned: el handle pareja va en la dirección OPUESTA con su MAGNITUD ORIGINAL
+    // Dirección opuesta = vector unitario * -1
+    const oppositePoint = {
+      x: sharedAnchor.x + (-unitVector.x * originalMagnitude),
+      y: sharedAnchor.y + (-unitVector.y * originalMagnitude)
+    };
+    
+    console.log('🎯 Calculated opposite point (with original magnitude):', oppositePoint);
+    console.log('📍 Shared anchor:', sharedAnchor);
+    console.log('📏 Current vector from anchor:', currentVector);
+    console.log('📏 Opposite vector (should be):', { x: -unitVector.x * originalMagnitude, y: -unitVector.y * originalMagnitude });
+    console.log('🔧 About to update paired handle:', pairedHandle.commandId, pairedHandle.controlPoint);
+    
+    // FORZAR la actualización
+    console.log('🚀 FORCING UPDATE of paired handle...');
+    this.updateSingleHandleByControlPoint(pairedHandle.commandId, pairedHandle.controlPoint, oppositePoint);
+    console.log('✅ FORCED UPDATE completed');
+    
+    // Forzar re-render
+    if (this.editorStore && this.editorStore.forceRender) {
+      console.log('🔄 Forcing render after aligned update');
+      this.editorStore.forceRender();
+    }
+  }
+
+  /**
+   * Obtiene la posición actual de un handle
+   */
+  private getHandlePosition(handleInfo: {
+    commandId: string;
+    handleType: 'incoming' | 'outgoing';
+    anchor: Point;
+    controlPoint: 'x1y1' | 'x2y2';
+  }): Point | null {
+    console.log('📍 getHandlePosition called for:', handleInfo);
+    
+    if (!this.editorStore) {
+      console.log('❌ No editor store available');
+      return null;
+    }
+
+    const { paths } = this.editorStore;
+    
+    for (const path of paths) {
+      for (const subPath of path.subPaths) {
+        const command = subPath.commands.find((cmd: SVGCommand) => cmd.id === handleInfo.commandId);
+        if (command && command.command === 'C') {
+          console.log('✅ Found command:', command);
+          
+          if (handleInfo.controlPoint === 'x1y1') {
+            if (command.x1 !== undefined && command.y1 !== undefined) {
+              const position = { x: command.x1, y: command.y1 };
+              console.log('📍 Returning x1y1 position:', position);
+              return position;
+            } else {
+              console.log('❌ x1y1 coordinates are undefined');
+            }
+          } else {
+            if (command.x2 !== undefined && command.y2 !== undefined) {
+              const position = { x: command.x2, y: command.y2 };
+              console.log('📍 Returning x2y2 position:', position);
+              return position;
+            } else {
+              console.log('❌ x2y2 coordinates are undefined');
+            }
+          }
+        }
+      }
+    }
+    
+    console.log('❌ Command not found or not a curve command');
+    return null;
   }
 
   /**
@@ -405,14 +708,28 @@ export class FigmaHandleManager {
   private updateSingleHandleByControlPoint(commandId: string, controlPoint: 'x1y1' | 'x2y2', newPoint: Point) {
     console.log('🔧 updateSingleHandleByControlPoint called:', { commandId, controlPoint, newPoint });
     
+    if (!this.editorStore) {
+      console.log('❌ No editor store available in updateSingleHandleByControlPoint');
+      return;
+    }
+
     const { updateCommand } = this.editorStore;
+    
+    if (!updateCommand) {
+      console.log('❌ No updateCommand function available');
+      return;
+    }
     
     if (controlPoint === 'x1y1') {
       console.log('✅ Updating x1y1 for command:', commandId, 'with point:', newPoint);
+      console.log('🔄 Calling updateCommand with:', { commandId, updates: { x1: newPoint.x, y1: newPoint.y } });
       updateCommand(commandId, { x1: newPoint.x, y1: newPoint.y });
+      console.log('✅ updateCommand called successfully for x1y1');
     } else {
       console.log('✅ Updating x2y2 for command:', commandId, 'with point:', newPoint);
+      console.log('🔄 Calling updateCommand with:', { commandId, updates: { x2: newPoint.x, y2: newPoint.y } });
       updateCommand(commandId, { x2: newPoint.x, y2: newPoint.y });
+      console.log('✅ updateCommand called successfully for x2y2');
     }
   }
 

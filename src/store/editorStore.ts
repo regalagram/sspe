@@ -103,9 +103,9 @@ const storedPrecision = (() => {
 const createInitialState = (): EditorState => {
   // Hardcoded SVG to load as initial state
   const hardcodedSVG = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="-14.5 -8.5 495 135">
-      <path d="M 8 14 L 53 104 L 99 14 L 143 104 L 188 14 L 233 104 L 278 14 L 323 104 L 368 14 L 413 104 L 458 14" fill="none" stroke="#000000" stroke-width="2" fill-opacity="0.1" stroke-opacity="0.9" />
-    </svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="-12.5 -12.5 495 135">
+  <path d="M 10 10 C 20 30 50 100 60 100 C 70 100 90 10 100 10 C 110 10 130 100 140 100 C 150 100 180 10 190 10 C 200 10 220 100 230 100 C 240 100 270 10 280 10 C 290 10 310 100 320 100 C 330 100 360 10 370 10 C 380 10 410 100 420 100 C 430 100 450 30 460 10" fill="none" stroke="#000000" stroke-width="2" fill-opacity="0.1" stroke-opacity="0.9" />
+</svg>
   `;
 
   let initialPaths: SVGPath[] = [];
