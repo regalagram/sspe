@@ -276,13 +276,7 @@ class MouseInteractionManager {
     if (this.state.draggingControlPoint) {
       const point = this.getSVGPoint(e, context.svgRef);
       
-      if (grid.snapToGrid) {
-        const snappedPoint = snapToGrid(point, grid.size);
-        point.x = snappedPoint.x;
-        point.y = snappedPoint.y;
-      }
-      
-      // Usar el nuevo sistema de Figma para actualizar handles
+      // Pasar el punto original al FigmaHandleManager, que decidirá si aplicar snap
       figmaHandleManager.updateDragHandle(point);
       
       return true;

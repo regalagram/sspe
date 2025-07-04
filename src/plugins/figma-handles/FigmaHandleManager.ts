@@ -14,6 +14,13 @@ export class FigmaHandleManager {
     }
   };
   private listeners: (() => void)[] = [];
+  
+  // Propiedades para rastrear velocidad y snap
+  private dragHistory: Array<{ point: Point; timestamp: number }> = [];
+  private lastDragTime: number = 0;
+  private velocityThreshold: number = 800; // píxeles por segundo
+  private snapToGridActive: boolean = false;
+  private alignmentDebounceTimer: any = null;
 
   constructor() {
     this.setupKeyboardListeners();
@@ -295,6 +302,10 @@ export class FigmaHandleManager {
   startDragHandle(commandId: string, handleType: 'incoming' | 'outgoing', startPoint: Point) {
     console.log('🚀 FigmaHandleManager: startDragHandle called with:', { commandId, handleType, startPoint });
     
+    // Limpiar historial de arrastre anterior
+    this.dragHistory = [];
+    this.lastDragTime = Date.now();
+    
     // Asegurar que tenemos los control points para este comando ANTES del drag
     const controlPointInfo = this.analyzeControlPoint(commandId);
     if (!controlPointInfo) {
@@ -336,6 +347,10 @@ export class FigmaHandleManager {
       console.log('❌ FigmaHandleManager: No control point info for command:', dragState.commandId);
       return;
     }
+
+    // Detectar si snap to grid está activo
+    const gridState = this.editorStore?.grid || {};
+    this.snapToGridActive = gridState.snapToGrid || false;
 
     console.log('✅ FigmaHandleManager: Applying Figma handle logic for:', dragState.commandId, dragState.handleType);
 
@@ -432,10 +447,14 @@ export class FigmaHandleManager {
     console.log('📍 Original anchor (command anchor):', anchor);
 
     // Verificar si están alineados (apuntan en direcciones opuestas)
-    const isAligned = this.areHandlesAligned(currentVector, pairedVector);
-    console.log('🎯 Are handles aligned?', isAligned);
+    // Calcular velocidad actual (necesitamos esto para shouldApplyAlignment)
+    const velocity = this.calculateDragVelocity(newPoint);
     
-    if (isAligned) {
+    const shouldApply = this.shouldApplyAlignment(velocity, currentVector, pairedVector);
+    
+    console.log('🎯 Should apply alignment?', shouldApply, this.snapToGridActive ? '(with grid tolerance)' : '(normal tolerance)');
+    
+    if (shouldApply) {
       console.log('✅ Handles are aligned! Applying coupling logic for type:', originalType);
       
       // Verificar si deberían ser tratados como 'mirrored' basado en longitudes actuales
@@ -461,6 +480,131 @@ export class FigmaHandleManager {
     } else {
       console.log('❌ Handles are not aligned, no coupling applied');
     }
+  }
+
+  /**
+   * Debounce para evitar emparejamiento en movimientos rápidos
+   */
+  private debounceAlignment(callback: () => void, delay: number = 100) {
+    if (this.alignmentDebounceTimer) {
+      clearTimeout(this.alignmentDebounceTimer);
+    }
+    
+    this.alignmentDebounceTimer = setTimeout(callback, delay);
+  }
+
+  /**
+   * Verifica si debería aplicar emparejamiento basado en múltiples factores
+   */
+  private shouldApplyAlignment(velocity: number, currentVector: Point, pairedVector: Point): boolean {
+    // No aplicar si el arrastre es muy rápido
+    if (this.isDragTooFast(velocity)) {
+      console.log('❌ Drag too fast, skipping alignment');
+      return false;
+    }
+    
+    // No aplicar si snap to grid está causando desvíos significativos
+    if (this.snapToGridActive) {
+      const gridState = this.editorStore?.grid || {};
+      const gridSize = gridState.size || 20;
+      
+      // Si el grid es muy grande, ser más permisivo
+      if (gridSize > 50) {
+        console.log('❌ Grid size too large, skipping alignment');
+        return false;
+      }
+    }
+    
+    // Verificar alineación con tolerancia apropiada
+    const isAligned = this.snapToGridActive 
+      ? this.areHandlesAlignedWithGridTolerance(currentVector, pairedVector)
+      : this.areHandlesAligned(currentVector, pairedVector);
+    
+    return isAligned;
+  }
+
+  /**
+   * Calcula la velocidad del arrastre para detectar movimientos rápidos
+   */
+  private calculateDragVelocity(currentPoint: Point): number {
+    const now = Date.now();
+    const currentEntry = { point: currentPoint, timestamp: now };
+    
+    // Agregar entrada actual
+    this.dragHistory.push(currentEntry);
+    
+    // Mantener solo las últimas 5 entradas (últimos ~100ms)
+    if (this.dragHistory.length > 5) {
+      this.dragHistory.shift();
+    }
+    
+    // Necesitamos al menos 2 puntos para calcular velocidad
+    if (this.dragHistory.length < 2) {
+      return 0;
+    }
+    
+    const firstEntry = this.dragHistory[0];
+    const lastEntry = this.dragHistory[this.dragHistory.length - 1];
+    
+    const deltaTime = lastEntry.timestamp - firstEntry.timestamp;
+    if (deltaTime === 0) return 0;
+    
+    const deltaX = lastEntry.point.x - firstEntry.point.x;
+    const deltaY = lastEntry.point.y - firstEntry.point.y;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    
+    // Velocidad en píxeles por segundo
+    const velocity = (distance / deltaTime) * 1000;
+    
+    console.log('📊 Drag velocity:', velocity, 'px/s');
+    return velocity;
+  }
+
+  /**
+   * Detecta si el movimiento es demasiado rápido para emparejamiento automático
+   */
+  private isDragTooFast(velocity: number): boolean {
+    return velocity > this.velocityThreshold;
+  }
+
+  /**
+   * Configura el threshold de velocidad para desactivar emparejamiento
+   */
+  setVelocityThreshold(threshold: number) {
+    this.velocityThreshold = threshold;
+    console.log('🎛️ Velocity threshold set to:', threshold, 'px/s');
+  }
+
+  /**
+   * Obtiene el threshold de velocidad actual
+   */
+  getVelocityThreshold(): number {
+    return this.velocityThreshold;
+  }
+
+  /**
+   * Obtiene estadísticas de velocidad actuales
+   */
+  getVelocityStats(): { current: number; threshold: number; isActive: boolean } {
+    const currentVelocity = this.dragHistory.length >= 2 ? this.calculateDragVelocity(this.dragHistory[this.dragHistory.length - 1].point) : 0;
+    return {
+      current: currentVelocity,
+      threshold: this.velocityThreshold,
+      isActive: this.isDragTooFast(currentVelocity)
+    };
+  }
+
+  /**
+   * Calcula si el snap to grid está interfiriendo con la alineación
+   */
+  private isSnapToGridInterfering(originalPoint: Point, snappedPoint: Point): boolean {
+    const snapDistance = Math.sqrt(
+      Math.pow(snappedPoint.x - originalPoint.x, 2) + 
+      Math.pow(snappedPoint.y - originalPoint.y, 2)
+    );
+    
+    // Si el snap movió el punto más de 5 píxeles, consideramos que interfiere
+    return snapDistance > 5;
   }
 
   /**
@@ -497,16 +641,16 @@ export class FigmaHandleManager {
   }
 
   /**
-   * Verifica si dos vectores están muy precisamente alineados (para handles independientes)
+   * Verifica si dos vectores están alineados con tolerancia más alta para snap to grid
    */
-  private areHandlesPreciselyAligned(vector1: Point, vector2: Point): boolean {
+  private areHandlesAlignedWithGridTolerance(vector1: Point, vector2: Point): boolean {
     const magnitude1 = Math.sqrt(vector1.x * vector1.x + vector1.y * vector1.y);
     const magnitude2 = Math.sqrt(vector2.x * vector2.x + vector2.y * vector2.y);
     
-    console.log('🔢 [PRECISE] Vector magnitudes:', { magnitude1, magnitude2 });
+    console.log('🔢 [GRID] Vector magnitudes:', { magnitude1, magnitude2 });
     
     if (magnitude1 === 0 || magnitude2 === 0) {
-      console.log('❌ [PRECISE] One of the vectors has zero magnitude');
+      console.log('❌ [GRID] One of the vectors has zero magnitude');
       return false;
     }
     
@@ -514,19 +658,19 @@ export class FigmaHandleManager {
     const unit1 = { x: vector1.x / magnitude1, y: vector1.y / magnitude1 };
     const unit2 = { x: vector2.x / magnitude2, y: vector2.y / magnitude2 };
     
-    console.log('📐 [PRECISE] Normalized vectors:', { unit1, unit2 });
+    console.log('📐 [GRID] Normalized vectors:', { unit1, unit2 });
     
     // Calcular producto punto con el vector opuesto
     const dotProduct = unit1.x * (-unit2.x) + unit1.y * (-unit2.y);
     
-    console.log('🎯 [PRECISE] Dot product (should be close to 1 for alignment):', dotProduct);
-    console.log('🎯 [PRECISE] Precise alignment threshold: 0.996 (cos 5°)');
+    console.log('🎯 [GRID] Dot product (should be close to 1 for alignment):', dotProduct);
+    console.log('🎯 [GRID] Grid-tolerant threshold: 0.85 (cos 32°)');
     
-    // Tolerancia muy estricta para handles independientes (cos(5°) ≈ 0.996)
-    const isPreciselyAligned = dotProduct > 0.996;
-    console.log('✅ [PRECISE] Result - handles precisely aligned?', isPreciselyAligned);
+    // Tolerancia más alta para snap to grid (cos(32°) ≈ 0.85)
+    const isAligned = dotProduct > 0.85;
+    console.log('✅ [GRID] Result - handles aligned with grid tolerance?', isAligned);
     
-    return isPreciselyAligned;
+    return isAligned;
   }
 
   /**
@@ -691,14 +835,21 @@ export class FigmaHandleManager {
     
     const { updateCommand } = this.editorStore;
     
+    // Obtener el anchor point para el snap inteligente
+    const controlPointInfo = this.state.controlPoints.get(commandId);
+    const anchorPoint = controlPointInfo?.anchor || { x: 0, y: 0 };
+    
+    // Aplicar snap inteligente si está activo
+    const finalPoint = this.smartSnapToGrid(newPoint, anchorPoint);
+    
     if (handleType === 'outgoing') {
       // x1y1 es el handle saliente del comando actual
-      console.log('✅ Updating outgoing handle (x1y1) for command:', commandId, 'with point:', newPoint);
-      updateCommand(commandId, { x1: newPoint.x, y1: newPoint.y });
+      console.log('✅ Updating outgoing handle (x1y1) for command:', commandId, 'with point:', finalPoint);
+      updateCommand(commandId, { x1: finalPoint.x, y1: finalPoint.y });
     } else {
       // x2y2 es el handle entrante del comando actual
-      console.log('✅ Updating incoming handle (x2y2) for command:', commandId, 'with point:', newPoint);
-      updateCommand(commandId, { x2: newPoint.x, y2: newPoint.y });
+      console.log('✅ Updating incoming handle (x2y2) for command:', commandId, 'with point:', finalPoint);
+      updateCommand(commandId, { x2: finalPoint.x, y2: finalPoint.y });
     }
   }
 
@@ -720,15 +871,22 @@ export class FigmaHandleManager {
       return;
     }
     
+    // Obtener el anchor point para el snap inteligente
+    const controlPointInfo = this.state.controlPoints.get(commandId);
+    const anchorPoint = controlPointInfo?.anchor || { x: 0, y: 0 };
+    
+    // Aplicar snap inteligente si está activo
+    const finalPoint = this.smartSnapToGrid(newPoint, anchorPoint);
+    
     if (controlPoint === 'x1y1') {
-      console.log('✅ Updating x1y1 for command:', commandId, 'with point:', newPoint);
-      console.log('🔄 Calling updateCommand with:', { commandId, updates: { x1: newPoint.x, y1: newPoint.y } });
-      updateCommand(commandId, { x1: newPoint.x, y1: newPoint.y });
+      console.log('✅ Updating x1y1 for command:', commandId, 'with point:', finalPoint);
+      console.log('🔄 Calling updateCommand with:', { commandId, updates: { x1: finalPoint.x, y1: finalPoint.y } });
+      updateCommand(commandId, { x1: finalPoint.x, y1: finalPoint.y });
       console.log('✅ updateCommand called successfully for x1y1');
     } else {
-      console.log('✅ Updating x2y2 for command:', commandId, 'with point:', newPoint);
-      console.log('🔄 Calling updateCommand with:', { commandId, updates: { x2: newPoint.x, y2: newPoint.y } });
-      updateCommand(commandId, { x2: newPoint.x, y2: newPoint.y });
+      console.log('✅ Updating x2y2 for command:', commandId, 'with point:', finalPoint);
+      console.log('🔄 Calling updateCommand with:', { commandId, updates: { x2: finalPoint.x, y2: finalPoint.y } });
+      updateCommand(commandId, { x2: finalPoint.x, y2: finalPoint.y });
       console.log('✅ updateCommand called successfully for x2y2');
     }
   }
@@ -933,6 +1091,16 @@ export class FigmaHandleManager {
    * Termina el arrastre de un handle
    */
   endDragHandle() {
+    // Limpiar historial de arrastre
+    this.dragHistory = [];
+    this.lastDragTime = 0;
+    
+    // Limpiar timer de debounce
+    if (this.alignmentDebounceTimer) {
+      clearTimeout(this.alignmentDebounceTimer);
+      this.alignmentDebounceTimer = null;
+    }
+    
     this.state.dragState = {
       isDragging: false,
       commandId: null,
@@ -1050,6 +1218,48 @@ export class FigmaHandleManager {
   cleanup() {
     document.removeEventListener('keydown', this.handleKeyDown);
     document.removeEventListener('keyup', this.handleKeyUp);
+  }
+
+  /**
+   * Aplica snap to grid inteligente para handles, considerando la alineación
+   */
+  private smartSnapToGrid(point: Point, anchorPoint: Point): Point {
+    if (!this.snapToGridActive || !this.editorStore?.grid) {
+      return point;
+    }
+
+    const gridState = this.editorStore.grid;
+    const gridSize = gridState.size || 20;
+    
+    // Snap básico
+    const snappedPoint = {
+      x: Math.round(point.x / gridSize) * gridSize,
+      y: Math.round(point.y / gridSize) * gridSize
+    };
+    
+    // Verificar si el snap está interfiriendo con la alineación
+    const originalVector = {
+      x: point.x - anchorPoint.x,
+      y: point.y - anchorPoint.y
+    };
+    
+    const snappedVector = {
+      x: snappedPoint.x - anchorPoint.x,
+      y: snappedPoint.y - anchorPoint.y
+    };
+    
+    // Si el snap cambió significativamente la dirección, usar el punto original
+    const originalAngle = Math.atan2(originalVector.y, originalVector.x);
+    const snappedAngle = Math.atan2(snappedVector.y, snappedVector.x);
+    const angleDiff = Math.abs(originalAngle - snappedAngle);
+    
+    // Si la diferencia de ángulo es mayor a 10 grados, usar el punto original
+    if (angleDiff > Math.PI / 18) { // 10 grados
+      console.log('🎯 Snap to grid interfering with alignment, using original point');
+      return point;
+    }
+    
+    return snappedPoint;
   }
 }
 
