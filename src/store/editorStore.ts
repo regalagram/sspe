@@ -205,69 +205,6 @@ function roundToPrecision(val: number | undefined, precision: number): number | 
   return typeof val === 'number' ? Number(val.toFixed(precision)) : val;
 }
 
-// Add a flag to prevent recursive updates
-let isUpdating = false;
-let updateDepth = 0;
-const MAX_UPDATE_DEPTH = 3; // Reduced from 5 for faster recovery
-let lastUpdateTime = 0;
-
-// Helper function to prevent recursive calls (for general operations)
-const withUpdateGuard = <T extends any[], R>(fn: (...args: T) => R) => {
-  return (...args: T): R => {
-    const now = Date.now();
-    
-    // More lenient throttling for drag operations
-    if (now - lastUpdateTime < 0.5) { // Reduced from 1ms to 0.5ms
-      // Don't log warnings for normal throttling during drag operations
-      return undefined as R;
-    }
-    
-    if (isUpdating || updateDepth >= MAX_UPDATE_DEPTH) {
-      console.warn('Recursive store update prevented, depth:', updateDepth);
-      return undefined as R;
-    }
-    
-    isUpdating = true;
-    updateDepth++;
-    lastUpdateTime = now;
-    
-    try {
-      return fn(...args);
-    } finally {
-      updateDepth--;
-      if (updateDepth === 0) {
-        isUpdating = false;
-      }
-    }
-  };
-};
-
-// Delta accumulation for smooth dragging
-let accumulatedDelta: Point = { x: 0, y: 0 };
-let deltaAccumulationTimer: number | null = null;
-
-// Optimized guard for drag operations (less restrictive)
-const withDragUpdateGuard = <T extends any[], R>(fn: (...args: T) => R) => {
-  return (...args: T): R => {
-    // Only prevent recursive calls, no time throttling for drag operations
-    if (isUpdating || updateDepth >= MAX_UPDATE_DEPTH) {
-      return undefined as R;
-    }
-    
-    isUpdating = true;
-    updateDepth++;
-    
-    try {
-      return fn(...args);
-    } finally {
-      updateDepth--;
-      if (updateDepth === 0) {
-        isUpdating = false;
-      }
-    }
-  };
-};
-
 export const useEditorStore = create<EditorState & EditorActions>()(
   subscribeWithSelector((set, get) => ({
     ...initialState,
@@ -445,7 +382,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         },
       })),
     
-    moveSubPath: withDragUpdateGuard((subPathId: string, delta: Point) => {
+    moveSubPath: (subPathId, delta) => {
       set((state) => ({
         paths: state.paths.map((path) => ({
           ...path,
@@ -497,7 +434,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
           ),
         })),
       }));
-    }),
+    },
     
     // Transform actions
     scaleSubPath: (subPathId, scaleX, scaleY, center) => {
@@ -708,7 +645,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       return commandId;
     },
     
-    updateCommand: withUpdateGuard((commandId, updates) =>
+    updateCommand: (commandId, updates) =>
       set((state) => {
         const precision = state.precision;
         return {
@@ -733,8 +670,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             })),
           })),
         };
-      })
-    ),
+      }),
     
     removeCommand: (commandId) =>
       set((state) => ({

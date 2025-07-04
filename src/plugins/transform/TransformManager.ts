@@ -55,11 +55,6 @@ export class TransformManager {
 
   private editorStore: any = null;
   private isShiftPressed: boolean = false;
-  
-  // Add update protection to prevent infinite loops
-  private isUpdatingCommands: boolean = false;
-  private isUpdatingState: boolean = false;
-  private lastUpdateTime: number = 0;
 
   setEditorStore(store: any) {
     this.editorStore = store;
@@ -305,29 +300,21 @@ export class TransformManager {
 
   // Update transform state
   updateTransformState() {
-    // Prevent infinite loops from state change callbacks
-    if (this.isUpdatingState) {
+    
+    // Ensure we have the latest store state
+    if (!this.editorStore) {
+      console.warn('TransformManager: No editor store available');
       return;
     }
     
-    this.isUpdatingState = true;
+    this.state.bounds = this.calculateBounds();
+    this.state.handles = this.generateHandles();
     
-    try {
-      // Ensure we have the latest store state
-      if (!this.editorStore) {
-        console.warn('TransformManager: No editor store available');
-        return;
-      }
-      
-      this.state.bounds = this.calculateBounds();
-      this.state.handles = this.generateHandles();
-      
-      // Call the state change callback if defined
-      if (this.state.onStateChange) {
-        this.state.onStateChange();
-      }
-    } finally {
-      this.isUpdatingState = false;
+    
+
+    // Call the state change callback if defined
+    if (this.state.onStateChange) {
+      this.state.onStateChange();
     }
   }
 
@@ -629,13 +616,6 @@ export class TransformManager {
   private updateTransform(currentPoint: Point) {
     if (!this.state.dragStart || !this.state.initialBounds) return;
 
-    // Optimized throttling for smoother transforms
-    const now = Date.now();
-    if (now - this.lastUpdateTime < 8) { // ~120fps for smooth transforms
-      return;
-    }
-    this.lastUpdateTime = now;
-
     // Store current point for mirror state calculation
     this.state.currentPoint = currentPoint;
 
@@ -791,63 +771,38 @@ export class TransformManager {
   }
 
   private applyTransformToCommands(transform: (x: number, y: number) => Point) {
-    // Prevent recursive updates
-    if (this.isUpdatingCommands) {
-      return;
-    }
-    
-    this.isUpdatingCommands = true;
-    
-    try {
-      const store = this.editorStore || useEditorStore.getState();
-      const { updateCommand } = store;
+    const store = this.editorStore || useEditorStore.getState();
+    const { updateCommand } = store;
 
-      // Transform selected commands in batch
-      const commandUpdates: Array<{ id: string; updates: Partial<SVGCommand> }> = [];
-      
-      for (const commandId of Object.keys(this.state.initialCommands)) {
-        const initialCommand = this.state.initialCommands[commandId];
-        const updates: Partial<SVGCommand> = {};
+    // Transform selected commands
+    for (const commandId of Object.keys(this.state.initialCommands)) {
+      const initialCommand = this.state.initialCommands[commandId];
+      const updates: Partial<SVGCommand> = {};
 
-        // Transform main point
-        if (initialCommand.x !== undefined && initialCommand.y !== undefined) {
-          const transformed = transform(initialCommand.x, initialCommand.y);
-          updates.x = transformed.x;
-          updates.y = transformed.y;
-        }
-
-        // Transform control points
-        if (initialCommand.x1 !== undefined && initialCommand.y1 !== undefined) {
-          const transformed = transform(initialCommand.x1, initialCommand.y1);
-          updates.x1 = transformed.x;
-          updates.y1 = transformed.y;
-        }
-
-        if (initialCommand.x2 !== undefined && initialCommand.y2 !== undefined) {
-          const transformed = transform(initialCommand.x2, initialCommand.y2);
-          updates.x2 = transformed.x;
-          updates.y2 = transformed.y;
-        }
-
-        // Collect updates for batch processing
-        if (Object.keys(updates).length > 0) {
-          commandUpdates.push({ id: commandId, updates });
-        }
+      // Transform main point
+      if (initialCommand.x !== undefined && initialCommand.y !== undefined) {
+        const transformed = transform(initialCommand.x, initialCommand.y);
+        updates.x = transformed.x;
+        updates.y = transformed.y;
       }
-      
-      // Apply all updates in sequence with better batching
-      if (commandUpdates.length > 0) {
-        // Apply updates immediately but in a try-catch to prevent issues
-        try {
-          commandUpdates.forEach(({ id, updates }) => {
-            updateCommand(id, updates);
-          });
-        } catch (error) {
-          console.warn('Error applying transform updates:', error);
-        }
+
+      // Transform control points
+      if (initialCommand.x1 !== undefined && initialCommand.y1 !== undefined) {
+        const transformed = transform(initialCommand.x1, initialCommand.y1);
+        updates.x1 = transformed.x;
+        updates.y1 = transformed.y;
       }
-    } finally {
-      this.isUpdatingCommands = false;
+
+      if (initialCommand.x2 !== undefined && initialCommand.y2 !== undefined) {
+        const transformed = transform(initialCommand.x2, initialCommand.y2);
+        updates.x2 = transformed.x;
+        updates.y2 = transformed.y;
+      }
+
+      // Apply updates
+      if (Object.keys(updates).length > 0) {
+        updateCommand(commandId, updates);
+      }
     }
   }
 
