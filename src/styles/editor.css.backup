@@ -217,21 +217,6 @@ body {
   box-shadow: none !important;
 }
 
-/* Remove all outlines for accordion buttons in all states */
-.accordion-sidebar button,
-.accordion-sidebar button:focus,
-.accordion-sidebar button:active,
-.accordion-sidebar button:hover,
-.accordion-sidebar button.active,
-.accordion-sidebar button.active:focus,
-.accordion-sidebar button.active:active,
-.accordion-sidebar button.active:hover {
-  outline: none !important;
-  outline-width: 0 !important;
-  outline-style: none !important;
-  outline-color: transparent !important;
-}
-
 .accordion-sidebar [style*="cursor: pointer"] {
   touch-action: manipulation;
   -webkit-tap-highlight-color: rgba(0,0,0,0.1);
@@ -243,54 +228,6 @@ body {
   outline: none !important;
   border: none !important;
   box-shadow: none !important;
-}
-
-/* Comprehensive outline removal for all interactive elements in accordion */
-.accordion-sidebar *:focus,
-.accordion-sidebar *:active,
-.accordion-sidebar button,
-.accordion-sidebar [role="button"],
-.accordion-sidebar [data-clickable],
-.accordion-sidebar [style*="cursor: pointer"],
-.accordion-panel-content *:focus,
-.accordion-panel-content *:active,
-.accordion-panel-content button,
-.accordion-panel-content [role="button"],
-.accordion-panel-content [data-clickable],
-.accordion-panel-content [style*="cursor: pointer"] {
-  outline: none !important;
-  outline-width: 0 !important;
-  outline-style: none !important;
-  outline-color: transparent !important;
-  -webkit-tap-highlight-color: transparent !important;
-}
-
-/* Additional focus styles for accordion panel content */
-.accordion-panel-content button:focus {
-  outline: none !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-}
-
-.accordion-panel-content button.active:focus {
-  outline: none !important;
-  border-color: #005299 !important;
-  box-shadow: none !important;
-}
-
-/* Remove all outlines for accordion panel content buttons in all states */
-.accordion-panel-content button,
-.accordion-panel-content button:focus,
-.accordion-panel-content button:active,
-.accordion-panel-content button:hover,
-.accordion-panel-content button.active,
-.accordion-panel-content button.active:focus,
-.accordion-panel-content button.active:active,
-.accordion-panel-content button.active:hover {
-  outline: none !important;
-  outline-width: 0 !important;
-  outline-style: none !important;
-  outline-color: transparent !important;
 }
 
 /* Improve touch responsiveness for mobile devices */
@@ -385,22 +322,16 @@ button.active:hover {
 /* Accordion mode specific button styles */
 .accordion-sidebar button:focus,
 .accordion-panel-content button:focus {
-  outline: none !important;
-  outline-width: 0 !important;
-  outline-style: none !important;
-  outline-color: transparent !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
+  outline: none;
+  border-color: transparent;
+  box-shadow: none;
 }
 
 .accordion-sidebar button.active:focus,
 .accordion-panel-content button.active:focus {
-  outline: none !important;
-  outline-width: 0 !important;
-  outline-style: none !important;
-  outline-color: transparent !important;
-  border-color: #005299 !important;
-  box-shadow: none !important;
+  outline: none;
+  border-color: #005299;
+  box-shadow: none;
 }
 
 /* Control Panel Styles */
@@ -1039,7 +970,3 @@ button.active:hover {
   }
   
   /* Contenido de paneles sin padding extra en móviles */
-  .accordion-panel-content {
-    padding: 0;
-  }
-}
