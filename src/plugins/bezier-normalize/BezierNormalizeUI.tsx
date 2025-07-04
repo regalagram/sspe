@@ -2,7 +2,7 @@ import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
-import { Shuffle, ArrowLeftRight, RefreshCw } from 'lucide-react';
+import { Shuffle, ArrowLeftRight, RefreshCw, Unlink } from 'lucide-react';
 import { bezierNormalizeManager, BezierPointInfo, BezierNormalizeAction } from './BezierNormalizeManager';
 
 interface BezierNormalizeControlsProps {}
@@ -50,6 +50,8 @@ export const BezierNormalizeControls: React.FC<BezierNormalizeControlsProps> = (
         return <Shuffle size={16} />;
       case 'convert-and-normalize':
         return <RefreshCw size={16} />;
+      case 'break-control-points':
+        return <Unlink size={16} />;
       default:
         return <RefreshCw size={16} />;
     }
@@ -63,6 +65,8 @@ export const BezierNormalizeControls: React.FC<BezierNormalizeControlsProps> = (
         return '#ff9800';
       case 'convert-and-normalize':
         return '#4caf50';
+      case 'break-control-points':
+        return '#f44336';
       default:
         return '#2196f3';
     }
@@ -115,6 +119,21 @@ export const BezierNormalizeControls: React.FC<BezierNormalizeControlsProps> = (
         gap: '12px'
       }}>
         
+        {/* Option Key Indicator */}
+        {state.isOptionPressed && (
+          <div style={{
+            fontSize: '11px',
+            color: '#fff',
+            padding: '6px',
+            backgroundColor: '#ff6b35',
+            borderRadius: '4px',
+            textAlign: 'center',
+            fontWeight: '600'
+          }}>
+            ⌥ Option pressed - Control points can be broken
+          </div>
+        )}
+
         {/* Scenario Info */}
         <div style={{ 
           fontSize: '12px', 

@@ -11,7 +11,15 @@ export const useGlobalKeyboard = () => {
       pluginManager.handleKeyDown(e);
     };
 
+    const handleKeyUp = (e: KeyboardEvent) => {
+      pluginManager.handleKeyUp(e);
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
   }, []);
 };

@@ -45,5 +45,15 @@ export const BezierNormalizePlugin: Plugin = {
         bezierNormalizeManager.executeAction(actions[0]);
       }
     }
-  ]
+  ],
+  
+  handleKeyDown: (e: KeyboardEvent) => {
+    bezierNormalizeManager.handleKeyDown(e);
+    return false; // Let other plugins handle the event too
+  },
+  
+  handleKeyUp: (e: KeyboardEvent) => {
+    bezierNormalizeManager.handleKeyUp(e);
+    return false; // Let other plugins handle the event too
+  }
 };

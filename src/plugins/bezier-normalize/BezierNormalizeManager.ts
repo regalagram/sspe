@@ -9,7 +9,7 @@ export interface BezierPointInfo {
 }
 
 export interface BezierNormalizeAction {
-  type: 'normalize-from-current' | 'normalize-from-other' | 'convert-and-normalize';
+  type: 'normalize-from-current' | 'normalize-from-other' | 'convert-and-normalize' | 'break-control-points';
   label: string;
   description: string;
 }
@@ -17,13 +17,15 @@ export interface BezierNormalizeAction {
 export interface BezierNormalizeState {
   pointInfo: BezierPointInfo | null;
   availableActions: BezierNormalizeAction[];
+  isOptionPressed: boolean;
 }
 
 export class BezierNormalizeManager {
   private editorStore: any;
   private state: BezierNormalizeState = {
     pointInfo: null,
-    availableActions: []
+    availableActions: [],
+    isOptionPressed: false
   };
   private listeners: (() => void)[] = [];
 
@@ -78,33 +80,55 @@ export class BezierNormalizeManager {
   }
 
   getAvailableActions(pointInfo: BezierPointInfo): BezierNormalizeAction[] {
-    const { prevSegmentType, nextSegmentType } = pointInfo;
+    const { prevSegmentType, nextSegmentType, command } = pointInfo;
     const actions: BezierNormalizeAction[] = [];
 
+    // Caso feliz: punto entre dos curvas
     if (prevSegmentType === 'curve' && nextSegmentType === 'curve') {
+      // If Option is pressed, prioritize break action
+      if (this.state.isOptionPressed) {
+        actions.push({
+          type: 'break-control-points',
+          label: '⌥ Quebrar puntos de control',
+          description: 'Separa los puntos de control para edición independiente'
+        });
+      }
+      
       actions.push({
         type: 'normalize-from-current',
-        label: 'Normalizar desde este lado',
-        description: 'Normaliza usando el punto de control entrante como referencia'
+        label: 'Normalizar (Figma-style)',
+        description: 'Alinea los puntos de control a 180° para suavidad'
       });
       actions.push({
         type: 'normalize-from-other',
         label: 'Normalizar desde el otro lado',
         description: 'Normaliza usando el punto de control de la curva siguiente como referencia'
       });
+      
+      // Add break action if Option is not pressed
+      if (!this.state.isOptionPressed) {
+        actions.push({
+          type: 'break-control-points',
+          label: 'Quebrar puntos (⌥ Option)',
+          description: 'Permite mover puntos de control independientemente'
+        });
+      }
     }
-    else if (prevSegmentType === 'line' && nextSegmentType === 'line') {
+    // Caso no feliz: punto es línea Y tiene línea siguiente
+    // (No importa si el anterior es M, L, o C - solo necesitamos L->L)
+    else if (command.command === 'L' && nextSegmentType === 'line') {
       actions.push({
         type: 'convert-and-normalize',
-        label: 'Convertir a curvas y normalizar',
-        description: 'Convierte ambas rectas a curvas y normaliza el punto'
+        label: 'Convertir a curvas (Figma-style)',
+        description: 'Convierte las líneas a curvas con puntos alineados'
       });
     }
-    else if ((prevSegmentType === 'line' && nextSegmentType === 'curve') || 
-             (prevSegmentType === 'curve' && nextSegmentType === 'line')) {
+    // Caso híbrido: mezcla de líneas y curvas
+    else if ((command.command === 'L' && nextSegmentType === 'curve') || 
+             (prevSegmentType === 'curve' && command.command === 'L')) {
       actions.push({
         type: 'convert-and-normalize',
-        label: 'Convertir recta a curva y normalizar',
+        label: 'Convertir recta a curva (Figma-style)',
         description: 'Convierte la recta en curva y normaliza ambos puntos de control'
       });
     }
@@ -127,6 +151,9 @@ export class BezierNormalizeManager {
         break;
       case 'convert-and-normalize':
         this.convertAndNormalize(pointInfo);
+        break;
+      case 'break-control-points':
+        this.breakControlPoints(pointInfo);
         break;
     }
   }
@@ -224,11 +251,12 @@ export class BezierNormalizeManager {
       }
     };
 
-    // Convertir líneas a curvas
+    // Convertir el comando actual si es una línea (caso principal)
     if (command.command === 'L' && prevCommand && prevCommand.x !== undefined && prevCommand.y !== undefined) {
       convertLineToCurve(command, { x: prevCommand.x, y: prevCommand.y }, { x: command.x, y: command.y });
     }
 
+    // Convertir el comando siguiente si es una línea
     if (nextCommand && nextCommand.command === 'L' && nextCommand.x !== undefined && nextCommand.y !== undefined) {
       convertLineToCurve(nextCommand, { x: command.x, y: command.y }, { x: nextCommand.x, y: nextCommand.y });
     }
@@ -236,8 +264,12 @@ export class BezierNormalizeManager {
     // Esperar a que se actualicen los comandos y luego normalizar correctamente
     setTimeout(() => {
       const updatedPointInfo = this.analyzeBezierPoint(command.id);
-      if (updatedPointInfo && updatedPointInfo.prevSegmentType === 'curve' && updatedPointInfo.nextSegmentType === 'curve') {
-        this.normalizeForUnhappyCase(updatedPointInfo);
+      if (updatedPointInfo) {
+        // Verificar si ahora tenemos al menos una curva para normalizar
+        if (updatedPointInfo.command.command === 'C' || 
+            (updatedPointInfo.nextCommand && updatedPointInfo.nextCommand.command === 'C')) {
+          this.normalizeForUnhappyCase(updatedPointInfo);
+        }
       }
     }, 0);
   }
@@ -246,24 +278,77 @@ export class BezierNormalizeManager {
     const { command, prevCommand, nextCommand } = pointInfo;
     
     if (!command.x || !command.y || !prevCommand || !nextCommand ||
-        command.command !== 'C' || nextCommand.command !== 'C') return;
+        command.command !== 'C' || nextCommand.command !== 'C' ||
+        prevCommand.x === undefined || prevCommand.y === undefined ||
+        nextCommand.x === undefined || nextCommand.y === undefined) return;
 
     const { updateCommand } = this.editorStore;
     
-    // Para el caso "no feliz", crear puntos de control normalizados horizontalmente
-    // con una distancia fija de 20 unidades para coincidir con el ejemplo esperado
-    const controlDistance = 20;
+    // Calcular las direcciones de las líneas entrante y saliente
+    const incomingDirection = {
+      x: command.x - prevCommand.x,
+      y: command.y - prevCommand.y
+    };
     
-    // Los puntos de control deben estar horizontalmente alineados
-    // (mismo Y que el punto seleccionado) para crear una normalización perfecta
+    const outgoingDirection = {
+      x: nextCommand.x - command.x,
+      y: nextCommand.y - command.y
+    };
+    
+    // Normalizar las direcciones para obtener vectores unitarios
+    const incomingLength = Math.sqrt(incomingDirection.x * incomingDirection.x + incomingDirection.y * incomingDirection.y);
+    const outgoingLength = Math.sqrt(outgoingDirection.x * outgoingDirection.x + outgoingDirection.y * outgoingDirection.y);
+    
+    if (incomingLength === 0 || outgoingLength === 0) return;
+    
+    const incomingUnit = {
+      x: incomingDirection.x / incomingLength,
+      y: incomingDirection.y / incomingLength
+    };
+    
+    const outgoingUnit = {
+      x: outgoingDirection.x / outgoingLength,
+      y: outgoingDirection.y / outgoingLength
+    };
+    
+    // COMPORTAMIENTO COMO FIGMA: Puntos de control perfectamente alineados (180°)
+    // Calcular la tangente promedio que biseca el ángulo entre las dos líneas
+    const tangentVector = {
+      x: incomingUnit.x + outgoingUnit.x,
+      y: incomingUnit.y + outgoingUnit.y
+    };
+    
+    // Normalizar la tangente promedio
+    const tangentLength = Math.sqrt(tangentVector.x * tangentVector.x + tangentVector.y * tangentVector.y);
+    
+    let tangentUnit = { x: 0, y: 0 };
+    if (tangentLength > 0) {
+      tangentUnit = {
+        x: tangentVector.x / tangentLength,
+        y: tangentVector.y / tangentLength
+      };
+    } else {
+      // Si las líneas son exactamente opuestas (180°), usar la perpendicular
+      tangentUnit = {
+        x: -incomingUnit.y,
+        y: incomingUnit.x
+      };
+    }
+    
+    // Usar distancias proporcionales para un resultado natural
+    const incomingControlDistance = Math.min(incomingLength * 0.3, 30);
+    const outgoingControlDistance = Math.min(outgoingLength * 0.3, 30);
+    
+    // FIGMA-style: Los puntos de control están perfectamente alineados (180°)
+    // Esto crea una curva suave sin quiebres, como en Figma por defecto
     const incomingControlPoint = {
-      x: command.x - controlDistance,
-      y: command.y  // Misma Y para alineación horizontal perfecta
+      x: command.x - tangentUnit.x * incomingControlDistance,
+      y: command.y - tangentUnit.y * incomingControlDistance
     };
     
     const outgoingControlPoint = {
-      x: command.x + controlDistance,
-      y: command.y  // Misma Y para alineación horizontal perfecta
+      x: command.x + tangentUnit.x * outgoingControlDistance,
+      y: command.y + tangentUnit.y * outgoingControlDistance
     };
     
     // Actualizar el comando actual
@@ -281,6 +366,86 @@ export class BezierNormalizeManager {
     });
   }
 
+  private breakControlPoints(pointInfo: BezierPointInfo): void {
+    const { command, prevCommand, nextCommand } = pointInfo;
+    
+    // This action only makes sense when we have curves on both sides
+    if (!prevCommand || !nextCommand) return;
+    if (prevCommand.command !== 'C' || nextCommand.command !== 'C') return;
+    
+    // The "breaking" is achieved by making the control points NOT aligned
+    // We'll offset them slightly to create a visible break while maintaining smoothness
+    const currentPoint = { x: command.x!, y: command.y! };
+    
+    // Get the current control points
+    const incomingControl = { x: prevCommand.x2!, y: prevCommand.y2! };
+    const outgoingControl = { x: nextCommand.x1!, y: nextCommand.y1! };
+    
+    // Calculate the current alignment vector
+    const incomingVector = {
+      x: currentPoint.x - incomingControl.x,
+      y: currentPoint.y - incomingControl.y
+    };
+    
+    const outgoingVector = {
+      x: outgoingControl.x - currentPoint.x,
+      y: outgoingControl.y - currentPoint.y
+    };
+    
+    // Calculate distances
+    const incomingDistance = Math.sqrt(incomingVector.x * incomingVector.x + incomingVector.y * incomingVector.y);
+    const outgoingDistance = Math.sqrt(outgoingVector.x * outgoingVector.x + outgoingVector.y * outgoingVector.y);
+    
+    if (incomingDistance === 0 || outgoingDistance === 0) return;
+    
+    // Create a slight angular offset (15 degrees) to break the alignment
+    const breakAngle = Math.PI / 12; // 15 degrees
+    
+    // Normalize the incoming vector and rotate it slightly
+    const incomingNormalized = {
+      x: incomingVector.x / incomingDistance,
+      y: incomingVector.y / incomingDistance
+    };
+    
+    const rotatedIncoming = {
+      x: incomingNormalized.x * Math.cos(breakAngle) - incomingNormalized.y * Math.sin(breakAngle),
+      y: incomingNormalized.x * Math.sin(breakAngle) + incomingNormalized.y * Math.cos(breakAngle)
+    };
+    
+    // Normalize the outgoing vector and rotate it in the opposite direction
+    const outgoingNormalized = {
+      x: outgoingVector.x / outgoingDistance,
+      y: outgoingVector.y / outgoingDistance
+    };
+    
+    const rotatedOutgoing = {
+      x: outgoingNormalized.x * Math.cos(-breakAngle) - outgoingNormalized.y * Math.sin(-breakAngle),
+      y: outgoingNormalized.x * Math.sin(-breakAngle) + outgoingNormalized.y * Math.cos(-breakAngle)
+    };
+    
+    // Update the control points with the rotated vectors
+    const newIncomingControl = {
+      x: currentPoint.x - rotatedIncoming.x * incomingDistance,
+      y: currentPoint.y - rotatedIncoming.y * incomingDistance
+    };
+    
+    const newOutgoingControl = {
+      x: currentPoint.x + rotatedOutgoing.x * outgoingDistance,
+      y: currentPoint.y + rotatedOutgoing.y * outgoingDistance
+    };
+    
+    // Update the commands with the new control points
+    this.editorStore.updateCommand(prevCommand.id, {
+      x2: newIncomingControl.x,
+      y2: newIncomingControl.y
+    });
+    
+    this.editorStore.updateCommand(nextCommand.id, {
+      x1: newOutgoingControl.x,
+      y1: newOutgoingControl.y
+    });
+  }
+
   private getSegmentType(command: SVGCommand | null): 'line' | 'curve' | null {
     if (!command) return null;
     
@@ -289,6 +454,9 @@ export class BezierNormalizeManager {
         return 'line';
       case 'C':
         return 'curve';
+      case 'M':
+        // M no es ni línea ni curva - es un punto de inicio
+        return null;
       default:
         return null;
     }
@@ -304,10 +472,33 @@ export class BezierNormalizeManager {
     
     this.state = {
       pointInfo,
-      availableActions
+      availableActions,
+      isOptionPressed: this.state.isOptionPressed // Mantener el estado actual de la tecla Option
     };
     
     this.notifyListeners();
+  }
+
+  // Método para establecer el estado de la tecla Option
+  setOptionPressed(pressed: boolean) {
+    if (this.state.isOptionPressed !== pressed) {
+      this.state.isOptionPressed = pressed;
+      // Update the available actions when Option state changes
+      this.updateState();
+    }
+  }
+
+  // Handle keyboard events
+  handleKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Alt' || e.key === 'Option') {
+      this.setOptionPressed(true);
+    }
+  }
+
+  handleKeyUp(e: KeyboardEvent) {
+    if (e.key === 'Alt' || e.key === 'Option') {
+      this.setOptionPressed(false);
+    }
   }
 }
 

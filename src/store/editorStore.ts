@@ -103,9 +103,8 @@ const storedPrecision = (() => {
 const createInitialState = (): EditorState => {
   // Hardcoded SVG to load as initial state
   const hardcodedSVG = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="-19.77 0.23 874.96 539.69">
-      <path d="M 155 295 C 165 285 245 285 255 295 C 265 305 265 385 255 395 C 245 405 145 435 135 425 C 125 415 145 305 155 295 M 20 190 L 100 190 L 100 270 L 20 270 L 20 190 M 40 200 L 40 240 L 70 260 L 90 210 L 40 200 M 355 255 L 355 335 L 435 335 C 485 315 485 270 435 255 C 410 245 380 245 355 255 M 90 40 C 90 130 120 130 140 130 C 160 130 170 60 190 60 C 170 106.667 186.667 130 240 130 C 293.333 130 310 100 290 40 Z" fill="#0078cc" stroke="#0000ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill-opacity="0.3" />
-      <path d="M 435 160 C 305 80 415 30 435 90 C 445 30 545 60 435 160 Z M 360 405 L 405 495 L 450 405 L 495 495 C 520 385 560 425 540 405 C 565 475 605 515 585 495 C 610 385 650 425 630 405 L 675 495 C 700 385 740 425 720 405 L 765 495 C 790 385 830 425 810 405" fill="#ff6464" stroke="#c83232" stroke-width="2" stroke-opacity="0.9" />
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="-14.5 -8.5 495 135">
+      <path d="M 8 14 L 53 104 L 99 14 L 143 104 L 188 14 L 233 104 L 278 14 L 323 104 L 368 14 L 413 104 L 458 14" fill="none" stroke="#000000" stroke-width="2" fill-opacity="0.1" stroke-opacity="0.9" />
     </svg>
   `;
 

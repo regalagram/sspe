@@ -34,6 +34,8 @@ export interface Plugin {
   shortcuts?: ShortcutDefinition[];
   ui?: UIComponentDefinition[];
   mouseHandlers?: MouseEventHandler;
+  handleKeyDown?: (e: KeyboardEvent) => boolean;
+  handleKeyUp?: (e: KeyboardEvent) => boolean;
 }
 
 export interface ToolDefinition {
@@ -246,6 +248,15 @@ export class PluginManager {
   }
   
   handleKeyDown(event: KeyboardEvent): boolean {
+    // First, let plugins handle the event
+    for (const plugin of this.plugins.values()) {
+      if (plugin.enabled && plugin.handleKeyDown) {
+        const handled = plugin.handleKeyDown(event);
+        if (handled) return true;
+      }
+    }
+    
+    // If no plugin handled it, check shortcuts
     const modifiers: string[] = [];
     if (event.ctrlKey) modifiers.push('ctrl');
     if (event.altKey) modifiers.push('alt');
@@ -259,6 +270,18 @@ export class PluginManager {
       event.preventDefault();
       shortcut.action();
       return true;
+    }
+    
+    return false;
+  }
+  
+  handleKeyUp(event: KeyboardEvent): boolean {
+    // Let plugins handle the event
+    for (const plugin of this.plugins.values()) {
+      if (plugin.enabled && plugin.handleKeyUp) {
+        const handled = plugin.handleKeyUp(event);
+        if (handled) return true;
+      }
     }
     
     return false;
