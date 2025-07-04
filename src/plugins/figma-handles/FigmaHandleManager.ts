@@ -252,6 +252,7 @@ export class FigmaHandleManager {
     };
 
     // Calcular el producto punto para determinar alineación
+    // En Figma, los handles están alineados cuando apuntan en direcciones opuestas
     const dotProduct = incomingUnit.x * (-outgoingUnit.x) + incomingUnit.y * (-outgoingUnit.y);
     
     // Tolerancia para determinar alineación (cos(10°) ≈ 0.985)
@@ -365,10 +366,10 @@ export class FigmaHandleManager {
       // Sin Option: aplicar lógica de acoplamiento según el tipo
       switch (type) {
         case 'mirrored':
-          this.updateMirroredHandles(commandId, handleType, newPoint, anchor);
+          this.updateMirroredHandlesFigma(commandId, handleType, newPoint, anchor);
           break;
         case 'aligned':
-          this.updateAlignedHandles(commandId, handleType, newPoint, anchor);
+          this.updateAlignedHandlesFigma(commandId, handleType, newPoint, anchor);
           break;
         case 'independent':
           this.updateSingleHandle(commandId, handleType, newPoint);
@@ -399,43 +400,34 @@ export class FigmaHandleManager {
   }
 
   /**
-   * Actualiza handles en modo mirrored (mismo largo, direcciones opuestas)
+   * Actualiza un handle específico por su control point
    */
-  private updateMirroredHandles(commandId: string, handleType: 'incoming' | 'outgoing', newPoint: Point, anchor: Point) {
+  private updateSingleHandleByControlPoint(commandId: string, controlPoint: 'x1y1' | 'x2y2', newPoint: Point) {
+    console.log('🔧 updateSingleHandleByControlPoint called:', { commandId, controlPoint, newPoint });
+    
     const { updateCommand } = this.editorStore;
     
-    // Calcular vector desde anchor al nuevo punto
-    const vector = {
-      x: newPoint.x - anchor.x,
-      y: newPoint.y - anchor.y
-    };
-    
-    // Calcular el punto opuesto (mismo largo, dirección opuesta)
-    const oppositePoint = {
-      x: anchor.x - vector.x,
-      y: anchor.y - vector.y
-    };
-    
-    if (handleType === 'outgoing') {
-      // Actualizar x1y1 del comando actual
+    if (controlPoint === 'x1y1') {
+      console.log('✅ Updating x1y1 for command:', commandId, 'with point:', newPoint);
       updateCommand(commandId, { x1: newPoint.x, y1: newPoint.y });
-      
-      // Actualizar x2y2 del comando actual (punto opuesto)
-      updateCommand(commandId, { x2: oppositePoint.x, y2: oppositePoint.y });
     } else {
-      // Actualizar x2y2 del comando actual
+      console.log('✅ Updating x2y2 for command:', commandId, 'with point:', newPoint);
       updateCommand(commandId, { x2: newPoint.x, y2: newPoint.y });
-      
-      // Actualizar x1y1 del comando actual (punto opuesto)
-      updateCommand(commandId, { x1: oppositePoint.x, y1: oppositePoint.y });
     }
   }
 
   /**
-   * Actualiza handles en modo aligned (alineados pero pueden tener diferentes largos)
+   * Actualiza handles en modo mirrored estilo Figma (mismo largo, direcciones opuestas)
+   * En Figma, cuando un handle está acoplado, al mover uno, el otro se mueve manteniendo
+   * la alineación pero preservando su longitud original
    */
-  private updateAlignedHandles(commandId: string, handleType: 'incoming' | 'outgoing', newPoint: Point, anchor: Point) {
+  private updateMirroredHandlesFigma(commandId: string, handleType: 'incoming' | 'outgoing', newPoint: Point, anchor: Point) {
+    console.log('🔧 updateMirroredHandlesFigma called:', { commandId, handleType, newPoint, anchor });
+    
     const { updateCommand } = this.editorStore;
+    
+    // Actualizar el handle que se está moviendo
+    this.updateSingleHandle(commandId, handleType, newPoint);
     
     // Calcular vector desde anchor al nuevo punto
     const vector = {
@@ -451,40 +443,173 @@ export class FigmaHandleManager {
       y: vector.y / magnitude
     };
     
-    // Obtener el largo actual del handle opuesto
-    const controlPointInfo = this.state.controlPoints.get(commandId);
-    if (!controlPointInfo) return;
-    
-    const oppositeHandle = handleType === 'incoming' ? controlPointInfo.outgoingHandle : controlPointInfo.incomingHandle;
-    let oppositeMagnitude = magnitude; // Por defecto, usar el mismo largo
-    
-    if (oppositeHandle) {
-      const oppositeVector = {
-        x: oppositeHandle.x - anchor.x,
-        y: oppositeHandle.y - anchor.y
+    // Encontrar y actualizar el handle pareja
+    const pairedHandle = this.findPairedHandle(commandId, handleType);
+    if (pairedHandle) {
+      console.log('🔗 Found paired handle:', pairedHandle);
+      
+      // Calcular el punto opuesto usando la misma magnitud
+      const oppositePoint = {
+        x: pairedHandle.anchor.x - unitVector.x * magnitude,
+        y: pairedHandle.anchor.y - unitVector.y * magnitude
       };
-      oppositeMagnitude = Math.sqrt(oppositeVector.x * oppositeVector.x + oppositeVector.y * oppositeVector.y);
+      
+      // Actualizar el handle pareja
+      this.updateSingleHandleByControlPoint(pairedHandle.commandId, pairedHandle.controlPoint, oppositePoint);
     }
+  }
+
+  /**
+   * Actualiza handles en modo aligned estilo Figma (alineados pero diferentes largos)
+   * En Figma, cuando están alineados, al mover uno, el otro se mueve manteniendo
+   * la alineación pero preservando su longitud original
+   */
+  private updateAlignedHandlesFigma(commandId: string, handleType: 'incoming' | 'outgoing', newPoint: Point, anchor: Point) {
+    console.log('🔧 updateAlignedHandlesFigma called:', { commandId, handleType, newPoint, anchor });
     
-    // Calcular el punto opuesto (misma dirección, largo preservado)
-    const oppositePoint = {
-      x: anchor.x - unitVector.x * oppositeMagnitude,
-      y: anchor.y - unitVector.y * oppositeMagnitude
+    const { updateCommand } = this.editorStore;
+    
+    // Actualizar el handle que se está moviendo
+    this.updateSingleHandle(commandId, handleType, newPoint);
+    
+    // Calcular vector desde anchor al nuevo punto
+    const vector = {
+      x: newPoint.x - anchor.x,
+      y: newPoint.y - anchor.y
     };
     
-    if (handleType === 'outgoing') {
-      // Actualizar x1y1 del comando actual
-      updateCommand(commandId, { x1: newPoint.x, y1: newPoint.y });
+    const magnitude = Math.sqrt(vector.x * vector.x + vector.y * vector.y);
+    if (magnitude === 0) return;
+    
+    const unitVector = {
+      x: vector.x / magnitude,
+      y: vector.y / magnitude
+    };
+    
+    // Encontrar y actualizar el handle pareja
+    const pairedHandle = this.findPairedHandle(commandId, handleType);
+    if (pairedHandle) {
+      console.log('🔗 Found paired handle:', pairedHandle);
       
-      // Actualizar x2y2 del comando actual (alineado)
-      updateCommand(commandId, { x2: oppositePoint.x, y2: oppositePoint.y });
-    } else {
-      // Actualizar x2y2 del comando actual
-      updateCommand(commandId, { x2: newPoint.x, y2: newPoint.y });
+      // Obtener la longitud original del handle pareja
+      const originalPairedMagnitude = this.getHandleMagnitude(pairedHandle);
       
-      // Actualizar x1y1 del comando actual (alineado)
-      updateCommand(commandId, { x1: oppositePoint.x, y1: oppositePoint.y });
+      // Calcular el punto opuesto usando la longitud original del handle pareja
+      const oppositePoint = {
+        x: pairedHandle.anchor.x - unitVector.x * originalPairedMagnitude,
+        y: pairedHandle.anchor.y - unitVector.y * originalPairedMagnitude
+      };
+      
+      // Actualizar el handle pareja
+      this.updateSingleHandleByControlPoint(pairedHandle.commandId, pairedHandle.controlPoint, oppositePoint);
     }
+  }
+
+  /**
+   * Encuentra el handle pareja según la lógica correcta de Figma:
+   * Los handles se emparejan cuando se conectan al mismo punto anchor pero pertenecen a comandos diferentes:
+   * - x2y2 del comando N se empareja con x1y1 del comando N+1 (ambos se conectan al anchor del comando N)
+   * - x1y1 del comando N+1 se empareja con x2y2 del comando N (ambos se conectan al anchor del comando N)
+   */
+  public findPairedHandle(commandId: string, handleType: 'incoming' | 'outgoing'): {
+    commandId: string;
+    handleType: 'incoming' | 'outgoing';
+    anchor: Point;
+    controlPoint: 'x1y1' | 'x2y2';
+  } | null {
+    if (!this.editorStore) return null;
+
+    const { paths } = this.editorStore;
+    
+    for (const path of paths) {
+      for (const subPath of path.subPaths) {
+        const commandIndex = subPath.commands.findIndex((cmd: SVGCommand) => cmd.id === commandId);
+        if (commandIndex !== -1) {
+          const commands = subPath.commands;
+          const currentCommand = commands[commandIndex];
+          
+          if (handleType === 'incoming') {
+            // x2y2 del comando actual busca x1y1 del comando siguiente
+            // Ambos se conectan al anchor del comando actual
+            if (commandIndex < commands.length - 1) {
+              const nextCommand = commands[commandIndex + 1];
+              if (nextCommand.command === 'C' && nextCommand.x1 !== undefined && nextCommand.y1 !== undefined) {
+                const anchor = { x: currentCommand.x || 0, y: currentCommand.y || 0 };
+                return {
+                  commandId: nextCommand.id,
+                  handleType: 'outgoing',
+                  anchor: anchor, // Mismo anchor (punto final del comando actual)
+                  controlPoint: 'x1y1'
+                };
+              }
+            }
+          } else {
+            // x1y1 del comando actual busca x2y2 del comando anterior
+            // Ambos se conectan al anchor del comando anterior
+            if (commandIndex > 0) {
+              const prevCommand = commands[commandIndex - 1];
+              if (prevCommand.command === 'C' && prevCommand.x2 !== undefined && prevCommand.y2 !== undefined) {
+                const anchor = { x: prevCommand.x || 0, y: prevCommand.y || 0 };
+                return {
+                  commandId: prevCommand.id,
+                  handleType: 'incoming',
+                  anchor: anchor, // Mismo anchor (punto final del comando anterior)
+                  controlPoint: 'x2y2'
+                };
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Obtiene la magnitud actual de un handle
+   */
+  private getHandleMagnitude(handleInfo: {
+    commandId: string;
+    handleType: 'incoming' | 'outgoing';
+    anchor: Point;
+    controlPoint: 'x1y1' | 'x2y2';
+  }): number {
+    if (!this.editorStore) return 0;
+
+    const { paths } = this.editorStore;
+    
+    for (const path of paths) {
+      for (const subPath of path.subPaths) {
+        const command = subPath.commands.find((cmd: SVGCommand) => cmd.id === handleInfo.commandId);
+        if (command && command.command === 'C') {
+          let handlePoint: Point;
+          
+          if (handleInfo.controlPoint === 'x1y1') {
+            if (command.x1 !== undefined && command.y1 !== undefined) {
+              handlePoint = { x: command.x1, y: command.y1 };
+            } else {
+              return 0;
+            }
+          } else {
+            if (command.x2 !== undefined && command.y2 !== undefined) {
+              handlePoint = { x: command.x2, y: command.y2 };
+            } else {
+              return 0;
+            }
+          }
+          
+          const vector = {
+            x: handlePoint.x - handleInfo.anchor.x,
+            y: handlePoint.y - handleInfo.anchor.y
+          };
+          
+          return Math.sqrt(vector.x * vector.x + vector.y * vector.y);
+        }
+      }
+    }
+    
+    return 0;
   }
 
   /**

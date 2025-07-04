@@ -82,6 +82,16 @@ export const FigmaHandleRenderer: React.FC = () => {
     return null;
   }
 
+  // Durante el drag, solo mostrar el handle que se arrastra y su pareja
+  const isDragging = handleState.dragState.isDragging;
+  const dragCommandId = handleState.dragState.commandId;
+  const dragHandleType = handleState.dragState.handleType;
+  
+  // Si estamos en modo drag, obtener información de la pareja
+  const pairedHandle = isDragging && dragCommandId && dragHandleType 
+    ? figmaHandleManager.findPairedHandle(dragCommandId, dragHandleType) 
+    : null;
+
   return (
     <>
       {paths.map((path) => 
@@ -105,6 +115,20 @@ export const FigmaHandleRenderer: React.FC = () => {
             
             if (!shouldShowCommand) return null;
             
+            // Durante el drag, solo mostrar el comando que se arrastra y su pareja
+            if (isDragging) {
+              const isCurrentDragCommand = command.id === dragCommandId;
+              const isPairedCommand = pairedHandle && pairedHandle.commandId === command.id;
+              
+              if (!isCurrentDragCommand && !isPairedCommand) {
+                return null; // No mostrar este comando
+              }
+            }
+            
+            // Variables para uso en la lógica de renderizado
+            const isCurrentDragCommand = isDragging && command.id === dragCommandId;
+            const isPairedCommand = isDragging && pairedHandle && pairedHandle.commandId === command.id;
+            
             // Get control point info from Figma handle manager
             const controlPointInfo = handleState.controlPoints.get(command.id);
             const handleType = controlPointInfo?.type || 'independent';
@@ -126,166 +150,88 @@ export const FigmaHandleRenderer: React.FC = () => {
                 {/* Render control points for cubic curves */}
                 {command.command === 'C' && controlPoints.length >= 2 && (
                   <>
-                    {/* First control point connects to previous command position */}
+                    {/* First control point (x1y1) - handle saliente */}
                     {prevPosition && (
                       <>
-                        <line
-                          x1={prevPosition.x}
-                          y1={prevPosition.y}
-                          x2={controlPoints[0].x}
-                          y2={controlPoints[0].y}
-                          stroke={colors.lineColor}
-                          strokeWidth={1 / viewport.zoom}
-                          strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
-                          pointerEvents="none"
-                          opacity={0.8}
-                        />
-                        <circle
-                          cx={controlPoints[0].x}
-                          cy={controlPoints[0].y}
-                          r={radius * 0.7}
-                          fill={colors.fill}
-                          stroke={colors.stroke}
-                          strokeWidth={1.5 / viewport.zoom}
-                          style={{ cursor: 'grab' }}
-                          data-command-id={command.id}
-                          data-control-point="x1y1"
-                        />
-                        {/* Indicador de tipo para el handle entrante */}
-                        {isCommandSelected && controlPointInfo && (
-                          <circle
-                            cx={controlPoints[0].x}
-                            cy={controlPoints[0].y}
-                            r={radius * 0.3}
-                            fill="white"
-                            stroke={colors.stroke}
-                            strokeWidth={0.5 / viewport.zoom}
-                            pointerEvents="none"
-                          />
+                        {/* Mostrar este handle si no estamos en drag, o si es el handle específico que debe mostrarse */}
+                        {(!isDragging || 
+                          (isDragging && command.id === dragCommandId && dragHandleType === 'outgoing') ||
+                          (isDragging && isPairedCommand && pairedHandle?.controlPoint === 'x1y1')) && (
+                          <>
+                            <line
+                              x1={prevPosition.x}
+                              y1={prevPosition.y}
+                              x2={controlPoints[0].x}
+                              y2={controlPoints[0].y}
+                              stroke={colors.lineColor}
+                              strokeWidth={1 / viewport.zoom}
+                              strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
+                              pointerEvents="none"
+                              opacity={0.8}
+                            />
+                            <circle
+                              cx={controlPoints[0].x}
+                              cy={controlPoints[0].y}
+                              r={radius * 0.7}
+                              fill={colors.fill}
+                              stroke={colors.stroke}
+                              strokeWidth={1.5 / viewport.zoom}
+                              style={{ cursor: 'grab' }}
+                              data-command-id={command.id}
+                              data-control-point="x1y1"
+                            />
+                          </>
                         )}
                       </>
                     )}
                     
-                    {/* Second control point connects to current command position */}
+                    {/* Second control point (x2y2) - handle entrante */}
                     {controlPoints.length >= 2 && (
                       <>
-                        <line
-                          x1={position.x}
-                          y1={position.y}
-                          x2={controlPoints[1].x}
-                          y2={controlPoints[1].y}
-                          stroke={colors.lineColor}
-                          strokeWidth={1 / viewport.zoom}
-                          strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
-                          pointerEvents="none"
-                          opacity={0.8}
-                        />
-                        <circle
-                          cx={controlPoints[1].x}
-                          cy={controlPoints[1].y}
-                          r={radius * 0.7}
-                          fill={colors.fill}
-                          stroke={colors.stroke}
-                          strokeWidth={1.5 / viewport.zoom}
-                          style={{ cursor: 'grab' }}
-                          data-command-id={command.id}
-                          data-control-point="x2y2"
-                        />
-                        {/* Indicador de tipo para el handle saliente */}
-                        {isCommandSelected && controlPointInfo && (
-                          <circle
-                            cx={controlPoints[1].x}
-                            cy={controlPoints[1].y}
-                            r={radius * 0.3}
-                            fill="white"
-                            stroke={colors.stroke}
-                            strokeWidth={0.5 / viewport.zoom}
-                            pointerEvents="none"
-                          />
+                        {/* Mostrar este handle si no estamos en drag, o si es el handle específico que debe mostrarse */}
+                        {(!isDragging || 
+                          (isDragging && command.id === dragCommandId && dragHandleType === 'incoming') ||
+                          (isDragging && isPairedCommand && pairedHandle?.controlPoint === 'x2y2')) && (
+                          <>
+                            <line
+                              x1={position.x}
+                              y1={position.y}
+                              x2={controlPoints[1].x}
+                              y2={controlPoints[1].y}
+                              stroke={colors.lineColor}
+                              strokeWidth={1 / viewport.zoom}
+                              strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
+                              pointerEvents="none"
+                              opacity={0.8}
+                            />
+                            <circle
+                              cx={controlPoints[1].x}
+                              cy={controlPoints[1].y}
+                              r={radius * 0.7}
+                              fill={colors.fill}
+                              stroke={colors.stroke}
+                              strokeWidth={1.5 / viewport.zoom}
+                              style={{ cursor: 'grab' }}
+                              data-command-id={command.id}
+                              data-control-point="x2y2"
+                            />
+                          </>
                         )}
                       </>
                     )}
                     
-                    {/* Línea de conexión entre handles para tipos acoplados */}
-                    {isCommandSelected && controlPointInfo && 
-                     (controlPointInfo.type === 'mirrored' || controlPointInfo.type === 'aligned') && 
-                     controlPoints.length >= 2 && prevPosition && (
-                      <line
-                        x1={controlPoints[0].x}
-                        y1={controlPoints[0].y}
-                        x2={controlPoints[1].x}
-                        y2={controlPoints[1].y}
-                        stroke={colors.lineColor}
+                    {/* Indicador simple del tipo en el anchor cuando el comando está seleccionado (sin drag) */}
+                    {!isDragging && isCommandSelected && controlPointInfo && (
+                      <circle
+                        cx={position.x}
+                        cy={position.y}
+                        r={radius * 0.4}
+                        fill={colors.fill}
+                        stroke={colors.stroke}
                         strokeWidth={0.5 / viewport.zoom}
-                        strokeDasharray={`${1 / viewport.zoom},${1 / viewport.zoom}`}
                         pointerEvents="none"
-                        opacity={0.5}
+                        opacity={0.7}
                       />
-                    )}
-                    
-                    {/* Indicador visual de tipo en el anchor point */}
-                    {isCommandSelected && controlPointInfo && (
-                      <g>
-                        {/* Círculo base del anchor */}
-                        <circle
-                          cx={position.x}
-                          cy={position.y}
-                          r={radius * 0.4}
-                          fill={colors.fill}
-                          stroke={colors.stroke}
-                          strokeWidth={0.5 / viewport.zoom}
-                          pointerEvents="none"
-                          opacity={0.7}
-                        />
-                        
-                        {/* Símbolo según el tipo */}
-                        {controlPointInfo.type === 'mirrored' && (
-                          <circle
-                            cx={position.x}
-                            cy={position.y}
-                            r={radius * 0.2}
-                            fill="white"
-                            pointerEvents="none"
-                          />
-                        )}
-                        
-                        {controlPointInfo.type === 'aligned' && (
-                          <>
-                            <line
-                              x1={position.x - radius * 0.15}
-                              y1={position.y}
-                              x2={position.x + radius * 0.15}
-                              y2={position.y}
-                              stroke="white"
-                              strokeWidth={0.5 / viewport.zoom}
-                              pointerEvents="none"
-                            />
-                          </>
-                        )}
-                        
-                        {controlPointInfo.type === 'independent' && (
-                          <>
-                            <line
-                              x1={position.x - radius * 0.1}
-                              y1={position.y - radius * 0.1}
-                              x2={position.x + radius * 0.1}
-                              y2={position.y + radius * 0.1}
-                              stroke="white"
-                              strokeWidth={0.5 / viewport.zoom}
-                              pointerEvents="none"
-                            />
-                            <line
-                              x1={position.x - radius * 0.1}
-                              y1={position.y + radius * 0.1}
-                              x2={position.x + radius * 0.1}
-                              y2={position.y - radius * 0.1}
-                              stroke="white"
-                              strokeWidth={0.5 / viewport.zoom}
-                              pointerEvents="none"
-                            />
-                          </>
-                        )}
-                      </g>
                     )}
                   </>
                 )}

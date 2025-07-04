@@ -4,6 +4,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { getAbsoluteCommandPosition, getAbsoluteControlPoints } from '../../utils/path-utils';
 import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';
+import { pluginManager } from '../../core/PluginSystem';
 
 interface VisualDebugControlsProps {
   commandPointsEnabled: boolean;
@@ -287,6 +288,13 @@ export const ControlPointsRenderer: React.FC = () => {
   const { isMobile, isTablet } = useMobileDetection();
 
   if (!paths || paths.length === 0) {
+    return null;
+  }
+
+  // Si el plugin figma-handles está activo, no renderizar control points básicos
+  // ya que el figma-handles proporciona una versión mejorada
+  const figmaHandlesPlugin = pluginManager.getPlugin('figma-handles');
+  if (figmaHandlesPlugin && figmaHandlesPlugin.enabled) {
     return null;
   }
 

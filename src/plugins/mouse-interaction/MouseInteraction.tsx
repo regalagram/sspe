@@ -155,7 +155,12 @@ class MouseInteractionManager {
       
       // Notificar al FigmaHandleManager sobre el inicio del arrastre
       const startPoint = this.getSVGPoint(e, context.svgRef);
-      // Para un comando C: x1y1 es el handle saliente, x2y2 es el handle entrante
+      // Para un comando C en el contexto de Figma:
+      // x1y1 es el handle que sale del comando anterior hacia el actual (equivale a "outgoing" del comando anterior)
+      // x2y2 es el handle que llega al comando actual (equivale a "incoming" del comando actual)
+      // Pero desde la perspectiva del comando actual que seleccionamos:
+      // x1y1 es el handle que sale hacia el siguiente comando
+      // x2y2 es el handle que viene del comando anterior
       const handleType = controlPoint === 'x1y1' ? 'outgoing' : 'incoming';
       
       console.log('🚀 MouseInteraction: Calling startDragHandle with:', { commandId, handleType, startPoint });
