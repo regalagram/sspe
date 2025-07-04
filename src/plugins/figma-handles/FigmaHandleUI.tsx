@@ -11,10 +11,8 @@ export const FigmaHandleControls: React.FC = () => {
   const [state, setState] = useState(figmaHandleManager.getState());
   const [selectedControlPoint, setSelectedControlPoint] = useState<string | null>(null);
 
-  // Set up editor store reference
-  useEffect(() => {
-    figmaHandleManager.setEditorStore(editorStore);
-  }, [editorStore]);
+  // Set up editor store reference - REMOVED: Now handled by plugin
+  // No longer calling figmaHandleManager.setEditorStore here to avoid reinitializations
 
   // Subscribe to state changes
   useEffect(() => {

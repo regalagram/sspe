@@ -20,6 +20,12 @@ export class FigmaHandleManager {
   }
 
   setEditorStore(store: any) {
+    // Evitar reinicializaciones innecesarias 
+    if (this.editorStore === store) {
+      return;
+    }
+    
+    console.log('🔗 FigmaHandleManager: Setting editor store (one time setup)');
     this.editorStore = store;
     
     // Suscribirse a cambios en la selección para actualizar automáticamente
@@ -29,31 +35,13 @@ export class FigmaHandleManager {
   private setupSelectionListener() {
     if (!this.editorStore) return;
     
-    // Escuchar cambios en la selección para actualizar automáticamente los puntos de control
-    let lastSelectedCommands: string[] = [];
-    
-    const checkSelectionChanges = () => {
-      if (!this.editorStore) return;
-      
-      const currentSelectedCommands = this.editorStore.selection.selectedCommands || [];
-      
-      // Verificar si la selección ha cambiado
-      if (JSON.stringify(lastSelectedCommands) !== JSON.stringify(currentSelectedCommands)) {
-        lastSelectedCommands = [...currentSelectedCommands];
-        this.updateControlPointsForSelection(currentSelectedCommands);
-      }
-    };
-    
-    // Usar requestAnimationFrame para verificar cambios sin impacto en performance
-    const checkLoop = () => {
-      checkSelectionChanges();
-      requestAnimationFrame(checkLoop);
-    };
-    
-    requestAnimationFrame(checkLoop);
+    // Remover el polling constante, ya que ahora manejamos el drag on-demand
+    console.log('� FigmaHandleManager: Selection listener set up (on-demand mode)');
   }
 
   private updateControlPointsForSelection(selectedCommands: string[]) {
+    console.log('🔄 FigmaHandleManager: Updating control points for selection:', selectedCommands);
+    
     // Limpiar puntos de control anteriores
     this.state.controlPoints.clear();
     
@@ -61,9 +49,14 @@ export class FigmaHandleManager {
     selectedCommands.forEach(commandId => {
       const controlPointInfo = this.analyzeControlPoint(commandId);
       if (controlPointInfo) {
+        console.log('✅ FigmaHandleManager: Added control point for command', commandId);
         this.state.controlPoints.set(commandId, controlPointInfo);
+      } else {
+        console.log('❌ FigmaHandleManager: Could not analyze control point for command', commandId);
       }
     });
+    
+    console.log('📊 FigmaHandleManager: Control points map size:', this.state.controlPoints.size);
     
     this.notifyListeners();
   }
@@ -109,11 +102,43 @@ export class FigmaHandleManager {
     this.handleKeyUp(e);
   }
 
+  public forceUpdateControlPoints() {
+    if (!this.editorStore) {
+      console.log('❌ FigmaHandleManager: Cannot force update - no editor store');
+      return;
+    }
+    
+    const currentSelectedCommands = this.editorStore.selection.selectedCommands || [];
+    console.log('🔄 FigmaHandleManager: Force updating control points for:', currentSelectedCommands);
+    
+    this.updateControlPointsForSelection(currentSelectedCommands);
+  }
+
+  /**
+   * Método público para que otros plugins puedan notificar cambios de selección
+   */
+  public onSelectionChanged() {
+    if (this.editorStore) {
+      const selectedCommands = this.editorStore.selection.selectedCommands || [];
+      if (selectedCommands.length > 0) {
+        console.log('🔄 FigmaHandleManager: Selection changed to:', selectedCommands);
+        this.updateControlPointsForSelection(selectedCommands);
+      } else {
+        console.log('🔄 FigmaHandleManager: Selection cleared');
+        this.state.controlPoints.clear();
+        this.notifyListeners();
+      }
+    }
+  }
+
   /**
    * Analiza un comando para determinar el tipo de punto de control
    */
   analyzeControlPoint(commandId: string): ControlPointInfo | null {
-    if (!this.editorStore) return null;
+    if (!this.editorStore) {
+      console.log('❌ FigmaHandleManager: No editor store available');
+      return null;
+    }
 
     const { paths } = this.editorStore;
     
@@ -125,11 +150,14 @@ export class FigmaHandleManager {
           const prevCommand = commandIndex > 0 ? subPath.commands[commandIndex - 1] : null;
           const nextCommand = commandIndex < subPath.commands.length - 1 ? subPath.commands[commandIndex + 1] : null;
 
+          console.log('✅ FigmaHandleManager: Found command:', command.command, 'with handles');
+
           return this.createControlPointInfo(command, prevCommand, nextCommand);
         }
       }
     }
     
+    console.log('❌ FigmaHandleManager: Command not found in any path:', commandId);
     return null;
   }
 
@@ -264,9 +292,20 @@ export class FigmaHandleManager {
    * Inicia el arrastre de un handle de control
    */
   startDragHandle(commandId: string, handleType: 'incoming' | 'outgoing', startPoint: Point) {
-    const controlPointInfo = this.state.controlPoints.get(commandId);
-    if (!controlPointInfo) return;
+    console.log('🚀 FigmaHandleManager: startDragHandle called with:', { commandId, handleType, startPoint });
+    
+    // Asegurar que tenemos los control points para este comando ANTES del drag
+    const controlPointInfo = this.analyzeControlPoint(commandId);
+    if (!controlPointInfo) {
+      console.log('❌ FigmaHandleManager: Could not analyze control point for command:', commandId);
+      return;
+    }
+    
+    // Actualizar el mapa de control points para incluir este comando
+    this.state.controlPoints.set(commandId, controlPointInfo);
+    console.log('✅ FigmaHandleManager: Added control point info for drag operation');
 
+    console.log('✅ FigmaHandleManager: Setting drag state for:', commandId);
     this.state.dragState = {
       isDragging: true,
       commandId,
@@ -275,6 +314,7 @@ export class FigmaHandleManager {
       startPoint
     };
 
+    console.log('✅ FigmaHandleManager: Drag state set:', this.state.dragState);
     this.notifyListeners();
   }
 

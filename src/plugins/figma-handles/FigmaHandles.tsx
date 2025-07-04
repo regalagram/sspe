@@ -30,6 +30,9 @@ export const FigmaHandlesPlugin: Plugin = {
     // Set up the editor store reference
     figmaHandleManager.setEditorStore(editorStore);
     
+    // Expose manager for debugging
+    (window as any).figmaHandleManager = figmaHandleManager;
+    
     // Note: This plugin replaces the default control points renderer
     // The FigmaHandleRenderer provides enhanced visual feedback
     
