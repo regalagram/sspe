@@ -250,9 +250,9 @@ export const TouchMobilePluginDefinition: Plugin = {
     },
   ],
   initialize: (editor: any) => {
-    console.log('🔌 TouchMobile plugin initialized');
+    // console.log('🔌 TouchMobile plugin initialized');
   },
   destroy: () => {
-    console.log('🔌 TouchMobile plugin destroyed');
+    // console.log('🔌 TouchMobile plugin destroyed');
   },
 };

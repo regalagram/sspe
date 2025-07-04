@@ -105,6 +105,9 @@ class MouseInteractionManager {
     }
     
     const { commandId, controlPoint } = context;
+    
+    console.log('🖱️ MouseInteraction: handleMouseDown - commandId:', commandId, 'controlPoint:', controlPoint);
+    
     const { 
         selection, 
         viewport, 

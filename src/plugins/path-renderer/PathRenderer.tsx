@@ -302,7 +302,7 @@ export const PathRenderer: React.FC = () => {
         if (!d || d.trim().length < 10) {
           console.log('🖼️ PathRenderer: Path with minimal/empty d string:', { pathId: path.id, d, subPaths: path.subPaths });
         } else {
-          console.log('🖼️ PathRenderer: Rendering path:', { pathId: path.id, d: d.substring(0, 50) + '...', style: path.style });
+          // console.log('🖼️ PathRenderer: Rendering path:', { pathId: path.id, d: d.substring(0, 50) + '...', style: path.style });
         }
         
         // Wireframe mode overrides path styles

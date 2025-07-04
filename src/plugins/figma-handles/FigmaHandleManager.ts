@@ -282,21 +282,21 @@ export class FigmaHandleManager {
    * Actualiza la posición del handle durante el arrastre
    */
   updateDragHandle(newPoint: Point) {
-    console.log('🔧 updateDragHandle called with:', newPoint);
+    console.log('🔧 FigmaHandleManager: updateDragHandle called with:', newPoint);
     
     const { dragState } = this.state;
     if (!dragState.isDragging || !dragState.commandId || !dragState.handleType) {
-      console.log('❌ Drag state invalid:', dragState);
+      console.log('❌ FigmaHandleManager: Drag state invalid:', dragState);
       return;
     }
 
     const controlPointInfo = this.state.controlPoints.get(dragState.commandId);
     if (!controlPointInfo) {
-      console.log('❌ No control point info for command:', dragState.commandId);
+      console.log('❌ FigmaHandleManager: No control point info for command:', dragState.commandId);
       return;
     }
 
-    console.log('✅ Applying Figma handle logic for:', dragState.commandId, dragState.handleType);
+    console.log('✅ FigmaHandleManager: Applying Figma handle logic for:', dragState.commandId, dragState.handleType);
 
     // Aplicar la lógica de Figma según el tipo y estado de Option
     this.applyFigmaHandleLogic(dragState.commandId, dragState.handleType, newPoint, controlPointInfo);

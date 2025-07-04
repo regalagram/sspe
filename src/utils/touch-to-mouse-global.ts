@@ -70,19 +70,19 @@ export function enableGlobalTouchToMouse() {
   if ((window as any)._touchToMouseInstalled) return;
   (window as any)._touchToMouseInstalled = true;
   
-  console.log('Enabling global touch-to-mouse system');
+  // console.log('Enabling global touch-to-mouse system');
 
   // Solo para dispositivos touch
   if (!('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
-    console.log('No touch support detected, skipping touch-to-mouse setup');
+    // console.log('No touch support detected, skipping touch-to-mouse setup');
     return;
   }
   
-  console.log('Touch support detected, setting up touch-to-mouse listeners');
+  // console.log('Touch support detected, setting up touch-to-mouse listeners');
 
   // Mapeo de eventos
   document.addEventListener('touchstart', (e) => {
-    console.log('Touch start detected:', e.touches.length, 'touches');
+    // console.log('Touch start detected:', e.touches.length, 'touches');
     if (e.touches.length !== 1) return;
     
     const touch = e.touches[0];
