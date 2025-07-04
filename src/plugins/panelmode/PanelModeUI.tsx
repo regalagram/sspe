@@ -144,48 +144,24 @@ export const PanelModeUI: React.FC = () => {
             gap: '6px',
             marginBottom: '8px'
           }}>
-            <button
-              onClick={handleShowAll}
+            <PluginButton
+              icon={<Eye size={14} />}
+              text="Show All"
+              color="#22c55e"
+              active={false}
               disabled={allPanelsEnabled}
-              style={{
-                flex: 1,
-                padding: '6px 8px',
-                fontSize: '10px',
-                fontWeight: 500,
-                border: '1px solid #22c55e',
-                borderRadius: '4px',
-                background: allPanelsEnabled ? '#f0f0f0' : '#22c55e',
-                color: allPanelsEnabled ? '#999' : 'white',
-                cursor: allPanelsEnabled ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}
-              title="Show all panels"
-            >
-              Show All
-            </button>
-            <button
-              onClick={handleHideAll}
+              onClick={handleShowAll}
+              fullWidth={true}
+            />
+            <PluginButton
+              icon={<EyeOff size={14} />}
+              text="Hide All"
+              color="#ef4444"
+              active={false}
               disabled={allPanelsDisabled}
-              style={{
-                flex: 1,
-                padding: '6px 8px',
-                fontSize: '10px',
-                fontWeight: 500,
-                border: '1px solid #ef4444',
-                borderRadius: '4px',
-                background: allPanelsDisabled ? '#f0f0f0' : '#ef4444',
-                color: allPanelsDisabled ? '#999' : 'white',
-                cursor: allPanelsDisabled ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}
-              title="Hide all panels"
-            >
-              Hide All
-            </button>
+              onClick={handleHideAll}
+              fullWidth={true}
+            />
           </div>
           
           <div 

@@ -200,7 +200,7 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
 
   const contentStyle: React.CSSProperties = {
     display: isExpanded ? 'block' : 'none',
-    padding: isMobile ? '20px' : '16px', // Más padding en móviles
+    padding: isMobile ? '8px 4px' : '8px 4px', // Padding uniforme: 8px arriba/abajo, 4px izquierda/derecha
     borderBottom: '1px solid #e0e0e0',
     background: 'white',
     maxHeight: isExpanded ? (isMobile ? '60vh' : '400px') : '0', // Más altura disponible en móviles

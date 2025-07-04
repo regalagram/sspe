@@ -664,7 +664,7 @@ button.active:hover {
   .accordion-panel-content select {
     font-size: 16px !important; /* Prevenir zoom en iOS y mejorar Android */
     padding: 12px 8px !important;
-    min-height: 44px;
+    min-height: 25px; /* Reducido de 44px a 25px */
     border-radius: 6px;
     touch-action: manipulation !important;
     -webkit-user-select: auto !important;
@@ -867,7 +867,7 @@ button.active:hover {
   .accordion-sidebar label,
   .accordion-panel-content label {
     font-size: 14px !important;
-    min-height: 44px;
+    min-height: 25px; /* Reducido de 44px a 25px */
     display: flex;
     align-items: center;
     touch-action: manipulation !important;
@@ -966,7 +966,7 @@ button.active:hover {
   .accordion-sidebar label[data-mobile-label-enhanced],
   .accordion-panel-content label[data-mobile-label-enhanced] {
     /* Asegurar area táctil adecuada */
-    min-height: 44px !important;
+    min-height: 25px !important; /* Reducido de 44px a 25px */
     padding: 8px 4px !important;
     cursor: pointer !important;
     

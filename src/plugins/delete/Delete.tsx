@@ -3,6 +3,7 @@ import { Trash2 } from 'lucide-react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { DraggablePanel } from '../../components/DraggablePanel';
+import { PluginButton } from '../../components/PluginButton';
 
 interface DeleteControlProps {
   onDelete: () => void;
@@ -15,28 +16,15 @@ export const DeleteControl: React.FC<DeleteControlProps> = ({
 }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <button
-        onClick={onDelete}
+      <PluginButton
+        icon={<Trash2 size={16} />}
+        text="Delete"
+        color="#ff4444"
+        active={hasSelection}
         disabled={!hasSelection}
-        style={{
-          padding: '8px 16px',
-          backgroundColor: hasSelection ? '#ff4444' : '#cccccc',
-          color: hasSelection ? 'white' : '#666666',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: hasSelection ? 'pointer' : 'not-allowed',
-          fontSize: '12px',
-          fontWeight: 'bold',
-          transition: 'background-color 0.2s',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-        title={hasSelection ? 'Delete selected elements' : 'No elements selected'}
-      >
-        <Trash2 size={16} style={{ marginRight: '8px' }} />
-        Delete
-      </button>
+        onClick={onDelete}
+        fullWidth={true}
+      />
       {hasSelection && (
         <div style={{ fontSize: '10px', color: '#666', textAlign: 'center' }}>
           Press Delete key or click button
