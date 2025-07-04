@@ -21,6 +21,7 @@ import { Transform } from '../plugins/transform/Transform';
 import { ArrangePlugin } from '../plugins/arrange/Arrange';
 import { ReorderPlugin } from '../plugins/reorder/Reorder';
 import { PanelModePlugin } from '../plugins/panelmode/PanelMode';
+import { TouchMobilePluginDefinition } from '../plugins/touch-mobile/TouchMobile';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -30,6 +31,9 @@ export const initializePlugins = (): void => {
   // Register base dependencies first
   pluginManager.registerPlugin(MouseInteractionPlugin); // Required by pencil
   pluginManager.registerPlugin(SelectionPlugin); // Required by subpath-transform and point-transform
+  
+  // Register TouchMobile plugin early to handle touch events
+  pluginManager.registerPlugin(TouchMobilePluginDefinition);
   
   // Register Transform early so it can handle transform handles before PathRenderer
   pluginManager.registerPlugin(Transform);
