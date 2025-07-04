@@ -119,6 +119,7 @@ export interface ControlPointInfo {
   outgoingHandle: Point | null;
   anchor: Point;
   isBreakable: boolean; // Si se puede separar con Option
+  isNextCommandDisplay?: boolean; // Si se está mostrando como "siguiente comando"
 }
 
 export interface BezierHandleState {

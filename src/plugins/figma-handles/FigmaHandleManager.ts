@@ -32,14 +32,23 @@ export class FigmaHandleManager {
     if (!this.editorStore) return;
   }
   private updateControlPointsForSelection(selectedCommands: string[]) {
+    console.log(`🎯 updateControlPointsForSelection called with:`, selectedCommands);
     this.state.controlPoints.clear();
-    selectedCommands.forEach(commandId => {
+    
+    // Get all commands that should show control points (selected + next commands)
+    const commandsToShow = this.getCommandsToShowControlPoints(selectedCommands);
+    
+    commandsToShow.forEach(commandId => {
       const controlPointInfo = this.analyzeControlPoint(commandId);
       if (controlPointInfo) {
         this.state.controlPoints.set(commandId, controlPointInfo);
+        console.log(`✅ Added control point info for command ${commandId}, isNext: ${controlPointInfo.isNextCommandDisplay}`);
       } else {
+        console.log(`❌ Failed to analyze control point for command ${commandId}`);
       }
     });
+    
+    console.log(`📊 Total control points in state:`, this.state.controlPoints.size);
     this.notifyListeners();
   }
   addListener(listener: () => void) {
@@ -87,13 +96,18 @@ export class FigmaHandleManager {
    */
   public onSelectionChanged() {
     if (this.editorStore) {
-      const selectedCommands = this.editorStore.selection.selectedCommands || [];
-      if (selectedCommands.length > 0) {
-        this.updateControlPointsForSelection(selectedCommands);
-      } else {
-        this.state.controlPoints.clear();
-        this.notifyListeners();
-      }
+      // Use setTimeout to ensure the store state has been updated
+      setTimeout(() => {
+        if (this.editorStore) {
+          const selectedCommands = this.editorStore.selection.selectedCommands || [];
+          if (selectedCommands.length > 0) {
+            this.updateControlPointsForSelection(selectedCommands);
+          } else {
+            this.state.controlPoints.clear();
+            this.notifyListeners();
+          }
+        }
+      }, 0);
     }
   }
   /**
@@ -127,13 +141,16 @@ export class FigmaHandleManager {
     const outgoingHandle = this.getOutgoingHandle(command, nextCommand);
     const type = this.determineControlPointType(command, incomingHandle, outgoingHandle);
     const isBreakable = incomingHandle !== null && outgoingHandle !== null;
+    const isNextCommandDisplay = this.isNextCommandDisplay(command.id);
+    
     return {
       commandId: command.id,
       type,
       incomingHandle,
       outgoingHandle,
       anchor,
-      isBreakable
+      isBreakable,
+      isNextCommandDisplay
     };
   }
   private getIncomingHandle(command: SVGCommand, prevCommand: SVGCommand | null): Point | null {
@@ -973,6 +990,81 @@ export class FigmaHandleManager {
       }
     }
     return 'independent';
+  }
+  /**
+   * Get all commands that should show control points (selected + next commands)
+   */
+  private getCommandsToShowControlPoints(selectedCommands: string[]): string[] {
+    if (!this.editorStore) {
+      return selectedCommands;
+    }
+
+    const commandsToShow = new Set<string>();
+    
+    // Add all selected commands
+    selectedCommands.forEach(commandId => {
+      commandsToShow.add(commandId);
+    });
+
+    // For each selected command, also add the next command if it exists
+    selectedCommands.forEach(commandId => {
+      const nextCommandId = this.getNextCommandId(commandId);
+      if (nextCommandId) {
+        commandsToShow.add(nextCommandId);
+        console.log(`🔗 Added next command ${nextCommandId} for selected command ${commandId}`);
+      }
+    });
+
+    const result = Array.from(commandsToShow);
+    console.log(`📋 Commands to show control points:`, result);
+    return result;
+  }
+
+  /**
+   * Get the ID of the next command after the given command
+   */
+  private getNextCommandId(commandId: string): string | null {
+    if (!this.editorStore) {
+      return null;
+    }
+
+    const { paths } = this.editorStore;
+    for (const path of paths) {
+      for (const subPath of path.subPaths) {
+        const commandIndex = subPath.commands.findIndex((cmd: SVGCommand) => cmd.id === commandId);
+        if (commandIndex !== -1) {
+          // Check if there's a next command in the same subPath
+          if (commandIndex < subPath.commands.length - 1) {
+            return subPath.commands[commandIndex + 1].id;
+          }
+          // If it's the last command in the subPath, return null
+          return null;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Check if a command is being shown as the "next" command (not directly selected)
+   */
+  private isNextCommandDisplay(commandId: string): boolean {
+    if (!this.editorStore) {
+      return false;
+    }
+    
+    const selectedCommands = this.editorStore.selection.selectedCommands || [];
+    
+    // If the command is directly selected, it's not a "next" command display
+    if (selectedCommands.includes(commandId)) {
+      return false;
+    }
+    
+    // Check if this command is the next command of any selected command
+    return selectedCommands.some((selectedId: string) => {
+      const nextId = this.getNextCommandId(selectedId);
+      return nextId === commandId;
+    });
   }
 }
 export const figmaHandleManager = new FigmaHandleManager();

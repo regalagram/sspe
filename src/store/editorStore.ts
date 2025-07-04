@@ -103,8 +103,8 @@ const storedPrecision = (() => {
 const createInitialState = (): EditorState => {
   // Hardcoded SVG to load as initial state
   const hardcodedSVG = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="-12.5 -12.5 495 135">
-  <path d="M 10 10 C 20 30 50 100 60 100 C 70 100 90 10 100 10 C 110 10 130 100 140 100 C 150 100 180 10 190 10 C 200 10 220 100 230 100 C 240 100 270 10 280 10 C 290 10 310 100 320 100 C 330 100 360 10 370 10 C 380 10 410 100 420 100 C 430 100 450 30 460 10" fill="none" stroke="#000000" stroke-width="2" fill-opacity="0.1" stroke-opacity="0.9" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="121 -31 947 834">
+  <path d="M 164 409 C 231 488 410 792 470 757 C 530 721 290 452 350 417 C 410 382 423 609 487 512 C 551 416 451 416 511 381 C 570 346 573 520 647 476 C 722 432 585 337 645 302 C 705 266 738 575 859 527 C 980 479 761 292 805 266 C 850 239 964 465 1009 439 C 1053 412 1006 264 837 12 Z" fill="none" stroke="#000000" stroke-width="10" fill-opacity="0.1" stroke-opacity="0.9" />
 </svg>
   `;
 

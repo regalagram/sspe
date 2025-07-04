@@ -12,8 +12,8 @@ const getControlPointSize = (isMobile: boolean, isTablet: boolean): number => {
   return 8;
 };
 
-// Helper function to get handle colors based on type
-const getHandleColors = (type: ControlPointType, isOptionPressed: boolean) => {
+// Helper function to get handle colors based on type and display mode
+const getHandleColors = (type: ControlPointType, isOptionPressed: boolean, isNextCommandDisplay: boolean = false) => {
   if (isOptionPressed) {
     return {
       fill: '#fbbf24', // Amarillo cuando Option está presionado
@@ -22,30 +22,69 @@ const getHandleColors = (type: ControlPointType, isOptionPressed: boolean) => {
     };
   }
   
+  // Use more subtle colors for next command displays
+  if (isNextCommandDisplay) {
+    switch (type) {
+      case 'mirrored':
+        return {
+          fill: '#10b981', // Verde para simétrico
+          stroke: '#059669',
+          lineColor: '#10b981',
+          opacity: 0.6 // Reduced opacity for next command
+        };
+      case 'aligned':
+        return {
+          fill: '#3b82f6', // Azul para alineado
+          stroke: '#2563eb',
+          lineColor: '#3b82f6',
+          opacity: 0.6 // Reduced opacity for next command
+        };
+      case 'independent':
+        return {
+          fill: '#f59e0b', // Amarillo para independiente
+          stroke: '#d97706',
+          lineColor: '#f59e0b',
+          opacity: 0.6 // Reduced opacity for next command
+        };
+      default:
+        return {
+          fill: '#999',
+          stroke: '#666',
+          lineColor: '#999',
+          opacity: 0.6 // Reduced opacity for next command
+        };
+    }
+  }
+  
+  // Regular colors for directly selected commands
   switch (type) {
     case 'mirrored':
       return {
         fill: '#10b981', // Verde para simétrico
         stroke: '#059669',
-        lineColor: '#10b981'
+        lineColor: '#10b981',
+        opacity: 1.0
       };
     case 'aligned':
       return {
         fill: '#3b82f6', // Azul para alineado
         stroke: '#2563eb',
-        lineColor: '#3b82f6'
+        lineColor: '#3b82f6',
+        opacity: 1.0
       };
     case 'independent':
       return {
         fill: '#f59e0b', // Amarillo para independiente
         stroke: '#d97706',
-        lineColor: '#f59e0b'
+        lineColor: '#f59e0b',
+        opacity: 1.0
       };
     default:
       return {
         fill: '#999',
         stroke: '#666',
-        lineColor: '#999'
+        lineColor: '#999',
+        opacity: 1.0
       };
   }
 };
@@ -58,7 +97,9 @@ export const FigmaHandleRenderer: React.FC = () => {
   // Subscribe to handle state changes
   React.useEffect(() => {
     const unsubscribe = figmaHandleManager.addListener(() => {
-      setHandleState(figmaHandleManager.getState());
+      const newState = figmaHandleManager.getState();
+      console.log(`🖼️ FigmaHandleRenderer: Updated state with ${newState.controlPoints.size} control points`);
+      setHandleState(newState);
     });
     
     return unsubscribe;
@@ -107,11 +148,15 @@ export const FigmaHandleRenderer: React.FC = () => {
             
             const isCommandSelected = selection.selectedCommands.includes(command.id);
             
+            // Check if this command has control points in the handle state
+            const hasControlPoints = handleState.controlPoints.has(command.id);
+            
             // Show control points if:
             // 1. Feature is enabled, OR
             // 2. Sub-path is selected, OR 
-            // 3. This specific command is selected
-            const shouldShowCommand = shouldShowSubPath || isCommandSelected;
+            // 3. This specific command is selected, OR
+            // 4. This command has control points to show (from FigmaHandleManager)
+            const shouldShowCommand = shouldShowSubPath || isCommandSelected || hasControlPoints;
             
             if (!shouldShowCommand) return null;
             
@@ -132,7 +177,8 @@ export const FigmaHandleRenderer: React.FC = () => {
             // Get control point info from Figma handle manager
             const controlPointInfo = handleState.controlPoints.get(command.id);
             const handleType = controlPointInfo?.type || 'independent';
-            const colors = getHandleColors(handleType, handleState.isOptionPressed);
+            const isNextCommandDisplay = controlPointInfo?.isNextCommandDisplay || false;
+            const colors = getHandleColors(handleType, handleState.isOptionPressed, isNextCommandDisplay);
             
             // Calcular radio responsivo basado en el dispositivo con factores de tamaño
             const baseRadius = getControlPointSize(isMobile, isTablet);
@@ -167,7 +213,7 @@ export const FigmaHandleRenderer: React.FC = () => {
                               strokeWidth={1 / viewport.zoom}
                               strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
                               pointerEvents="none"
-                              opacity={0.8}
+                              opacity={0.8 * (colors.opacity || 1)}
                             />
                             <circle
                               cx={controlPoints[0].x}
@@ -179,6 +225,7 @@ export const FigmaHandleRenderer: React.FC = () => {
                               style={{ cursor: 'grab' }}
                               data-command-id={command.id}
                               data-control-point="x1y1"
+                              opacity={colors.opacity || 1}
                             />
                           </>
                         )}
@@ -202,7 +249,7 @@ export const FigmaHandleRenderer: React.FC = () => {
                               strokeWidth={1 / viewport.zoom}
                               strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
                               pointerEvents="none"
-                              opacity={0.8}
+                              opacity={0.8 * (colors.opacity || 1)}
                             />
                             <circle
                               cx={controlPoints[1].x}
@@ -214,6 +261,7 @@ export const FigmaHandleRenderer: React.FC = () => {
                               style={{ cursor: 'grab' }}
                               data-command-id={command.id}
                               data-control-point="x2y2"
+                              opacity={colors.opacity || 1}
                             />
                           </>
                         )}
@@ -230,7 +278,7 @@ export const FigmaHandleRenderer: React.FC = () => {
                         stroke={colors.stroke}
                         strokeWidth={0.5 / viewport.zoom}
                         pointerEvents="none"
-                        opacity={0.7}
+                        opacity={0.7 * (colors.opacity || 1)}
                       />
                     )}
                   </>
