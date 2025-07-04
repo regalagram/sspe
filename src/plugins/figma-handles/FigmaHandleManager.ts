@@ -18,6 +18,11 @@ export class FigmaHandleManager {
   private velocityThreshold: number = 800;
   private snapToGridActive: boolean = false;
   private alignmentDebounceTimer: any = null;
+  
+  // Add update throttling to prevent infinite loops
+  private updateInProgress: boolean = false;
+  private updateQueue: Map<string, any> = new Map();
+  private updateTimer: any = null;
   constructor() {
     this.setupKeyboardListeners();
   }
@@ -619,31 +624,81 @@ export class FigmaHandleManager {
     return null;
   }
   private updateSingleHandle(commandId: string, handleType: 'incoming' | 'outgoing', newPoint: Point) {
-    const { updateCommand } = this.editorStore;
-    const controlPointInfo = this.state.controlPoints.get(commandId);
-    const anchorPoint = controlPointInfo?.anchor || { x: 0, y: 0 };
-    const finalPoint = this.smartSnapToGrid(newPoint, anchorPoint);
-    if (handleType === 'outgoing') {
-      updateCommand(commandId, { x1: finalPoint.x, y1: finalPoint.y });
-    } else {
-      updateCommand(commandId, { x2: finalPoint.x, y2: finalPoint.y });
+    this.queueUpdate(commandId, handleType, newPoint);
+  }
+  
+  private queueUpdate(commandId: string, handleType: 'incoming' | 'outgoing', newPoint: Point) {
+    // Prevent recursive updates
+    if (this.updateInProgress) {
+      return;
+    }
+    
+    // Queue the update
+    this.updateQueue.set(commandId, { handleType, newPoint });
+    
+    // Clear existing timer and set new one for batch processing
+    if (this.updateTimer) {
+      clearTimeout(this.updateTimer);
+    }
+    
+    this.updateTimer = setTimeout(() => {
+      this.processUpdateQueue();
+    }, 32); // ~30fps to reduce update frequency
+  }
+  
+  private processUpdateQueue() {
+    if (this.updateInProgress || this.updateQueue.size === 0) {
+      return;
+    }
+    
+    this.updateInProgress = true;
+    
+    try {
+      const { updateCommand } = this.editorStore;
+      
+      // Process all queued updates in batch
+      for (const [commandId, { handleType, newPoint }] of this.updateQueue) {
+        const controlPointInfo = this.state.controlPoints.get(commandId);
+        const anchorPoint = controlPointInfo?.anchor || { x: 0, y: 0 };
+        const finalPoint = this.smartSnapToGrid(newPoint, anchorPoint);
+        
+        if (handleType === 'outgoing') {
+          updateCommand(commandId, { x1: finalPoint.x, y1: finalPoint.y });
+        } else {
+          updateCommand(commandId, { x2: finalPoint.x, y2: finalPoint.y });
+        }
+      }
+      
+      this.updateQueue.clear();
+    } finally {
+      this.updateInProgress = false;
     }
   }
   private updateSingleHandleByControlPoint(commandId: string, controlPoint: 'x1y1' | 'x2y2', newPoint: Point) {
-    if (!this.editorStore) {
+    if (!this.editorStore || this.updateInProgress) {
       return;
     }
+    
     const { updateCommand } = this.editorStore;
     if (!updateCommand) {
       return;
     }
-    const controlPointInfo = this.state.controlPoints.get(commandId);
-    const anchorPoint = controlPointInfo?.anchor || { x: 0, y: 0 };
-    const finalPoint = this.smartSnapToGrid(newPoint, anchorPoint);
-    if (controlPoint === 'x1y1') {
-      updateCommand(commandId, { x1: finalPoint.x, y1: finalPoint.y });
-    } else {
-      updateCommand(commandId, { x2: finalPoint.x, y2: finalPoint.y });
+    
+    // Prevent recursive updates by setting flag
+    this.updateInProgress = true;
+    
+    try {
+      const controlPointInfo = this.state.controlPoints.get(commandId);
+      const anchorPoint = controlPointInfo?.anchor || { x: 0, y: 0 };
+      const finalPoint = this.smartSnapToGrid(newPoint, anchorPoint);
+      
+      if (controlPoint === 'x1y1') {
+        updateCommand(commandId, { x1: finalPoint.x, y1: finalPoint.y });
+      } else {
+        updateCommand(commandId, { x2: finalPoint.x, y2: finalPoint.y });
+      }
+    } finally {
+      this.updateInProgress = false;
     }
   }
   private updateMirroredHandlesFigma(commandId: string, handleType: 'incoming' | 'outgoing', newPoint: Point, anchor: Point) {
@@ -861,6 +916,18 @@ export class FigmaHandleManager {
     return this.state;
   }
   cleanup() {
+    // Clear all timers
+    if (this.alignmentDebounceTimer) {
+      clearTimeout(this.alignmentDebounceTimer);
+    }
+    if (this.updateTimer) {
+      clearTimeout(this.updateTimer);
+    }
+    
+    // Clear queues
+    this.updateQueue.clear();
+    
+    // Remove event listeners
     document.removeEventListener('keydown', this.handleKeyDown);
     document.removeEventListener('keyup', this.handleKeyUp);
   }

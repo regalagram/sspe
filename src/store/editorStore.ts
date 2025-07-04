@@ -205,6 +205,43 @@ function roundToPrecision(val: number | undefined, precision: number): number | 
   return typeof val === 'number' ? Number(val.toFixed(precision)) : val;
 }
 
+// Add a flag to prevent recursive updates
+let isUpdating = false;
+let updateDepth = 0;
+const MAX_UPDATE_DEPTH = 5;
+let lastUpdateTime = 0;
+
+// Helper function to prevent recursive calls
+const withUpdateGuard = <T extends any[], R>(fn: (...args: T) => R) => {
+  return (...args: T): R => {
+    const now = Date.now();
+    
+    // Add time-based throttling as additional protection
+    if (now - lastUpdateTime < 1) { // 1ms minimum gap
+      console.warn('Update throttled to prevent spam');
+      return undefined as R;
+    }
+    
+    if (isUpdating || updateDepth >= MAX_UPDATE_DEPTH) {
+      console.warn('Recursive store update prevented, depth:', updateDepth);
+      return undefined as R;
+    }
+    
+    isUpdating = true;
+    updateDepth++;
+    lastUpdateTime = now;
+    
+    try {
+      return fn(...args);
+    } finally {
+      updateDepth--;
+      if (updateDepth === 0) {
+        isUpdating = false;
+      }
+    }
+  };
+};
+
 export const useEditorStore = create<EditorState & EditorActions>()(
   subscribeWithSelector((set, get) => ({
     ...initialState,
@@ -382,7 +419,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         },
       })),
     
-    moveSubPath: (subPathId, delta) => {
+    moveSubPath: withUpdateGuard((subPathId, delta) => {
       set((state) => ({
         paths: state.paths.map((path) => ({
           ...path,
@@ -434,7 +471,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
           ),
         })),
       }));
-    },
+    }),
     
     // Transform actions
     scaleSubPath: (subPathId, scaleX, scaleY, center) => {
@@ -645,7 +682,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       return commandId;
     },
     
-    updateCommand: (commandId, updates) =>
+    updateCommand: withUpdateGuard((commandId, updates) =>
       set((state) => {
         const precision = state.precision;
         return {
@@ -670,7 +707,8 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             })),
           })),
         };
-      }),
+      })
+    ),
     
     removeCommand: (commandId) =>
       set((state) => ({

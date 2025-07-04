@@ -1,10 +1,22 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { subPathToString, getContrastColor, subPathToStringInContext, findSubPathAtPoint } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
 import { isCurrentlyProcessingTouch, getCurrentTouchEventId, getCurrentTouchEventType } from '../../utils/touch-to-mouse-global';
+
+// Throttle function
+const throttle = <T extends (...args: any[]) => void>(func: T, limit: number): T => {
+  let inThrottle: boolean;
+  return ((...args: any[]) => {
+    if (!inThrottle) {
+      func.apply(null, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  }) as T;
+};
 
 // Global path drag manager to handle mouse events from plugin system
 class PathDragManager {
@@ -117,6 +129,14 @@ export const PathRenderer: React.FC = () => {
     }
   }, [viewport, selection.selectedSubPaths, selectSubPathMultiple]);
 
+  // Add throttling to prevent excessive calls
+  const throttledMoveSubPath = useCallback(
+    throttle((subPathId: string, delta: { x: number; y: number }) => {
+      moveSubPath(subPathId, delta);
+    }, 32), // ~30fps to reduce update frequency
+    [moveSubPath]
+  );
+
   // Handle mouse move for dragging
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGElement>) => {
     if (!dragState.isDragging || !dragState.subPathId || !dragState.startPoint || !dragState.svgElement) return;
@@ -187,7 +207,7 @@ export const PathRenderer: React.FC = () => {
       : [dragState.subPathId];
     
     subPathsToMove.forEach(subPathId => {
-      moveSubPath(subPathId, delta);
+      throttledMoveSubPath(subPathId, delta);
     });
     
     // Update last point
@@ -195,7 +215,7 @@ export const PathRenderer: React.FC = () => {
       ...prev,
       lastPoint: currentPoint,
     }));
-  }, [dragState, moveSubPath, selection.selectedSubPaths, viewport, pushToHistory]);
+  }, [dragState, throttledMoveSubPath, selection.selectedSubPaths, viewport, pushToHistory]);
 
   // Handle mouse up to stop dragging
   const handleMouseUp = useCallback((e?: React.MouseEvent<SVGElement>) => {

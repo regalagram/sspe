@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { transformManager, transformMouseHandlers, TransformBounds, TransformHandle } from './TransformManager';
@@ -13,6 +13,11 @@ const TransformPlugin: React.FC = () => {
   const selection = useEditorStore((state) => state.selection);
   const paths = useEditorStore((state) => state.paths);
   const viewport = useEditorStore((state) => state.viewport);
+  
+  // Use ref to prevent infinite loops
+  const isUpdatingRef = useRef(false);
+  const selectionRef = useRef(selection);
+  const pathsRef = useRef(paths);
 
   // Initialize transform manager with editor store
   useEffect(() => {
@@ -20,6 +25,8 @@ const TransformPlugin: React.FC = () => {
     
     // Set up callback for transform state changes (hide/show handles)
     transformManager.setStateChangeCallback(() => {
+      if (isUpdatingRef.current) return; // Prevent infinite loops
+      
       setForceUpdate(prev => prev + 1);
       setIsTransforming(transformManager.isTransforming());
       setTransformMode(transformManager.getTransformMode());
@@ -33,20 +40,39 @@ const TransformPlugin: React.FC = () => {
 
   // Update transform state when selection or paths change
   useEffect(() => {
-    // Always pass the current store state to transform manager
-    transformManager.setEditorStore(useEditorStore.getState());
+    // Prevent infinite loops by checking if we're already updating
+    if (isUpdatingRef.current) return;
     
-    const hasValidSelection = transformManager.hasValidSelection();
+    // Check if selection or paths actually changed
+    const selectionChanged = JSON.stringify(selection) !== JSON.stringify(selectionRef.current);
+    const pathsChanged = JSON.stringify(paths) !== JSON.stringify(pathsRef.current);
     
-    if (hasValidSelection) {
-      transformManager.updateTransformState();
-      const newBounds = transformManager.getBounds();
-      const newHandles = transformManager.getHandles();
-      setBounds(newBounds);
-      setHandles(newHandles);
-    } else {
-      setBounds(null);
-      setHandles([]);
+    if (!selectionChanged && !pathsChanged) return;
+    
+    // Update refs
+    selectionRef.current = selection;
+    pathsRef.current = paths;
+    
+    isUpdatingRef.current = true;
+    
+    try {
+      // Always pass the current store state to transform manager
+      transformManager.setEditorStore(useEditorStore.getState());
+      
+      const hasValidSelection = transformManager.hasValidSelection();
+      
+      if (hasValidSelection) {
+        transformManager.updateTransformState();
+        const newBounds = transformManager.getBounds();
+        const newHandles = transformManager.getHandles();
+        setBounds(newBounds);
+        setHandles(newHandles);
+      } else {
+        setBounds(null);
+        setHandles([]);
+      }
+    } finally {
+      isUpdatingRef.current = false;
     }
   }, [selection.selectedCommands, selection.selectedSubPaths, paths]);
 
