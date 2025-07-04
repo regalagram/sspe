@@ -25,7 +25,6 @@ export const FigmaHandlesPlugin: Plugin = {
   ],
 
   initialize: (editorStore) => {
-    console.log('🔗 FigmaHandlesPlugin: Initializing...');
     
     // Set up the editor store reference
     figmaHandleManager.setEditorStore(editorStore);
@@ -37,7 +36,6 @@ export const FigmaHandlesPlugin: Plugin = {
     // The FigmaHandleRenderer provides enhanced visual feedback
     
     return () => {
-      console.log('🔗 FigmaHandlesPlugin: Cleaning up...');
       figmaHandleManager.cleanup();
     };
   },

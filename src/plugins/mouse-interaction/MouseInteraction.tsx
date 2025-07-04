@@ -106,7 +106,6 @@ class MouseInteractionManager {
     
     const { commandId, controlPoint } = context;
     
-    console.log('🖱️ MouseInteraction: handleMouseDown - commandId:', commandId, 'controlPoint:', controlPoint);
     
     const { 
         selection, 
@@ -151,7 +150,6 @@ class MouseInteractionManager {
       // Dragging control point - usar el nuevo sistema de Figma
       this.state.draggingControlPoint = { commandId, point: controlPoint };
       
-      console.log('🚀 MouseInteraction: About to call startDragHandle for:', commandId, controlPoint);
       
       // Notificar al FigmaHandleManager sobre el inicio del arrastre
       const startPoint = this.getSVGPoint(e, context.svgRef);
@@ -163,7 +161,6 @@ class MouseInteractionManager {
       // x2y2 es el handle que viene del comando anterior
       const handleType = controlPoint === 'x1y1' ? 'outgoing' : 'incoming';
       
-      console.log('🚀 MouseInteraction: Calling startDragHandle with:', { commandId, handleType, startPoint });
       figmaHandleManager.startDragHandle(commandId, handleType, startPoint);
       
       // Notify transform manager that movement started (control point drag)

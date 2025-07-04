@@ -21,7 +21,6 @@ class PathDragManager {
   }
 
   handleMouseMove = (e: React.MouseEvent<SVGElement>, context: any): boolean => {
-    // console.log('PathDragManager handleMouseMove called');
     if (this.currentDragHandlers) {
       this.currentDragHandlers.handleMouseMove(e);
       return true; // We handled the event
@@ -76,13 +75,7 @@ export const PathRenderer: React.FC = () => {
     const fromTouch = isCurrentlyProcessingTouch();
     const touchEventId = getCurrentTouchEventId();
     const touchEventType = getCurrentTouchEventType();
-    
-    console.log('handleSubPathMouseDown called', { 
-      subPathId, 
-      fromTouch, 
-      touchEventId, 
-      touchEventType 
-    });
+  
     
     // Skip duplicate touch events using element-specific deduplication
     if (fromTouch) {
@@ -90,7 +83,6 @@ export const PathRenderer: React.FC = () => {
       const deduplicationKey = `subpath-${subPathId}-mousedown`;
       
       if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
-        console.log('Skipping duplicate touch event');
         return; // Already processed this touch event for this specific subpath
       }
       if (touchEventId) {
@@ -98,7 +90,6 @@ export const PathRenderer: React.FC = () => {
           (window as any).lastProcessedTouchEvents = {};
         }
         (window as any).lastProcessedTouchEvents[deduplicationKey] = touchEventId;
-        console.log('Marked touch event as processed');
       }
     }
     
@@ -133,12 +124,7 @@ export const PathRenderer: React.FC = () => {
     const fromTouch = isCurrentlyProcessingTouch();
     const touchEventId = getCurrentTouchEventId();
     
-    console.log('handleMouseMove called', { 
-      fromTouch, 
-      touchEventId,
-      isDragging: dragState.isDragging,
-      subPathId: dragState.subPathId 
-    });
+
     
     // Skip duplicate touch events using element-specific deduplication
     if (fromTouch) {
@@ -146,7 +132,6 @@ export const PathRenderer: React.FC = () => {
       const deduplicationKey = `subpath-${dragState.subPathId}-mousemove`;
       
       if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
-        console.log('Skipping duplicate mousemove event');
         return; // Already processed this touch event for this specific subpath
       }
       if (touchEventId) {
@@ -298,13 +283,7 @@ export const PathRenderer: React.FC = () => {
         // Join all sub-paths into a single d string
         const d = path.subPaths.map(subPathToString).join(' ');
         
-        // Debug log for paths with empty or minimal d string
-        if (!d || d.trim().length < 10) {
-          console.log('🖼️ PathRenderer: Path with minimal/empty d string:', { pathId: path.id, d, subPaths: path.subPaths });
-        } else {
-          // console.log('🖼️ PathRenderer: Rendering path:', { pathId: path.id, d: d.substring(0, 50) + '...', style: path.style });
-        }
-        
+     
         // Wireframe mode overrides path styles
         const isWireframeMode = enabledFeatures.has('wireframe');
         const wireframeStrokeWidth = 2 / viewport.zoom; // Fixed visual thickness independent of zoom
