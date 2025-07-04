@@ -92,11 +92,11 @@ class PencilManager {
     const state = useEditorStore.getState();
     const { mode } = state;
     const isPencil = mode.current === 'create' && mode.createMode?.commandType === 'PENCIL';
-    console.log('🎨 PencilManager: isPencilMode check:', { 
-      current: mode.current, 
-      createMode: mode.createMode, 
-      isPencil 
-    });
+    // console.log('🎨 PencilManager: isPencilMode check:', { 
+    //   current: mode.current, 
+    //   createMode: mode.createMode, 
+    //   isPencil 
+    // });
     return isPencil;
   }
 
@@ -175,7 +175,7 @@ class PencilManager {
 
   handleMouseMove = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
     if (!this.isPencilMode() || !this.state.isDrawing) {
-      console.log('🎨 PencilManager: MouseMove rejected - pencilMode:', this.isPencilMode(), 'isDrawing:', this.state.isDrawing);
+      // console.log('🎨 PencilManager: MouseMove rejected - pencilMode:', this.isPencilMode(), 'isDrawing:', this.state.isDrawing);
       return false;
     }
 

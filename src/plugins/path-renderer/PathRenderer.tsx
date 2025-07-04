@@ -21,7 +21,7 @@ class PathDragManager {
   }
 
   handleMouseMove = (e: React.MouseEvent<SVGElement>, context: any): boolean => {
-    console.log('PathDragManager handleMouseMove called');
+    // console.log('PathDragManager handleMouseMove called');
     if (this.currentDragHandlers) {
       this.currentDragHandlers.handleMouseMove(e);
       return true; // We handled the event

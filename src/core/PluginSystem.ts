@@ -102,7 +102,8 @@ export class PluginManager {
     commandId?: string,
     controlPoint?: 'x1y1' | 'x2y2'
   ): boolean {
-    console.log('🔌 PluginSystem: handleMouseEvent called with:', eventType);
+    // Debug logs disabled to reduce console noise
+    // console.log('🔌 PluginSystem: handleMouseEvent called with:', eventType);
     
     const context: MouseEventContext = {
       svgPoint: this.getSVGPoint(e as MouseEvent<SVGElement>),
@@ -111,7 +112,7 @@ export class PluginManager {
       controlPoint
     };
 
-    console.log('🔌 PluginSystem: SVG point:', context.svgPoint);
+    // console.log('🔌 PluginSystem: SVG point:', context.svgPoint);
 
     // Check if clicking on a transform handle
     const target = e.target as SVGElement;
@@ -127,7 +128,7 @@ export class PluginManager {
     // Process plugins in order, stop if any plugin handles the event
     let pluginsToProcess = this.getEnabledPlugins();
     
-    console.log('🔌 PluginSystem: Processing', pluginsToProcess.length, 'enabled plugins');
+    // console.log('🔌 PluginSystem: Processing', pluginsToProcess.length, 'enabled plugins');
     
     if ((handleType === 'transform' || handleType === 'rotation') && eventType === 'mouseDown') {
       // When clicking on a transform or rotation handle, prioritize Transform plugin
@@ -158,7 +159,7 @@ export class PluginManager {
     for (const plugin of pluginsToProcess) {
       if (!plugin.mouseHandlers) continue;
 
-      console.log('🔌 PluginSystem: Trying plugin:', plugin.id);
+      // console.log('🔌 PluginSystem: Trying plugin:', plugin.id);
       
       let handled = false;
       switch (eventType) {
@@ -176,14 +177,14 @@ export class PluginManager {
           break;
       }
 
-      console.log('🔌 PluginSystem: Plugin', plugin.id, 'handled:', handled);
+      // console.log('🔌 PluginSystem: Plugin', plugin.id, 'handled:', handled);
 
       if (handled) {
         return true;
       }
     }
 
-    console.log('🔌 PluginSystem: No plugin handled the event');
+    // console.log('🔌 PluginSystem: No plugin handled the event');
     return false;
   }
   

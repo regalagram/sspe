@@ -7,7 +7,7 @@ import { pluginManager } from '../core/PluginSystem';
  */
 export const useMouseEventHandlers = () => {
   const handleMouseDown = (e: React.MouseEvent<SVGElement>) => {
-    console.log('📱 Mouse: handleMouseDown called');
+    // console.log('📱 Mouse: handleMouseDown called');
     const target = e.target as SVGElement;
     const commandId = target.getAttribute('data-command-id') || undefined;
     const controlPoint = target.getAttribute('data-control-point') as 'x1y1' | 'x2y2' | undefined;
@@ -15,12 +15,12 @@ export const useMouseEventHandlers = () => {
   };
   
   const handleMouseMove = (e: React.MouseEvent<SVGElement>) => {
-    console.log('📱 Mouse: handleMouseMove called');
+    // console.log('📱 Mouse: handleMouseMove called');
     pluginManager.handleMouseEvent('mouseMove', e);
   };
   
   const handleMouseUp = (e: React.MouseEvent<SVGElement>) => {
-    console.log('📱 Mouse: handleMouseUp called');
+    // console.log('📱 Mouse: handleMouseUp called');
     pluginManager.handleMouseEvent('mouseUp', e);
   };
   
