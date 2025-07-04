@@ -320,7 +320,7 @@ ${pathElements}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
         <PluginButton
           icon={<Upload size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
-          text="Upload SVG"
+          text="Upload"
           color="#007bff"
           active={false}
           disabled={false}
@@ -329,7 +329,7 @@ ${pathElements}
         />
         <PluginButton
           icon={<Download size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
-          text="Download SVG"
+          text="Download"
           color="#28a745"
           active={false}
           disabled={paths.length === 0}
@@ -360,7 +360,7 @@ ${pathElements}
       <div style={{ marginTop: '8px' }}>
         <PluginButton
           icon={<Trash2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
-          text="Clear All Paths"
+          text="Clear All"
           color="#dc3545"
           active={false}
           disabled={false}

@@ -72,19 +72,19 @@ export const PencilUI: React.FC = () => {
   const tooltipInfo = {
     smoothingFactor: {
       title: "Smoothing Factor (0-1)",
-      description: "Controla la intensidad del suavizado adaptativo. 0 = sin suavizado, 1 = máximo suavizado. Defecto: 0.85"
+      description: "Controls the intensity of adaptive smoothing. 0 = no smoothing, 1 = maximum smoothing. Default: 0.85"
     },
     simplifyTolerance: {
       title: "Simplify Tolerance (0.5-5)",
-      description: "Controla cuántos puntos se eliminan durante la simplificación RDP. 0.5 = mantener más detalle, 5 = simplificar más agresivamente. Defecto: 2.0"
+      description: "Controls how many points are removed during RDP simplification. 0.5 = keep more detail, 5 = simplify more aggressively. Default: 2.0"
     },
     minDistance: {
       title: "Min Distance (0.5-3)",
-      description: "Distancia mínima entre puntos capturados. 0.5 = más puntos/detalle, 3 = menos puntos/más fluido. Defecto: 1.5"
+      description: "Minimum distance between captured points. 0.5 = more points/detail, 3 = fewer points/smoother. Default: 1.5"
     },
     lowPassAlpha: {
       title: "Filter Strength (0.1-0.8)",
-      description: "Intensidad del filtro de paso bajo para reducir ruido. 0.1 = menos filtrado, 0.8 = más filtrado. Defecto: 0.3"
+      description: "Low-pass filter strength to reduce noise. 0.1 = less filtering, 0.8 = more filtering. Default: 0.3"
     }
   };
 
@@ -342,54 +342,51 @@ export const PencilUI: React.FC = () => {
                   <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#666' }}>
                     Presets:
                   </span>
-                  <div style={{ display: 'flex', gap: '2px' }}>
+                  <div style={{ display: 'flex', gap: '1px' }}>
                     <button
                       onClick={() => handlePreset('precise')}
                       style={{
                         flex: 1,
-                        padding: '3px 4px',
-                        fontSize: '9px',
+                        fontSize: '7px',
                         backgroundColor: '#e3f2fd',
                         border: '1px solid #90caf9',
                         borderRadius: '3px',
                         cursor: 'pointer',
                         color: '#1976d2'
                       }}
-                      title="Para dibujos detallados y precisos"
+                      title="For detailed and precise drawings"
                     >
-                      Preciso
+                      Precise
                     </button>
                     <button
                       onClick={() => handlePreset('fluid')}
                       style={{
                         flex: 1,
-                        padding: '3px 4px',
-                        fontSize: '9px',
+                        fontSize: '7px',
                         backgroundColor: '#e8f5e8',
                         border: '1px solid #a5d6a7',
                         borderRadius: '3px',
                         cursor: 'pointer',
                         color: '#388e3c'
                       }}
-                      title="Para sketching fluido y natural"
+                      title="For fluid and natural sketching"
                     >
-                      Fluido
+                      Fluid
                     </button>
                     <button
                       onClick={() => handlePreset('quick')}
                       style={{
                         flex: 1,
-                        padding: '3px 4px',
-                        fontSize: '9px',
+                        fontSize: '7px',
                         backgroundColor: '#fff3e0',
                         border: '1px solid #ffcc02',
                         borderRadius: '3px',
                         cursor: 'pointer',
                         color: '#f57c00'
                       }}
-                      title="Para bocetos rápidos y gestuales"
+                      title="For quick and gestural sketches"
                     >
-                      Rápido
+                      Quick
                     </button>
                   </div>
                 </div>
