@@ -23,6 +23,7 @@ import { ReorderPlugin } from '../plugins/reorder/Reorder';
 import { PanelModePlugin } from '../plugins/panelmode/PanelMode';
 import { TouchMobilePluginDefinition } from '../plugins/touch-mobile/TouchMobile';
 import { DeletePlugin } from '../plugins/delete/Delete';
+import { BezierNormalizePlugin } from '../plugins/bezier-normalize/BezierNormalize';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -58,6 +59,7 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(PencilPlugin); // Depends on mouse-interaction
   pluginManager.registerPlugin(SubPathTransformPlugin); // Depends on selection
   pluginManager.registerPlugin(PointTransformPlugin); // Depends on selection
+  pluginManager.registerPlugin(BezierNormalizePlugin); // Depends on selection
   
   // Register remaining plugins
   pluginManager.registerPlugin(ShapesPlugin);
