@@ -130,5 +130,14 @@ export interface BezierHandleState {
     handleType: 'incoming' | 'outgoing' | null;
     originalType: ControlPointType | null;
     startPoint: Point | null;
+    pairInfo?: {
+      type: ControlPointType;
+      pairedHandle: {
+        commandId: string;
+        handleType: 'incoming' | 'outgoing';
+        anchor: Point;
+        controlPoint: 'x1y1' | 'x2y2';
+      } | null;
+    };
   };
 }

@@ -1,5 +1,24 @@
 import { SVGCommand, Point, ControlPointType, ControlPointInfo, BezierHandleState } from '../../types';
 
+/**
+ * FigmaHandleManager - Gestiona el comportamiento de handles tipo Figma
+ * 
+ * NUEVA LÓGICA (v2.0):
+ * - Detección de alineación al INICIO del drag (no durante el movimiento)
+ * - Estado de par persistente durante todo el drag
+ * - Mejor handling de movimientos rápidos
+ * - Lógica más predecible y estable
+ * 
+ * MÉTODOS PRINCIPALES:
+ * - detectInitialPairAlignment: Detecta el tipo de par al inicio
+ * - applyNewFigmaHandleLogic: Aplica la nueva lógica de sincronización
+ * - synchronizePairedHandle: Sincroniza handles según su tipo
+ * 
+ * MÉTODOS DEPRECADOS:
+ * - applyFigmaHandleLogic: Lógica antigua con problemas de velocidad
+ * - updateHandleWithAutoAlignment: Detección durante el drag (problemática)
+ */
+
 export class FigmaHandleManager {
   private editorStore: any;
   private state: BezierHandleState = {
@@ -313,8 +332,16 @@ export class FigmaHandleManager {
       return;
     }
     
-    // Actualizar el mapa de control points para incluir este comando
-    this.state.controlPoints.set(commandId, controlPointInfo);
+    // PASO 1: Detectar alineamiento al principio del drag
+    const pairInfo = this.detectInitialPairAlignment(commandId, handleType, controlPointInfo);
+    
+    // Actualizar el mapa de control points para incluir este comando con el tipo correcto
+    this.state.controlPoints.set(commandId, {
+      ...controlPointInfo,
+      type: pairInfo.type
+    });
+    
+    console.log('✅ FigmaHandleManager: Initial pair detection result:', pairInfo);
     console.log('✅ FigmaHandleManager: Added control point info for drag operation');
 
     console.log('✅ FigmaHandleManager: Setting drag state for:', commandId);
@@ -322,8 +349,9 @@ export class FigmaHandleManager {
       isDragging: true,
       commandId,
       handleType,
-      originalType: controlPointInfo.type,
-      startPoint
+      originalType: pairInfo.type,
+      startPoint,
+      pairInfo: pairInfo // Guardar información del par para uso durante el drag
     };
 
     console.log('✅ FigmaHandleManager: Drag state set:', this.state.dragState);
@@ -348,18 +376,217 @@ export class FigmaHandleManager {
       return;
     }
 
-    // Detectar si snap to grid está activo
-    const gridState = this.editorStore?.grid || {};
-    this.snapToGridActive = gridState.snapToGrid || false;
+    console.log('✅ FigmaHandleManager: Applying new Figma handle logic for:', dragState.commandId, dragState.handleType);
+    console.log('🎯 Current pair info:', dragState.pairInfo);
+    console.log('🎯 Option pressed:', this.state.isOptionPressed);
 
-    console.log('✅ FigmaHandleManager: Applying Figma handle logic for:', dragState.commandId, dragState.handleType);
+    // PASO 2: Aplicar lógica basada en el estado inicial y tecla Option
+    this.applyNewFigmaHandleLogic(dragState.commandId, dragState.handleType, newPoint, dragState.pairInfo);
+  }
 
-    // Aplicar la lógica de Figma según el tipo y estado de Option
-    this.applyFigmaHandleLogic(dragState.commandId, dragState.handleType, newPoint, controlPointInfo);
+  /**
+   * Aplica la nueva lógica de manejo de handles tipo Figma
+   */
+  private applyNewFigmaHandleLogic(
+    commandId: string,
+    handleType: 'incoming' | 'outgoing',
+    newPoint: Point,
+    pairInfo?: {
+      type: ControlPointType;
+      pairedHandle: {
+        commandId: string;
+        handleType: 'incoming' | 'outgoing';
+        anchor: Point;
+        controlPoint: 'x1y1' | 'x2y2';
+      } | null;
+    }
+  ) {
+    console.log('🔧 applyNewFigmaHandleLogic called with:', {
+      commandId,
+      handleType,
+      newPoint,
+      pairInfo,
+      isOptionPressed: this.state.isOptionPressed
+    });
+
+    if (this.state.isOptionPressed) {
+      // PASO 3: Con Option presionada - modo independiente o búsqueda de alineación
+      this.handleOptionPressedLogic(commandId, handleType, newPoint, pairInfo);
+    } else {
+      // PASO 4: Sin Option - usar tipo detectado al inicio
+      this.handleNormalDragLogic(commandId, handleType, newPoint, pairInfo);
+    }
+
+    this.notifyListeners();
+  }
+
+  /**
+   * Maneja la lógica cuando Option está presionada
+   */
+  private handleOptionPressedLogic(
+    commandId: string,
+    handleType: 'incoming' | 'outgoing',
+    newPoint: Point,
+    pairInfo?: {
+      type: ControlPointType;
+      pairedHandle: {
+        commandId: string;
+        handleType: 'incoming' | 'outgoing';
+        anchor: Point;
+        controlPoint: 'x1y1' | 'x2y2';
+      } | null;
+    }
+  ) {
+    console.log('🎯 Option pressed logic - independent mode with alignment search');
+    
+    // Siempre actualizar solo el handle que se está moviendo
+    this.updateSingleHandle(commandId, handleType, newPoint);
+    
+    // Si hay un par, verificar si se está alineando en tiempo real
+    if (pairInfo?.pairedHandle) {
+      this.checkRealTimeAlignment(commandId, handleType, newPoint, pairInfo.pairedHandle);
+    }
+  }
+
+  /**
+   * Maneja la lógica sin Option presionada
+   */
+  private handleNormalDragLogic(
+    commandId: string,
+    handleType: 'incoming' | 'outgoing',
+    newPoint: Point,
+    pairInfo?: {
+      type: ControlPointType;
+      pairedHandle: {
+        commandId: string;
+        handleType: 'incoming' | 'outgoing';
+        anchor: Point;
+        controlPoint: 'x1y1' | 'x2y2';
+      } | null;
+    }
+  ) {
+    console.log('🎯 Normal drag logic - using initial pair type:', pairInfo?.type);
+    
+    // Actualizar el handle que se está moviendo
+    this.updateSingleHandle(commandId, handleType, newPoint);
+    
+    // Si hay un par y está alineado/mirrored, sincronizar
+    if (pairInfo?.pairedHandle && (pairInfo.type === 'aligned' || pairInfo.type === 'mirrored')) {
+      console.log('✅ Synchronizing paired handle - type:', pairInfo.type);
+      this.synchronizePairedHandle(commandId, handleType, newPoint, pairInfo.pairedHandle, pairInfo.type);
+    }
+  }
+
+  /**
+   * Sincroniza el handle pareja según el tipo
+   */
+  private synchronizePairedHandle(
+    commandId: string,
+    handleType: 'incoming' | 'outgoing',
+    newPoint: Point,
+    pairedHandle: {
+      commandId: string;
+      handleType: 'incoming' | 'outgoing';
+      anchor: Point;
+      controlPoint: 'x1y1' | 'x2y2';
+    },
+    pairType: ControlPointType
+  ) {
+    console.log('🔄 synchronizePairedHandle called:', { pairType, pairedHandle });
+    
+    const sharedAnchor = pairedHandle.anchor;
+    
+    // Calcular vector desde el anchor compartido al nuevo punto
+    const currentVector = {
+      x: newPoint.x - sharedAnchor.x,
+      y: newPoint.y - sharedAnchor.y
+    };
+    
+    const magnitude = Math.sqrt(currentVector.x * currentVector.x + currentVector.y * currentVector.y);
+    if (magnitude === 0) return;
+    
+    const unitVector = {
+      x: currentVector.x / magnitude,
+      y: currentVector.y / magnitude
+    };
+    
+    if (pairType === 'mirrored') {
+      // Misma magnitud, dirección opuesta
+      const oppositePoint = {
+        x: sharedAnchor.x + (-unitVector.x * magnitude),
+        y: sharedAnchor.y + (-unitVector.y * magnitude)
+      };
+      
+      console.log('🔄 Mirrored sync - opposite point:', oppositePoint);
+      this.updateSingleHandleByControlPoint(pairedHandle.commandId, pairedHandle.controlPoint, oppositePoint);
+      
+    } else if (pairType === 'aligned') {
+      // Magnitud original del par, dirección opuesta
+      const originalMagnitude = this.getHandleMagnitude(pairedHandle);
+      const oppositePoint = {
+        x: sharedAnchor.x + (-unitVector.x * originalMagnitude),
+        y: sharedAnchor.y + (-unitVector.y * originalMagnitude)
+      };
+      
+      console.log('🔄 Aligned sync - opposite point with original magnitude:', oppositePoint);
+      this.updateSingleHandleByControlPoint(pairedHandle.commandId, pairedHandle.controlPoint, oppositePoint);
+    }
+  }
+
+  /**
+   * Verifica alineación en tiempo real cuando Option está presionada
+   */
+  private checkRealTimeAlignment(
+    commandId: string,
+    handleType: 'incoming' | 'outgoing',
+    newPoint: Point,
+    pairedHandle: {
+      commandId: string;
+      handleType: 'incoming' | 'outgoing';
+      anchor: Point;
+      controlPoint: 'x1y1' | 'x2y2';
+    }
+  ) {
+    console.log('🔍 checkRealTimeAlignment called');
+    
+    const pairedHandlePosition = this.getHandlePosition(pairedHandle);
+    if (!pairedHandlePosition) return;
+    
+    const sharedAnchor = pairedHandle.anchor;
+    
+    const currentVector = {
+      x: newPoint.x - sharedAnchor.x,
+      y: newPoint.y - sharedAnchor.y
+    };
+    
+    const pairedVector = {
+      x: pairedHandlePosition.x - sharedAnchor.x,
+      y: pairedHandlePosition.y - sharedAnchor.y
+    };
+    
+    const newType = this.determinePairType(currentVector, pairedVector);
+    
+    console.log('🔍 Real-time alignment check - detected type:', newType);
+    
+    // Si se detecta alineación, actualizar el tipo y sincronizar
+    if (newType === 'aligned' || newType === 'mirrored') {
+      console.log('✅ Real-time alignment detected! Synchronizing...');
+      this.synchronizePairedHandle(commandId, handleType, newPoint, pairedHandle, newType);
+      
+      // Actualizar el tipo en el estado
+      const controlPointInfo = this.state.controlPoints.get(commandId);
+      if (controlPointInfo) {
+        this.state.controlPoints.set(commandId, {
+          ...controlPointInfo,
+          type: newType
+        });
+      }
+    }
   }
 
   /**
    * Aplica la lógica de manejo de handles tipo Figma
+   * @deprecated - Usar applyNewFigmaHandleLogic en su lugar
    */
   private applyFigmaHandleLogic(
     commandId: string,
@@ -367,6 +594,8 @@ export class FigmaHandleManager {
     newPoint: Point,
     controlPointInfo: ControlPointInfo
   ) {
+    console.log('⚠️ Using deprecated applyFigmaHandleLogic - should use applyNewFigmaHandleLogic');
+    // Método deprecado - mantenido para compatibilidad
     const { updateCommand } = this.editorStore;
     const { anchor, type } = controlPointInfo;
 
@@ -387,6 +616,7 @@ export class FigmaHandleManager {
 
   /**
    * Actualiza un handle verificando automáticamente la alineación con su pareja
+   * @deprecated - Lógica problemática con movimientos rápidos. Usar nueva lógica en applyNewFigmaHandleLogic.
    */
   private updateHandleWithAutoAlignment(
     commandId: string,
@@ -981,7 +1211,7 @@ export class FigmaHandleManager {
   }
 
   /**
-   * Encuentra el handle pareja según la lógica correcta de Figma:
+   * Detecta el handle pareja según la lógica correcta de Figma:
    * Los handles se emparejan cuando se conectan al mismo punto anchor pero pertenecen a comandos diferentes:
    * - x2y2 del comando N se empareja con x1y1 del comando N+1 (ambos se conectan al anchor del comando N)
    * - x1y1 del comando N+1 se empareja con x2y2 del comando N (ambos se conectan al anchor del comando N)
@@ -1106,7 +1336,8 @@ export class FigmaHandleManager {
       commandId: null,
       handleType: null,
       originalType: null,
-      startPoint: null
+      startPoint: null,
+      pairInfo: undefined
     };
 
     this.notifyListeners();
@@ -1260,6 +1491,147 @@ export class FigmaHandleManager {
     }
     
     return snappedPoint;
+  }
+
+  /**
+   * Detecta la alineación inicial del par de handles al comenzar el drag
+   * PASO 1: Analizar si existe un par y determinar su tipo (aligned/mirrored/independent)
+   */
+  private detectInitialPairAlignment(
+    commandId: string,
+    handleType: 'incoming' | 'outgoing',
+    controlPointInfo: ControlPointInfo
+  ): {
+    type: ControlPointType;
+    pairedHandle: {
+      commandId: string;
+      handleType: 'incoming' | 'outgoing';
+      anchor: Point;
+      controlPoint: 'x1y1' | 'x2y2';
+    } | null;
+  } {
+    console.log('🔍 detectInitialPairAlignment called for:', { commandId, handleType });
+    
+    // Buscar el handle pareja
+    const pairedHandle = this.findPairedHandle(commandId, handleType);
+    
+    if (!pairedHandle) {
+      console.log('❌ No paired handle found, type: independent');
+      return {
+        type: 'independent',
+        pairedHandle: null
+      };
+    }
+    
+    console.log('✅ Found paired handle:', pairedHandle);
+    
+    // Obtener posiciones actuales de ambos handles
+    const currentHandlePosition = this.getCurrentHandlePosition(commandId, handleType);
+    const pairedHandlePosition = this.getHandlePosition(pairedHandle);
+    
+    if (!currentHandlePosition || !pairedHandlePosition) {
+      console.log('❌ Could not get handle positions, type: independent');
+      return {
+        type: 'independent',
+        pairedHandle: null
+      };
+    }
+    
+    console.log('📍 Current handle position:', currentHandlePosition);
+    console.log('📍 Paired handle position:', pairedHandlePosition);
+    
+    // Usar el anchor compartido (calculado en findPairedHandle)
+    const sharedAnchor = pairedHandle.anchor;
+    
+    // Calcular vectores desde el anchor compartido
+    const currentVector = {
+      x: currentHandlePosition.x - sharedAnchor.x,
+      y: currentHandlePosition.y - sharedAnchor.y
+    };
+    
+    const pairedVector = {
+      x: pairedHandlePosition.x - sharedAnchor.x,
+      y: pairedHandlePosition.y - sharedAnchor.y
+    };
+    
+    console.log('📏 Current vector:', currentVector);
+    console.log('📏 Paired vector:', pairedVector);
+    console.log('📍 Shared anchor:', sharedAnchor);
+    
+    // Determinar tipo basado en alineación y magnitudes
+    const type = this.determinePairType(currentVector, pairedVector);
+    
+    console.log('✅ Initial pair type determined:', type);
+    
+    return {
+      type,
+      pairedHandle
+    };
+  }
+
+  /**
+   * Obtiene la posición actual de un handle del comando especificado
+   */
+  private getCurrentHandlePosition(commandId: string, handleType: 'incoming' | 'outgoing'): Point | null {
+    if (!this.editorStore) return null;
+
+    const { paths } = this.editorStore;
+    
+    for (const path of paths) {
+      for (const subPath of path.subPaths) {
+        const command = subPath.commands.find((cmd: SVGCommand) => cmd.id === commandId);
+        if (command && command.command === 'C') {
+          if (handleType === 'outgoing') {
+            // Handle saliente: x1, y1
+            if (command.x1 !== undefined && command.y1 !== undefined) {
+              return { x: command.x1, y: command.y1 };
+            }
+          } else {
+            // Handle entrante: x2, y2
+            if (command.x2 !== undefined && command.y2 !== undefined) {
+              return { x: command.x2, y: command.y2 };
+            }
+          }
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Determina el tipo de par basado en vectores
+   */
+  private determinePairType(vector1: Point, vector2: Point): ControlPointType {
+    const magnitude1 = Math.sqrt(vector1.x * vector1.x + vector1.y * vector1.y);
+    const magnitude2 = Math.sqrt(vector2.x * vector2.x + vector2.y * vector2.y);
+    
+    if (magnitude1 === 0 || magnitude2 === 0) {
+      return 'independent';
+    }
+    
+    // Normalizar vectores
+    const unit1 = { x: vector1.x / magnitude1, y: vector1.y / magnitude1 };
+    const unit2 = { x: vector2.x / magnitude2, y: vector2.y / magnitude2 };
+    
+    // Calcular producto punto con el vector opuesto (para alineación)
+    const dotProduct = unit1.x * (-unit2.x) + unit1.y * (-unit2.y);
+    
+    // Tolerancia para alineación (cos(15°) ≈ 0.966)
+    const alignmentThreshold = 0.966;
+    
+    if (dotProduct > alignmentThreshold) {
+      // Están alineados, verificar si son mirrored (magnitudes similares)
+      const magnitudeRatio = Math.min(magnitude1, magnitude2) / Math.max(magnitude1, magnitude2);
+      
+      if (magnitudeRatio > 0.9) {
+        return 'mirrored'; // Mismo largo y alineados
+      } else {
+        return 'aligned'; // Alineados pero diferentes largos
+      }
+    }
+    
+    return 'independent';
   }
 }
 

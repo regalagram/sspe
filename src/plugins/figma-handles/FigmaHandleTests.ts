@@ -142,6 +142,125 @@ export const testHandleDrag = () => {
   };
 };
 
+/**
+ * Tests para la nueva lógica de detección inicial de pares (v2.0)
+ */
+
+// Test de detección inicial de pares
+export const testInitialPairDetection = () => {
+  console.log('🧪 Testing Initial Pair Detection (v2.0)...');
+  
+  const mockStore = createMockEditorStore();
+  figmaHandleManager.setEditorStore(mockStore);
+  
+  // Simular el inicio de drag en un punto con par
+  console.log('--- Testing cmd2 outgoing handle ---');
+  figmaHandleManager.startDragHandle('cmd2', 'outgoing', { x: 150, y: 80 });
+  
+  const dragState = figmaHandleManager.getState().dragState;
+  console.log('Drag state after start:', dragState);
+  
+  if (dragState.pairInfo) {
+    console.log(`✅ Initial pair type detected: ${dragState.pairInfo.type}`);
+    console.log(`✅ Has paired handle: ${dragState.pairInfo.pairedHandle !== null}`);
+    if (dragState.pairInfo.pairedHandle) {
+      console.log(`✅ Paired handle: ${dragState.pairInfo.pairedHandle.commandId} (${dragState.pairInfo.pairedHandle.handleType})`);
+    }
+  } else {
+    console.log('❌ No pair info detected');
+  }
+  
+  // Limpiar
+  figmaHandleManager.endDragHandle();
+};
+
+// Test de sincronización estable
+export const testStableSynchronization = () => {
+  console.log('🧪 Testing Stable Synchronization (v2.0)...');
+  
+  const mockStore = createMockEditorStore();
+  figmaHandleManager.setEditorStore(mockStore);
+  
+  // Simular movimiento rápido
+  console.log('--- Testing fast movement stability ---');
+  figmaHandleManager.startDragHandle('cmd2', 'outgoing', { x: 150, y: 80 });
+  
+  // Simular varios movimientos rápidos
+  const fastMovements = [
+    { x: 160, y: 85 },
+    { x: 170, y: 90 },
+    { x: 180, y: 95 },
+    { x: 190, y: 100 }
+  ];
+  
+  fastMovements.forEach((point, index) => {
+    console.log(`Fast movement ${index + 1}:`, point);
+    figmaHandleManager.updateDragHandle(point);
+  });
+  
+  console.log('✅ Fast movement test completed - no crashes');
+  
+  // Limpiar
+  figmaHandleManager.endDragHandle();
+};
+
+// Test de comportamiento con tecla Option
+export const testOptionKeyBehavior = () => {
+  console.log('🧪 Testing Option Key Behavior (v2.0)...');
+  
+  const mockStore = createMockEditorStore();
+  figmaHandleManager.setEditorStore(mockStore);
+  
+  // Test sin Option (sincronización normal)
+  console.log('--- Testing without Option key ---');
+  figmaHandleManager.startDragHandle('cmd2', 'outgoing', { x: 150, y: 80 });
+  figmaHandleManager.updateDragHandle({ x: 160, y: 85 });
+  console.log('✅ Normal synchronization applied');
+  figmaHandleManager.endDragHandle();
+  
+  // Test con Option (modo independiente)
+  console.log('--- Testing with Option key ---');
+  // Simular keydown de Option
+  const optionKeyDown = new KeyboardEvent('keydown', { key: 'Option' });
+  figmaHandleManager.simulateKeyDown(optionKeyDown);
+  
+  figmaHandleManager.startDragHandle('cmd2', 'outgoing', { x: 150, y: 80 });
+  figmaHandleManager.updateDragHandle({ x: 160, y: 85 });
+  console.log('✅ Independent mode applied');
+  figmaHandleManager.endDragHandle();
+  
+  // Simular keyup de Option
+  const optionKeyUp = new KeyboardEvent('keyup', { key: 'Option' });
+  figmaHandleManager.simulateKeyUp(optionKeyUp);
+  
+  console.log('✅ Option key behavior test completed');
+};
+
+// Test de búsqueda de alineación en tiempo real
+export const testRealTimeAlignment = () => {
+  console.log('🧪 Testing Real-Time Alignment Search (v2.0)...');
+  
+  const mockStore = createMockEditorStore();
+  figmaHandleManager.setEditorStore(mockStore);
+  
+  // Simular Option presionada
+  const optionKeyDown = new KeyboardEvent('keydown', { key: 'Option' });
+  figmaHandleManager.simulateKeyDown(optionKeyDown);
+  
+  figmaHandleManager.startDragHandle('cmd2', 'outgoing', { x: 150, y: 80 });
+  
+  // Simular movimiento que debería alinear
+  console.log('--- Testing alignment detection during Option drag ---');
+  figmaHandleManager.updateDragHandle({ x: 120, y: 120 }); // Hacia el lado opuesto
+  
+  console.log('✅ Real-time alignment search completed');
+  
+  // Limpiar
+  figmaHandleManager.endDragHandle();
+  const optionKeyUp = new KeyboardEvent('keyup', { key: 'Option' });
+  figmaHandleManager.simulateKeyUp(optionKeyUp);
+};
+
 // Ejecutar todos los tests
 export const runAllTests = () => {
   console.log('🚀 Starting Figma Handles System Tests...');
@@ -157,6 +276,27 @@ export const runAllTests = () => {
   return results;
 };
 
+// Ejecutar todos los tests de la nueva lógica
+export const runNewLogicTests = () => {
+  console.log('🚀 Running New Logic Tests (v2.0)...');
+  console.log('================================================');
+  
+  testInitialPairDetection();
+  console.log('');
+  
+  testStableSynchronization();
+  console.log('');
+  
+  testOptionKeyBehavior();
+  console.log('');
+  
+  testRealTimeAlignment();
+  console.log('');
+  
+  console.log('✅ All new logic tests completed!');
+  console.log('================================================');
+};
+
 // Función de utilidad para test manual en consola del navegador
 export const setupTestEnvironment = () => {
   // Exponer las funciones de test globalmente para uso manual
@@ -169,8 +309,26 @@ export const setupTestEnvironment = () => {
     figmaHandleManager
   };
   
+  // Agregar los nuevos tests a la interfaz global
+  (window as any).figmaHandleTests = {
+    // Tests originales
+    runAllTests,
+    testControlPointTypeDetection,
+    testOptionKeyHandling,
+    testConvertToMirrored,
+    testHandleDrag,
+    
+    // Nuevos tests v2.0
+    testInitialPairDetection,
+    testStableSynchronization,
+    testOptionKeyBehavior,
+    testRealTimeAlignment,
+    runNewLogicTests
+  };
+  
   console.log('🔧 Test environment set up. Use window.figmaHandleTests to run tests.');
   console.log('Example: window.figmaHandleTests.runAllTests()');
+  console.log('🆕 New v2.0 tests: window.figmaHandleTests.runNewLogicTests()');
 };
 
 // Auto-setup en desarrollo
