@@ -33,6 +33,8 @@ El plugin Panel Mode permite alternar entre dos modos de visualización de panel
 - **Expansión Exclusiva**: Solo un panel activo a la vez
 - **Scrollbar Personalizada**: Navegación suave en listas largas
 - **Margin Automático**: El canvas se ajusta automáticamente al sidebar
+- **Scroll Inteligente**: Diferencia entre scroll táctil y clicks intencionales
+- **Auto-scroll**: Desplazamiento automático al expandir un panel
 
 ## 🚀 Uso
 
@@ -50,6 +52,8 @@ El plugin Panel Mode permite alternar entre dos modos de visualización de panel
 1. Hacer clic en cualquier título de panel para expandirlo
 2. El panel previamente expandido se contrae automáticamente
 3. Usar scroll para navegar por la lista completa
+4. En dispositivos táctiles, el sistema diferencia entre scroll y taps intencionales
+5. Al expandir un panel, se hace scroll automáticamente para verlo completo
 
 ## 🔧 Implementación Técnica
 
@@ -70,12 +74,20 @@ El plugin Panel Mode permite alternar entre dos modos de visualización de panel
 - **Configuración de Paneles**: `localStorage['sspe-panel-configs']`
 - **Panel Expandido**: Estado temporal (no persistente)
 
+### **Touch Scroll Detection**
+- **Umbral de Movimiento**: 10px para diferenciar scroll de tap
+- **Umbral de Tiempo**: 300ms para detectar gestos rápidos
+- **Análisis de Gestos**: Compara posición inicial vs. final del touch
+- **Prevención de Clicks**: Solo ejecuta acciones en taps intencionales
+
 ## 📱 Responsive Design
 
 - **Ancho Fijo**: Sidebar de 320px en modo accordion
 - **Transiciones Suaves**: Animaciones de 0.3s para cambios de modo
 - **Scroll Inteligente**: Área de contenido con scroll independiente
 - **Margin Dinámico**: Canvas se ajusta automáticamente
+- **Touch Optimizado**: Detección de gestos de scroll vs. taps intencionales
+- **Auto-scroll**: Desplazamiento automático al expandir paneles
 
 ## 🎨 Integración de Paneles
 

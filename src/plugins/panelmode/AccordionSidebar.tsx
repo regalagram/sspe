@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { UIComponentDefinition } from '../../core/PluginSystem';
 import { usePanelModeStore } from './PanelManager';
 import { ChevronDown, ChevronRight } from 'lucide-react';
@@ -19,6 +19,7 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
   } = usePanelModeStore();
 
   const { isMobile, isTablet } = useMobileDetection();
+  const panelsContainerRef = useRef<HTMLDivElement>(null);
   
   // Apply mobile form focus fix for iOS and Android (safe version that excludes checkboxes)
   useMobileFormFocusFix();
@@ -30,6 +31,26 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
   useMobileControlsEnhancement();
   
   const visiblePanels = getVisiblePanels();
+  
+  // Auto-scroll when a panel is expanded
+  useEffect(() => {
+    if (accordionExpandedPanel && panelsContainerRef.current) {
+      const expandedPanelElement = panelsContainerRef.current.querySelector(
+        `[data-panel-id="${accordionExpandedPanel}"]`
+      );
+      
+      if (expandedPanelElement) {
+        // Small delay to ensure the panel content is fully rendered
+        setTimeout(() => {
+          expandedPanelElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+            inline: 'nearest'
+          });
+        }, 100);
+      }
+    }
+  }, [accordionExpandedPanel]);
   
   // Filter plugins based on visible panels
   const visiblePlugins = plugins.filter(plugin => 
@@ -95,7 +116,7 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
     <div className="accordion-sidebar" style={sidebarStyle}>
 
       
-      <div style={panelsContainerStyle}>
+      <div ref={panelsContainerRef} style={panelsContainerStyle}>
         {/* Panel Mode - Always first */}
         {panelModePlugin && (
           <>
@@ -105,6 +126,7 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
               panel={visiblePanels.find(p => p.id === panelModePlugin.id)}
               isExpanded={accordionExpandedPanel === panelModePlugin.id}
               onToggle={() => handlePanelToggle(panelModePlugin.id)}
+              panelId={panelModePlugin.id}
             />
             {otherPlugins.length > 0 && (
               <div style={{ 
@@ -128,6 +150,7 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
               panel={panel}
               isExpanded={isExpanded}
               onToggle={() => handlePanelToggle(plugin.id)}
+              panelId={plugin.id}
             />
           );
         })}
@@ -141,16 +164,23 @@ interface AccordionPanelProps {
   panel?: { id: string; name: string; enabled: boolean; order: number; pluginId: string };
   isExpanded: boolean;
   onToggle: () => void;
+  panelId: string;
 }
 
 const AccordionPanel: React.FC<AccordionPanelProps> = ({ 
   plugin, 
   panel, 
   isExpanded, 
-  onToggle 
+  onToggle,
+  panelId
 }) => {
   const { isMobile, isTablet } = useMobileDetection();
   const isPanelMode = plugin.id === 'panel-mode-ui';
+  
+  // Touch scroll detection
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const scrollThreshold = 10; // pixels
+  const timeThreshold = 300; // milliseconds
   
   const headerStyle: React.CSSProperties = {
     padding: isMobile ? '16px 20px' : '12px 16px', // Más padding en móviles
@@ -189,10 +219,24 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
   // Handle touch events explicitly for better mobile support
   const handleTouchStart = (e: React.TouchEvent) => {
     console.log('AccordionPanel touchstart:', plugin.id);
+    
+    // Record initial touch position and time
+    const touch = e.touches[0];
+    touchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now()
+    };
+    
     // Add visual feedback for touch
     if (!isExpanded) {
       (e.currentTarget as HTMLElement).style.background = '#f0f0f0';
     }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    // Don't prevent default here to allow scrolling
+    // This allows the container to scroll normally
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
@@ -205,8 +249,45 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
       (e.currentTarget as HTMLElement).style.background = '#fafafa';
     }
     
-    // Trigger the toggle action immediately
-    onToggle();
+    // Check if this was a scroll gesture or an intentional tap
+    if (touchStartRef.current) {
+      const touch = e.changedTouches[0];
+      const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
+      const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
+      const deltaTime = Date.now() - touchStartRef.current.time;
+      
+      // Only trigger if movement is minimal and time is reasonable
+      const isIntentionalTap = deltaX < scrollThreshold && 
+                               deltaY < scrollThreshold && 
+                               deltaTime < timeThreshold;
+      
+      console.log('Touch analysis:', {
+        deltaX,
+        deltaY,
+        deltaTime,
+        isIntentionalTap,
+        pluginId: plugin.id
+      });
+      
+      if (isIntentionalTap) {
+        onToggle();
+      }
+    }
+    
+    // Reset touch tracking
+    touchStartRef.current = null;
+  };
+
+  const handleTouchCancel = (e: React.TouchEvent) => {
+    console.log('AccordionPanel touchcancel:', plugin.id);
+    
+    // Remove visual feedback
+    if (!isExpanded) {
+      (e.currentTarget as HTMLElement).style.background = '#fafafa';
+    }
+    
+    // Reset touch tracking
+    touchStartRef.current = null;
   };
 
   const handleClick = (e: React.MouseEvent) => {
@@ -219,14 +300,16 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
   };
 
   return (
-    <div>
+    <div data-panel-id={panelId}>
       <div 
         data-accordion-panel-header="true"
         data-clickable="true"
         style={headerStyle}
         onClick={handleClick}
         onTouchStart={isMobile ? handleTouchStart : undefined}
+        onTouchMove={isMobile ? handleTouchMove : undefined}
         onTouchEnd={isMobile ? handleTouchEnd : undefined}
+        onTouchCancel={isMobile ? handleTouchCancel : undefined}
         onMouseEnter={!isMobile ? (e) => {
           if (!isExpanded) {
             e.currentTarget.style.background = '#f5f5f5';
