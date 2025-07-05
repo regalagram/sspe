@@ -35,7 +35,7 @@ export class FigmaHandleManager {
     // Setup will be handled manually through onSelectionChanged calls
   }
   private updateControlPointsForSelection(selectedCommands: string[]) {
-    console.log(`🎯 updateControlPointsForSelection called with:`, selectedCommands);
+    
     this.state.controlPoints.clear();
     
     // Get all commands that should show control points (selected + next commands)
@@ -45,13 +45,13 @@ export class FigmaHandleManager {
       const controlPointInfo = this.analyzeControlPoint(commandId);
       if (controlPointInfo) {
         this.state.controlPoints.set(commandId, controlPointInfo);
-        console.log(`✅ Added control point info for command ${commandId}, isNext: ${controlPointInfo.isNextCommandDisplay}`);
+        
       } else {
-        console.log(`❌ Failed to analyze control point for command ${commandId}`);
+        
       }
     });
     
-    console.log(`📊 Total control points in state:`, this.state.controlPoints.size);
+    
     this.notifyListeners();
   }
   addListener(listener: () => void) {
@@ -103,7 +103,7 @@ export class FigmaHandleManager {
       setTimeout(() => {
         if (this.editorStore) {
           const selectedCommands = this.editorStore.selection.selectedCommands || [];
-          console.log(`🔔 onSelectionChanged: Selected commands:`, selectedCommands);
+          
           if (selectedCommands.length > 0) {
             this.updateControlPointsForSelection(selectedCommands);
           } else {
@@ -1015,12 +1015,12 @@ export class FigmaHandleManager {
       const nextCommandId = this.getNextCommandId(commandId);
       if (nextCommandId) {
         commandsToShow.add(nextCommandId);
-        console.log(`🔗 Added next command ${nextCommandId} for selected command ${commandId}`);
+        
       }
     });
 
     const result = Array.from(commandsToShow);
-    console.log(`📋 Commands to show control points:`, result);
+    
     return result;
   }
 

@@ -99,7 +99,6 @@ export const FigmaHandleRenderer: React.FC = () => {
   React.useEffect(() => {
     const unsubscribe = figmaHandleManager.addListener(() => {
       const newState = figmaHandleManager.getState();
-      console.log(`🖼️ FigmaHandleRenderer: Updated state with ${newState.controlPoints.size} control points`);
       setHandleState(newState);
       
       // Force a re-render by updating a key
@@ -163,11 +162,6 @@ export const FigmaHandleRenderer: React.FC = () => {
             // 4. This command has control points to show (from FigmaHandleManager)
             const shouldShowCommand = shouldShowSubPath || isCommandSelected || hasControlPoints;
             
-            // Debug logging
-            if (hasControlPoints) {
-              console.log(`🎨 Command ${command.id} has control points, isNext: ${controlPointInfoForCheck?.isNextCommandDisplay}, shouldShow: ${shouldShowCommand}`);
-            }
-            
             if (!shouldShowCommand) return null;
             
             // Durante el drag, solo mostrar el comando que se arrastra y su pareja
@@ -200,14 +194,6 @@ export const FigmaHandleRenderer: React.FC = () => {
             
             // Get absolute control points for this command with path context
             const controlPoints = getAbsoluteControlPoints(command, subPath, path.subPaths);
-            
-            // Debug logging for command rendering
-            console.log(`🖼️ Rendering command ${command.id}, type: ${command.command}, isNext: ${isNextCommandDisplay}, hasCP: ${hasControlPoints}`);
-            
-            // Additional logging for cubic commands
-            if (command.command === 'C' && controlPoints.length >= 2) {
-              console.log(`✨ Actually rendering control points for command ${command.id}, isNext: ${isNextCommandDisplay}, opacity: ${colors.opacity}`);
-            }
             
             return (
               <g key={`figma-control-${command.id}`}>
