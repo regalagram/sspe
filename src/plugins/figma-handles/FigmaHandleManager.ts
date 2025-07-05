@@ -1,4 +1,5 @@
 import { SVGCommand, Point, ControlPointType, ControlPointInfo, BezierHandleState } from '../../types';
+import { useEditorStore } from '../../store/editorStore';
 export class FigmaHandleManager {
   private editorStore: any;
   private state: BezierHandleState = {
@@ -28,8 +29,10 @@ export class FigmaHandleManager {
     this.editorStore = store;
     this.setupSelectionListener();
   }
+  
   private setupSelectionListener() {
     if (!this.editorStore) return;
+    // Setup will be handled manually through onSelectionChanged calls
   }
   private updateControlPointsForSelection(selectedCommands: string[]) {
     console.log(`🎯 updateControlPointsForSelection called with:`, selectedCommands);
@@ -96,10 +99,11 @@ export class FigmaHandleManager {
    */
   public onSelectionChanged() {
     if (this.editorStore) {
-      // Use setTimeout to ensure the store state has been updated
+      // Use a small timeout to ensure the store state has been updated
       setTimeout(() => {
         if (this.editorStore) {
           const selectedCommands = this.editorStore.selection.selectedCommands || [];
+          console.log(`🔔 onSelectionChanged: Selected commands:`, selectedCommands);
           if (selectedCommands.length > 0) {
             this.updateControlPointsForSelection(selectedCommands);
           } else {
@@ -107,7 +111,7 @@ export class FigmaHandleManager {
             this.notifyListeners();
           }
         }
-      }, 0);
+      }, 1); // Very small delay to ensure store update
     }
   }
   /**

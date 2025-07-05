@@ -191,9 +191,6 @@ class MouseInteractionManager {
           finalSelectedIds = selection.selectedCommands;
           // Use selectMultiple to ensure the state is maintained properly
           selectMultiple(finalSelectedIds, 'commands');
-          
-          // Notificar al FigmaHandleManager sobre el cambio de selección
-          figmaHandleManager.onSelectionChanged();
         } else {
           // If not selected, select only this command (clear others)
           finalSelectedIds = [commandId];

@@ -93,6 +93,7 @@ export const FigmaHandleRenderer: React.FC = () => {
   const { paths, enabledFeatures, viewport, selection, visualDebugSizes } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   const [handleState, setHandleState] = React.useState(figmaHandleManager.getState());
+  const [renderKey, setRenderKey] = React.useState(0);
 
   // Subscribe to handle state changes
   React.useEffect(() => {
@@ -100,6 +101,9 @@ export const FigmaHandleRenderer: React.FC = () => {
       const newState = figmaHandleManager.getState();
       console.log(`🖼️ FigmaHandleRenderer: Updated state with ${newState.controlPoints.size} control points`);
       setHandleState(newState);
+      
+      // Force a re-render by updating a key
+      setRenderKey(prev => prev + 1);
     });
     
     return unsubscribe;
@@ -134,7 +138,7 @@ export const FigmaHandleRenderer: React.FC = () => {
     : null;
 
   return (
-    <>
+    <g key={`figma-handle-renderer-${renderKey}`}>
       {paths.map((path) => 
         path.subPaths.map((subPath) => {
           // If feature is disabled, only show control points for selected sub-paths
@@ -150,6 +154,7 @@ export const FigmaHandleRenderer: React.FC = () => {
             
             // Check if this command has control points in the handle state
             const hasControlPoints = handleState.controlPoints.has(command.id);
+            const controlPointInfoForCheck = handleState.controlPoints.get(command.id);
             
             // Show control points if:
             // 1. Feature is enabled, OR
@@ -157,6 +162,11 @@ export const FigmaHandleRenderer: React.FC = () => {
             // 3. This specific command is selected, OR
             // 4. This command has control points to show (from FigmaHandleManager)
             const shouldShowCommand = shouldShowSubPath || isCommandSelected || hasControlPoints;
+            
+            // Debug logging
+            if (hasControlPoints) {
+              console.log(`🎨 Command ${command.id} has control points, isNext: ${controlPointInfoForCheck?.isNextCommandDisplay}, shouldShow: ${shouldShowCommand}`);
+            }
             
             if (!shouldShowCommand) return null;
             
@@ -191,10 +201,18 @@ export const FigmaHandleRenderer: React.FC = () => {
             // Get absolute control points for this command with path context
             const controlPoints = getAbsoluteControlPoints(command, subPath, path.subPaths);
             
+            // Debug logging for command rendering
+            console.log(`🖼️ Rendering command ${command.id}, type: ${command.command}, isNext: ${isNextCommandDisplay}, hasCP: ${hasControlPoints}`);
+            
+            // Additional logging for cubic commands
+            if (command.command === 'C' && controlPoints.length >= 2) {
+              console.log(`✨ Actually rendering control points for command ${command.id}, isNext: ${isNextCommandDisplay}, opacity: ${colors.opacity}`);
+            }
+            
             return (
               <g key={`figma-control-${command.id}`}>
                 {/* Render control points for cubic curves */}
-                {command.command === 'C' && controlPoints.length >= 2 && (
+                {command.command === 'C' && controlPoints.length >= 2 ? (
                   <>
                     {/* First control point (x1y1) - handle saliente */}
                     {prevPosition && (
@@ -282,12 +300,12 @@ export const FigmaHandleRenderer: React.FC = () => {
                       />
                     )}
                   </>
-                )}
+                ) : null}
               </g>
             );
           });
         })
       )}
-    </>
+    </g>
   );
 };
