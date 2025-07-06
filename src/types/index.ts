@@ -81,7 +81,7 @@ export interface GridState {
 }
 
 export interface EditorMode {
-  current: 'select' | 'create' | 'edit' | 'pan' | 'zoom';
+  current: 'select' | 'create' | 'edit' | 'pan' | 'zoom' | 'curves';
   createMode?: {
     commandType: EditorCommandType;
     isDrawing: boolean;

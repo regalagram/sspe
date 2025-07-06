@@ -25,6 +25,7 @@ import { TouchMobilePluginDefinition } from '../plugins/touch-mobile/TouchMobile
 import { DeletePlugin } from '../plugins/delete/Delete';
 import { BezierNormalizePlugin } from '../plugins/bezier-normalize/BezierNormalize';
 import { FigmaHandlesPlugin } from '../plugins/figma-handles/FigmaHandles';
+import { CurvesPlugin } from '../plugins/curves/Curves';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -58,6 +59,7 @@ export const initializePlugins = (): void => {
   
   // Register plugins that depend on others
   pluginManager.registerPlugin(PencilPlugin); // Depends on mouse-interaction
+  pluginManager.registerPlugin(CurvesPlugin); // Depends on mouse-interaction
   pluginManager.registerPlugin(SubPathTransformPlugin); // Depends on selection
   pluginManager.registerPlugin(PointTransformPlugin); // Depends on selection
   pluginManager.registerPlugin(BezierNormalizePlugin); // Depends on selection

@@ -103,8 +103,9 @@ const storedPrecision = (() => {
 const createInitialState = (): EditorState => {
   // Hardcoded SVG to load as initial state
   const hardcodedSVG = `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="121 -31 947 834">
-  <path d="M 164 409 C 231 488 410 792 470 757 C 530 721 290 452 350 417 C 410 382 423 609 487 512 C 551 416 451 416 511 381 C 570 346 573 520 647 476 C 722 432 585 337 645 302 C 705 266 738 575 859 527 C 980 479 761 292 805 266 C 850 239 964 465 1009 439 C 1053 412 1006 264 837 12 Z" fill="none" stroke="#000000" stroke-width="10" fill-opacity="0.1" stroke-opacity="0.9" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="56 145 997 459">
+  <path d="M 164 195 C 57 198 95 478 213 473 C 331 468 252 295 321 295 C 391 295 340 442 391 446 C 441 449 444 344 478 345 C 512 345 501 493 547 496 C 594 498 598 344 634 344 C 669 344 649 554 698 558 C 747 561 739 394 790 393 C 842 393 752 520 884 518 C 1015 517 1051 194 946 190 Z" fill="#beca1c" stroke="#f8382a" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round" fill-opacity="0.4" stroke-opacity="0.6" />
+  <path d="M 823 216 C 793 216 770 240 770 269 C 770 328 830 343 870 402 C 908 344 970 326 970 269 C 970 240 946 216 918 216 C 897 216 878 229 870 247 C 862 229 844 216 823 216 Z" fill="#ffffff" stroke="#f78782" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
 </svg>
   `;
 
