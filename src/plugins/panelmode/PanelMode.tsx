@@ -47,6 +47,7 @@ const formatPanelName = (id: string): string => {
     'point-transform-controls': 'Point Transform',
     'subpath-transform-controls': 'Sub-Path Transform',
     'delete-control': 'Delete',
+    'curves-ui': 'Curves',
   };
 
   // Return mapped name if available
