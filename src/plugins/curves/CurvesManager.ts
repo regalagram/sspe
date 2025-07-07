@@ -166,11 +166,7 @@ export class CurvesManager {
 
   private convertPointsToPath = () => {
     if (this.curveState.points.length < 2) return;
-
-    console.log('CurvesManager: All points:', this.curveState.points.map(p => ({ id: p.id, x: p.x, y: p.y })));
-
     const { pushToHistory } = this.editorStore;
-    
     // Save current state to history BEFORE making changes
     pushToHistory();
     
@@ -261,17 +257,6 @@ export class CurvesManager {
     
     this.curveState.currentPathId = pathId;
     this.curveState.currentSubPathId = subPathId;
-
-    // Debug: Log final path structure
-    console.log('CurvesManager: Final path commands:', commands.map((cmd: any) => ({
-      command: cmd.command,
-      x: cmd.x,
-      y: cmd.y,
-      x1: cmd.x1,
-      y1: cmd.y1,
-      x2: cmd.x2,
-      y2: cmd.y2
-    })));
   };
 
   private snapPoint = (point: Point): Point => {

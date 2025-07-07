@@ -92,33 +92,16 @@ class PencilManager {
     const state = useEditorStore.getState();
     const { mode } = state;
     const isPencil = mode.current === 'create' && mode.createMode?.commandType === 'PENCIL';
-    // console.log('🎨 PencilManager: isPencilMode check:', { 
-    //   current: mode.current, 
-    //   createMode: mode.createMode, 
-    //   isPencil 
-    // });
     return isPencil;
   }
 
   handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
-    console.log('🖋️ PencilManager.handleMouseDown called', {
-      mode: this.editorStore?.mode,
-      isPencilMode: this.isPencilMode(),
-      timestamp: Date.now()
-    });
-    
     if (!this.isPencilMode()) {
-      
       return false;
     }
-
-    
     e.preventDefault();
     e.stopPropagation();
-
     const { svgPoint } = context;
-    
-    
     // Get current store state
     if (!this.editorStore) {
       console.error('PencilManager: EditorStore not initialized');

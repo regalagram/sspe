@@ -217,9 +217,7 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
   };
 
   // Handle touch events explicitly for better mobile support
-  const handleTouchStart = (e: React.TouchEvent) => {
-    console.log('AccordionPanel touchstart:', plugin.id);
-    
+  const handleTouchStart = (e: React.TouchEvent) => {    
     // Record initial touch position and time
     const touch = e.touches[0];
     touchStartRef.current = {
@@ -240,7 +238,6 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    console.log('AccordionPanel touchend:', plugin.id);
     e.preventDefault();
     e.stopPropagation();
     
@@ -279,8 +276,6 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
   };
 
   const handleTouchCancel = (e: React.TouchEvent) => {
-    console.log('AccordionPanel touchcancel:', plugin.id);
-    
     // Remove visual feedback
     if (!isExpanded) {
       (e.currentTarget as HTMLElement).style.background = '#fafafa';
@@ -291,7 +286,6 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
   };
 
   const handleClick = (e: React.MouseEvent) => {
-    console.log('AccordionPanel click:', plugin.id, 'isTrusted:', (e as any).isTrusted);
     // For desktop, handle all clicks normally
     // For mobile, only handle if it's NOT a synthetic click from touch
     if (!isMobile || (e as any).isTrusted) {
@@ -349,10 +343,7 @@ interface AccordionPanelContentProps {
 }
 
 const AccordionPanelContent: React.FC<AccordionPanelContentProps> = ({ plugin }) => {
-  // Debug log to verify which plugins are being rendered
-  React.useEffect(() => {
-    console.log(`Accordion rendering plugin: ${plugin.id}`);
-  }, [plugin.id]);
+
 
   return (
     <div 
