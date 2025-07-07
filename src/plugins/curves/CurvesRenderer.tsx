@@ -1,17 +1,20 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { curvesManager, CurveToolMode } from './CurvesManager';
+import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';
 
 export const CurvesRenderer: React.FC = () => {
-  const { viewport } = useEditorStore();
+  const { viewport, visualDebugSizes } = useEditorStore();
+  const { isMobile, isTablet } = useMobileDetection();
   const curveState = curvesManager.getState();
 
   if (!curveState.isActive) return null;
 
-  const handleRadius = 4;
-  const handleLineWidth = 1;
-  const pointRadius = 3;
-  const selectedPointRadius = 4;
+  // Calculate responsive sizes based on the Visual Debug system
+  const baseRadius = getControlPointSize(isMobile, isTablet);
+  const commandPointRadius = (baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.commandPointsFactor) / viewport.zoom;
+  const controlPointRadius = (baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.controlPointsFactor) / viewport.zoom;
+  const handleLineWidth = 1 / viewport.zoom;
 
   return (
     <g className="curves-overlay">
@@ -47,7 +50,7 @@ export const CurvesRenderer: React.FC = () => {
             <circle
               cx={point.handleIn.x}
               cy={point.handleIn.y}
-              r={handleRadius}
+              r={controlPointRadius * 0.7}
               fill="white"
               stroke="#007acc"
               strokeWidth={handleLineWidth}
@@ -59,7 +62,7 @@ export const CurvesRenderer: React.FC = () => {
             <circle
               cx={point.handleOut.x}
               cy={point.handleOut.y}
-              r={handleRadius}
+              r={controlPointRadius * 0.7}
               fill="white"
               stroke="#007acc"
               strokeWidth={handleLineWidth}
@@ -72,10 +75,10 @@ export const CurvesRenderer: React.FC = () => {
           <circle
             cx={point.x}
             cy={point.y}
-            r={point.selected ? selectedPointRadius : pointRadius}
+            r={point.selected ? commandPointRadius : commandPointRadius * 0.8}
             fill={point.selected ? '#007acc' : 'white'}
             stroke="#007acc"
-            strokeWidth={2}
+            strokeWidth={2 / viewport.zoom}
             className="curve-point"
             style={{ cursor: 'pointer' }}
           />
@@ -96,7 +99,7 @@ export const CurvesRenderer: React.FC = () => {
             <text
               x={point.x + 8}
               y={point.y - 8}
-              fontSize="10"
+              fontSize={10 / viewport.zoom}
               fill="#007acc"
               fontFamily="Arial, sans-serif"
             >
@@ -127,10 +130,10 @@ export const CurvesRenderer: React.FC = () => {
         <circle
           cx={curveState.previewPoint.x}
           cy={curveState.previewPoint.y}
-          r={pointRadius}
+          r={commandPointRadius * 0.8}
           fill="white"
           stroke="#007acc"
-          strokeWidth={1}
+          strokeWidth={1 / viewport.zoom}
           strokeDasharray="3,3"
           opacity={0.7}
         />
@@ -142,7 +145,7 @@ export const CurvesRenderer: React.FC = () => {
           d={generatePathData(curveState.points)}
           fill="none"
           stroke="#007acc"
-          strokeWidth={2}
+          strokeWidth={2 / viewport.zoom}
           strokeDasharray="5,5"
           opacity={0.6}
         />
@@ -163,16 +166,16 @@ export const CurvesRenderer: React.FC = () => {
                 <circle
                   cx={firstPoint.x}
                   cy={firstPoint.y}
-                  r={pointRadius + 5}
+                  r={commandPointRadius * 1.5}
                   fill="none"
                   stroke="#007acc"
-                  strokeWidth={2}
+                  strokeWidth={2 / viewport.zoom}
                   opacity={0.7}
                 />
                 <text
                   x={firstPoint.x + 15}
                   y={firstPoint.y - 10}
-                  fontSize="12"
+                  fontSize={12 / viewport.zoom}
                   fill="#007acc"
                   fontFamily="Arial, sans-serif"
                 >
@@ -190,7 +193,7 @@ export const CurvesRenderer: React.FC = () => {
         <text
           x={viewport.viewBox.width / 2}
           y={viewport.viewBox.height / 2}
-          fontSize="16"
+          fontSize={16 / viewport.zoom}
           fill="#007acc"
           fontFamily="Arial, sans-serif"
           textAnchor="middle"
