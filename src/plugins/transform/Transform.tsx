@@ -3,6 +3,7 @@ import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { transformManager, transformMouseHandlers, TransformBounds, TransformHandle } from './TransformManager';
 import { TransformHandles } from './TransformHandles';
+import { DimensionsInfo } from './DimensionsInfo';
 
 const TransformPlugin: React.FC = () => {
   const [bounds, setBounds] = useState<TransformBounds | null>(null);
@@ -68,7 +69,12 @@ const TransformPlugin: React.FC = () => {
   return (
     <>
       {bounds && handles.length > 0 && (
-        <TransformHandles bounds={bounds} handles={handles} />
+        <>
+          <TransformHandles bounds={bounds} handles={handles} />
+          
+          {/* Show dimensions info always when bounds are available */}
+          <DimensionsInfo bounds={bounds} viewport={viewport} />
+        </>
       )}
       
       {/* Transform status indicator */}
