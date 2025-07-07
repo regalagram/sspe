@@ -13,7 +13,6 @@ import { useMouseEventHandlers } from '../hooks/useMouseEventHandlers';
 import { useTouchEventHandlers } from '../plugins/touch-mobile/TouchMobile';
 import { PluginUIRenderer } from '../components/PluginUIRenderer';
 import { AccordionToggleButton } from '../components/AccordionToggleButton';
-import FillNoneTest from '../components/FillNoneTest';
 
 // Register plugins immediately during module loading
 enableGlobalTouchToMouse(); // Sistema global simple: touch→mouse
@@ -87,9 +86,6 @@ export const SvgEditor: React.FC = () => {
           isFullscreen={isFullscreen}
         />
       )}
-
-      {/* Temporarily add test component */}
-      <FillNoneTest />
     </div>
   );
 };
