@@ -4,6 +4,8 @@
 
 This document describes the architectural patterns, design principles, and technical guidelines used in the development of the SVG Sub-Path Editor. The goal is to provide a reference guide for developing similar applications with the same quality, structure, and simplicity.
 
+**Current Architecture**: The application uses a **simplified accordion-only UI system** with a centralized plugin architecture. All UI controls are organized in a collapsible accordion sidebar, eliminating the complexity of draggable panels while maintaining full modularity and extensibility.
+
 ## 🏗️ General Architecture
 
 ### 1. **Modular Plugin Architecture**
@@ -33,28 +35,28 @@ interface Plugin {
 - ✅ Plugins communicate only through the central store
 - ✅ Each plugin defines its own UI components, shortcuts, and tools
 
-### 2. **Position-Based UI System**
+### 2. **Accordion-Based UI System**
 
-**Principle**: UI components are organized by physical positions in the interface.
+**Principle**: UI components are organized in a collapsible accordion sidebar system.
 
 ```typescript
 interface UIComponentDefinition {
   id: string;
   component: React.ComponentType<any>;
-  position: 'toolbar' | 'sidebar' | 'statusbar' | 'contextmenu' | 'svg-content';
+  position: 'accordion' | 'toolbar' | 'svg-content' | 'statusbar' | 'contextmenu';
   order?: number;
 }
 ```
 
 **Standard Positions**:
+- `accordion`: Collapsible accordion panels in sidebar
 - `toolbar`: Top toolbar
-- `sidebar`: Right side panel (draggable)
 - `svg-content`: Content rendered inside the SVG
 - `statusbar`: Bottom status bar
 - `contextmenu`: Context menus
 
 **Order Guideline**: 
-- Use `order` to control rendering order
+- Use `order` to control rendering order in accordion
 - SVG content: Grid (0) → Paths (10) → Control Points (20) → Command Points (30) → Selection (100)
 
 ## 🗃️ State Management
@@ -104,29 +106,26 @@ interface EditorActions {
 
 ## 🎯 Component Patterns
 
-### 5. **Draggable Panel Pattern**
+### 5. **Accordion Panel Pattern**
 
-**Principle**: All plugin controls must be in draggable panels.
+**Principle**: All plugin controls must be in accordion panels within the sidebar.
 
 ```typescript
 export const PluginComponent: React.FC = () => {
   return (
-    <DraggablePanel 
-      title="Plugin Name"
-      initialPosition={{ x: 980, y: 80 }}
-      id="plugin-name"
-    >
+    <div>
       <PluginControls />
-    </DraggablePanel>
+    </div>
   );
 };
 ```
 
 **Guidelines**:
-- ✅ Use `DraggablePanel` for all plugin controls
-- ✅ Initial positions must avoid overlap
-- ✅ Unique IDs for position persistence
-- ✅ Descriptive and concise titles
+- ✅ Use simple `<div>` containers for plugin controls
+- ✅ Accordion system handles panel management automatically
+- ✅ Unique IDs for panel identification
+- ✅ Descriptive and concise panel titles
+- ✅ Panels can be enabled/disabled individually
 
 ### 6. **Separation of Logic and Presentation**
 
@@ -149,7 +148,7 @@ export const Plugin: Plugin = {
     {
       id: 'plugin-controls',
       component: PluginControls,
-      position: 'sidebar',
+      position: 'accordion',
       order: 1
     },
     {
@@ -275,7 +274,10 @@ src/
 │   ├── zoom/
 │   ├── grid/
 │   ├── creation-tools/
+│   ├── panelmode/          # Accordion sidebar system
 │   └── [plugin-name]/
+├── managers/               # State managers
+│   └── ToolModeManager.ts  # Exclusive tool mode management
 ├── store/                  # State management
 │   └── editorStore.ts
 ├── types/                  # Type definitions
@@ -285,8 +287,13 @@ src/
 │   ├── id-utils.ts
 │   └── [domain]-utils.ts
 ├── components/             # Reusable components
-│   ├── DraggablePanel.tsx
+│   ├── AccordionToggleButton.tsx
+│   ├── PluginButton.tsx
 │   └── SVGCommandIcons.tsx
+├── hooks/                  # Custom hooks
+│   ├── useCombinedCursor.ts
+│   ├── useEditorStyles.ts
+│   └── [hook-name].ts
 └── styles/
     └── editor.css
 ```
@@ -327,9 +334,9 @@ const useMyPlugin = () => {
 
 ## 🔄 Persistence Management
 
-### 16. **Granular Persistence**
+### 16. **Accordion-Based Persistence**
 
-**Principle**: Persist user preferences in a granular and optional manner.
+**Principle**: Persist user preferences and accordion state in a granular and optional manner.
 
 ```typescript
 interface UserPreferences {
@@ -338,17 +345,124 @@ interface UserPreferences {
   gridSize: number;
   snapToGrid: boolean;
   showControlPoints: boolean;
+  accordionVisible: boolean;
+  accordionExpandedPanel: string | null;
+}
+
+interface PanelConfig {
+  id: string;
+  name: string;
+  enabled: boolean;
+  order: number;
+  pluginId: string;
 }
 
 // Persist only what's necessary for UX
 const savePreferences = (prefs: UserPreferences) => {
   localStorage.setItem('svg-editor-prefs', JSON.stringify(prefs));
 };
+
+const savePanelConfigs = (configs: Map<string, PanelConfig>) => {
+  localStorage.setItem('sspe-panel-configs', JSON.stringify(Object.fromEntries(configs)));
+};
 ```
+
+## 🎛️ Panel Management System
+
+### 17. **Accordion Panel Manager**
+
+**Principle**: Centralized management of accordion panels with persistent state.
+
+```typescript
+interface PanelModeState {
+  mode: 'accordion';
+  panels: Map<string, PanelConfig>;
+  accordionExpandedPanel: string | null;
+  accordionVisible: boolean;
+}
+
+interface PanelModeActions {
+  registerPanel: (config: PanelConfig) => void;
+  enablePanel: (panelId: string) => void;
+  disablePanel: (panelId: string) => void;
+  togglePanel: (panelId: string) => void;
+  setAccordionExpanded: (panelId: string | null) => void;
+  reorderPanel: (panelId: string, newOrder: number) => void;
+}
+```
+
+**Guidelines**:
+- ✅ Panels are automatically registered by plugins
+- ✅ Panel state is persisted in localStorage
+- ✅ Only one panel can be expanded at a time
+- ✅ Panels can be enabled/disabled individually
+- ✅ Panel order is customizable and persistent
+
+## 🛠️ Tool Mode Management
+
+### 18. **Exclusive Tool Mode System**
+
+**Principle**: Tools are mutually exclusive - only one tool can be active at a time.
+
+```typescript
+interface ToolModeState {
+  currentTool: string | null;
+  tools: Map<string, ToolDefinition>;
+}
+
+interface ToolModeActions {
+  setTool: (toolId: string) => void;
+  clearTool: () => void;
+  registerTool: (tool: ToolDefinition) => void;
+  isToolActive: (toolId: string) => boolean;
+}
+
+interface ToolDefinition {
+  id: string;
+  name: string;
+  icon?: string;
+  cursor?: string;
+  exclusive?: boolean; // Default: true
+}
+```
+
+**Usage Example**:
+```typescript
+// In a plugin
+const CreationTool: React.FC = () => {
+  const { currentTool, setTool, clearTool } = useToolModeStore();
+  const isActive = currentTool === 'creation-tool';
+
+  const handleToggle = () => {
+    if (isActive) {
+      clearTool();
+    } else {
+      setTool('creation-tool');
+    }
+  };
+
+  return (
+    <button 
+      onClick={handleToggle}
+      className={isActive ? 'active' : ''}
+    >
+      Creation Tool
+    </button>
+  );
+};
+```
+
+**Guidelines**:
+- ✅ Tools are mutually exclusive by default
+- ✅ Only one tool can be active at a time
+- ✅ Tools automatically deactivate when another tool is selected
+- ✅ Tools can be cleared to return to default state
+- ✅ Tool state is managed centrally through ToolModeManager
+- ✅ Tools can define custom cursors and behavior
 
 ## 🧪 Testing Principles
 
-### 17. **Testability by Design**
+### 19. **Testability by Design**
 
 **Guidelines for making code testable**:
 - ✅ Pure functions in utils/
@@ -358,7 +472,7 @@ const savePreferences = (prefs: UserPreferences) => {
 
 ## 📏 Code Standards
 
-### 18. **Naming Conventions**
+### 20. **Naming Conventions**
 
 ```typescript
 // Interfaces: PascalCase with descriptive suffix
@@ -378,7 +492,7 @@ export function getAbsolutePosition() { }
 const DEFAULT_GRID_SIZE = 20;
 ```
 
-### 19. **Strict TypeScript**
+### 21. **Strict TypeScript**
 
 **Principle**: Use TypeScript strictly with complete typing.
 
@@ -401,7 +515,7 @@ const processData = (data: unknown): ProcessedData => {
 
 ## 🚀 Scalability and Maintenance
 
-### 20. **Scalability Principles**
+### 22. **Scalability Principles**
 
 **Extensibility**:
 - ✅ New plugins without modifying core
@@ -420,18 +534,40 @@ const processData = (data: unknown): ProcessedData => {
 
 ## 📚 Summary of Key Guidelines
 
+### 🎯 Current Architecture (Accordion-Only System)
+
+**Evolution**: The application has evolved from a draggable panel system to a simplified accordion-only architecture, focusing on:
+- **Simplicity**: Single accordion sidebar instead of multiple draggable windows
+- **Consistency**: All plugin controls follow the same UI pattern
+- **Performance**: Reduced complexity and better resource management
+- **Maintainability**: Cleaner codebase with fewer UI management concerns
+
+**Key Components**:
+- `AccordionSidebar`: Main UI container for all plugin controls
+- `PanelManager`: Centralized state management for accordion panels
+- `ToolModeManager`: Exclusive tool mode management system
+- `PanelWrapper`: Simple wrapper component for plugin content
+- `AccordionToggleButton`: Toggle button for showing/hiding accordion
+
+**Tool Management**:
+- **Exclusive Tools**: Only one tool can be active at a time (Creation, Pencil, etc.)
+- **Tool States**: Tools can be active, inactive, or cleared
+- **Centralized Control**: ToolModeManager handles all tool state transitions
+- **Plugin Integration**: Each tool plugin registers with the ToolModeManager
+
 ### ✅ DO
 
 1. **Create one plugin per functionality**
-2. **Use DraggablePanel for all controls**
-3. **Complete typing with TypeScript**
-4. **Pure functions for transformations**
-5. **Central store as single source of truth**
-6. **Separate control and rendering components**
-7. **Centralized events with complete context**
-8. **Smart conditional rendering**
-9. **Inverse proportional scaling to zoom**
-10. **Directory structure by domain**
+2. **Use accordion panels for all controls**
+3. **Use ToolModeManager for exclusive tools**
+4. **Complete typing with TypeScript**
+5. **Pure functions for transformations**
+6. **Central store as single source of truth**
+7. **Separate control and rendering components**
+8. **Centralized events with complete context**
+9. **Smart conditional rendering**
+10. **Inverse proportional scaling to zoom**
+11. **Directory structure by domain**
 
 ### ❌ DON'T
 
@@ -445,6 +581,7 @@ const processData = (data: unknown): ProcessedData => {
 8. **Don't use 'any' in TypeScript**
 9. **Don't couple components to specific positions**
 10. **Don't implement functionalities outside the plugin system**
+11. **Don't allow multiple exclusive tools to be active simultaneously**
 
 ---
 
