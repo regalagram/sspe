@@ -102,9 +102,6 @@ export class PluginManager {
     commandId?: string,
     controlPoint?: 'x1y1' | 'x2y2'
   ): boolean {
-    // Debug logs disabled to reduce console noise
-    // console.log('🔌 PluginSystem: handleMouseEvent called with:', eventType);
-    
     const context: MouseEventContext = {
       svgPoint: this.getSVGPoint(e as MouseEvent<SVGElement>),
       svgRef: this.svgRef!,
@@ -112,12 +109,8 @@ export class PluginManager {
       controlPoint
     };
 
-    // console.log('🔌 PluginSystem: SVG point:', context.svgPoint);
-
-    // Check if clicking on a transform handle
     const target = e.target as SVGElement;
     
-    // Safety check: ensure target is a valid DOM element with getAttribute method
     const handleType = target && typeof target.getAttribute === 'function' 
       ? target.getAttribute('data-handle-type') 
       : null;
@@ -127,8 +120,6 @@ export class PluginManager {
     
     // Process plugins in order, stop if any plugin handles the event
     let pluginsToProcess = this.getEnabledPlugins();
-    
-    // console.log('🔌 PluginSystem: Processing', pluginsToProcess.length, 'enabled plugins');
     
     if ((handleType === 'transform' || handleType === 'rotation') && eventType === 'mouseDown') {
       // When clicking on a transform or rotation handle, prioritize Transform plugin
@@ -152,15 +143,12 @@ export class PluginManager {
       if (shapesPlugin && this.isShapeCreationMode) {
         const otherPlugins = pluginsToProcess.filter(p => p.id !== 'shapes');
         pluginsToProcess = [shapesPlugin, ...otherPlugins];
-        console.log('🔌 PluginSystem: Prioritizing shapes plugin - in creation mode');
       }
     }
     
     for (const plugin of pluginsToProcess) {
       if (!plugin.mouseHandlers) continue;
 
-      // console.log('🔌 PluginSystem: Trying plugin:', plugin.id);
-      
       let handled = false;
       switch (eventType) {
         case 'mouseDown':
@@ -177,14 +165,11 @@ export class PluginManager {
           break;
       }
 
-      // console.log('🔌 PluginSystem: Plugin', plugin.id, 'handled:', handled);
-
       if (handled) {
         return true;
       }
     }
 
-    // console.log('🔌 PluginSystem: No plugin handled the event');
     return false;
   }
   

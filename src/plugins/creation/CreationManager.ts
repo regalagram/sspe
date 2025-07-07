@@ -98,8 +98,7 @@ export class CreationManager {
    * Activar modo creation con un comando específico - llamado por ToolModeManager
    */
   activateCreation(commandType: string): void {
-    console.log(`🔨 CreationManager: Activating creation mode with '${commandType}'`);
-    const store = useEditorStore.getState();
+        const store = useEditorStore.getState();
     store.setCreateMode(commandType as any);
   }
 
@@ -108,24 +107,21 @@ export class CreationManager {
    * No notifica de vuelta para evitar loops
    */
   deactivateExternally = (): void => {
-    console.log('🔨 CreationManager: Being deactivated externally by ToolModeManager');
-    
+        
     // Cambiar modo del editor a select - NO notificar a ToolModeManager para evitar loop
     const store = useEditorStore.getState();
     if (store.mode.current === 'create') {
       store.setMode('select');
     }
     
-    console.log('🔨 CreationManager: External deactivation completed');
-  };
+      };
 
   /**
    * Método para activación externa por ToolModeManager
    * No genera recursión porque no llama de vuelta a ToolModeManager
    */
   activateExternally = (commandType: EditorCommandType): void => {
-    console.log('🔨 CreationManager: Being activated externally by ToolModeManager', commandType);
-    const store = useEditorStore.getState();
+        const store = useEditorStore.getState();
     store.setCreateMode(commandType);
   };
 
@@ -133,12 +129,10 @@ export class CreationManager {
    * Salir del modo creation - llamado cuando el usuario presiona Escape o Exit
    */
   exitCreation = (): void => {
-    console.log('🔨 CreationManager: Exiting creation mode');
-    
+        
     // Verificar si fue activado por ToolModeManager
     if (toolModeManager.isActive('creation')) {
-      console.log('🔨 CreationManager: Notifying ToolModeManager of deactivation');
-      toolModeManager.notifyModeDeactivated('creation');
+            toolModeManager.notifyModeDeactivated('creation');
     } else {
       // Solo cambiar modo del editor si no fue coordinado por ToolModeManager
       const store = useEditorStore.getState();
