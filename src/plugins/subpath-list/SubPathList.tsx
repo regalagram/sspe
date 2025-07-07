@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { getAllSubPaths } from '../../utils/subpath-utils';
 import { subPathToString } from '../../utils/path-utils';
 import { Eye, EyeOff } from 'lucide-react';
@@ -396,13 +395,9 @@ export const SubPathListPlugin: Plugin = {
     {
       id: 'subpath-list',
       component: () => (
-        <DraggablePanel 
-          title="Sub-Paths"
-          initialPosition={{ x: 980, y: 80 }}
-          id="subpath-list"
-        >
+        <div>
           <SubPathListComponent />
-        </DraggablePanel>
+        </div>
       ),
       position: 'sidebar',
       order: 0

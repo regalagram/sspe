@@ -1,7 +1,6 @@
 import React, { MouseEvent } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { getAbsoluteCommandPosition, getAbsoluteControlPoints } from '../../utils/path-utils';
 import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';
 import { pluginManager } from '../../core/PluginSystem';
@@ -425,11 +424,7 @@ export const VisualDebugComponent: React.FC = () => {
   } = useEditorStore();
   
   return (
-    <DraggablePanel 
-      title="Visual Debug"
-      initialPosition={{ x: 980, y: 300 }}
-      id="visual-debug"
-    >
+    <div>
       <VisualDebugControls
         commandPointsEnabled={enabledFeatures.has('command-points')}
         controlPointsEnabled={enabledFeatures.has('control-points')}
@@ -451,7 +446,7 @@ export const VisualDebugComponent: React.FC = () => {
         onTransformResizeFactorChange={setVisualDebugTransformResizeFactor}
         onTransformRotateFactorChange={setVisualDebugTransformRotateFactor}
       />
-    </DraggablePanel>
+    </div>
   );
 };
 

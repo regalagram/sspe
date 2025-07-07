@@ -1,7 +1,6 @@
 import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { findCommandById } from '../../utils/subpath-utils';
 import { SVGCommand } from '../../types';
 
@@ -131,17 +130,13 @@ export const CommandPanelComponent: React.FC = () => {
   const { command, pathId, subPathId } = commandInfo;
 
   return (
-    <DraggablePanel
-      title="Point Info"
-      initialPosition={{ x: 20, y: 200 }}
-      id="command-panel"
-    >
+    <div>
       <CommandPanel 
         command={command}
         pathId={pathId}
         subPathId={subPathId}
       />
-    </DraggablePanel>
+    </div>
   );
 };
 

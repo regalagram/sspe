@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
 import { ArrowUpDown, Spline } from 'lucide-react';
 import { SVGCommand, SVGCommandType } from '../../types';
@@ -202,11 +201,7 @@ export const PointTransformControls: React.FC<PointTransformControlsProps> = () 
   }
 
   return (
-    <DraggablePanel
-      id="point-transform"
-      title="Point Transform"
-      initialPosition={{ x: 20, y: 400 }}
-    >
+    <div>
       <div style={{ 
         display: 'flex',
         flexDirection: 'column',
@@ -264,6 +259,6 @@ export const PointTransformControls: React.FC<PointTransformControlsProps> = () 
         </div>
         
       </div>
-    </DraggablePanel>
+    </div>
   );
 };

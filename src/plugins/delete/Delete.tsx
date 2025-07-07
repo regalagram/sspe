@@ -2,7 +2,6 @@ import React from 'react';
 import { Trash2 } from 'lucide-react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
 
 interface DeleteControlProps {
@@ -75,16 +74,12 @@ export const DeleteComponent: React.FC = () => {
   };
 
   return (
-    <DraggablePanel 
-      title="Delete"
-      initialPosition={{ x: 980, y: 240 }}
-      id="delete-control"
-    >
+    <div>
       <DeleteControl
         onDelete={handleDelete}
         hasSelection={hasSelection}
       />
-    </DraggablePanel>
+    </div>
   );
 };
 

@@ -3,7 +3,6 @@ import React, { ReactNode } from 'react';
 interface PanelWrapperProps {
   children: ReactNode;
   title: string;
-  initialPosition?: { x: number; y: number };
   className?: string;
   style?: React.CSSProperties;
   id?: string;

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
 import { Move, RotateCw, Maximize2, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Waves, Minimize2, FlipHorizontal, FlipVertical } from 'lucide-react';
 import { 
@@ -479,11 +478,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
   }, [handleMirrorHorizontal, handleMirrorVertical]);
 
   return (
-    <DraggablePanel
-      title="Sub-Path Transform"
-      initialPosition={{ x: 980, y: 300 }}
-      id="subpath-transform"
-    >
+    <div>
       <div style={{ 
         display: 'flex', 
         flexDirection: 'column', 
@@ -993,6 +988,6 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
           </>
         )}
       </div>
-    </DraggablePanel>
+    </div>
   );
 };

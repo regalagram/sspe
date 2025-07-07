@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
 import { Link, Unlink, CornerDownLeft, CornerUpRight } from 'lucide-react';
 import { figmaHandleManager } from './FigmaHandleManager';
@@ -93,11 +92,7 @@ export const FigmaHandleControls: React.FC = () => {
   const canConvertToMirrored = controlPointInfo.type !== 'mirrored' && controlPointInfo.isBreakable;
 
   return (
-    <DraggablePanel
-      id="figma-handles"
-      title="Puntos de Control (Figma)"
-      initialPosition={{ x: 20, y: 600 }}
-    >
+    <div>
       <div style={{ 
         display: 'flex',
         flexDirection: 'column',
@@ -202,6 +197,6 @@ export const FigmaHandleControls: React.FC = () => {
         </div>
 
       </div>
-    </DraggablePanel>
+    </div>
   );
 };

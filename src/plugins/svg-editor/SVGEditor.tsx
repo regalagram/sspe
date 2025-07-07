@@ -4,7 +4,6 @@ import { useEditorStore } from '../../store/editorStore';
 import { subPathToString } from '../../utils/path-utils';
 import { parseSVGToSubPaths } from '../../utils/svg-parser';
 import { calculateViewBoxFromSVGString } from '../../utils/viewbox-utils';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
 import { RotateCcw, CheckCircle2, Trash2, Upload, Download } from 'lucide-react';
 import { savePreferences, loadPreferences } from '../../utils/persistence';
@@ -301,11 +300,7 @@ ${pathElements}
   const currentSVG = generateSVGCode();
 
   return (
-    <DraggablePanel 
-      title="SVG"
-      initialPosition={{ x: 980, y: 300 }}
-      id="svg-editor"
-    >
+    <div>
       {/* Upload/Download buttons */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
         <PluginButton
@@ -358,7 +353,7 @@ ${pathElements}
           fullWidth={true}
         />
       </div>
-    </DraggablePanel>
+    </div>
   );
 };
 

@@ -2,10 +2,6 @@ import { useMouseInteraction } from '../plugins/mouse-interaction/MouseInteracti
 import { useRectSelection } from '../plugins/selection/Selection';
 import { usePencilCursor } from '../plugins/pencil/usePencilCursor';
 
-/**
- * Hook to combine cursors from different plugins
- * Following the composition over inheritance principle from README.md
- */
 export const useCombinedCursor = () => {
   const mouseInteraction = useMouseInteraction();
   const rectSelection = useRectSelection();

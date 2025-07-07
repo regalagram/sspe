@@ -1,7 +1,6 @@
 import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Target } from 'lucide-react';
 import { PluginButton } from '../../components/PluginButton';
 
@@ -109,11 +108,7 @@ export const Zoom: React.FC = () => {
   const { viewport, selection, zoomIn, zoomOut, zoomToFit, zoomToSelection, zoomToSubPath, resetView } = useEditorStore();
 
   return (
-    <DraggablePanel 
-      title="Zoom Controls"
-      initialPosition={{ x: 980, y: 20 }}
-      id="zoom-controls"
-    >
+    <div>
       <ZoomControls
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
@@ -125,7 +120,7 @@ export const Zoom: React.FC = () => {
         hasSelection={selection.selectedCommands.length > 0}
         hasSubPathSelection={selection.selectedSubPaths.length > 0}
       />
-    </DraggablePanel>
+    </div>
   );
 };
 

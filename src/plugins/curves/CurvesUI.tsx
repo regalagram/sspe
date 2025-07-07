@@ -1,7 +1,6 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { curvesManager, CurveToolMode, PointType } from './CurvesManager';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
 import { PenTool, Square, Circle, RotateCcw, Trash2 } from 'lucide-react';
 
@@ -180,16 +179,13 @@ export const CurvesUI: React.FC = () => {
     return null;
   };
 
-  // En modo acordeón, el DraggablePanel se renderiza automáticamente por el sistema
-  // Solo necesitamos devolver el contenido
+  // In accordion mode, panels are rendered automatically by the system
+  // We just need to return the content
   const title = curveState.isActive ? 'Curves Tool - Active' : 'Curves Tool';
   
   return (
-    <DraggablePanel 
-      title={title}
-      id="curves-tool-panel"
-    >
+    <div>
       {renderContent()}
-    </DraggablePanel>
+    </div>
   );
 };

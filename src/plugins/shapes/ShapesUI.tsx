@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
 import { SHAPE_TEMPLATES, ShapeTemplate } from './ShapeDefinitions';
 import { shapeManager } from './ShapeManager';
@@ -216,11 +215,7 @@ export const ShapesUI: React.FC = () => {
   const allShapes = SHAPE_TEMPLATES;
 
   return (
-    <DraggablePanel
-      title="Shapes"
-      initialPosition={{ x: 980, y: 220 }}
-      id="shapes-panel"
-    >
+    <div>
       <div style={{
         display: 'flex',
         flexDirection: 'column',
@@ -259,6 +254,6 @@ export const ShapesUI: React.FC = () => {
             />
         )}
       </div>
-    </DraggablePanel>
+    </div>
   );
 };

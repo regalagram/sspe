@@ -1,7 +1,6 @@
 import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { Undo2, Redo2 } from 'lucide-react';
 import { PluginButton } from '../../components/PluginButton';
 
@@ -44,18 +43,14 @@ export const UndoRedoComponent: React.FC = () => {
   const { history, undo, redo } = useEditorStore();
   
   return (
-    <DraggablePanel 
-      title="History"
-      initialPosition={{ x: 980, y: 100 }}
-      id="history-controls"
-    >
+    <div>
       <UndoRedoControls
         canUndo={history.canUndo}
         canRedo={history.canRedo}
         onUndo={undo}
         onRedo={redo}
       />
-    </DraggablePanel>
+    </div>
   );
 };
 

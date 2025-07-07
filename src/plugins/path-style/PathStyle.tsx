@@ -2,7 +2,6 @@ import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { PathStyle, SVGPath } from '../../types';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { convertRgbToHex } from '../../utils/color-utils';
 
 // Helper function to convert colors to hex format for color inputs
@@ -293,11 +292,7 @@ export const PathStyleComponent: React.FC = () => {
   };
 
   return (
-    <DraggablePanel 
-      title="Style"
-      initialPosition={{ x: 980, y: 220 }}
-      id="path-style"
-    >
+    <div>
       <div style={{ 
         fontSize: '10px', 
         color: '#999', 
@@ -313,7 +308,7 @@ export const PathStyleComponent: React.FC = () => {
         pathStyle={firstPathStyle}
         onStyleChange={handleStyleChange}
       />
-    </DraggablePanel>
+    </div>
   );
 };
 

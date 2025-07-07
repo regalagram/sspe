@@ -1,15 +1,9 @@
 import { useEffect } from 'react';
 import { pluginManager } from '../core/PluginSystem';
 
-/**
- * Hook for handling global mouse events that escape the SVG during drag operations
- * Following the centralized mouse events system principle from README.md
- */
 export const useGlobalMouseEvents = () => {
   useEffect(() => {
     const handleNativeMove = (e: MouseEvent) => {
-      // Handle mouse move events
-      
       if (e.buttons === 1) {
         const mouseEvent = {
           ...e,
@@ -28,8 +22,6 @@ export const useGlobalMouseEvents = () => {
     };
 
     const handleNativeUp = (e: MouseEvent) => {
-      // Handle mouse up events
-      
       const mouseEvent = {
         ...e,
         nativeEvent: e,

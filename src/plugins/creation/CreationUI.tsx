@@ -1,7 +1,6 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { SVGCommandType, EditorCommandType } from '../../types';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import SVGCommandIcon from '../../components/SVGCommandIcons';
 import { PluginButton } from '../../components/PluginButton';
 import { LogOut } from 'lucide-react';
@@ -83,17 +82,13 @@ export const CreationUI: React.FC = () => {
   };
 
   return (
-    <DraggablePanel
-      title="Creation"
-      initialPosition={{ x: 980, y: 140 }}
-      id="creation-tools"
-    >
+    <div>
       <CreationTools
         currentMode={mode.current}
         createMode={mode.createMode}
         onSelectTool={handleSelectTool}
         onExitCreateMode={handleExitCreateMode}
       />
-    </DraggablePanel>
+    </div>
   );
 };

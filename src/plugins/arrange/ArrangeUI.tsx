@@ -1,6 +1,5 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
 import { 
   AlignLeft, 
@@ -181,11 +180,7 @@ export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
   );
 
   return (
-    <DraggablePanel
-      id="arrange-panel"
-      title="Arrange"
-      initialPosition={{ x: 100, y: 100 }}
-    >
+    <div>
       <div style={containerStyle}>
         
         {/* Alignment Section */}
@@ -347,6 +342,6 @@ export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
           {hasThreeOrMore && `${selection.selectedSubPaths.length} selected`}
         </div>
       </div>
-    </DraggablePanel>
+    </div>
   );
 };

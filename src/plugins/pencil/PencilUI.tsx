@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { pencilManager } from './PencilManager';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
 import { Edit3, LogOut } from 'lucide-react';
 import { toolModeManager } from '../../managers/ToolModeManager';
@@ -140,11 +139,7 @@ export const PencilUI: React.FC = () => {
   );
 
   return (
-    <DraggablePanel
-      title="Pencil Tool"
-      initialPosition={{ x: 980, y: 300 }}
-      id="pencil-tools"
-    >
+    <div>
       <div style={{
         display: 'flex',
         flexDirection: 'column'
@@ -508,6 +503,6 @@ export const PencilUI: React.FC = () => {
           </div>
         )}
       </div>
-    </DraggablePanel>
+    </div>
   );
 };

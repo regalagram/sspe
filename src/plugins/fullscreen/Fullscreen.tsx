@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { DraggablePanel } from '../../components/DraggablePanel';
 
 interface FullscreenControlProps {
   isFullscreen: boolean;
@@ -60,16 +59,12 @@ export const FullscreenComponent: React.FC = () => {
   };
 
   return (
-    <DraggablePanel 
-      title="Fullscreen"
-      initialPosition={{ x: 980, y: 180 }}
-      id="fullscreen-control"
-    >
+    <div>
       <FullscreenControl
         isFullscreen={isFullscreen}
         onToggle={handleToggle}
       />
-    </DraggablePanel>
+    </div>
   );
 };
 

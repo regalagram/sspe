@@ -9,7 +9,8 @@ import { useGlobalMouseEvents } from '../hooks/useGlobalMouseEvents';
 import { useEditorStyles } from '../hooks/useEditorStyles';
 import { usePluginInitialization } from '../hooks/usePluginInitialization';
 import { useMouseEventHandlers } from '../hooks/useMouseEventHandlers';
-import { PluginUIRenderer } from '../components/PluginUIRenderer';
+import { pluginManager } from './PluginSystem';
+import { AccordionSidebar } from '../plugins/panelmode/AccordionSidebar';
 import { AccordionToggleButton } from '../components/AccordionToggleButton';
 
 // Register plugins immediately during module loading
@@ -23,11 +24,23 @@ export const SvgEditor: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
   
   // Get panel mode from store
-  const { accordionVisible, toggleAccordionVisible } = usePanelModeStore();
+  const { accordionVisible, toggleAccordionVisible, getVisiblePanels } = usePanelModeStore();
   
   // Use custom hooks for cleaner separation of concerns
   const { getCursor } = useCombinedCursor();
   const { editorStyle, svgStyle } = useEditorStyles({ isFullscreen, accordionVisible });
+
+  // Get svg-content plugins
+  const svgContentPlugins = pluginManager.getEnabledPlugins()
+    .flatMap(plugin => plugin.ui || [])
+    .filter(ui => ui.position === 'svg-content')
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  // Get all panels for accordion (sidebar + toolbar)
+  const allPanels = pluginManager.getEnabledPlugins()
+    .flatMap(plugin => plugin.ui || [])
+    .filter(ui => ui.position === 'sidebar' || ui.position === 'toolbar')
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
   
   // Initialize global event handlers
   useGlobalKeyboard();
@@ -41,8 +54,7 @@ export const SvgEditor: React.FC = () => {
 
   return (
     <div className="svg-editor" style={editorStyle}>
-      {/* Render toolbar plugins */}
-      <PluginUIRenderer position="toolbar" />
+      {/* Toolbar is hidden in accordion mode */}
       
       {/* Main SVG canvas */}
       <svg
@@ -60,13 +72,15 @@ export const SvgEditor: React.FC = () => {
         onWheel={handleWheel}
       >
         <g transform={getSafeTransform(editorStore.viewport)}>
-          {/* Render SVG content through plugins */}
-          <PluginUIRenderer position="svg-content" />
+          {/* Render SVG content plugins */}
+          {svgContentPlugins.map(ui => (
+            <ui.component key={ui.id} />
+          ))}
         </g>
       </svg>
       
-      {/* Render sidebar plugins */}
-      <PluginUIRenderer position="sidebar" />
+      {/* Render sidebar as accordion */}
+      {accordionVisible && <AccordionSidebar plugins={allPanels} />}
 
       {/* Accordion toggle button - always show (since we're always in accordion mode) */}
       <AccordionToggleButton

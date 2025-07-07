@@ -1,6 +1,5 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { 
   ChevronUp,
   ChevronDown,
@@ -105,11 +104,7 @@ export const ReorderUI: React.FC<ReorderUIProps> = ({ onClose }) => {
   );
 
   return (
-    <DraggablePanel
-      id="reorder-panel"
-      title="Reorder"
-      initialPosition={{ x: 300, y: 100 }}
-    >
+    <div>
       <div style={containerStyle}>
         
         {/* Reorder Section */}
@@ -153,6 +148,6 @@ export const ReorderUI: React.FC<ReorderUIProps> = ({ onClose }) => {
           {hasSelection && `${selection.selectedSubPaths.length} selected`}
         </div>
       </div>
-    </DraggablePanel>
+    </div>
   );
 };

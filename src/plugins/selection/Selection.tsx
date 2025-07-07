@@ -1,7 +1,6 @@
 import React, { useState, MouseEvent } from 'react';
 import { Plugin, MouseEventHandler, MouseEventContext } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
 import { MousePointer2, XCircle } from 'lucide-react';
 import { getCommandPosition } from '../../utils/path-utils';
@@ -324,18 +323,14 @@ export const SelectionToolsComponent: React.FC = () => {
     selection.selectedCommands.length;
   
   return (
-    <DraggablePanel 
-      title="Selection"
-      initialPosition={{ x: 980, y: 300 }}
-      id="selection-tools"
-    >
+    <div>
       <SelectionTools
         currentMode={mode.current}
         onSetSelectionMode={() => setMode('select')}
         onClearSelection={clearSelection}
         selectedCount={selectedCount}
       />
-    </DraggablePanel>
+    </div>
   );
 };
 
