@@ -57,6 +57,7 @@ const defaultPreferences: UserPreferences = {
 export function loadPreferences(): UserPreferences {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
+    
     if (!stored) {
       return defaultPreferences;
     }
@@ -73,7 +74,7 @@ export function loadPreferences(): UserPreferences {
       showControlPoints: typeof parsed.showControlPoints === 'boolean' ? parsed.showControlPoints : defaultPreferences.showControlPoints,
       showCommandPoints: typeof parsed.showCommandPoints === 'boolean' ? parsed.showCommandPoints : defaultPreferences.showCommandPoints,
       wireframeMode: typeof parsed.wireframeMode === 'boolean' ? parsed.wireframeMode : defaultPreferences.wireframeMode,
-      precision: typeof parsed.precision === 'number' ? Math.max(0, Math.min(8, parsed.precision)) : defaultPreferences.precision,
+      precision: typeof parsed.precision === 'number' ? Math.max(0, Math.min(8, parsed.precision)) : (defaultPreferences.precision ?? 2),
       visualDebugSizes: parsed.visualDebugSizes && typeof parsed.visualDebugSizes === 'object' ? {
         globalFactor: typeof parsed.visualDebugSizes.globalFactor === 'number' ? Math.max(0.1, Math.min(5.0, parsed.visualDebugSizes.globalFactor)) : defaultPreferences.visualDebugSizes!.globalFactor,
         commandPointsFactor: typeof parsed.visualDebugSizes.commandPointsFactor === 'number' ? Math.max(0.1, Math.min(5.0, parsed.visualDebugSizes.commandPointsFactor)) : defaultPreferences.visualDebugSizes!.commandPointsFactor,

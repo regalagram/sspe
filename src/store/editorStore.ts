@@ -91,7 +91,7 @@ interface EditorActions {
 
 // Load preferences from localStorage
 const preferences = loadPreferences();
-const storedPrecision = preferences.precision || 2;
+const storedPrecision = preferences.precision ?? 2; // Use nullish coalescing to support 0
 
 const createInitialState = (): EditorState => {
   // Hardcoded SVG to load as initial state
