@@ -3,6 +3,7 @@ import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
 import { SHAPE_TEMPLATES, ShapeTemplate } from './ShapeDefinitions';
 import { shapeManager } from './ShapeManager';
+import { toolModeManager } from '../../managers/ToolModeManager';
 import { 
   Square, 
   Circle, 
@@ -182,19 +183,28 @@ export const ShapesUI: React.FC = () => {
       // Deselect if clicking the same shape
       console.log('🔷 ShapesUI: Deselecting shape');
       setActiveShapeId(null);
-      shapeManager.stopShapeCreation();
+      if (toolModeManager.isActive('shapes')) {
+        toolModeManager.setMode('select');
+      } else {
+        shapeManager.stopShapeCreation();
+      }
     } else {
       // Select new shape
       console.log('🔷 ShapesUI: Selecting new shape');
       setActiveShapeId(shapeId);
       shapeManager.setCurrentSize(currentSize);
-      shapeManager.startShapeCreation(shapeId);
+      // Usar ToolModeManager para coordinar la activación
+      toolModeManager.setMode('shapes', { shapeId: shapeId });
     }
   };
 
   const handleExitShapeMode = () => {
     setActiveShapeId(null);
-    shapeManager.stopShapeCreation();
+    if (toolModeManager.isActive('shapes')) {
+      toolModeManager.setMode('select');
+    } else {
+      shapeManager.stopShapeCreation();
+    }
   };
 
   const handleSizeChange = (newSize: number) => {

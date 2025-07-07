@@ -5,6 +5,8 @@ import { DraggablePanel } from '../../components/DraggablePanel';
 import SVGCommandIcon from '../../components/SVGCommandIcons';
 import { PluginButton } from '../../components/PluginButton';
 import { LogOut } from 'lucide-react';
+import { toolModeManager } from '../../managers/ToolModeManager';
+import { creationManager } from './CreationManager';
 
 interface CreationToolsProps {
   currentMode: string;
@@ -70,7 +72,15 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
 };
 
 export const CreationUI: React.FC = () => {
-  const { mode, setCreateMode, exitCreateMode } = useEditorStore();
+  const { mode } = useEditorStore();
+
+  const handleSelectTool = (commandType: SVGCommandType) => {
+    toolModeManager.setMode('creation', { commandType: commandType as EditorCommandType });
+  };
+
+  const handleExitCreateMode = () => {
+    creationManager.exitCreation();
+  };
 
   return (
     <DraggablePanel
@@ -81,8 +91,8 @@ export const CreationUI: React.FC = () => {
       <CreationTools
         currentMode={mode.current}
         createMode={mode.createMode}
-        onSelectTool={setCreateMode}
-        onExitCreateMode={exitCreateMode}
+        onSelectTool={handleSelectTool}
+        onExitCreateMode={handleExitCreateMode}
       />
     </DraggablePanel>
   );

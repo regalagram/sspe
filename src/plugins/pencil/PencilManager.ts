@@ -108,6 +108,16 @@ class PencilManager {
   }
 
   /**
+   * Método para activación externa por ToolModeManager
+   * No genera recursión porque no llama de vuelta a ToolModeManager
+   */
+  activateExternally = (): void => {
+    console.log('✏️ PencilManager: Being activated externally by ToolModeManager');
+    const store = useEditorStore.getState();
+    store.setCreateMode('PENCIL');
+  };
+
+  /**
    * Método para desactivación externa por ToolModeManager
    * No notifica de vuelta para evitar loops
    */
@@ -128,6 +138,32 @@ class PencilManager {
     }
     
     console.log('✏️ PencilManager: External deactivation completed');
+  };
+
+  /**
+   * Salir del modo pencil - llamado cuando el usuario presiona Escape o Exit
+   */
+  exitPencil = (): void => {
+    console.log('✏️ PencilManager: Exiting pencil mode');
+    
+    // Finalizar dibujo actual si está en progreso
+    if (this.state.isDrawing) {
+      this.state.isDrawing = false;
+      this.resetDrawingState();
+      this.removeGlobalMouseEvents();
+    }
+    
+    // Verificar si fue activado por ToolModeManager
+    if (toolModeManager.isActive('pencil')) {
+      console.log('✏️ PencilManager: Notifying ToolModeManager of deactivation');
+      toolModeManager.notifyModeDeactivated('pencil');
+    } else {
+      // Solo cambiar modo del editor si no fue coordinado por ToolModeManager
+      const store = useEditorStore.getState();
+      if (store.mode.current === 'create' && store.mode.createMode?.commandType === 'PENCIL') {
+        store.setMode('select');
+      }
+    }
   };
 
   handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {

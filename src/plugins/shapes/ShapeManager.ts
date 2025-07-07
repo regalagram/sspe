@@ -35,9 +35,9 @@ export class ShapeManager {
   startShapeCreation(shapeId: string) {
     console.log('🔷 ShapeManager.startShapeCreation called with shapeId:', shapeId);
     
-    // Verificar si ya estamos en el modo correcto
-    if (toolModeManager.isActive('shapes') && this.state.shapeId === shapeId) {
-      console.log('🔷 ShapeManager: Already in shape mode with same shape, skipping');
+    // Solo verificar si ya tenemos el mismo shapeId activo
+    if (this.state.isCreating && this.state.shapeId === shapeId) {
+      console.log('🔷 ShapeManager: Already creating same shape, skipping');
       return;
     }
     
@@ -61,16 +61,11 @@ export class ShapeManager {
     // Notify the plugin manager that shape creation mode is off
     pluginManager.setShapeCreationMode(false);
     
-    // Notificar a ToolModeManager si fue desactivado externamente
-    if (toolModeManager.isActive('shapes')) {
-      toolModeManager.notifyModeDeactivated('shapes');
-    }
-    
     console.log('🔷 ShapeManager: Shape creation stopped, state:', this.state);
   }
 
   isInShapeCreationMode(): boolean {
-    return toolModeManager.isActive('shapes') && this.state.isCreating && this.state.shapeId !== null;
+    return this.state.isCreating && this.state.shapeId !== null;
   }
 
   getCurrentShapeId(): string | null {
@@ -141,7 +136,9 @@ export class ShapeManager {
 
     console.log('🔷 ShapeManager: Inserting shape at point:', finalPoint);
     this.insertShape(finalPoint);
-    this.stopShapeCreation();
+    
+    // Don't stop shape creation automatically - let the user decide
+    // this.stopShapeCreation();
     
     return true;
   };

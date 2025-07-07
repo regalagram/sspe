@@ -197,14 +197,17 @@ export class ToolModeManager {
       case 'curves':
         if (this.curvesManager) {
           console.log('🔧 ToolModeManager: Activating curve tool');
-          this.curvesManager.activateCurveTool();
+          this.curvesManager.activateExternally();
+        } else {
+          // Fallback si no hay manager
+          useEditorStore.getState().setMode('curves');
         }
         break;
         
       case 'pencil':
         console.log('🔧 ToolModeManager: Activating pencil mode');
         if (this.pencilManager) {
-          this.pencilManager.activatePencil();
+          this.pencilManager.activateExternally();
         } else {
           // Fallback si no hay manager
           useEditorStore.getState().setCreateMode('PENCIL');
@@ -216,7 +219,7 @@ export class ToolModeManager {
           this.state.createSubMode = options.commandType;
           console.log(`🔧 ToolModeManager: Activating creation mode with '${options.commandType}'`);
           if (this.creationManager) {
-            this.creationManager.activateCreation(options.commandType);
+            this.creationManager.activateExternally(options.commandType);
           } else {
             // Fallback si no hay manager
             useEditorStore.getState().setCreateMode(options.commandType);

@@ -4,6 +4,7 @@ import { pencilManager } from './PencilManager';
 import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
 import { Edit3, LogOut } from 'lucide-react';
+import { toolModeManager } from '../../managers/ToolModeManager';
 
 export const PencilUI: React.FC = () => {
   const { mode, setCreateMode, exitCreateMode } = useEditorStore();
@@ -19,12 +20,12 @@ export const PencilUI: React.FC = () => {
 
   const handlePencilClick = () => {
     console.log('🎨 PencilUI: Activating pencil mode');
-    setCreateMode('PENCIL');
+    toolModeManager.setMode('pencil');
   };
 
   const handleExitPencil = () => {
     console.log('🎨 PencilUI: Exiting pencil mode');
-    exitCreateMode();
+    pencilManager.exitPencil();
   };
 
   const handleStrokeColorChange = (color: string) => {

@@ -4,6 +4,7 @@ import { snapToGrid } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { useEditorStore } from '../../store/editorStore';
 import { toolModeManager } from '../../managers/ToolModeManager';
+import { EditorCommandType } from '../../types';
 
 export class CreationManager {
   private editorStore: any;
@@ -116,6 +117,35 @@ export class CreationManager {
     }
     
     console.log('🔨 CreationManager: External deactivation completed');
+  };
+
+  /**
+   * Método para activación externa por ToolModeManager
+   * No genera recursión porque no llama de vuelta a ToolModeManager
+   */
+  activateExternally = (commandType: EditorCommandType): void => {
+    console.log('🔨 CreationManager: Being activated externally by ToolModeManager', commandType);
+    const store = useEditorStore.getState();
+    store.setCreateMode(commandType);
+  };
+
+  /**
+   * Salir del modo creation - llamado cuando el usuario presiona Escape o Exit
+   */
+  exitCreation = (): void => {
+    console.log('🔨 CreationManager: Exiting creation mode');
+    
+    // Verificar si fue activado por ToolModeManager
+    if (toolModeManager.isActive('creation')) {
+      console.log('🔨 CreationManager: Notifying ToolModeManager of deactivation');
+      toolModeManager.notifyModeDeactivated('creation');
+    } else {
+      // Solo cambiar modo del editor si no fue coordinado por ToolModeManager
+      const store = useEditorStore.getState();
+      if (store.mode.current === 'create') {
+        store.setMode('select');
+      }
+    }
   };
 }
 
