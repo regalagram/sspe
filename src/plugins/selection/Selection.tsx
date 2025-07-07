@@ -7,6 +7,7 @@ import { MousePointer2, XCircle } from 'lucide-react';
 import { getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
+import { toolModeManager } from '../../managers/ToolModeManager';
 
 // Rectangle Selection Manager
 interface RectSelectionState {
@@ -361,8 +362,7 @@ export const SelectionPlugin: Plugin = {
       key: 'v',
       description: 'Selection Tool',
       action: () => {
-        const store = useEditorStore.getState();
-        store.setMode('select');
+        toolModeManager.setMode('select');
       }
     },
     {

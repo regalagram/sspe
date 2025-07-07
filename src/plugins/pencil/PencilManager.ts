@@ -5,6 +5,7 @@ import { generateId } from '../../utils/id-utils';
 import { SVGCommand, EditorCommandType, Point } from '../../types';
 import { tldrawSmoother, SmoothedPoint } from './TldrawSmoother';
 import { PencilStorage, PencilStorageData } from './PencilStorage';
+import { toolModeManager } from '../../managers/ToolModeManager';
 
 interface PencilState {
   isDrawing: boolean;
@@ -46,6 +47,8 @@ class PencilManager {
 
   constructor() {
     this.loadFromStorage();
+    // Registrar con ToolModeManager
+    toolModeManager.setPencilManager(this);
   }
 
   /**
@@ -94,6 +97,38 @@ class PencilManager {
     const isPencil = mode.current === 'create' && mode.createMode?.commandType === 'PENCIL';
     return isPencil;
   }
+
+  /**
+   * Activar modo pencil - llamado por ToolModeManager
+   */
+  activatePencil(): void {
+    console.log('✏️ PencilManager: Activating pencil mode');
+    const store = useEditorStore.getState();
+    store.setCreateMode('PENCIL');
+  }
+
+  /**
+   * Método para desactivación externa por ToolModeManager
+   * No notifica de vuelta para evitar loops
+   */
+  deactivateExternally = (): void => {
+    console.log('✏️ PencilManager: Being deactivated externally by ToolModeManager');
+    
+    // Finalizar dibujo actual si está en progreso
+    if (this.state.isDrawing) {
+      this.state.isDrawing = false;
+      this.resetDrawingState();
+      this.removeGlobalMouseEvents();
+    }
+    
+    // Cambiar modo del editor a select - NO notificar a ToolModeManager para evitar loop
+    const store = useEditorStore.getState();
+    if (store.mode.current === 'create' && store.mode.createMode?.commandType === 'PENCIL') {
+      store.setMode('select');
+    }
+    
+    console.log('✏️ PencilManager: External deactivation completed');
+  };
 
   handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
     if (!this.isPencilMode()) {

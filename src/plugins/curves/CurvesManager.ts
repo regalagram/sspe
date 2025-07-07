@@ -3,6 +3,7 @@ import { MouseEventHandler, MouseEventContext } from '../../core/PluginSystem';
 import { snapToGrid } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { Point, SVGCommand } from '../../types';
+import { toolModeManager } from '../../managers/ToolModeManager';
 
 export enum CurveToolMode {
   INACTIVE = 'inactive',
@@ -65,6 +66,11 @@ export class CurvesManager {
   // Throttling for performance during drag operations
   private isThrottling = false;
 
+  constructor() {
+    // Registrar este manager con ToolModeManager
+    toolModeManager.setCurvesManager(this);
+  }
+
   setEditorStore(store: any) {
     this.editorStore = store;
   }
@@ -120,6 +126,11 @@ export class CurvesManager {
   }
 
   activateCurveTool = () => {
+    // Usar ToolModeManager para coordinación
+    if (!toolModeManager.isActive('curves')) {
+      toolModeManager.setMode('curves');
+    }
+    
     this.curveState.isActive = true;
     this.curveState.mode = CurveToolMode.CREATING;
     this.editorStore.setMode('curves');
@@ -140,7 +151,12 @@ export class CurvesManager {
     // Clean up throttling
     this.isThrottling = false;
     
-    this.editorStore.setMode('select');
+    // Notificar a ToolModeManager si fue desactivado externamente
+    if (toolModeManager.isActive('curves')) {
+      toolModeManager.notifyModeDeactivated('curves');
+    } else {
+      this.editorStore.setMode('select');
+    }
     this.updateState();
   };
 
@@ -162,6 +178,30 @@ export class CurvesManager {
     if (this.curveState.points.length >= 2) {
       this.finishPath();
     }
+  };
+
+  /**
+   * Método para desactivación externa por ToolModeManager
+   * No notifica de vuelta para evitar loops
+   */
+  deactivateExternally = () => {
+    console.log('🏹 CurvesManager: Being deactivated externally by ToolModeManager');
+    this.finishPath();
+    this.curveState.isActive = false;
+    this.curveState.mode = CurveToolMode.INACTIVE;
+    this.curveState.points = [];
+    this.curveState.selectedPointId = undefined;
+    this.curveState.dragState = undefined;
+    this.curveState.previewPoint = undefined;
+    this.curveState.previewHandle = undefined;
+    this.curveState.isClosingPath = false;
+    
+    // Clean up throttling
+    this.isThrottling = false;
+    
+    // No notificar a ToolModeManager para evitar loop
+    this.editorStore.setMode('select');
+    this.updateState();
   };
 
   private convertPointsToPath = () => {

@@ -3,6 +3,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { creationManager } from './CreationManager';
 import { CreationRenderer } from './CreationRenderer';
 import { CreationUI } from './CreationUI';
+import { toolModeManager } from '../../managers/ToolModeManager';
 
 export const CreationPlugin: Plugin = {
   id: 'creation',
@@ -24,40 +25,37 @@ export const CreationPlugin: Plugin = {
       key: 'm',
       description: 'Move To Tool',
       action: () => {
-        const store = useEditorStore.getState();
-        store.setCreateMode('M');
+        toolModeManager.setMode('creation', { commandType: 'M' });
       }
     },
     {
       key: 'l',
       description: 'Line To Tool',
       action: () => {
-        const store = useEditorStore.getState();
-        store.setCreateMode('L');
+        toolModeManager.setMode('creation', { commandType: 'L' });
       }
     },
     {
       key: 'c',
       description: 'Cubic Bezier Tool',
       action: () => {
-        const store = useEditorStore.getState();
-        store.setCreateMode('C');
+        toolModeManager.setMode('creation', { commandType: 'C' });
       }
     },
     {
       key: 'z',
       description: 'Close Path Tool',
       action: () => {
-        const store = useEditorStore.getState();
-        store.setCreateMode('Z');
+        toolModeManager.setMode('creation', { commandType: 'Z' });
       }
     },
     {
       key: 'Escape',
       description: 'Exit Create Mode',
       action: () => {
-        const store = useEditorStore.getState();
-        store.exitCreateMode();
+        if (toolModeManager.isActive('creation')) {
+          toolModeManager.setMode('select');
+        }
       }
     }
   ],

@@ -4,6 +4,7 @@ import { pencilManager } from './PencilManager';
 import { PencilUI } from './PencilUI';
 import { PencilCursor } from './PencilCursor';
 import { PencilDebug } from './PencilDebug';
+import { toolModeManager } from '../../managers/ToolModeManager';
 
 export const PencilPlugin: Plugin = {
   id: 'pencil',
@@ -32,18 +33,15 @@ export const PencilPlugin: Plugin = {
       key: 'p',
       description: 'Activate Pencil Tool',
       action: () => {
-        const store = useEditorStore.getState();
-        store.setCreateMode('PENCIL');
+        toolModeManager.setMode('pencil');
       }
     },
     {
       key: 'Escape',
       description: 'Exit Pencil Mode',
       action: () => {
-        const store = useEditorStore.getState();
-        const { mode } = store;
-        if (mode.current === 'create' && mode.createMode?.commandType === 'PENCIL') {
-          store.exitCreateMode();
+        if (toolModeManager.isActive('pencil')) {
+          toolModeManager.setMode('select');
         }
       }
     }

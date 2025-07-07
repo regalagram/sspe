@@ -4,6 +4,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { SHAPE_TEMPLATES, ShapeTemplate, getShapeById } from './ShapeDefinitions';
 import { snapToGrid } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
+import { toolModeManager } from '../../managers/ToolModeManager';
 
 interface ShapeCreationState {
   isCreating: boolean;
@@ -22,12 +23,24 @@ export class ShapeManager {
 
   private editorStore: any = null;
 
+  constructor() {
+    // Registrar este manager con ToolModeManager
+    toolModeManager.setShapeManager(this);
+  }
+
   setEditorStore(store: any) {
     this.editorStore = store;
   }
 
   startShapeCreation(shapeId: string) {
     console.log('🔷 ShapeManager.startShapeCreation called with shapeId:', shapeId);
+    
+    // Verificar si ya estamos en el modo correcto
+    if (toolModeManager.isActive('shapes') && this.state.shapeId === shapeId) {
+      console.log('🔷 ShapeManager: Already in shape mode with same shape, skipping');
+      return;
+    }
+    
     this.state.isCreating = true;
     this.state.shapeId = shapeId;
     this.state.startPoint = null;
@@ -48,11 +61,16 @@ export class ShapeManager {
     // Notify the plugin manager that shape creation mode is off
     pluginManager.setShapeCreationMode(false);
     
+    // Notificar a ToolModeManager si fue desactivado externamente
+    if (toolModeManager.isActive('shapes')) {
+      toolModeManager.notifyModeDeactivated('shapes');
+    }
+    
     console.log('🔷 ShapeManager: Shape creation stopped, state:', this.state);
   }
 
   isInShapeCreationMode(): boolean {
-    return this.state.isCreating && this.state.shapeId !== null;
+    return toolModeManager.isActive('shapes') && this.state.isCreating && this.state.shapeId !== null;
   }
 
   getCurrentShapeId(): string | null {
@@ -73,6 +91,23 @@ export class ShapeManager {
     }
     return 'default';
   }
+
+  /**
+   * Método para desactivación externa por ToolModeManager
+   * No notifica de vuelta para evitar loops
+   */
+  deactivateExternally = () => {
+    console.log('🔷 ShapeManager: Being deactivated externally by ToolModeManager');
+    this.state.isCreating = false;
+    this.state.shapeId = null;
+    this.state.startPoint = null;
+    
+    // Notify the plugin manager that shape creation mode is off
+    pluginManager.setShapeCreationMode(false);
+    
+    // No notificar a ToolModeManager para evitar loop
+    console.log('🔷 ShapeManager: External deactivation completed');
+  };
 
   // Mouse event handlers
   handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {

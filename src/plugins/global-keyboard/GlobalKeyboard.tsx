@@ -1,5 +1,6 @@
 import { Plugin, pluginManager } from '../../core/PluginSystem';
 import { curvesManager } from '../curves/CurvesManager';
+import { toolModeManager } from '../../managers/ToolModeManager';
 
 export const GlobalKeyboardPlugin: Plugin = {
   id: 'global-keyboard',
@@ -75,18 +76,20 @@ export const GlobalKeyboardPlugin: Plugin = {
       action: () => {
         const editorStore = pluginManager.getEditorStore();
         if (editorStore) {
-          // Check if we're in curves mode
-          const curveState = curvesManager.getState();
-          if (curveState.isActive) {
-            curvesManager.exitCurveTool();
+          // Usar ToolModeManager para manejar el escape de manera centralizada
+          const currentMode = toolModeManager.getActiveMode();
+          
+          if (currentMode !== 'select') {
+            // Si hay algún modo activo, volver a select
+            toolModeManager.setMode('select');
             return;
           }
           
-          // Default behavior: clear selection
+          // Si ya estamos en select, limpiar selección
           editorStore.clearSelection();
         }
       },
-      description: 'Clear selection or exit curve tool'
+      description: 'Exit current tool or clear selection'
     }
   ],
 };

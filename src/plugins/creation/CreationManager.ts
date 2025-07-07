@@ -2,9 +2,16 @@ import { MouseEvent } from 'react';
 import { MouseEventHandler, MouseEventContext } from '../../core/PluginSystem';
 import { snapToGrid } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
+import { useEditorStore } from '../../store/editorStore';
+import { toolModeManager } from '../../managers/ToolModeManager';
 
 export class CreationManager {
   private editorStore: any;
+
+  constructor() {
+    // Registrar con ToolModeManager
+    toolModeManager.setCreationManager(this);
+  }
 
   setEditorStore(store: any) {
     this.editorStore = store;
@@ -84,6 +91,31 @@ export class CreationManager {
     }
 
     return false;
+  };
+
+  /**
+   * Activar modo creation con un comando específico - llamado por ToolModeManager
+   */
+  activateCreation(commandType: string): void {
+    console.log(`🔨 CreationManager: Activating creation mode with '${commandType}'`);
+    const store = useEditorStore.getState();
+    store.setCreateMode(commandType as any);
+  }
+
+  /**
+   * Método para desactivación externa por ToolModeManager
+   * No notifica de vuelta para evitar loops
+   */
+  deactivateExternally = (): void => {
+    console.log('🔨 CreationManager: Being deactivated externally by ToolModeManager');
+    
+    // Cambiar modo del editor a select - NO notificar a ToolModeManager para evitar loop
+    const store = useEditorStore.getState();
+    if (store.mode.current === 'create') {
+      store.setMode('select');
+    }
+    
+    console.log('🔨 CreationManager: External deactivation completed');
   };
 }
 

@@ -2,6 +2,7 @@ import { Plugin } from '../../core/PluginSystem';
 import { curvesManager } from './CurvesManager';
 import { CurvesRenderer } from './CurvesRenderer';
 import { CurvesUI } from './CurvesUI';
+import { toolModeManager } from '../../managers/ToolModeManager';
 
 export const CurvesPlugin: Plugin = {
   id: 'curves',
@@ -25,21 +26,23 @@ export const CurvesPlugin: Plugin = {
       key: 'c',
       description: 'Curve Tool',
       action: () => {
-        curvesManager.activateCurveTool();
+        toolModeManager.setMode('curves');
       }
     },
     {
       key: 'b',
       description: 'Bézier Curve Tool',
       action: () => {
-        curvesManager.activateCurveTool();
+        toolModeManager.setMode('curves');
       }
     },
     {
       key: 'Escape',
       description: 'Exit Curve Tool',
       action: () => {
-        curvesManager.exitCurveTool();
+        if (toolModeManager.isActive('curves')) {
+          toolModeManager.setMode('select');
+        }
       }
     },
     {
