@@ -502,10 +502,6 @@ class PencilManager {
   private handleGlobalMouseMove = (e: globalThis.MouseEvent) => {
     if (!this.state.isDrawing) return;
 
-    // Ignore synthetic mouse events from touch to prevent double processing
-    const syntheticMouseEvent = e as any;
-    if (syntheticMouseEvent.fromTouch) return;
-
     // Find the SVG element
     const svg = document.querySelector('.svg-editor svg') as SVGSVGElement;
     if (!svg) return;
@@ -519,10 +515,6 @@ class PencilManager {
 
   private handleGlobalMouseUp = (e: globalThis.MouseEvent) => {
     if (!this.state.isDrawing) return;
-
-    // Ignore synthetic mouse events from touch to prevent double processing
-    const syntheticMouseEvent = e as any;
-    if (syntheticMouseEvent.fromTouch) return;
 
     // Check if we have meaningful drawing content (more than just the initial point)
     const hasDrawingContent = this.state.rawPoints.length > 1;

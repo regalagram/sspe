@@ -1,5 +1,4 @@
 import React from 'react';
-import { useMobileDetection, getButtonSize } from '../hooks/useMobileDetection';
 
 interface PluginButtonProps {
   icon: React.ReactNode;
@@ -20,32 +19,20 @@ export const PluginButton: React.FC<PluginButtonProps> = ({
   onClick,
   fullWidth = false,
 }) => {
-  const { isMobile, isTablet } = useMobileDetection();
-  
-  // Calcular tamaños responsivos
-  const buttonHeight = getButtonSize(isMobile, isTablet);
-  const fontSize = isMobile ? 14 : 12;
-  const padding = isMobile ? '8px 24px' : '4px 20px';
-  const borderRadius = isMobile ? 24 : 18;
+  // Fixed sizes for desktop
+  const buttonHeight = 32;
+  const fontSize = 12;
+  const padding = '4px 20px';
+  const borderRadius = 18;
 
-  // Handle touch events for better mobile support
   const handleClick = (e: React.MouseEvent) => {
     if (disabled) return;
-    onClick?.();
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (disabled) return;
-    
-    e.preventDefault();
-    e.stopPropagation();
     onClick?.();
   };
 
   return (
     <button
       onClick={handleClick}
-      onTouchEnd={isMobile ? handleTouchEnd : undefined}
       disabled={disabled}
       style={{
         display: 'flex',
@@ -66,8 +53,7 @@ export const PluginButton: React.FC<PluginButtonProps> = ({
         transition: 'all 0.2s',
         outline: active ? `2px solid ${color}` : 'none',
         width: fullWidth ? '100%' : 'auto',
-        touchAction: 'manipulation', // Mejorar respuesta táctil
-        WebkitTapHighlightColor: 'rgba(0,0,0,0.1)', // Subtle tap highlight for iOS
+        userSelect: 'none',
       }}
       title={text}
       type="button"

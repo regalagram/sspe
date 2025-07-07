@@ -2,10 +2,6 @@ import React, { useRef, useEffect } from 'react';
 import { UIComponentDefinition } from '../../core/PluginSystem';
 import { usePanelModeStore } from './PanelManager';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { useMobileDetection, getButtonSize } from '../../hooks/useMobileDetection';
-import { useMobileFormFocusFix } from '../../hooks/useMobileFormFocusFix';
-import { useAndroidTouchEnhancements } from '../../hooks/useAndroidTouchEnhancements';
-import { useMobileControlsEnhancement } from '../../hooks/useMobileControlsEnhancement';
 
 interface AccordionSidebarProps {
   plugins: UIComponentDefinition[];
@@ -18,17 +14,7 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
     getVisiblePanels 
   } = usePanelModeStore();
 
-  const { isMobile, isTablet } = useMobileDetection();
   const panelsContainerRef = useRef<HTMLDivElement>(null);
-  
-  // Apply mobile form focus fix for iOS and Android (safe version that excludes checkboxes)
-  useMobileFormFocusFix();
-  
-  // Apply Android-specific touch enhancements
-  useAndroidTouchEnhancements();
-  
-  // Apply NON-INVASIVE controls enhancements for mobile (checkboxes, sliders, etc.)
-  useMobileControlsEnhancement();
   
   const visiblePanels = getVisiblePanels();
   
@@ -93,23 +79,20 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
   };
 
   const headerStyle: React.CSSProperties = {
-    padding: isMobile ? '16px 20px' : '12px 16px', // Más padding en móviles
+    padding: '12px 16px',
     borderBottom: '1px solid #e0e0e0',
     background: '#f8f9fa',
-    fontSize: isMobile ? '16px' : '14px', // Texto más grande en móviles
+    fontSize: '14px',
     fontWeight: 600,
     color: '#333',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: isMobile ? '48px' : 'auto', // Altura mínima para touch targets
   };
 
   const panelsContainerStyle: React.CSSProperties = {
     flex: 1,
-    overflow: 'auto',
-    WebkitOverflowScrolling: 'touch', // Smooth scrolling en iOS
-    touchAction: 'auto', // Permitir scroll táctil
+    overflow: 'auto'
   };
 
   return (
@@ -174,123 +157,41 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
   onToggle,
   panelId
 }) => {
-  const { isMobile, isTablet } = useMobileDetection();
   const isPanelMode = plugin.id === 'panel-mode-ui';
   
-  // Touch scroll detection
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
-  const scrollThreshold = 10; // pixels
-  const timeThreshold = 300; // milliseconds
-  
   const headerStyle: React.CSSProperties = {
-    padding: isMobile ? '16px 20px' : '12px 16px', // Más padding en móviles
+    padding: '12px 16px',
     borderBottom: '1px solid #e0e0e0',
     cursor: 'pointer',
     background: isExpanded ? '#f0f8ff' : (isPanelMode ? '#f8f9fa' : '#fafafa'),
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    fontSize: isMobile ? '15px' : '13px', // Texto más grande en móviles
+    fontSize: '13px',
     fontWeight: isPanelMode ? 600 : 500,
     color: isPanelMode ? '#007acc' : '#666',
     transition: 'background 0.2s ease',
-    minHeight: isMobile ? '48px' : 'auto', // Altura mínima para touch targets
-    touchAction: 'manipulation', // Mejorar respuesta táctil
+  
   };
 
   const contentStyle: React.CSSProperties = {
     display: isExpanded ? 'block' : 'none',
-    padding: isMobile ? '8px 4px' : '8px 4px', // Padding uniforme: 8px arriba/abajo, 4px izquierda/derecha
+    padding: '8px 4px',
     borderBottom: '1px solid #e0e0e0',
     background: 'white',
-    maxHeight: isExpanded ? (isMobile ? '60vh' : '400px') : '0', // Más altura disponible en móviles
+    maxHeight: isExpanded ? '400px' : '0',
     overflow: 'auto',
     transition: 'max-height 0.3s ease',
-    WebkitOverflowScrolling: 'touch', // Smooth scrolling en iOS
-    touchAction: 'auto', // Permitir scroll táctil
   };
 
   const iconStyle: React.CSSProperties = {
     transition: 'transform 0.2s ease',
-    width: isMobile ? '20px' : '16px', // Iconos más grandes en móviles
-    height: isMobile ? '20px' : '16px',
-  };
-
-  // Handle touch events explicitly for better mobile support
-  const handleTouchStart = (e: React.TouchEvent) => {    
-    // Record initial touch position and time
-    const touch = e.touches[0];
-    touchStartRef.current = {
-      x: touch.clientX,
-      y: touch.clientY,
-      time: Date.now()
-    };
-    
-    // Add visual feedback for touch
-    if (!isExpanded) {
-      (e.currentTarget as HTMLElement).style.background = '#f0f0f0';
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    // Don't prevent default here to allow scrolling
-    // This allows the container to scroll normally
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Remove visual feedback
-    if (!isExpanded) {
-      (e.currentTarget as HTMLElement).style.background = '#fafafa';
-    }
-    
-    // Check if this was a scroll gesture or an intentional tap
-    if (touchStartRef.current) {
-      const touch = e.changedTouches[0];
-      const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
-      const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
-      const deltaTime = Date.now() - touchStartRef.current.time;
-      
-      // Only trigger if movement is minimal and time is reasonable
-      const isIntentionalTap = deltaX < scrollThreshold && 
-                               deltaY < scrollThreshold && 
-                               deltaTime < timeThreshold;
-      
-      console.log('Touch analysis:', {
-        deltaX,
-        deltaY,
-        deltaTime,
-        isIntentionalTap,
-        pluginId: plugin.id
-      });
-      
-      if (isIntentionalTap) {
-        onToggle();
-      }
-    }
-    
-    // Reset touch tracking
-    touchStartRef.current = null;
-  };
-
-  const handleTouchCancel = (e: React.TouchEvent) => {
-    // Remove visual feedback
-    if (!isExpanded) {
-      (e.currentTarget as HTMLElement).style.background = '#fafafa';
-    }
-    
-    // Reset touch tracking
-    touchStartRef.current = null;
+    width: '16px',
+    height: '16px',
   };
 
   const handleClick = (e: React.MouseEvent) => {
-    // For desktop, handle all clicks normally
-    // For mobile, only handle if it's NOT a synthetic click from touch
-    if (!isMobile || (e as any).isTrusted) {
-      onToggle();
-    }
+    onToggle();
   };
 
   return (
@@ -300,27 +201,23 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
         data-clickable="true"
         style={headerStyle}
         onClick={handleClick}
-        onTouchStart={isMobile ? handleTouchStart : undefined}
-        onTouchMove={isMobile ? handleTouchMove : undefined}
-        onTouchEnd={isMobile ? handleTouchEnd : undefined}
-        onTouchCancel={isMobile ? handleTouchCancel : undefined}
-        onMouseEnter={!isMobile ? (e) => {
+        onMouseEnter={(e) => {
           if (!isExpanded) {
             e.currentTarget.style.background = '#f5f5f5';
           }
-        } : undefined}
-        onMouseLeave={!isMobile ? (e) => {
+        }}
+        onMouseLeave={(e) => {
           if (!isExpanded) {
             e.currentTarget.style.background = '#fafafa';
           }
-        } : undefined}
+        }}
       >
         <span>{panel?.name || plugin.id}</span>
         <div style={iconStyle}>
           {isExpanded ? (
-            <ChevronDown size={isMobile ? 20 : 16} />
+            <ChevronDown size={16} />
           ) : (
-            <ChevronRight size={isMobile ? 20 : 16} />
+            <ChevronRight size={16} />
           )}
         </div>
       </div>

@@ -4,7 +4,6 @@ import { useEditorStore } from '../../store/editorStore';
 import { subPathToString, getContrastColor, subPathToStringInContext, findSubPathAtPoint } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
-import { isCurrentlyProcessingTouch, getCurrentTouchEventId, getCurrentTouchEventType } from '../../utils/touch-to-mouse-global';
 
 // Global path drag manager to handle mouse events from plugin system
 class PathDragManager {
@@ -72,27 +71,6 @@ export const PathRenderer: React.FC = () => {
   const handleSubPathMouseDown = useCallback((e: React.MouseEvent<SVGElement>, subPathId: string) => {
     e.stopPropagation();
     
-    const fromTouch = isCurrentlyProcessingTouch();
-    const touchEventId = getCurrentTouchEventId();
-    const touchEventType = getCurrentTouchEventType();
-  
-    
-    // Skip duplicate touch events using element-specific deduplication
-    if (fromTouch) {
-      // Use a more specific key that includes the subPathId
-      const deduplicationKey = `subpath-${subPathId}-mousedown`;
-      
-      if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
-        return; // Already processed this touch event for this specific subpath
-      }
-      if (touchEventId) {
-        if (!(window as any).lastProcessedTouchEvents) {
-          (window as any).lastProcessedTouchEvents = {};
-        }
-        (window as any).lastProcessedTouchEvents[deduplicationKey] = touchEventId;
-      }
-    }
-    
     const svgElement = (e.target as SVGPathElement).closest('svg');
     if (svgElement) {
       // Always ensure the subpath being dragged is selected
@@ -120,27 +98,6 @@ export const PathRenderer: React.FC = () => {
   // Handle mouse move for dragging
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGElement>) => {
     if (!dragState.isDragging || !dragState.subPathId || !dragState.startPoint || !dragState.svgElement) return;
-    
-    const fromTouch = isCurrentlyProcessingTouch();
-    const touchEventId = getCurrentTouchEventId();
-    
-
-    
-    // Skip duplicate touch events using element-specific deduplication
-    if (fromTouch) {
-      // Use the dragging subpath ID for the deduplication key
-      const deduplicationKey = `subpath-${dragState.subPathId}-mousemove`;
-      
-      if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
-        return; // Already processed this touch event for this specific subpath
-      }
-      if (touchEventId) {
-        if (!(window as any).lastProcessedTouchEvents) {
-          (window as any).lastProcessedTouchEvents = {};
-        }
-        (window as any).lastProcessedTouchEvents[deduplicationKey] = touchEventId;
-      }
-    }
     
     const currentPoint = getTransformedPoint(e, dragState.svgElement);
     
@@ -199,24 +156,6 @@ export const PathRenderer: React.FC = () => {
 
   // Handle mouse up to stop dragging
   const handleMouseUp = useCallback((e?: React.MouseEvent<SVGElement>) => {
-    // Skip duplicate touch events using element-specific deduplication
-    if (e && (e as any).fromTouch) {
-      const touchEventId = (e as any).touchEventId;
-      // Use the dragging subpath ID for the deduplication key
-      const subPathId = dragState.subPathId || 'unknown';
-      const deduplicationKey = `subpath-${subPathId}-mouseup`;
-      
-      if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
-        return; // Already processed this touch event for this specific subpath
-      }
-      if (touchEventId) {
-        if (!(window as any).lastProcessedTouchEvents) {
-          (window as any).lastProcessedTouchEvents = {};
-        }
-        (window as any).lastProcessedTouchEvents[deduplicationKey] = touchEventId;
-      }
-    }
-    
     // Notify transform manager that movement ended only if actual dragging occurred
     if (dragState.isDragging && dragState.dragStarted) {
       transformManager.setMoving(false);
@@ -241,9 +180,6 @@ export const PathRenderer: React.FC = () => {
       });
 
       const handleGlobalMouseMove = (e: MouseEvent) => {
-        // Skip if this is a synthetic touch event - React handlers will handle it
-        if ((e as any).fromTouch) return;
-        
         // Convert global mouse event to React mouse event format
         const mockEvent = {
           clientX: e.clientX,

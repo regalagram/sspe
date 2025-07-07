@@ -21,7 +21,7 @@ import { Transform } from '../plugins/transform/Transform';
 import { ArrangePlugin } from '../plugins/arrange/Arrange';
 import { ReorderPlugin } from '../plugins/reorder/Reorder';
 import { PanelModePlugin } from '../plugins/panelmode/PanelMode';
-import { TouchMobilePluginDefinition } from '../plugins/touch-mobile/TouchMobile';
+
 import { DeletePlugin } from '../plugins/delete/Delete';
 import { BezierNormalizePlugin } from '../plugins/bezier-normalize/BezierNormalize';
 import { FigmaHandlesPlugin } from '../plugins/figma-handles/FigmaHandles';
@@ -35,9 +35,6 @@ export const initializePlugins = (): void => {
   // Register base dependencies first
   pluginManager.registerPlugin(MouseInteractionPlugin); // Required by pencil
   pluginManager.registerPlugin(SelectionPlugin); // Required by subpath-transform and point-transform
-  
-  // Register TouchMobile plugin early to handle touch events
-  pluginManager.registerPlugin(TouchMobilePluginDefinition);
   
   // Register Transform early so it can handle transform handles before PathRenderer
   pluginManager.registerPlugin(Transform);

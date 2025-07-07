@@ -24,9 +24,6 @@ export const PencilCursor: React.FC = () => {
     }
 
     const handleMouseMove = (e: MouseEvent) => {
-      // Ignore synthetic mouse events from touch to prevent double processing
-      const syntheticMouseEvent = e as any;
-      if (syntheticMouseEvent.fromTouch) return;
 
       const svg = document.querySelector('.svg-editor svg');
       if (!svg) return;

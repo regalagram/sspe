@@ -1,14 +1,8 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { detectMobileDevice } from '../../hooks/useMobileDetection';
 
 export type PanelMode = 'draggable' | 'accordion';
-
-// Función para detectar si estamos en un dispositivo móvil
-const detectMobileDevice = (): boolean => {
-  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  const isMobileWidth = window.innerWidth <= 768;
-  return isTouchDevice && isMobileWidth;
-};
 
 export interface PanelConfig {
   id: string;
@@ -45,8 +39,8 @@ type PanelModeStore = PanelModeState & PanelModeActions;
 
 // Load saved mode from localStorage
 const loadSavedMode = (): PanelMode => {
-  // En dispositivos móviles, forzar modo accordion
-  if (detectMobileDevice()) {
+  // No mobile device support
+  if (false) {
     return 'accordion';
   }
   
@@ -237,7 +231,7 @@ export const panelModeManager = {
   subscribe: usePanelModeStore.subscribe,
 };
 
-// Detect and set accordion mode on mobile devices
-if (detectMobileDevice()) {
+// No mobile device support
+if (false) { // Mobile device support removed
   usePanelModeStore.getState().setMode('accordion');
 }

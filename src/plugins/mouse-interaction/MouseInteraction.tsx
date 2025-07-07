@@ -87,55 +87,7 @@ class MouseInteractionManager {
   }
 
   handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
-    // Debug logging para verificar el evento
-    console.log('🔥 MouseInteraction: Raw event properties:', {
-      fromTouch: (e as any).fromTouch,
-      touchEventId: (e as any).touchEventId,
-      nativeFromTouch: (e.nativeEvent as any)?.fromTouch,
-      nativeTouchEventId: (e.nativeEvent as any)?.touchEventId,
-      eventType: e.type,
-      eventTarget: e.target
-    });
-    
-    // Skip duplicate touch events using element-specific deduplication
-    const isFromTouch = !!(e as any).fromTouch || !!(e.nativeEvent as any)?.fromTouch;
-    
-    if (isFromTouch) {
-      const touchEventId = (e as any).touchEventId || (e.nativeEvent as any)?.touchEventId;
-      const elementId = (e.currentTarget as any)?.dataset?.elementId || 'mouse-interaction';
-      const deduplicationKey = `${elementId}-mousedown`;
-      
-      console.log('🔥 MouseInteraction: Touch event detected:', {
-        touchEventId,
-        elementId,
-        deduplicationKey,
-        lastProcessed: (window as any).lastProcessedTouchEvents?.[deduplicationKey]
-      });
-      
-      if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
-        console.log('🔥 MouseInteraction: Skipping duplicate touch event');
-        return false; // Already processed this touch event for this element and event type
-      }
-      if (touchEventId) {
-        if (!(window as any).lastProcessedTouchEvents) {
-          (window as any).lastProcessedTouchEvents = {};
-        }
-        (window as any).lastProcessedTouchEvents[deduplicationKey] = touchEventId;
-        console.log('🔥 MouseInteraction: Processing touch event');
-      }
-    }
-    
     const { commandId, controlPoint } = context;
-    
-    console.log('🔥 MouseInteraction: handleMouseDown called:', {
-      commandId,
-      controlPoint,
-      hasEditorStore: !!this.editorStore,
-      isSpacePressed: this.state.isSpacePressed,
-      button: e.button,
-      isFromTouch
-    });
-    
     
     const { 
         selection, 
@@ -156,7 +108,6 @@ class MouseInteractionManager {
     
     // Si estamos arrastrando un control point y tocamos en otro lugar, finalizar el drag
     if (this.state.draggingControlPoint && !controlPoint && !this.state.isSpacePressed) {
-      console.log('🔥 MouseInteraction: Ending control point drag due to click elsewhere');
       figmaHandleManager.endDragHandle();
       this.state.draggingControlPoint = null;
       transformManager.setMoving(false);
@@ -187,57 +138,10 @@ class MouseInteractionManager {
 
     if (commandId && controlPoint && !this.state.isSpacePressed) {
       // Dragging control point - usar el nuevo sistema de Figma
-      console.log('🔥 MouseInteraction: Starting control point drag:', {
-        commandId,
-        controlPoint,
-        currentDragState: this.state.draggingControlPoint,
-        isFromTouch
-      });
-      
-      // Para eventos touch, SIEMPRE actualizar inmediatamente la posición
-      // Esto permite drag continuo sin necesidad de múltiples toques
-      if (isFromTouch) {
-        // Si ya hay un drag activo del mismo punto, continuar
-        const isExistingDrag = this.state.draggingControlPoint && 
-                              this.state.draggingControlPoint.commandId === commandId &&
-                              this.state.draggingControlPoint.point === controlPoint;
-        
-        if (isExistingDrag) {
-          console.log('🔥 MouseInteraction: Continuing existing drag for touch event');
-          const currentPoint = this.getSVGPoint(e, context.svgRef);
-          figmaHandleManager.updateDragHandle(currentPoint);
-          transformManager.setMoving(true);
-          return true;
-        }
-        
-        // Si es un drag diferente o nuevo, iniciar inmediatamente
-        console.log('🔥 MouseInteraction: Starting immediate touch drag');
-        this.state.draggingControlPoint = { commandId, point: controlPoint };
-        
-        const startPoint = this.getSVGPoint(e, context.svgRef);
-        const handleType = controlPoint === 'x1y1' ? 'outgoing' : 'incoming';
-        
-        figmaHandleManager.startDragHandle(commandId, handleType, startPoint);
-        transformManager.setMoving(true);
-        pushToHistory();
-        
-        // IMPORTANTE: Para touch, empezar a actualizar inmediatamente
-        figmaHandleManager.updateDragHandle(startPoint);
-        
-        return true;
-      }
-      
-      // Para mouse, comportamiento normal
-      this.state.draggingControlPoint = { commandId, point: controlPoint };
+             this.state.draggingControlPoint = { commandId, point: controlPoint };
       
       const startPoint = this.getSVGPoint(e, context.svgRef);
       const handleType = controlPoint === 'x1y1' ? 'outgoing' : 'incoming';
-      
-      console.log('🔥 MouseInteraction: Calling figmaHandleManager.startDragHandle:', {
-        commandId,
-        handleType,
-        startPoint
-      });
       
       figmaHandleManager.startDragHandle(commandId, handleType, startPoint);
       transformManager.setMoving(true);
@@ -312,26 +216,7 @@ class MouseInteractionManager {
     }
 
     return false;
-  };
-
-  handleMouseMove = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
-    // Skip duplicate touch events using element-specific deduplication
-    if ((e as any).fromTouch) {
-      const touchEventId = (e as any).touchEventId;
-      const elementId = (e.currentTarget as any)?.dataset?.elementId || 'mouse-interaction';
-      const deduplicationKey = `${elementId}-mousemove`;
-      
-      if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
-        return false; // Already processed this touch event for this element and event type
-      }
-      if (touchEventId) {
-        if (!(window as any).lastProcessedTouchEvents) {
-          (window as any).lastProcessedTouchEvents = {};
-        }
-        (window as any).lastProcessedTouchEvents[deduplicationKey] = touchEventId;
-      }
-    }
-    
+  };  handleMouseMove = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
     const { grid, selection, pan, updateCommand, moveCommand } = this.editorStore;
 
     if (this.state.isPanning) {
@@ -344,12 +229,6 @@ class MouseInteractionManager {
 
     if (this.state.draggingControlPoint) {
       const point = this.getSVGPoint(e, context.svgRef);
-      
-      console.log('🔥 MouseInteraction: handleMouseMove updating control point:', {
-        point,
-        draggingControlPoint: this.state.draggingControlPoint,
-        isFromTouch: !!(e as any).fromTouch || !!(e.nativeEvent as any)?.fromTouch
-      });
       
       // Pasar el punto original al FigmaHandleManager, que decidirá si aplicar snap
       figmaHandleManager.updateDragHandle(point);
@@ -380,61 +259,13 @@ class MouseInteractionManager {
     }
 
     return false;
-  };
-
-  handleMouseUp = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
-    // Skip duplicate touch events using element-specific deduplication
-    const isFromTouch = !!(e as any).fromTouch || !!(e.nativeEvent as any)?.fromTouch;
-    
-    if (isFromTouch) {
-      const touchEventId = (e as any).touchEventId || (e.nativeEvent as any)?.touchEventId;
-      const elementId = (e.currentTarget as any)?.dataset?.elementId || 'mouse-interaction';
-      const deduplicationKey = `${elementId}-mouseup`;
-      
-      if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
-        return false; // Already processed this touch event for this element and event type
-      }
-      if (touchEventId) {
-        if (!(window as any).lastProcessedTouchEvents) {
-          (window as any).lastProcessedTouchEvents = {};
-        }
-        (window as any).lastProcessedTouchEvents[deduplicationKey] = touchEventId;
-      }
-    }
-    
+  };  handleMouseUp = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
     const wasHandling = !!(this.state.draggingCommand || this.state.draggingControlPoint || this.state.isPanning);
     const wasDraggingCommand = !!this.state.draggingCommand;
     const wasDraggingControlPoint = !!this.state.draggingControlPoint;
 
-    console.log('🔥 MouseInteraction: handleMouseUp called:', {
-      wasHandling,
-      wasDraggingCommand,
-      wasDraggingControlPoint,
-      isFromTouch
-    });
-
-    // Para eventos touch, NO resetear el estado del drag NUNCA durante mouseUp
-    // El drag solo debe terminar cuando se toque fuera del punto de control
-    const shouldPreserveDragState = isFromTouch && wasDraggingControlPoint;
-
-    if (shouldPreserveDragState) {
-      console.log('🔥 MouseInteraction: Preserving drag state for touch control point drag (always preserve for touch)');
-      
-      // Notify transform manager that movement ended temporarily
-      transformManager.setMoving(false);
-      
-      // Reset cursor if space is still pressed but not panning
-      if (this.state.isSpacePressed) {
-        const svg = (e.target as Element).closest('svg');
-        if (svg) svg.style.cursor = 'grab';
-      }
-      
-      return wasHandling;
-    }
-
     // Finalizar arrastre de control points en el sistema de Figma
     if (wasDraggingControlPoint && this.state.draggingControlPoint) {
-      console.log('🔥 MouseInteraction: Ending drag handle');
       figmaHandleManager.endDragHandle();
     }
 

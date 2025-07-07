@@ -40,8 +40,7 @@ export class ToolModeManager {
   private creationManager: any = null;
   
   constructor() {
-    console.log('🔧 ToolModeManager: Initialized');
-  }
+      }
   
   /**
    * Registrar managers externos para coordinación
@@ -86,12 +85,10 @@ export class ToolModeManager {
   setMode(mode: ToolMode, options?: ToolModeOptions): void {
     const previousMode = this.state.activeMode;
     
-    console.log(`🔧 ToolModeManager: Changing mode from '${previousMode}' to '${mode}'`, options);
-    
+        
     // Si ya estamos en el modo solicitado, no hacer nada
     if (previousMode === mode && this.isModeConfigurationSame(options)) {
-      console.log(`🔧 ToolModeManager: Already in mode '${mode}', skipping`);
-      return;
+            return;
     }
     
     // Desactivar modo anterior
@@ -103,8 +100,7 @@ export class ToolModeManager {
     // Notificar cambio
     this.notifyListeners();
     
-    console.log(`🔧 ToolModeManager: Mode changed successfully to '${mode}'`);
-  }
+      }
   
   /**
    * Verificar si la configuración del modo es la misma
@@ -122,26 +118,22 @@ export class ToolModeManager {
   private deactivateCurrentMode(): void {
     const currentMode = this.state.activeMode;
     
-    console.log(`🔧 ToolModeManager: Deactivating mode '${currentMode}'`);
-    
+        
     switch (currentMode) {
       case 'shapes':
         if (this.shapeManager) {
-          console.log('🔧 ToolModeManager: Stopping shape creation');
-          this.shapeManager.stopShapeCreation();
+                    this.shapeManager.stopShapeCreation();
         }
         break;
         
       case 'curves':
         if (this.curvesManager) {
-          console.log('🔧 ToolModeManager: Exiting curve tool');
-          this.curvesManager.deactivateExternally();
+                    this.curvesManager.deactivateExternally();
         }
         break;
         
       case 'pencil':
-        console.log('🔧 ToolModeManager: Exiting pencil mode');
-        if (this.pencilManager) {
+                if (this.pencilManager) {
           this.pencilManager.deactivateExternally();
         } else {
           // Fallback si no hay manager
@@ -153,8 +145,7 @@ export class ToolModeManager {
         break;
         
       case 'creation':
-        console.log('🔧 ToolModeManager: Exiting creation mode');
-        if (this.creationManager) {
+                if (this.creationManager) {
           this.creationManager.deactivateExternally();
         } else {
           // Fallback si no hay manager
@@ -180,8 +171,7 @@ export class ToolModeManager {
    * Activar el nuevo modo
    */
   private activateNewMode(mode: ToolMode, options?: ToolModeOptions): void {
-    console.log(`🔧 ToolModeManager: Activating mode '${mode}'`, options);
-    
+        
     this.state.activeMode = mode;
     
     switch (mode) {
@@ -189,15 +179,13 @@ export class ToolModeManager {
         if (options?.shapeId && this.shapeManager) {
           this.state.shapeId = options.shapeId;
           this.state.metadata = options.metadata;
-          console.log(`🔧 ToolModeManager: Starting shape creation with '${options.shapeId}'`);
-          this.shapeManager.startShapeCreation(options.shapeId);
+                    this.shapeManager.startShapeCreation(options.shapeId);
         }
         break;
         
       case 'curves':
         if (this.curvesManager) {
-          console.log('🔧 ToolModeManager: Activating curve tool');
-          this.curvesManager.activateExternally();
+                    this.curvesManager.activateExternally();
         } else {
           // Fallback si no hay manager
           useEditorStore.getState().setMode('curves');
@@ -205,8 +193,7 @@ export class ToolModeManager {
         break;
         
       case 'pencil':
-        console.log('🔧 ToolModeManager: Activating pencil mode');
-        if (this.pencilManager) {
+                if (this.pencilManager) {
           this.pencilManager.activateExternally();
         } else {
           // Fallback si no hay manager
@@ -217,8 +204,7 @@ export class ToolModeManager {
       case 'creation':
         if (options?.commandType) {
           this.state.createSubMode = options.commandType;
-          console.log(`🔧 ToolModeManager: Activating creation mode with '${options.commandType}'`);
-          if (this.creationManager) {
+                    if (this.creationManager) {
             this.creationManager.activateExternally(options.commandType);
           } else {
             // Fallback si no hay manager
@@ -228,8 +214,7 @@ export class ToolModeManager {
         break;
         
       case 'select':
-        console.log('🔧 ToolModeManager: Activating select mode');
-        useEditorStore.getState().setMode('select');
+                useEditorStore.getState().setMode('select');
         break;
     }
   }
@@ -266,8 +251,7 @@ export class ToolModeManager {
    */
   notifyModeDeactivated(mode: ToolMode): void {
     if (this.state.activeMode === mode) {
-      console.log(`🔧 ToolModeManager: Mode '${mode}' was deactivated externally`);
-      this.setMode('select');
+            this.setMode('select');
     }
   }
   

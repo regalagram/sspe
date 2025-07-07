@@ -8,8 +8,7 @@ import { pluginManager } from '../core/PluginSystem';
 export const useGlobalMouseEvents = () => {
   useEffect(() => {
     const handleNativeMove = (e: MouseEvent) => {
-      // Skip synthetic touch events to prevent double processing
-      if ((e as any).fromTouch) return;
+      // Handle mouse move events
       
       if (e.buttons === 1) {
         const mouseEvent = {
@@ -29,8 +28,7 @@ export const useGlobalMouseEvents = () => {
     };
 
     const handleNativeUp = (e: MouseEvent) => {
-      // Skip synthetic touch events to prevent double processing
-      if ((e as any).fromTouch) return;
+      // Handle mouse up events
       
       const mouseEvent = {
         ...e,

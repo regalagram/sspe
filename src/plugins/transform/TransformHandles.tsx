@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { transformManager, TransformHandle, TransformBounds } from './TransformManager';
 import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';
-// Ya no se necesita mapeo touch-to-mouse local, ahora es global
 
 interface TransformHandlesProps {
   bounds: TransformBounds;
@@ -16,13 +15,11 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
   const { isMobile, isTablet } = useMobileDetection();
   const [hoveredHandle, setHoveredHandle] = useState<string | null>(null);
 
-  // Mapeo touch-to-mouse ahora es global, no se requiere nada especial aquí
 
   if (!bounds || handles.length === 0) {
     return null;
   }
 
-  // Calculate opacity based on transform state and movement state - hide visually but keep for touch events
   const isTransforming = transformManager.isTransforming();
   const isMoving = transformManager.isMoving();
   const shouldHideHandles = isTransforming || isMoving;

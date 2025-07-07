@@ -8,6 +8,10 @@ interface MobileDetectionState {
   screenHeight: number;
 }
 
+/**
+ * Hook simplificado para detección de dispositivos móviles
+ * Siempre retorna false para móviles y tablets (sin soporte touch)
+ */
 export const useMobileDetection = (): MobileDetectionState => {
   const [state, setState] = useState<MobileDetectionState>({
     isMobile: false,
@@ -19,27 +23,16 @@ export const useMobileDetection = (): MobileDetectionState => {
 
   useEffect(() => {
     const checkDeviceType = () => {
-      const width = window.innerWidth;
-      const height = window.innerHeight;
-      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      
-      // Breakpoints comunes para dispositivos móviles y tablets
-      const isMobile = width <= 768 && isTouchDevice;
-      const isTablet = width > 768 && width <= 1024 && isTouchDevice;
-
       setState({
-        isMobile,
-        isTablet,
-        isTouchDevice,
-        screenWidth: width,
-        screenHeight: height,
+        isMobile: false,
+        isTablet: false,
+        isTouchDevice: false,
+        screenWidth: window.innerWidth,
+        screenHeight: window.innerHeight,
       });
     };
 
-    // Verificar al cargar
-    checkDeviceType();
-
-    // Verificar en cambios de tamaño
+    // Escuchar cambios de tamaño
     window.addEventListener('resize', checkDeviceType);
     window.addEventListener('orientationchange', checkDeviceType);
 
@@ -52,16 +45,31 @@ export const useMobileDetection = (): MobileDetectionState => {
   return state;
 };
 
-// Función utilitaria para obtener el tamaño de los puntos de control en móviles
-export const getControlPointSize = (isMobile: boolean, isTablet: boolean): number => {
-  if (isMobile) return 14; // Puntos más grandes en móviles para mejor interacción táctil
-  if (isTablet) return 8; // Tamaño intermedio en tablets
-  return 6; // Tamaño normal en desktop
+// Función utilitaria para detectar dispositivos móviles (sin React)
+// Siempre retorna false ya que no hay soporte móvil
+export const detectMobileDevice = (): boolean => {
+  return false;
 };
 
-// Función utilitaria para obtener el tamaño de los botones en móviles
+// Función utilitaria para obtener valores de dispositivo móvil (sin React)
+// Siempre retorna valores de desktop ya que no hay soporte móvil
+export const getMobileDetectionValues = () => {
+  return {
+    isMobile: false,
+    isTablet: false,
+    isTouchDevice: false,
+    screenWidth: window.innerWidth,
+    screenHeight: window.innerHeight,
+  };
+};
+
+// Funciones utilitarias para compatibilidad con código existente
+export const getControlPointSize = (isMobile: boolean, isTablet: boolean): number => {
+  // Siempre retorna tamaño desktop ya que no hay soporte móvil
+  return 6;
+};
+
 export const getButtonSize = (isMobile: boolean, isTablet: boolean): number => {
-  if (isMobile) return 48; // Mínimo recomendado para touch targets
-  if (isTablet) return 40; // Tamaño intermedio
-  return 32; // Tamaño normal en desktop
+  // Siempre retorna tamaño desktop ya que no hay soporte móvil
+  return 32;
 };

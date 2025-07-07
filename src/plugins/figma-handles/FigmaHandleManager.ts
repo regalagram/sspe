@@ -118,37 +118,26 @@ export class FigmaHandleManager {
    * Analiza un comando para determinar el tipo de punto de control
    */
   analyzeControlPoint(commandId: string): ControlPointInfo | null {
-    console.log('🔥 FigmaHandleManager: analyzeControlPoint called:', {
-      commandId,
-      hasEditorStore: !!this.editorStore
-    });
-    
+        
     if (!this.editorStore) {
-      console.log('🔥 FigmaHandleManager: No editorStore - returning null');
-      return null;
+            return null;
     }
     const { paths } = this.editorStore;
     
-    console.log('🔥 FigmaHandleManager: Searching in paths:', paths?.length || 0);
-    
+        
     for (const path of paths) {
-      console.log('🔥 FigmaHandleManager: Checking path with subPaths:', path.subPaths?.length || 0);
-      for (const subPath of path.subPaths) {
-        console.log('🔥 FigmaHandleManager: Checking subPath with commands:', subPath.commands?.length || 0);
-        const commandIndex = subPath.commands.findIndex((cmd: SVGCommand) => cmd.id === commandId);
+            for (const subPath of path.subPaths) {
+                const commandIndex = subPath.commands.findIndex((cmd: SVGCommand) => cmd.id === commandId);
         if (commandIndex !== -1) {
-          console.log('🔥 FigmaHandleManager: Found command at index:', commandIndex);
-          const command = subPath.commands[commandIndex];
+                    const command = subPath.commands[commandIndex];
           const prevCommand = commandIndex > 0 ? subPath.commands[commandIndex - 1] : null;
           const nextCommand = commandIndex < subPath.commands.length - 1 ? subPath.commands[commandIndex + 1] : null;
           const result = this.createControlPointInfo(command, prevCommand, nextCommand);
-          console.log('🔥 FigmaHandleManager: Created controlPointInfo:', result);
-          return result;
+                    return result;
         }
       }
     }
-    console.log('🔥 FigmaHandleManager: Command not found - returning null');
-    return null;
+        return null;
   }
   private createControlPointInfo(
     command: SVGCommand,
@@ -245,27 +234,18 @@ export class FigmaHandleManager {
    * Inicia el arrastre de un handle de control
    */
   startDragHandle(commandId: string, handleType: 'incoming' | 'outgoing', startPoint: Point) {
-    console.log('🔥 FigmaHandleManager: startDragHandle called:', {
-      commandId,
-      handleType,
-      startPoint,
-      hasEditorStore: !!this.editorStore
-    });
-    
+        
     this.dragHistory = [];
     this.lastDragTime = Date.now();
     const controlPointInfo = this.analyzeControlPoint(commandId);
     
-    console.log('🔥 FigmaHandleManager: controlPointInfo:', controlPointInfo);
-    
+        
     if (!controlPointInfo) {
-      console.log('🔥 FigmaHandleManager: No controlPointInfo found - returning early');
-      return;
+            return;
     }
     const pairInfo = this.detectInitialPairAlignment(commandId, handleType, controlPointInfo);
     
-    console.log('🔥 FigmaHandleManager: pairInfo:', pairInfo);
-    
+        
     this.state.controlPoints.set(commandId, {
       ...controlPointInfo,
       type: pairInfo.type
@@ -279,8 +259,7 @@ export class FigmaHandleManager {
       pairInfo: pairInfo
     };
     
-    console.log('🔥 FigmaHandleManager: Drag state set:', this.state.dragState);
-    
+        
     this.notifyListeners();
   }
   /**

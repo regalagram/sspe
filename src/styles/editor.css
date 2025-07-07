@@ -25,143 +25,7 @@ body {
   background: #f5f5f5;
 }
 
-/* Estilos específicos para móviles */
-@media (max-width: 768px) {
-  .svg-editor {
-    /* Prevenir zoom del navegador pero permitir gestos personalizados */
-    touch-action: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-  
-  /* SVG específico para gestos táctiles */
-  .svg-editor svg {
-    touch-action: none;
-  }
-  
-  /* Permitir scroll específicamente en areas de UI */
-  .accordion-sidebar,
-  .accordion-panel-content,
-  .draggable-panel {
-    touch-action: auto !important;
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  /* Para inputs, permitir manipulación completa en iOS y Android - VERSION CORREGIDA */
-  input:not([type="range"]), textarea, select, button {
-    touch-action: manipulation !important;
-    -webkit-user-select: text !important;
-    -moz-user-select: text !important;
-    -ms-user-select: text !important;
-    user-select: text !important;
-    font-size: 16px !important; /* Prevenir zoom en iOS y mejorar Android */
-    -webkit-appearance: none; /* Resetear apariencia en iOS/Android */
-    appearance: none; /* Estándar */
-    -webkit-tap-highlight-color: rgba(0,0,0,0.1);
-    /* Mejoras específicas para Android */
-    outline: none; /* Remover outline por defecto en Android */
-    border-radius: 4px; /* Bordes redondeados consistentes */
-  }
-  
-  /* Range sliders necesitan tratamiento especial para mantener funcionalidad nativa */
-  input[type="range"] {
-    touch-action: manipulation !important;
-    -webkit-user-select: none !important;
-    -moz-user-select: none !important;
-    -ms-user-select: none !important;
-    user-select: none !important;
-    /* NO aplicar appearance: none aquí - se hace más abajo de manera controlada */
-    -webkit-tap-highlight-color: rgba(0,0,0,0.1);
-    outline: none;
-  }
-  
-  /* Específico para diferentes tipos de input en móviles */
-  input[type="color"],
-  input[type="range"],
-  input[type="number"],
-  input[type="text"],
-  input[type="checkbox"] {
-    touch-action: manipulation !important;
-    -webkit-user-select: auto !important;
-    user-select: auto !important;
-    pointer-events: auto !important;
-    -webkit-touch-callout: default !important;
-    /* Android optimizations */
-    -webkit-text-size-adjust: 100%;
-    -ms-text-size-adjust: 100%;
-  }
-  
-  /* Labels también deben permitir interacción */
-  label {
-    touch-action: manipulation !important;
-    -webkit-user-select: none !important;
-    user-select: none !important;
-    cursor: pointer;
-    /* Android tap target optimization */
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-  }
-}
-
-/* Estilos adicionales para dispositivos móviles */
-@media (max-width: 768px) {
-  /* Hacer el toolbar más alto en móviles */
-  .toolbar-container {
-    height: 80px;
-    padding: 0 2px;
-  }
-  
-  /* Ajustar el sidebar para móviles */
-  .sidebar-container {
-    top: 80px;
-    width: 100%;
-    max-width: 320px;
-  }
-  
-  /* Hacer los botones más grandes en móviles */
-  button {
-    min-height: 48px;
-    min-width: 48px;
-  }
-  
-  /* Puntos de comando y control más grandes */
-  .command-point {
-    r: 8px !important;
-  }
-  
-  .control-point {
-    r: 6px !important;
-  }
-  
-  /* Handles de transformación más grandes */
-  .transform-handle {
-    width: 24px !important;
-    height: 24px !important;
-  }
-}
-
-@media (min-width: 769px) and (max-width: 1024px) {
-  /* Estilos para tablets */
-  .command-point {
-    r: 6px !important;
-  }
-  
-  .control-point {
-    r: 5px !important;
-  }
-  
-  .transform-handle {
-    width: 20px !important;
-    height: 20px !important;
-  }
-}
-
-/* Plugin UI Containers */
+/* Toolbar styles */
 .toolbar-container {
   position: absolute;
   top: 0;
@@ -198,8 +62,6 @@ body {
 
 /* Touch-friendly styles for accordion mode */
 .accordion-sidebar button {
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: rgba(0,0,0,0.1);
   min-height: 44px; /* Minimum touch target size */
   min-width: 44px;
 }
@@ -233,8 +95,6 @@ body {
 }
 
 .accordion-sidebar [style*="cursor: pointer"] {
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: rgba(0,0,0,0.1);
   min-height: 44px; /* Minimum touch target size for clickable elements */
 }
 
@@ -262,7 +122,6 @@ body {
   outline-width: 0 !important;
   outline-style: none !important;
   outline-color: transparent !important;
-  -webkit-tap-highlight-color: transparent !important;
 }
 
 /* Additional focus styles for accordion panel content */
@@ -324,8 +183,6 @@ body {
 
 /* Accordion panel headers */
 .accordion-sidebar [data-accordion-panel-header="true"] {
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: rgba(0,118,204,0.1);
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -334,8 +191,6 @@ body {
 
 /* Accordion toggle button */
 [data-accordion-toggle="true"] {
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: rgba(0,118,204,0.2);
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -449,7 +304,6 @@ button.active:hover {
   border-radius: 3px;
   font-size: 12px;
   /* Mejorar soporte táctil para inputs */
-  touch-action: manipulation;
   -webkit-user-select: text;
   -moz-user-select: text;
   -ms-user-select: text;
@@ -547,8 +401,6 @@ button.active:hover {
   left: auto !important;
   top: auto !important;
   /* Permitir scroll y interacción táctil */
-  touch-action: auto !important;
-  -webkit-overflow-scrolling: touch;
 }
 
 .accordion-panel-content .drag-handle,
@@ -582,8 +434,6 @@ button.active:hover {
   overflow: hidden;
   box-shadow: -2px 0 8px rgba(0,0,0,0.1);
   /* Mejorar scroll táctil */
-  touch-action: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* Elementos que necesitan permitir scroll y selección */
@@ -593,7 +443,6 @@ button.active:hover {
 .accordion-panel-content input,
 .accordion-panel-content textarea,
 .accordion-panel-content select {
-  touch-action: manipulation;
   -webkit-user-select: text;
   -moz-user-select: text;
   -ms-user-select: text;
@@ -605,14 +454,10 @@ button.active:hover {
 .accordion-panel-content,
 .accordion-sidebar > div[style*="overflow"],
 .control-panel {
-  touch-action: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* Elementos marcados como mobile-scrollable */
 [data-mobile-scrollable="true"] {
-  touch-action: auto !important;
-  -webkit-overflow-scrolling: touch;
   overflow: auto;
 }
 
@@ -666,11 +511,9 @@ button.active:hover {
     padding: 12px 8px !important;
     min-height: 25px; /* Reducido de 44px a 25px */
     border-radius: 6px;
-    touch-action: manipulation !important;
     -webkit-user-select: auto !important;
     user-select: auto !important;
     pointer-events: auto !important;
-    -webkit-touch-callout: default !important;
     -webkit-appearance: none;
     appearance: none;
     /* Android specific improvements */
@@ -870,7 +713,6 @@ button.active:hover {
     min-height: 25px; /* Reducido de 44px a 25px */
     display: flex;
     align-items: center;
-    touch-action: manipulation !important;
     cursor: pointer;
     padding: 4px 0;
     /* Android tap feedback */
@@ -890,7 +732,6 @@ button.active:hover {
   .accordion-panel-content input[type="checkbox"][data-mobile-enhanced] {
     /* Asegurar que funcionen nativamente */
     pointer-events: auto !important;
-    touch-action: manipulation !important;
     -webkit-appearance: none !important;
     appearance: none !important;
     

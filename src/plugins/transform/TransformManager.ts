@@ -4,8 +4,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { SVGCommand, Point, BoundingBox } from '../../types';
 import { calculateGlobalViewBox } from '../../utils/viewbox-utils';
 import { pathToString, subPathToString } from '../../utils/path-utils';
-import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';
-import { isCurrentlyProcessingTouch, getCurrentTouchEventId, getCurrentTouchEventType } from '../../utils/touch-to-mouse-global';
+import { getControlPointSize, getMobileDetectionValues } from '../../hooks/useMobileDetection';
 
 export interface TransformBounds {
   x: number;
@@ -246,8 +245,7 @@ export class TransformManager {
     const { x, y, width, height } = this.state.bounds;
     
     // Get device detection for responsive handle size
-    const isMobile = window.innerWidth <= 768 && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-    const isTablet = window.innerWidth > 768 && window.innerWidth <= 1024 && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    const { isMobile, isTablet } = getMobileDetectionValues();
     
     // Use responsive handle size with size factors like in TransformHandles.tsx
     const baseHandleSize = getControlPointSize(isMobile, isTablet);
@@ -401,25 +399,6 @@ export class TransformManager {
 
   // Mouse event handlers
   handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
-    // Skip duplicate touch events using element-specific deduplication
-    const fromTouch = isCurrentlyProcessingTouch();
-    const touchEventId = getCurrentTouchEventId();
-    const touchEventType = getCurrentTouchEventType();
-    
-    if (fromTouch) {
-      const deduplicationKey = `transform-mousedown`;
-      
-      if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
-        return false; // Already processed this touch event
-      }
-      if (touchEventId) {
-        if (!(window as any).lastProcessedTouchEvents) {
-          (window as any).lastProcessedTouchEvents = {};
-        }
-        (window as any).lastProcessedTouchEvents[deduplicationKey] = touchEventId;
-      }
-    }
-  
     if (!this.hasValidSelection()) {
       return false;
     }
@@ -447,48 +426,12 @@ export class TransformManager {
   handleMouseMove = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
     if (!this.state.isTransforming) return false;
 
-    // Skip duplicate touch events using element-specific deduplication
-    const fromTouch = isCurrentlyProcessingTouch();
-    const touchEventId = getCurrentTouchEventId();
-    
-    if (fromTouch) {
-      const deduplicationKey = `transform-mousemove`;
-      
-      if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
-        return false; // Already processed this touch event
-      }
-      if (touchEventId) {
-        if (!(window as any).lastProcessedTouchEvents) {
-          (window as any).lastProcessedTouchEvents = {};
-        }
-        (window as any).lastProcessedTouchEvents[deduplicationKey] = touchEventId;
-      }
-    }
-
     this.updateTransform(context.svgPoint);
     return true;
   };
 
   handleMouseUp = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
     if (!this.state.isTransforming) return false;
-
-    // Skip duplicate touch events using element-specific deduplication
-    const fromTouch = isCurrentlyProcessingTouch();
-    const touchEventId = getCurrentTouchEventId();
-    
-    if (fromTouch) {
-      const deduplicationKey = `transform-mouseup`;
-      
-      if (touchEventId && (window as any).lastProcessedTouchEvents?.[deduplicationKey] === touchEventId) {
-        return false; // Already processed this touch event
-      }
-      if (touchEventId) {
-        if (!(window as any).lastProcessedTouchEvents) {
-          (window as any).lastProcessedTouchEvents = {};
-        }
-        (window as any).lastProcessedTouchEvents[deduplicationKey] = touchEventId;
-      }
-    }
 
     this.endTransform();
     return true;
@@ -557,14 +500,12 @@ export class TransformManager {
     
     // Fallback to position-based detection
     // Get device detection (need to instantiate since this is not in a React component)
-    const isMobile = window.innerWidth <= 768 && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-    const isTablet = window.innerWidth > 768 && window.innerWidth <= 1024 && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    const { isMobile, isTablet } = getMobileDetectionValues();
     
     // Use responsive handle size like in TransformHandles.tsx
     const baseHandleSize = getControlPointSize(isMobile, isTablet);
     
-    // Increase tolerance for touch devices - increased to match larger handle sizes
-    const baseTolerance = isMobile ? 32 : isTablet ? 24 : 12;
+    const baseTolerance = 12;
 
     for (const handle of this.state.handles) {
       // Calcular tamaño específico para cada tipo de handle

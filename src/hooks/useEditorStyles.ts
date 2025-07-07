@@ -31,7 +31,7 @@ export const useEditorStyles = ({ isFullscreen, panelMode, accordionVisible }: U
 
   const svgStyle: React.CSSProperties = useMemo(() => ({
     background: 'white',
-    touchAction: 'none' // Prevenir comportamientos nativos de touch
+    /* Prevent default browser behaviors */
   }), []);
 
   return { editorStyle, svgStyle };

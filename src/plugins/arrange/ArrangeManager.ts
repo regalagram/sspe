@@ -313,7 +313,6 @@ export class ArrangeManager {
     this.editorStore.pushToHistory();
   }
 
-  // Pack operation - move all elements to touch each other
   pack() {
     const { subPaths, bounds } = this.getSelectedElements();
     if (subPaths.length < 2) return;

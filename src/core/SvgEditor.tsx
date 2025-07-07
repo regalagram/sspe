@@ -1,5 +1,4 @@
 import React, { useRef } from 'react';
-import { enableGlobalTouchToMouse } from '../utils/touch-to-mouse-global';
 import { useEditorStore } from '../store/editorStore';
 import { getSafeTransform } from '../utils/transform-utils';
 import { usePanelModeStore } from '../plugins/panelmode/PanelManager';
@@ -10,12 +9,10 @@ import { useGlobalMouseEvents } from '../hooks/useGlobalMouseEvents';
 import { useEditorStyles } from '../hooks/useEditorStyles';
 import { usePluginInitialization } from '../hooks/usePluginInitialization';
 import { useMouseEventHandlers } from '../hooks/useMouseEventHandlers';
-import { useTouchEventHandlers } from '../plugins/touch-mobile/TouchMobile';
 import { PluginUIRenderer } from '../components/PluginUIRenderer';
 import { AccordionToggleButton } from '../components/AccordionToggleButton';
 
 // Register plugins immediately during module loading
-enableGlobalTouchToMouse(); // Sistema global simple: touch→mouse
 
 // Initialize plugins during module load
 initializePlugins();
@@ -41,9 +38,6 @@ export const SvgEditor: React.FC = () => {
   
   // Mouse event handlers
   const { handleMouseDown, handleMouseMove, handleMouseUp, handleWheel } = useMouseEventHandlers();
-  
-  // Touch event handlers
-  const { handleTouchStart, handleTouchMove, handleTouchEnd, handleTouchCancel } = useTouchEventHandlers();
 
   return (
     <div className="svg-editor" style={editorStyle}>
@@ -64,10 +58,6 @@ export const SvgEditor: React.FC = () => {
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         onWheel={handleWheel}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchCancel}
       >
         <g transform={getSafeTransform(editorStore.viewport)}>
           {/* Render SVG content through plugins */}
