@@ -100,11 +100,8 @@ export const CurvesUI: React.FC = () => {
                   text="Corner"
                   color="#666"
                   onClick={() => {
-                    const point = curveState.points.find(p => p.id === curveState.selectedPointId);
-                    if (point) {
-                      point.type = PointType.CORNER;
-                      point.handleIn = undefined;
-                      point.handleOut = undefined;
+                    if (curveState.selectedPointId) {
+                      curvesManager.setPointType(curveState.selectedPointId, PointType.CORNER);
                     }
                   }}
                 />
@@ -113,13 +110,8 @@ export const CurvesUI: React.FC = () => {
                   text="Smooth"
                   color="#666"
                   onClick={() => {
-                    const point = curveState.points.find(p => p.id === curveState.selectedPointId);
-                    if (point) {
-                      point.type = PointType.SMOOTH;
-                      if (!point.handleIn && !point.handleOut) {
-                        point.handleIn = { x: point.x - 30, y: point.y };
-                        point.handleOut = { x: point.x + 30, y: point.y };
-                      }
+                    if (curveState.selectedPointId) {
+                      curvesManager.setPointType(curveState.selectedPointId, PointType.SMOOTH);
                     }
                   }}
                 />
@@ -128,13 +120,8 @@ export const CurvesUI: React.FC = () => {
                   text="Asymmetric"
                   color="#666"
                   onClick={() => {
-                    const point = curveState.points.find(p => p.id === curveState.selectedPointId);
-                    if (point) {
-                      point.type = PointType.ASYMMETRIC;
-                      if (!point.handleIn && !point.handleOut) {
-                        point.handleIn = { x: point.x - 30, y: point.y };
-                        point.handleOut = { x: point.x + 30, y: point.y };
-                      }
+                    if (curveState.selectedPointId) {
+                      curvesManager.setPointType(curveState.selectedPointId, PointType.ASYMMETRIC);
                     }
                   }}
                 />
@@ -157,11 +144,7 @@ export const CurvesUI: React.FC = () => {
                 text="Delete Selected Point"
                 color="#dc3545"
                 onClick={() => {
-                  const pointId = curveState.selectedPointId;
-                  if (pointId) {
-                    curveState.points = curveState.points.filter(p => p.id !== pointId);
-                    curveState.selectedPointId = undefined;
-                  }
+                  curvesManager.deleteSelectedPoint();
                 }}
               />
             )}

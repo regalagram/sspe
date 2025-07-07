@@ -19,6 +19,15 @@ export interface UserPreferences {
 
   // Precision of points (optional)
   precision?: number;
+  
+  // Visual Debug size controls
+  visualDebugSizes?: {
+    globalFactor: number;
+    commandPointsFactor: number;
+    controlPointsFactor: number;
+    transformResizeFactor: number;
+    transformRotateFactor: number;
+  };
 }
 
 const STORAGE_KEY = 'svg-editor-preferences';
@@ -33,6 +42,13 @@ const defaultPreferences: UserPreferences = {
   showCommandPoints: true,
   wireframeMode: false,
   precision: 2,
+  visualDebugSizes: {
+    globalFactor: 1.0,
+    commandPointsFactor: 1.0,
+    controlPointsFactor: 1.0,
+    transformResizeFactor: 1.0,
+    transformRotateFactor: 1.0,
+  },
 };
 
 /**
@@ -58,6 +74,13 @@ export function loadPreferences(): UserPreferences {
       showCommandPoints: typeof parsed.showCommandPoints === 'boolean' ? parsed.showCommandPoints : defaultPreferences.showCommandPoints,
       wireframeMode: typeof parsed.wireframeMode === 'boolean' ? parsed.wireframeMode : defaultPreferences.wireframeMode,
       precision: typeof parsed.precision === 'number' ? Math.max(0, Math.min(8, parsed.precision)) : defaultPreferences.precision,
+      visualDebugSizes: parsed.visualDebugSizes && typeof parsed.visualDebugSizes === 'object' ? {
+        globalFactor: typeof parsed.visualDebugSizes.globalFactor === 'number' ? Math.max(0.1, Math.min(5.0, parsed.visualDebugSizes.globalFactor)) : defaultPreferences.visualDebugSizes!.globalFactor,
+        commandPointsFactor: typeof parsed.visualDebugSizes.commandPointsFactor === 'number' ? Math.max(0.1, Math.min(5.0, parsed.visualDebugSizes.commandPointsFactor)) : defaultPreferences.visualDebugSizes!.commandPointsFactor,
+        controlPointsFactor: typeof parsed.visualDebugSizes.controlPointsFactor === 'number' ? Math.max(0.1, Math.min(5.0, parsed.visualDebugSizes.controlPointsFactor)) : defaultPreferences.visualDebugSizes!.controlPointsFactor,
+        transformResizeFactor: typeof parsed.visualDebugSizes.transformResizeFactor === 'number' ? Math.max(0.1, Math.min(5.0, parsed.visualDebugSizes.transformResizeFactor)) : defaultPreferences.visualDebugSizes!.transformResizeFactor,
+        transformRotateFactor: typeof parsed.visualDebugSizes.transformRotateFactor === 'number' ? Math.max(0.1, Math.min(5.0, parsed.visualDebugSizes.transformRotateFactor)) : defaultPreferences.visualDebugSizes!.transformRotateFactor,
+      } : defaultPreferences.visualDebugSizes,
     };
   } catch (error) {
     console.warn('Failed to load preferences from localStorage:', error);

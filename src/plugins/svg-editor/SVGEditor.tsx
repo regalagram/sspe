@@ -30,10 +30,6 @@ const PrecisionControl: React.FC<PrecisionControlProps> = ({ precision, onPrecis
     
     // Auto-apply the change immediately
     onPrecisionChange(val);
-    try {
-      const prefs = loadPreferences();
-      savePreferences({ ...prefs, precision: val });
-    } catch {}
   };
 
   const topRowStyle: React.CSSProperties = {
@@ -249,13 +245,7 @@ ${pathElements}
       return;
     }
     
-    // Show confirmation for destructive action
-    const confirmMessage = `This will permanently delete all ${pathCount} path(s) and leave an empty SVG. This action cannot be undone. Are you sure?`;
-    if (!confirm(confirmMessage)) {
-      return;
-    }
-    
-    // Clear all paths by replacing with empty array
+    // Clear all paths by replacing with empty array (no confirmation needed)
     replacePaths([]);
     
     // Reset viewport completely to default state (zoom 1, pan 0,0, and default viewBox)

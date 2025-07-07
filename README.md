@@ -460,3 +460,6 @@ Following these guidelines ensures:
 - **👥 Ease for new developers**
 
 These principles have proven their effectiveness in building the SVG Sub-Path Editor and can be applied to any complex web application that requires modularity, extensibility, and long-term maintainability.
+
+# Publish
+vercel --prod

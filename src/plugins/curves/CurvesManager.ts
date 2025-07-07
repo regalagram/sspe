@@ -167,10 +167,21 @@ export class CurvesManager {
   private convertPointsToPath = () => {
     if (this.curveState.points.length < 2) return;
 
-    
     console.log('CurvesManager: All points:', this.curveState.points.map(p => ({ id: p.id, x: p.x, y: p.y })));
 
     const { pushToHistory } = this.editorStore;
+    
+    // Save current state to history BEFORE making changes
+    pushToHistory();
+    
+    // Get precision from store
+    const precision = this.editorStore.precision;
+    
+    // Helper function to round to precision
+    const roundToPrecision = (val: number | undefined): number | undefined => {
+      if (val === undefined) return undefined;
+      return Math.round(val * Math.pow(10, precision)) / Math.pow(10, precision);
+    };
     
     // Build all commands first
     const commands: any[] = [];
@@ -180,8 +191,8 @@ export class CurvesManager {
     commands.push({
       id: `cmd-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       command: 'M',
-      x: firstPoint.x,
-      y: firstPoint.y,
+      x: roundToPrecision(firstPoint.x),
+      y: roundToPrecision(firstPoint.y),
     });
     
 
@@ -195,8 +206,8 @@ export class CurvesManager {
         commands.push({
           id: `cmd-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           command: 'L',
-          x: point.x,
-          y: point.y,
+          x: roundToPrecision(point.x),
+          y: roundToPrecision(point.y),
         });
         
       } else {
@@ -207,12 +218,12 @@ export class CurvesManager {
         commands.push({
           id: `cmd-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           command: 'C',
-          x1: cp1.x,
-          y1: cp1.y,
-          x2: cp2.x,
-          y2: cp2.y,
-          x: point.x,
-          y: point.y,
+          x1: roundToPrecision(cp1.x),
+          y1: roundToPrecision(cp1.y),
+          x2: roundToPrecision(cp2.x),
+          y2: roundToPrecision(cp2.y),
+          x: roundToPrecision(point.x),
+          y: roundToPrecision(point.y),
         });
         
       }
@@ -227,9 +238,7 @@ export class CurvesManager {
       
     }
 
-    
-
-    // Create path object directly without using addPath to avoid default commands
+    // Create the new path directly
     const pathId = `path-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const subPathId = `subpath-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
@@ -246,15 +255,15 @@ export class CurvesManager {
       },
     };
 
+    // Add the path using the store's set method to ensure proper state management
+    const currentPaths = this.editorStore.paths;
+    this.editorStore.replacePaths([...currentPaths, newPath]);
     
-
-    // Add the path directly to the store
-    this.editorStore.paths.push(newPath);
     this.curveState.currentPathId = pathId;
     this.curveState.currentSubPathId = subPathId;
 
-    // Debug: Log final path structure BEFORE pushToHistory
-    console.log('CurvesManager: Final path commands BEFORE pushToHistory:', commands.map((cmd: any) => ({
+    // Debug: Log final path structure
+    console.log('CurvesManager: Final path commands:', commands.map((cmd: any) => ({
       command: cmd.command,
       x: cmd.x,
       y: cmd.y,
@@ -263,22 +272,6 @@ export class CurvesManager {
       x2: cmd.x2,
       y2: cmd.y2
     })));
-
-    pushToHistory();
-    
-    // Debug: Log final path structure AFTER pushToHistory
-    const finalPathAfter = this.editorStore.paths.find((p: any) => p.id === pathId);
-    if (finalPathAfter && finalPathAfter.subPaths[0]) {
-      console.log('CurvesManager: Final path commands AFTER pushToHistory:', finalPathAfter.subPaths[0].commands.map((cmd: any) => ({
-        command: cmd.command,
-        x: cmd.x,
-        y: cmd.y,
-        x1: cmd.x1,
-        y1: cmd.y1,
-        x2: cmd.x2,
-        y2: cmd.y2
-      })));
-    }
   };
 
   private snapPoint = (point: Point): Point => {
@@ -396,6 +389,10 @@ export class CurvesManager {
 
     if (this.curveState.mode === CurveToolMode.EDITING) {
       if (existingHandle) {
+        // Save current state to history BEFORE starting to drag handle
+        const { pushToHistory } = this.editorStore;
+        pushToHistory();
+        
         // Start dragging handle
         this.curveState.dragState = {
           isDragging: true,
@@ -417,6 +414,10 @@ export class CurvesManager {
           // Alt+click: Convert point type
           this.togglePointType(existingPoint);
         } else {
+          // Save current state to history BEFORE starting to drag point
+          const { pushToHistory } = this.editorStore;
+          pushToHistory();
+          
           // Start dragging point
           this.curveState.dragState = {
             isDragging: true,
@@ -583,6 +584,7 @@ export class CurvesManager {
 
     if (this.curveState.mode === CurveToolMode.DRAGGING_HANDLE || 
         this.curveState.mode === CurveToolMode.DRAGGING_POINT) {
+      
       this.curveState.dragState = undefined;
       this.curveState.mode = CurveToolMode.CREATING;
       
@@ -611,6 +613,10 @@ export class CurvesManager {
   };
 
   private togglePointType = (point: CurvePoint) => {
+    // Save current state to history BEFORE making changes
+    const { pushToHistory } = this.editorStore;
+    pushToHistory();
+
     switch (point.type) {
       case PointType.CORNER:
         point.type = PointType.SMOOTH;
@@ -629,10 +635,52 @@ export class CurvesManager {
         point.handleOut = undefined;
         break;
     }
+    
+    this.updateState();
   };
 
-  private deleteSelectedPoint = () => {
+  // Public method to change point type with history support
+  setPointType = (pointId: string, newType: PointType) => {
+    const point = this.curveState.points.find(p => p.id === pointId);
+    if (!point) return;
+
+    // Save current state to history BEFORE making changes
+    const { pushToHistory } = this.editorStore;
+    pushToHistory();
+
+    point.type = newType;
+    
+    switch (newType) {
+      case PointType.CORNER:
+        point.handleIn = undefined;
+        point.handleOut = undefined;
+        break;
+      case PointType.SMOOTH:
+        if (!point.handleIn && !point.handleOut) {
+          // Add default handles
+          point.handleIn = { x: point.x - 30, y: point.y };
+          point.handleOut = { x: point.x + 30, y: point.y };
+        }
+        break;
+      case PointType.ASYMMETRIC:
+        if (!point.handleIn && !point.handleOut) {
+          // Add default handles
+          point.handleIn = { x: point.x - 30, y: point.y };
+          point.handleOut = { x: point.x + 30, y: point.y };
+        }
+        break;
+    }
+    
+    this.updateState();
+  };
+
+  // Public method to delete selected point with history support
+  deleteSelectedPoint = () => {
     if (!this.curveState.selectedPointId) return;
+
+    // Save current state to history BEFORE making changes
+    const { pushToHistory } = this.editorStore;
+    pushToHistory();
 
     this.curveState.points = this.curveState.points.filter(
       p => p.id !== this.curveState.selectedPointId
@@ -644,11 +692,17 @@ export class CurvesManager {
       this.curveState.points = [];
       this.curveState.mode = CurveToolMode.CREATING;
     }
+    
+    this.updateState();
   };
 
   // Add method to add point in the middle of a segment
   addPointToSegment = (segmentIndex: number, t: number = 0.5) => {
     if (segmentIndex >= this.curveState.points.length - 1) return;
+    
+    // Save current state to history BEFORE making changes
+    const { pushToHistory } = this.editorStore;
+    pushToHistory();
     
     const point1 = this.curveState.points[segmentIndex];
     const point2 = this.curveState.points[segmentIndex + 1];
@@ -669,13 +723,20 @@ export class CurvesManager {
     this.curveState.points.forEach(p => p.selected = false);
     newPoint.selected = true;
     this.curveState.selectedPointId = newPoint.id;
+    
+    this.updateState();
   };
 
   // Add method to break handles (make asymmetric)
   breakHandles = (pointId: string) => {
     const point = this.curveState.points.find(p => p.id === pointId);
     if (point && point.type === PointType.SMOOTH) {
+      // Save current state to history BEFORE making changes
+      const { pushToHistory } = this.editorStore;
+      pushToHistory();
+      
       point.type = PointType.ASYMMETRIC;
+      this.updateState();
     }
   };
 

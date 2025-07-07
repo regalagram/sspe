@@ -91,14 +91,7 @@ interface EditorActions {
 
 // Load preferences from localStorage
 const preferences = loadPreferences();
-const storedPrecision = (() => {
-  try {
-    const val = localStorage.getItem('sspe-precision');
-    return val ? Math.max(0, Math.min(8, parseInt(JSON.parse(val), 10))) : 2;
-  } catch {
-    return 2;
-  }
-})();
+const storedPrecision = preferences.precision || 2;
 
 const createInitialState = (): EditorState => {
   // Hardcoded SVG to load as initial state
@@ -162,7 +155,7 @@ const createInitialState = (): EditorState => {
     ]),
     renderVersion: 0,
     precision: storedPrecision, // Precisión inicial
-    visualDebugSizes: {
+    visualDebugSizes: preferences.visualDebugSizes || {
       globalFactor: 1.0,
       commandPointsFactor: 1.0,
       controlPointsFactor: 1.0,
@@ -185,6 +178,8 @@ const saveCurrentPreferences = (state: EditorState) => {
     showControlPoints: state.enabledFeatures.has('control-points'),
     showCommandPoints: state.enabledFeatures.has('command-points'),
     wireframeMode: state.enabledFeatures.has('wireframe'),
+    precision: state.precision,
+    visualDebugSizes: state.visualDebugSizes,
   };
   savePreferences(preferences);
 };
@@ -1463,63 +1458,104 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             })),
           })),
         }));
-        return {
+        
+        const newState = {
           precision,
           paths: newPaths,
           renderVersion: state.renderVersion + 1,
         };
+        
+        // Save preferences after updating precision
+        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
+        return newState;
       });
     },
 
     // Visual Debug size controls
     setVisualDebugGlobalFactor: (factor: number) => {
-      set((state) => ({
-        visualDebugSizes: {
-          ...state.visualDebugSizes,
-          globalFactor: Math.max(0.1, Math.min(5.0, factor)),
-        },
-        renderVersion: state.renderVersion + 1,
-      }));
+      set((state) => {
+        const newState = {
+          visualDebugSizes: {
+            ...state.visualDebugSizes,
+            globalFactor: Math.max(0.1, Math.min(5.0, factor)),
+          },
+          renderVersion: state.renderVersion + 1,
+        };
+        
+        // Save preferences after updating visual debug sizes
+        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
+        return newState;
+      });
     },
 
     setVisualDebugCommandPointsFactor: (factor: number) => {
-      set((state) => ({
-        visualDebugSizes: {
-          ...state.visualDebugSizes,
-          commandPointsFactor: Math.max(0.1, Math.min(5.0, factor)),
-        },
-        renderVersion: state.renderVersion + 1,
-      }));
+      set((state) => {
+        const newState = {
+          visualDebugSizes: {
+            ...state.visualDebugSizes,
+            commandPointsFactor: Math.max(0.1, Math.min(5.0, factor)),
+          },
+          renderVersion: state.renderVersion + 1,
+        };
+        
+        // Save preferences after updating visual debug sizes
+        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
+        return newState;
+      });
     },
 
     setVisualDebugControlPointsFactor: (factor: number) => {
-      set((state) => ({
-        visualDebugSizes: {
-          ...state.visualDebugSizes,
-          controlPointsFactor: Math.max(0.1, Math.min(5.0, factor)),
-        },
-        renderVersion: state.renderVersion + 1,
-      }));
+      set((state) => {
+        const newState = {
+          visualDebugSizes: {
+            ...state.visualDebugSizes,
+            controlPointsFactor: Math.max(0.1, Math.min(5.0, factor)),
+          },
+          renderVersion: state.renderVersion + 1,
+        };
+        
+        // Save preferences after updating visual debug sizes
+        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
+        return newState;
+      });
     },
 
     setVisualDebugTransformResizeFactor: (factor: number) => {
-      set((state) => ({
-        visualDebugSizes: {
-          ...state.visualDebugSizes,
-          transformResizeFactor: Math.max(0.1, Math.min(5.0, factor)),
-        },
-        renderVersion: state.renderVersion + 1,
-      }));
+      set((state) => {
+        const newState = {
+          visualDebugSizes: {
+            ...state.visualDebugSizes,
+            transformResizeFactor: Math.max(0.1, Math.min(5.0, factor)),
+          },
+          renderVersion: state.renderVersion + 1,
+        };
+        
+        // Save preferences after updating visual debug sizes
+        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
+        return newState;
+      });
     },
 
     setVisualDebugTransformRotateFactor: (factor: number) => {
-      set((state) => ({
-        visualDebugSizes: {
-          ...state.visualDebugSizes,
-          transformRotateFactor: Math.max(0.1, Math.min(5.0, factor)),
-        },
-        renderVersion: state.renderVersion + 1,
-      }));
+      set((state) => {
+        const newState = {
+          visualDebugSizes: {
+            ...state.visualDebugSizes,
+            transformRotateFactor: Math.max(0.1, Math.min(5.0, factor)),
+          },
+          renderVersion: state.renderVersion + 1,
+        };
+        
+        // Save preferences after updating visual debug sizes
+        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
+        return newState;
+      });
     },
   }))
 );
