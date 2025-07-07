@@ -1,7 +1,6 @@
 import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { DraggablePanel } from '../../components/DraggablePanel';
 
 interface GridProps {
   size: number;
@@ -201,24 +200,16 @@ export const GridControls: React.FC<GridControlsProps> = ({
   );
 };
 
-import { useMobileDetection } from '../../hooks/useMobileDetection';
-
 export const GridComponent: React.FC = () => {
   const { grid, toggleGrid, toggleSnapToGrid, setGridSize, toggleGridLabels } = useEditorStore();
-  const { isMobile, isTablet } = useMobileDetection();
   // Forzar re-render usando una key dependiente del estado de la grilla
   const gridKey = `${grid.enabled}-${grid.snapToGrid}-${grid.showLabels}-${grid.size}`;
 
   return (
-    <DraggablePanel 
-      title="Grid Controls"
-      initialPosition={{ x: 980, y: 60 }}
-      id="grid-controls"
-    >
-      <div key={gridKey}>
-        <GridControls
-          enabled={grid.enabled}
-          size={grid.size}
+    <div key={gridKey}>
+      <GridControls
+        enabled={grid.enabled}
+        size={grid.size}
           snapToGrid={grid.snapToGrid}
           showLabels={grid.showLabels || false}
           onToggleGrid={toggleGrid}
@@ -226,8 +217,7 @@ export const GridComponent: React.FC = () => {
           onToggleLabels={toggleGridLabels}
           onSizeChange={setGridSize}
         />
-      </div>
-    </DraggablePanel>
+    </div>
   );
 };
 

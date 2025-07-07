@@ -23,11 +23,11 @@ export const SvgEditor: React.FC = () => {
   const svgRef = useRef<SVGSVGElement>(null);
   
   // Get panel mode from store
-  const { mode: panelMode, accordionVisible, toggleAccordionVisible } = usePanelModeStore();
+  const { accordionVisible, toggleAccordionVisible } = usePanelModeStore();
   
   // Use custom hooks for cleaner separation of concerns
   const { getCursor } = useCombinedCursor();
-  const { editorStyle, svgStyle } = useEditorStyles({ isFullscreen, panelMode, accordionVisible });
+  const { editorStyle, svgStyle } = useEditorStyles({ isFullscreen, accordionVisible });
   
   // Initialize global event handlers
   useGlobalKeyboard();
@@ -68,14 +68,12 @@ export const SvgEditor: React.FC = () => {
       {/* Render sidebar plugins */}
       <PluginUIRenderer position="sidebar" />
 
-      {/* Accordion toggle button - only show in accordion mode */}
-      {panelMode === 'accordion' && (
-        <AccordionToggleButton
-          accordionVisible={accordionVisible}
-          toggleAccordionVisible={toggleAccordionVisible}
-          isFullscreen={isFullscreen}
-        />
-      )}
+      {/* Accordion toggle button - always show (since we're always in accordion mode) */}
+      <AccordionToggleButton
+        accordionVisible={accordionVisible}
+        toggleAccordionVisible={toggleAccordionVisible}
+        isFullscreen={isFullscreen}
+      />
     </div>
   );
 };

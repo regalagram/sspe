@@ -107,15 +107,6 @@ export const PanelModePlugin: Plugin = {
 
   shortcuts: [
     {
-      key: 'p',
-      modifiers: ['ctrl', 'shift'],
-      description: 'Toggle Panel Mode',
-      action: () => {
-        const store = usePanelModeStore.getState();
-        store.toggleMode();
-      }
-    },
-    {
       key: 'Tab',
       modifiers: ['ctrl'],
       description: 'Toggle Panel Visibility (Focus PanelMode)',

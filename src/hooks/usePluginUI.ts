@@ -6,7 +6,7 @@ import { usePanelModeStore } from '../plugins/panelmode/PanelManager';
  * Following the position-based UI system principle from README.md
  */
 export const usePluginUI = () => {
-  const { mode: panelMode, accordionVisible } = usePanelModeStore();
+  const { accordionVisible } = usePanelModeStore();
 
   const getPluginUIConfig = (position: string) => {
     const { getVisiblePanels } = usePanelModeStore.getState();
@@ -15,24 +15,17 @@ export const usePluginUI = () => {
     const plugins = pluginManager.getEnabledPlugins()
       .flatMap(plugin => plugin.ui || [])
       .filter(ui => ui.position === position)
-      .filter(ui => {
-        // In draggable mode, respect visibility settings
-        if (panelMode === 'draggable') {
-          return visiblePanels.some(panel => panel.id === ui.id);
-        }
-        return true; // In accordion mode, filtering is handled by AccordionSidebar
-      })
       .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-    // Special handling for sidebar in accordion mode - include toolbar panels too
-    if (position === 'sidebar' && panelMode === 'accordion') {
+    // Special handling for sidebar - always use accordion mode
+    if (position === 'sidebar') {
       // Only show accordion if it's visible
       if (!accordionVisible) {
         return { type: 'hidden' as const };
       }
       
-      // Get all draggable panels (sidebar + toolbar) including panel-mode-ui
-      const allDraggablePanels = pluginManager.getEnabledPlugins()
+      // Get all panels (sidebar + toolbar) including panel-mode-ui
+      const allPanels = pluginManager.getEnabledPlugins()
         .flatMap(plugin => plugin.ui || [])
         .filter(ui => 
           (ui.position === 'sidebar' || ui.position === 'toolbar')
@@ -40,17 +33,17 @@ export const usePluginUI = () => {
         )
         .sort((a, b) => (a.order || 0) - (b.order || 0));
       
-      return { type: 'accordion' as const, plugins: allDraggablePanels };
+      return { type: 'accordion' as const, plugins: allPanels };
     }
     
-    // In accordion mode, hide toolbar panels since they're shown in the accordion
-    if (position === 'toolbar' && panelMode === 'accordion') {
+    // Hide toolbar panels since they're shown in the accordion
+    if (position === 'toolbar') {
       return { type: 'hidden' as const };
     }
     
-    // Default draggable mode
+    // Default: return plugins as-is (for other positions)
     return { type: 'plugins' as const, plugins };
   };
 
-  return { getPluginUIConfig, panelMode, accordionVisible };
+  return { getPluginUIConfig, accordionVisible };
 };

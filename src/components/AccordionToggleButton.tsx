@@ -16,11 +16,6 @@ export const AccordionToggleButton: React.FC<AccordionToggleButtonProps> = ({
   toggleAccordionVisible,
   isFullscreen
 }) => {
-  // Don't show in fullscreen mode
-  if (isFullscreen) {
-    return null;
-  }
-
   return (
     <button
       data-accordion-toggle="true"

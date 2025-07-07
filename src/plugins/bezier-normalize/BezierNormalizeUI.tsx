@@ -1,6 +1,5 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { DraggablePanel } from '../../components/DraggablePanel';
 import { PluginButton } from '../../components/PluginButton';
 import { Shuffle, ArrowLeftRight, RefreshCw, Unlink } from 'lucide-react';
 import { bezierNormalizeManager, BezierPointInfo, BezierNormalizeAction } from './BezierNormalizeManager';
@@ -108,16 +107,11 @@ export const BezierNormalizeControls: React.FC<BezierNormalizeControlsProps> = (
   const scenario = getScenarioDescription();
 
   return (
-    <DraggablePanel
-      id="bezier-normalize"
-      title="Normalizar Curvas Bézier"
-      initialPosition={{ x: 20, y: 500 }}
-    >
-      <div style={{ 
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px'
-      }}>
+    <div style={{ 
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px'
+    }}>
         
         {/* Option Key Indicator */}
         {state.isOptionPressed && (
@@ -199,7 +193,6 @@ export const BezierNormalizeControls: React.FC<BezierNormalizeControlsProps> = (
             Selecciona un punto para ver las opciones de normalización
           </div>
         )}
-      </div>
-    </DraggablePanel>
+    </div>
   );
 };

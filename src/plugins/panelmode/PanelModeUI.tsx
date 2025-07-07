@@ -1,20 +1,13 @@
 import React from 'react';
 import { usePanelModeStore } from './PanelManager';
-import { DraggablePanel } from '../../components/DraggablePanel';
-import { PluginButton } from '../../components/PluginButton';
 import { 
-  Layout, 
-  Sidebar, 
   Eye, 
   EyeOff, 
   Settings,
-  ArrowUpDown
 } from 'lucide-react';
 
 export const PanelModeUI: React.FC = () => {
   const { 
-    mode, 
-    toggleMode, 
     getPanelsList,
     togglePanel,
     enablePanel,
@@ -99,136 +92,153 @@ export const PanelModeUI: React.FC = () => {
     border: '1px solid #e0e8f0',
   };
 
+  const buttonStyle: React.CSSProperties = {
+    background: 'transparent',
+    border: '1px solid #e0e0e0',
+    cursor: 'pointer',
+    padding: '6px 12px',
+    borderRadius: '4px',
+    fontSize: '12px',
+    color: '#666',
+    transition: 'all 0.2s ease',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    width: '100%',
+    justifyContent: 'center',
+  };
+
+  const enabledButtonStyle: React.CSSProperties = {
+    ...buttonStyle,
+    background: '#22c55e',
+    color: 'white',
+    border: '1px solid #22c55e',
+  };
+
+  const disabledButtonStyle: React.CSSProperties = {
+    ...buttonStyle,
+    background: '#ef4444',
+    color: 'white',
+    border: '1px solid #ef4444',
+  };
+
   return (
-    <DraggablePanel
-      title="Panel Mode"
-      initialPosition={{ x: 20, y: 80 }}
-      id="panel-mode-controls"
-    >
-      <div style={containerStyle}>
-        
-        {/* Mode Toggle */}
-        <div>
-          <PluginButton
-            icon={mode === 'draggable' ? <Layout size={16} /> : <Sidebar size={16} />}
-            text={mode === 'draggable' ? 'Switch to Accordion' : 'Switch to Draggable'}
-            color="#007acc"
-            active={false}
-            disabled={false}
-            onClick={toggleMode}
-            fullWidth={true}
-          />
+    <div style={containerStyle}>
+      {/* Panel Management Section */}
+      <div>
+        <div style={titleStyle}>
+          <Settings size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+          Panel Visibility
         </div>
 
-
-
-        {/* Panel Management Section */}
-        <div style={sectionStyle}>
-          <div style={titleStyle}>
-            <Settings size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
-            Panel Visibility
-            {panels.length > 6 && (
-              <span style={{ 
-                fontSize: '9px', 
-                color: '#888', 
-                fontWeight: 400,
-                marginLeft: '4px'
-              }}>
-              </span>
-            )}
-          </div>
-
-          {/* Hide/Show All Buttons */}
-          <div style={{
-            display: 'flex',
-            gap: '6px',
-            marginBottom: '8px'
-          }}>
-            <PluginButton
-              icon={<Eye size={14} />}
-              text="Show All"
-              color="#22c55e"
-              active={false}
-              disabled={allPanelsEnabled}
-              onClick={handleShowAll}
-              fullWidth={true}
-            />
-            <PluginButton
-              icon={<EyeOff size={14} />}
-              text="Hide All"
-              color="#ef4444"
-              active={false}
-              disabled={allPanelsDisabled}
-              onClick={handleHideAll}
-              fullWidth={true}
-            />
-          </div>
-          
-          <div 
-            className="panel-visibility-scroll"
-            style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              gap: '4px',
-              maxHeight: '200px', // Limit height for scroll
-              overflowY: 'auto',   // Enable vertical scroll
-              padding: '4px',      // Small padding for scroll area
-              border: '1px solid #e0e0e0',
-              borderRadius: '4px',
-              background: '#fafafa'
+        {/* Hide/Show All Buttons */}
+        <div style={{
+          display: 'flex',
+          gap: '6px',
+          marginBottom: '8px'
+        }}>
+          <button
+            style={allPanelsEnabled ? { ...buttonStyle, opacity: 0.5 } : enabledButtonStyle}
+            disabled={allPanelsEnabled}
+            onClick={handleShowAll}
+            onMouseEnter={(e) => {
+              if (!allPanelsEnabled) {
+                e.currentTarget.style.background = '#16a34a';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!allPanelsEnabled) {
+                e.currentTarget.style.background = '#22c55e';
+              }
             }}
           >
-            {panels.length === 0 ? (
-              <div style={{ 
-                fontSize: '11px', 
-                color: '#999', 
-                textAlign: 'center',
-                padding: '12px',
-                fontStyle: 'italic'
-              }}>
-                Loading panels...
-              </div>
-            ) : (
-              panels.map((panel) => (
-                <div key={panel.id} style={panelItemStyle}>
-                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                    <span style={{ 
-                      color: panel.enabled ? '#333' : '#999',
-                      fontWeight: panel.enabled ? 500 : 400
-                    }}>
-                      {panel.name}
-                    </span>
-                    <span style={{ 
-                      fontSize: '10px', 
-                      color: '#888',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      {panel.originalPosition || 'unknown'}
-                    </span>
-                  </div>
-                  <button
-                    style={{
-                      ...toggleButtonStyle,
-                      color: panel.enabled ? '#22c55e' : '#ef4444'
-                    }}
-                    onClick={() => togglePanel(panel.id)}
-                    title={panel.enabled ? 'Hide panel' : 'Show panel'}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#e5e7eb';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                  >
-                    {panel.enabled ? <Eye size={14} /> : <EyeOff size={14} />}
-                  </button>
+            <Eye size={14} />
+            Show All
+          </button>
+          <button
+            style={allPanelsDisabled ? { ...buttonStyle, opacity: 0.5 } : disabledButtonStyle}
+            disabled={allPanelsDisabled}
+            onClick={handleHideAll}
+            onMouseEnter={(e) => {
+              if (!allPanelsDisabled) {
+                e.currentTarget.style.background = '#dc2626';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!allPanelsDisabled) {
+                e.currentTarget.style.background = '#ef4444';
+              }
+            }}
+          >
+            <EyeOff size={14} />
+            Hide All
+          </button>
+        </div>
+        
+        <div 
+          className="panel-visibility-scroll"
+          style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '4px',
+            maxHeight: '200px',
+            overflowY: 'auto',
+            padding: '4px',
+            border: '1px solid #e0e0e0',
+            borderRadius: '4px',
+            background: '#fafafa'
+          }}
+        >
+          {panels.length === 0 ? (
+            <div style={{ 
+              fontSize: '11px', 
+              color: '#999', 
+              textAlign: 'center',
+              padding: '12px',
+              fontStyle: 'italic'
+            }}>
+              Loading panels...
+            </div>
+          ) : (
+            panels.map((panel) => (
+              <div key={panel.id} style={panelItemStyle}>
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <span style={{ 
+                    color: panel.enabled ? '#333' : '#999',
+                    fontWeight: panel.enabled ? 500 : 400
+                  }}>
+                    {panel.name}
+                  </span>
+                  <span style={{ 
+                    fontSize: '10px', 
+                    color: '#888',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    {panel.originalPosition || 'unknown'}
+                  </span>
                 </div>
-              ))
-            )}
-          </div>
+                <button
+                  style={{
+                    ...toggleButtonStyle,
+                    color: panel.enabled ? '#22c55e' : '#ef4444'
+                  }}
+                  onClick={() => togglePanel(panel.id)}
+                  title={panel.enabled ? 'Hide panel' : 'Show panel'}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#e5e7eb';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  {panel.enabled ? <Eye size={14} /> : <EyeOff size={14} />}
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
-    </DraggablePanel>
+    </div>
   );
 };

@@ -1,8 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { detectMobileDevice } from '../../hooks/useMobileDetection';
 
-export type PanelMode = 'draggable' | 'accordion';
+export type PanelMode = 'accordion';
 
 export interface PanelConfig {
   id: string;
@@ -22,7 +21,6 @@ interface PanelModeState {
 
 interface PanelModeActions {
   setMode: (mode: PanelMode) => void;
-  toggleMode: () => void;
   registerPanel: (config: PanelConfig) => void;
   enablePanel: (panelId: string) => void;
   disablePanel: (panelId: string) => void;
@@ -39,17 +37,8 @@ type PanelModeStore = PanelModeState & PanelModeActions;
 
 // Load saved mode from localStorage
 const loadSavedMode = (): PanelMode => {
-  // No mobile device support
-  if (false) {
-    return 'accordion';
-  }
-  
-  try {
-    const saved = localStorage.getItem('sspe-panel-mode');
-    return saved === 'accordion' ? 'accordion' : 'draggable';
-  } catch {
-    return 'draggable';
-  }
+  // Always use accordion mode
+  return 'accordion';
 };
 
 // Load saved panel configurations
@@ -80,12 +69,6 @@ export const usePanelModeStore = create<PanelModeStore>()(
       } catch {
         // Ignore storage errors
       }
-    },
-
-    toggleMode: () => {
-      const currentMode = get().mode;
-      const newMode = currentMode === 'draggable' ? 'accordion' : 'draggable';
-      get().setMode(newMode);
     },
 
     registerPanel: (config: PanelConfig) => {
@@ -230,8 +213,3 @@ export const panelModeManager = {
   getStore: () => usePanelModeStore.getState(),
   subscribe: usePanelModeStore.subscribe,
 };
-
-// No mobile device support
-if (false) { // Mobile device support removed
-  usePanelModeStore.getState().setMode('accordion');
-}

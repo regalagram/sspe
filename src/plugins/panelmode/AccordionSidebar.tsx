@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { UIComponentDefinition } from '../../core/PluginSystem';
 import { usePanelModeStore } from './PanelManager';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, X } from 'lucide-react';
 
 interface AccordionSidebarProps {
   plugins: UIComponentDefinition[];
@@ -11,7 +11,8 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
   const { 
     accordionExpandedPanel, 
     setAccordionExpanded, 
-    getVisiblePanels 
+    getVisiblePanels,
+    setAccordionVisible
   } = usePanelModeStore();
 
   const panelsContainerRef = useRef<HTMLDivElement>(null);
@@ -59,6 +60,11 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
     return nameA.localeCompare(nameB);
   });
 
+  const handleCloseAccordion = () => {
+    setAccordionVisible(false);
+    setAccordionExpanded(null);
+  };
+
   const handlePanelToggle = (panelId: string) => {
     if (accordionExpandedPanel === panelId) {
       setAccordionExpanded(null);
@@ -72,10 +78,12 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
   const otherPlugins = sortedPlugins.filter(p => p.id !== 'panel-mode-ui');
 
   const sidebarStyle: React.CSSProperties = {
-    width: '200px', // Ancho fijo y adecuado para accordion
-    maxWidth: '200px', // Asegurar que no se expanda más
-    minWidth: '200px', // Asegurar que no se contraiga menos
-    // Using CSS class for additional styles
+    width: '200px',
+    maxWidth: '200px',
+    minWidth: '200px',
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
   };
 
   const headerStyle: React.CSSProperties = {
@@ -90,6 +98,19 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
     justifyContent: 'space-between',
   };
 
+  const closeButtonStyle: React.CSSProperties = {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '4px',
+    borderRadius: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#666',
+    transition: 'background-color 0.2s ease',
+  };
+
   const panelsContainerStyle: React.CSSProperties = {
     flex: 1,
     overflow: 'auto'
@@ -97,7 +118,22 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
 
   return (
     <div className="accordion-sidebar" style={sidebarStyle}>
-
+      <div style={headerStyle}>
+        <span>Panels</span>
+        <button
+          style={closeButtonStyle}
+          onClick={handleCloseAccordion}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#e0e0e0';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+          title="Close panels"
+        >
+          <X size={16} />
+        </button>
+      </div>
       
       <div ref={panelsContainerRef} style={panelsContainerStyle}>
         {/* Panel Mode - Always first */}
