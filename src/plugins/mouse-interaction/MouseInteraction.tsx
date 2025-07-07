@@ -1,6 +1,5 @@
-import React, { useState, MouseEvent, WheelEvent } from 'react';
-import { Plugin, MouseEventHandler, MouseEventContext } from '../../core/PluginSystem';
-import { useEditorStore } from '../../store/editorStore';
+import React, { MouseEvent, WheelEvent } from 'react';
+import { Plugin, MouseEventContext } from '../../core/PluginSystem';
 import { snapToGrid, getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
