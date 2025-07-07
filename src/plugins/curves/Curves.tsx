@@ -22,8 +22,15 @@ export const CurvesPlugin: Plugin = {
   
   shortcuts: [
     {
-      key: 'p',
+      key: 'c',
       description: 'Curve Tool',
+      action: () => {
+        curvesManager.activateCurveTool();
+      }
+    },
+    {
+      key: 'b',
+      description: 'Bézier Curve Tool',
       action: () => {
         curvesManager.activateCurveTool();
       }
