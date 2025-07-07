@@ -57,11 +57,6 @@ body {
   padding: 0; 
 }
 
-.accordion-sidebar button {
-  min-height: 44px; 
-  min-width: 44px;
-}
-
 button {
   background: white;
   border: 1px solid #ccc;

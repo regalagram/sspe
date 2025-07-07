@@ -212,7 +212,7 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
 
   const contentStyle: React.CSSProperties = {
     display: isExpanded ? 'block' : 'none',
-    padding: '8px 4px',
+    padding: '8px 8px',
     borderBottom: '1px solid #e0e0e0',
     background: 'white',
     maxHeight: isExpanded ? '400px' : '0',

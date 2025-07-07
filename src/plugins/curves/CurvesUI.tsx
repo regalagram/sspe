@@ -32,14 +32,14 @@ export const CurvesUI: React.FC = () => {
   const renderContent = () => {
     if (!curveState.isActive && mode.current !== 'curves') {
       return (
-        <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <PluginButton
             icon={<PenTool size={16} />}
             text="Activate Curve Tool"
             color="#007acc"
             onClick={() => curvesManager.activateCurveTool()}
           />
-          <div style={{ fontSize: '12px', color: '#666', lineHeight: '1.4' }}>
+          <div style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>
             <p><strong>Curve Tool:</strong></p>
             <p>• Click: Create corner point</p>
             <p>• Click + Drag: Create smooth point</p>
@@ -54,14 +54,14 @@ export const CurvesUI: React.FC = () => {
 
     if (curveState.isActive) {
       return (
-        <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {/* Tool status */}
           <div style={{ 
             backgroundColor: '#007acc', 
             color: 'white', 
             padding: '6px 8px', 
             borderRadius: '4px', 
-            fontSize: '12px',
+            fontSize: '11px',
             textAlign: 'center'
           }}>
             {curveState.mode === CurveToolMode.CREATING && 'Creating Path'}
@@ -71,7 +71,7 @@ export const CurvesUI: React.FC = () => {
           </div>
 
           {/* Current path info */}
-          <div style={{ fontSize: '12px', color: '#666' }}>
+          <div style={{ fontSize: '11px', color: '#666' }}>
             Points: {curveState.points.length}
             {curveState.selectedPointId && (
               <div>
@@ -84,16 +84,16 @@ export const CurvesUI: React.FC = () => {
           {curveState.selectedPointId && (
             <div style={{ 
               display: 'flex', 
-              gap: '4px',
-              padding: '8px',
-              backgroundColor: '#f5f5f5',
+              gap: '1px',
+              padding: '4px',
               borderRadius: '4px',
-              flexDirection: 'column'
+              flexDirection: 'column',
+              border: '1px solid #ddd',
             }}>
-              <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '4px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 'bold', paddingBottom: '4px' }}>
                 Point Type:
               </div>
-              <div style={{ display: 'flex', gap: '4px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
                 <PluginButton
                   icon={<Square size={14} />}
                   text="Corner"

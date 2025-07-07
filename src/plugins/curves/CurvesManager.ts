@@ -154,8 +154,7 @@ export class CurvesManager {
     
     // Verificar si fue activado por ToolModeManager ANTES de notificar
     if (toolModeManager.isActive('curves')) {
-      console.log('🏹 CurvesManager: Notifying ToolModeManager of deactivation');
-      toolModeManager.notifyModeDeactivated('curves');
+            toolModeManager.notifyModeDeactivated('curves');
     } else {
       // Solo cambiar modo del editor si no fue coordinado por ToolModeManager
       this.editorStore.setMode('select');
@@ -188,8 +187,7 @@ export class CurvesManager {
    * No notifica de vuelta para evitar loops
    */
   deactivateExternally = () => {
-    console.log('🏹 CurvesManager: Being deactivated externally by ToolModeManager');
-    this.finishPath();
+        this.finishPath();
     this.curveState.isActive = false;
     this.curveState.mode = CurveToolMode.INACTIVE;
     this.curveState.points = [];
@@ -212,7 +210,6 @@ export class CurvesManager {
    * No genera recursión porque no llama de vuelta a ToolModeManager
    */
   activateExternally = () => {
-    console.log('🏹 CurvesManager: Being activated externally by ToolModeManager');
     this.curveState.isActive = true;
     this.curveState.mode = CurveToolMode.CREATING;
     this.editorStore.setMode('curves');
