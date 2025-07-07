@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { EditorState, SVGCommand, SVGPath, Point, EditorCommandType, PathStyle } from '../types';
+import { EditorState, SVGCommand, SVGPath, Point, EditorCommandType, PathStyle, ViewportState } from '../types';
 import { generateId } from '../utils/id-utils.js';
 import { loadPreferences, savePreferences, UserPreferences } from '../utils/persistence';
 import { createNewPath } from '../utils/subpath-utils';
@@ -184,7 +184,7 @@ const saveCurrentPreferences = (state: EditorState) => {
 };
 
 // Helper function to ensure valid viewport values
-const validateViewport = (viewport: any) => {
+const validateViewport = (viewport: ViewportState) => {
   return {
     ...viewport,
     zoom: isFinite(viewport.zoom) && viewport.zoom > 0 ? viewport.zoom : 1,
