@@ -262,7 +262,6 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
         <div 
           style={contentStyle}
           className="accordion-panel-content-container"
-          data-mobile-scrollable="true"
         >
           <AccordionPanelContent plugin={plugin} />
         </div>
@@ -285,7 +284,6 @@ const AccordionPanelContent: React.FC<AccordionPanelContentProps> = ({ plugin })
         width: '100%',
       }}
       className="accordion-panel-content"
-      data-mobile-scrollable="true"
     >
       <AccordionModeProvider>
         <plugin.component />
@@ -294,7 +292,6 @@ const AccordionPanelContent: React.FC<AccordionPanelContentProps> = ({ plugin })
   );
 };
 
-// Context provider to signal we're in accordion mode
 const AccordionContext = React.createContext(false);
 
 const AccordionModeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

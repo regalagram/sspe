@@ -1,4 +1,3 @@
-/* SVG Editor Styles */
 * {
   box-sizing: border-box;
 }
@@ -25,7 +24,6 @@ body {
   background: #f5f5f5;
 }
 
-/* Toolbar styles */
 .toolbar-container {
   position: absolute;
   top: 0;
@@ -54,150 +52,16 @@ body {
   padding: 2px;
 }
 
-/* Sidebar container en modo accordion */
 .sidebar-container.accordion-mode {
   width: 200px;
-  padding: 0; /* Sin padding interno para el accordion */
+  padding: 0; 
 }
 
-/* Touch-friendly styles for accordion mode */
 .accordion-sidebar button {
-  min-height: 44px; /* Minimum touch target size */
+  min-height: 44px; 
   min-width: 44px;
 }
 
-/* Remove focus outline and borders for accordion buttons */
-.accordion-sidebar button:focus {
-  outline: none !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-}
-
-.accordion-sidebar button.active:focus {
-  outline: none !important;
-  border-color: #005299 !important;
-  box-shadow: none !important;
-}
-
-/* Remove all outlines for accordion buttons in all states */
-.accordion-sidebar button,
-.accordion-sidebar button:focus,
-.accordion-sidebar button:active,
-.accordion-sidebar button:hover,
-.accordion-sidebar button.active,
-.accordion-sidebar button.active:focus,
-.accordion-sidebar button.active:active,
-.accordion-sidebar button.active:hover {
-  outline: none !important;
-  outline-width: 0 !important;
-  outline-style: none !important;
-  outline-color: transparent !important;
-}
-
-.accordion-sidebar [style*="cursor: pointer"] {
-  min-height: 44px; /* Minimum touch target size for clickable elements */
-}
-
-/* Remove focus outline for other clickable elements in accordion */
-.accordion-sidebar [style*="cursor: pointer"]:focus {
-  outline: none !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-
-/* Comprehensive outline removal for all interactive elements in accordion */
-.accordion-sidebar *:focus,
-.accordion-sidebar *:active,
-.accordion-sidebar button,
-.accordion-sidebar [role="button"],
-.accordion-sidebar [data-clickable],
-.accordion-sidebar [style*="cursor: pointer"],
-.accordion-panel-content *:focus,
-.accordion-panel-content *:active,
-.accordion-panel-content button,
-.accordion-panel-content [role="button"],
-.accordion-panel-content [data-clickable],
-.accordion-panel-content [style*="cursor: pointer"] {
-  outline: none !important;
-  outline-width: 0 !important;
-  outline-style: none !important;
-  outline-color: transparent !important;
-}
-
-/* Additional focus styles for accordion panel content */
-.accordion-panel-content button:focus {
-  outline: none !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-}
-
-.accordion-panel-content button.active:focus {
-  outline: none !important;
-  border-color: #005299 !important;
-  box-shadow: none !important;
-}
-
-/* Remove all outlines for accordion panel content buttons in all states */
-.accordion-panel-content button,
-.accordion-panel-content button:focus,
-.accordion-panel-content button:active,
-.accordion-panel-content button:hover,
-.accordion-panel-content button.active,
-.accordion-panel-content button.active:focus,
-.accordion-panel-content button.active:active,
-.accordion-panel-content button.active:hover {
-  outline: none !important;
-  outline-width: 0 !important;
-  outline-style: none !important;
-  outline-color: transparent !important;
-}
-
-/* Improve touch responsiveness for mobile devices */
-@media (max-width: 768px) {
-  .accordion-sidebar button {
-    min-height: 48px;
-    padding: 2px 2px;
-    font-size: 16px; /* Prevent zoom on iOS */
-  }
-  
-  .accordion-sidebar [data-clickable],
-  .accordion-sidebar [style*="cursor: pointer"] {
-    min-height: 48px;
-    padding: 2px 2px;
-  }
-}
-
-/* Additional focus styles for accordion panel content */
-.accordion-panel-content button:focus,
-.accordion-panel-content [style*="cursor: pointer"]:focus {
-  outline: none !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-}
-
-.accordion-panel-content button.active:focus {
-  outline: none !important;
-  border-color: #005299 !important;
-  box-shadow: none !important;
-}
-
-/* Accordion panel headers */
-.accordion-sidebar [data-accordion-panel-header="true"] {
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-}
-
-/* Accordion toggle button */
-[data-accordion-toggle="true"] {
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-}
-
-/* Button Styles */
 button {
   background: white;
   border: 1px solid #ccc;
@@ -237,28 +101,6 @@ button.active:hover {
   background: #005299;
 }
 
-/* Accordion mode specific button styles */
-.accordion-sidebar button:focus,
-.accordion-panel-content button:focus {
-  outline: none !important;
-  outline-width: 0 !important;
-  outline-style: none !important;
-  outline-color: transparent !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-}
-
-.accordion-sidebar button.active:focus,
-.accordion-panel-content button.active:focus {
-  outline: none !important;
-  outline-width: 0 !important;
-  outline-style: none !important;
-  outline-color: transparent !important;
-  border-color: #005299 !important;
-  box-shadow: none !important;
-}
-
-/* Control Panel Styles */
 .control-panel {
   background: white;
   border-radius: 4px;
@@ -303,7 +145,6 @@ button.active:hover {
   border: 1px solid #ccc;
   border-radius: 3px;
   font-size: 12px;
-  /* Mejorar soporte táctil para inputs */
   -webkit-user-select: text;
   -moz-user-select: text;
   -ms-user-select: text;
@@ -331,7 +172,6 @@ button.active:hover {
   font-size: 12px;
 }
 
-/* Tool Button Grid */
 .tool-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
@@ -345,7 +185,6 @@ button.active:hover {
   font-weight: bold;
 }
 
-/* Status Display */
 .status-display {
   font-size: 11px;
   color: #666;
@@ -355,7 +194,6 @@ button.active:hover {
   border-radius: 3px;
 }
 
-/* Fullscreen styles */
 .svg-editor.fullscreen {
   position: fixed !important;
   top: 0 !important;
@@ -365,7 +203,6 @@ button.active:hover {
   z-index: 9999 !important;
 }
 
-/* Animation for smooth interactions */
 .path-element {
   transition: filter 0.2s ease;
 }
@@ -378,12 +215,10 @@ button.active:hover {
   transform: scale(1.2);
 }
 
-/* Grid styles */
 .grid-overlay line {
   pointer-events: none;
 }
 
-/* Accordion Panel Mode Styles */
 .accordion-panel-content .draggable-panel,
 .accordion-panel-wrapper {
   position: static !important;
@@ -400,7 +235,6 @@ button.active:hover {
   opacity: 1 !important;
   left: auto !important;
   top: auto !important;
-  /* Permitir scroll y interacción táctil */
 }
 
 .accordion-panel-content .drag-handle,
@@ -413,13 +247,11 @@ button.active:hover {
   padding: 0 !important;
 }
 
-/* Override any draggable panel styles when in accordion mode */
 .accordion-panel-wrapper * {
   position: static !important;
   transform: none !important;
 }
 
-/* Accordion sidebar specific styles */
 .accordion-sidebar {
   position: fixed;
   top: 0;
@@ -433,10 +265,8 @@ button.active:hover {
   flex-direction: column;
   overflow: hidden;
   box-shadow: -2px 0 8px rgba(0,0,0,0.1);
-  /* Mejorar scroll táctil */
 }
 
-/* Elementos que necesitan permitir scroll y selección */
 .accordion-sidebar input,
 .accordion-sidebar textarea,
 .accordion-sidebar select,
@@ -447,412 +277,9 @@ button.active:hover {
   -moz-user-select: text;
   -ms-user-select: text;
   user-select: text;
-  font-size: 16px; /* Prevenir zoom en iOS */
+  font-size: 16px; 
 }
 
-/* Contenedores scrollables */
-.accordion-panel-content,
-.accordion-sidebar > div[style*="overflow"],
-.control-panel {
-}
-
-/* Elementos marcados como mobile-scrollable */
-[data-mobile-scrollable="true"] {
-  overflow: auto;
-}
-
-/* Mejorar visibilidad de scrollbars en móviles */
-@media (max-width: 768px) {
-  .accordion-sidebar::-webkit-scrollbar,
-  .accordion-panel-content::-webkit-scrollbar,
-  [data-mobile-scrollable="true"]::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-
-  .accordion-sidebar::-webkit-scrollbar-track,
-  .accordion-panel-content::-webkit-scrollbar-track,
-  [data-mobile-scrollable="true"]::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-
-  .accordion-sidebar::-webkit-scrollbar-thumb,
-  .accordion-panel-content::-webkit-scrollbar-thumb,
-  [data-mobile-scrollable="true"]::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
-  }
-
-  .accordion-sidebar::-webkit-scrollbar-thumb:hover,
-  .accordion-panel-content::-webkit-scrollbar-thumb:hover,
-  [data-mobile-scrollable="true"]::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-  }
-}
-
-/* Asegurar que los inputs tengan el tamaño correcto en móviles */
-@media (max-width: 768px) {
-  .accordion-sidebar input[type="text"],
-  .accordion-sidebar input[type="number"],
-  .accordion-sidebar input[type="color"],
-  .accordion-sidebar input[type="range"],
-  .accordion-sidebar input[type="checkbox"],
-  .accordion-sidebar textarea,
-  .accordion-sidebar select,
-  .accordion-panel-content input[type="text"],
-  .accordion-panel-content input[type="number"],
-  .accordion-panel-content input[type="color"],
-  .accordion-panel-content input[type="range"],
-  .accordion-panel-content input[type="checkbox"],
-  .accordion-panel-content textarea,
-  .accordion-panel-content select {
-    font-size: 16px !important; /* Prevenir zoom en iOS y mejorar Android */
-    padding: 12px 8px !important;
-    min-height: 25px; /* Reducido de 44px a 25px */
-    border-radius: 6px;
-    -webkit-user-select: auto !important;
-    user-select: auto !important;
-    pointer-events: auto !important;
-    -webkit-appearance: none;
-    appearance: none;
-    /* Android specific improvements */
-    outline: none;
-    border: 2px solid #ddd;
-    transition: border-color 0.2s ease;
-    -webkit-text-size-adjust: 100%;
-    -ms-text-size-adjust: 100%;
-  }
-  
-  /* Focus styles para Android */
-  .accordion-sidebar input:focus,
-  .accordion-sidebar textarea:focus,
-  .accordion-sidebar select:focus,
-  .accordion-panel-content input:focus,
-  .accordion-panel-content textarea:focus,
-  .accordion-panel-content select:focus {
-    border-color: #007acc !important;
-    box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2) !important;
-    outline: none !important;
-  }
-  
-  /* Color inputs necesitan tamaño específico - VERSION MEJORADA */
-  .accordion-sidebar input[type="color"],
-  .accordion-panel-content input[type="color"] {
-    min-width: 44px !important;
-    min-height: 44px !important;
-    width: 44px !important;
-    height: 44px !important;
-    padding: 2px !important;
-    cursor: pointer;
-    border: 2px solid #ddd !important;
-    border-radius: 6px !important;
-    -webkit-appearance: none !important;
-    appearance: none !important;
-    background: none !important;
-    outline: none !important;
-  }
-  
-  /* Hover y focus para color inputs */
-  .accordion-sidebar input[type="color"]:hover,
-  .accordion-panel-content input[type="color"]:hover {
-    border-color: #007acc !important;
-    box-shadow: 0 2px 4px rgba(0,122,204,0.2) !important;
-  }
-  
-  .accordion-sidebar input[type="color"]:focus,
-  .accordion-panel-content input[type="color"]:focus {
-    border-color: #007acc !important;
-    box-shadow: 0 0 0 3px rgba(0,122,204,0.3) !important;
-  }
-  
-  /* Range inputs necesitan altura específica y estilos Android - VERSION ULTRA MEJORADA */
-  .accordion-sidebar input[type="range"],
-  .accordion-panel-content input[type="range"] {
-    height: 44px !important;
-    -webkit-appearance: none !important;
-    appearance: none !important;
-    background: transparent !important;
-    cursor: pointer;
-    border: none !important;
-    outline: none !important;
-    width: 100% !important;
-    margin: 12px 0 !important;
-    padding: 0 !important;
-    position: relative !important;
-  }
-  
-  /* Android/iOS range track styles - ULTRA VISIBLE CON FALLBACKS */
-  .accordion-sidebar input[type="range"]::-webkit-slider-track,
-  .accordion-panel-content input[type="range"]::-webkit-slider-track {
-    width: 100% !important;
-    height: 8px !important;
-    cursor: pointer;
-    background: linear-gradient(to right, #ddd 0%, #ddd 100%) !important;
-    border-radius: 4px !important;
-    border: 1px solid #ccc !important;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.2) !important;
-    -webkit-appearance: none !important;
-    appearance: none !important;
-  }
-  
-  /* Firefox range track */
-  .accordion-sidebar input[type="range"]::-moz-range-track,
-  .accordion-panel-content input[type="range"]::-moz-range-track {
-    width: 100% !important;
-    height: 8px !important;
-    cursor: pointer;
-    background: linear-gradient(to right, #ddd 0%, #ddd 100%) !important;
-    border-radius: 4px !important;
-    border: 1px solid #ccc !important;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.2) !important;
-  }
-  
-  /* Android/iOS range thumb styles - ULTRA GRANDE Y VISIBLE */
-  .accordion-sidebar input[type="range"]::-webkit-slider-thumb,
-  .accordion-panel-content input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none !important;
-    appearance: none !important;
-    height: 28px !important;
-    width: 28px !important;
-    border-radius: 50% !important;
-    background: linear-gradient(145deg, #007acc 0%, #005299 100%) !important;
-    cursor: pointer !important;
-    border: 4px solid #ffffff !important;
-    box-shadow: 
-      0 3px 8px rgba(0,0,0,0.3), 
-      0 0 0 1px rgba(0,122,204,0.2),
-      inset 0 1px 0 rgba(255,255,255,0.3) !important;
-    margin-top: -10px !important; /* Centrar verticalmente */
-    position: relative !important;
-    z-index: 2 !important;
-  }
-  
-  /* Firefox range thumb */
-  .accordion-sidebar input[type="range"]::-moz-range-thumb,
-  .accordion-panel-content input[type="range"]::-moz-range-thumb {
-    height: 28px !important;
-    width: 28px !important;
-    border-radius: 50% !important;
-    background: linear-gradient(145deg, #007acc 0%, #005299 100%) !important;
-    cursor: pointer !important;
-    border: 4px solid #ffffff !important;
-    box-shadow: 
-      0 3px 8px rgba(0,0,0,0.3), 
-      0 0 0 1px rgba(0,122,204,0.2) !important;
-  }
-  
-  /* Hover state para range thumb - MAS DRAMATICO */
-  .accordion-sidebar input[type="range"]::-webkit-slider-thumb:hover,
-  .accordion-panel-content input[type="range"]::-webkit-slider-thumb:hover {
-    background: linear-gradient(145deg, #005299 0%, #003d73 100%) !important;
-    box-shadow: 
-      0 4px 12px rgba(0,0,0,0.4), 
-      0 0 0 2px rgba(0,122,204,0.4),
-      inset 0 1px 0 rgba(255,255,255,0.4) !important;
-    transform: scale(1.1) !important;
-  }
-  
-  .accordion-sidebar input[type="range"]::-moz-range-thumb:hover,
-  .accordion-panel-content input[type="range"]::-moz-range-thumb:hover {
-    background: linear-gradient(145deg, #005299 0%, #003d73 100%) !important;
-    box-shadow: 
-      0 4px 12px rgba(0,0,0,0.4), 
-      0 0 0 2px rgba(0,122,204,0.4) !important;
-    transform: scale(1.1) !important;
-  }
-  
-  /* Focus state para range - MUY VISIBLE */
-  .accordion-sidebar input[type="range"]:focus,
-  .accordion-panel-content input[type="range"]:focus {
-    outline: none !important;
-    box-shadow: 0 0 0 4px rgba(0,122,204,0.25) !important;
-    border-radius: 4px !important;
-  }
-  
-  .accordion-sidebar input[type="range"]:focus::-webkit-slider-thumb,
-  .accordion-panel-content input[type="range"]:focus::-webkit-slider-thumb {
-    box-shadow: 
-      0 3px 8px rgba(0,0,0,0.3), 
-      0 0 0 4px rgba(0,122,204,0.4),
-      inset 0 1px 0 rgba(255,255,255,0.3) !important;
-  }
-  
-  .accordion-sidebar input[type="range"]:focus::-moz-range-thumb,
-  .accordion-panel-content input[type="range"]:focus::-moz-range-thumb {
-    box-shadow: 
-      0 3px 8px rgba(0,0,0,0.3), 
-      0 0 0 4px rgba(0,122,204,0.4) !important;
-  }
-  
-  /* Fallback para navegadores que no soporten los pseudo-elementos */
-  .accordion-sidebar input[type="range"][data-mobile-range],
-  .accordion-panel-content input[type="range"][data-mobile-range] {
-    background: linear-gradient(to right, #ddd 0%, #ddd 100%) !important;
-    border: 2px solid #007acc !important;
-    border-radius: 22px !important;
-    height: 44px !important;
-  }
-  
-  /* Checkbox inputs con mejor UX para Android - VERSION CORREGIDA */
-  .accordion-sidebar input[type="checkbox"]:not([data-mobile-enhanced]),
-  .accordion-panel-content input[type="checkbox"]:not([data-mobile-enhanced]) {
-    min-width: 20px !important;
-    min-height: 20px !important;
-    transform: scale(1.5);
-    margin: 8px;
-    accent-color: #007acc; /* Android accent color */
-    -webkit-appearance: checkbox !important; /* Mantener apariencia nativa para checkboxes normales */
-    appearance: checkbox !important;
-  }
-  
-  /* Labels en acordeón con mejor touch target para Android */
-  .accordion-sidebar label,
-  .accordion-panel-content label {
-    font-size: 14px !important;
-    min-height: 25px; /* Reducido de 44px a 25px */
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    padding: 4px 0;
-    /* Android tap feedback */
-    transition: background-color 0.1s ease;
-  }
-  
-  /* Android tap feedback */
-  .accordion-sidebar label:active,
-  .accordion-panel-content label:active {
-    background-color: rgba(0, 122, 204, 0.1);
-    border-radius: 4px;
-  }
-  
-  /* NUEVA SECCIÓN: Estilos específicos para checkboxes móviles mejorados */
-  /* Checkboxes con mejoras NO INVASIVAS para móviles */
-  .accordion-sidebar input[type="checkbox"][data-mobile-enhanced],
-  .accordion-panel-content input[type="checkbox"][data-mobile-enhanced] {
-    /* Asegurar que funcionen nativamente */
-    pointer-events: auto !important;
-    -webkit-appearance: none !important;
-    appearance: none !important;
-    
-    /* Mejorar el tamaño y apariencia */
-    width: 24px !important;
-    height: 24px !important;
-    min-width: 24px !important;
-    min-height: 24px !important;
-    
-    /* Estilo visual mejorado */
-    border: 2px solid #007acc;
-    border-radius: 4px;
-    background: white;
-    cursor: pointer;
-    
-    /* Transiciones suaves */
-    transition: all 0.2s ease;
-    
-    /* Eliminar margin/padding que puedan interferir */
-    margin: 0 8px 0 0 !important;
-    padding: 0 !important;
-    transform: none !important; /* Eliminar transform scale anterior */
-    
-    /* Centrar visualmente */
-    position: relative;
-    vertical-align: middle;
-    
-    /* Asegurar que se vea bien */
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    flex-shrink: 0; /* No permitir que se comprima */
-  }
-  
-  /* Estado checked para checkboxes móviles - MAS VISIBLE */
-  .accordion-sidebar input[type="checkbox"][data-mobile-enhanced]:checked,
-  .accordion-panel-content input[type="checkbox"][data-mobile-enhanced]:checked {
-    background: #007acc !important;
-    border-color: #007acc !important;
-    color: white;
-    box-shadow: 0 1px 3px rgba(0,122,204,0.3);
-  }
-  
-  /* Checkmark para estado checked - MAS GRANDE Y VISIBLE */
-  .accordion-sidebar input[type="checkbox"][data-mobile-enhanced]:checked::after,
-  .accordion-panel-content input[type="checkbox"][data-mobile-enhanced]:checked::after {
-    content: '✓';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 16px !important;
-    font-weight: bold;
-    line-height: 1;
-    text-shadow: 0 0 2px rgba(0,0,0,0.5); /* Para mejor visibilidad */
-  }
-  
-  /* Estado hover/focus para checkboxes móviles */
-  .accordion-sidebar input[type="checkbox"][data-mobile-enhanced]:hover,
-  .accordion-panel-content input[type="checkbox"][data-mobile-enhanced]:hover {
-    border-color: #005299;
-    box-shadow: 0 2px 6px rgba(33, 150, 243, 0.2);
-    background: #f8f9ff;
-  }
-  
-  .accordion-sidebar input[type="checkbox"][data-mobile-enhanced]:focus,
-  .accordion-panel-content input[type="checkbox"][data-mobile-enhanced]:focus {
-    outline: none;
-    border-color: #005299;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.3);
-  }
-  
-  /* Labels mejorados para checkboxes móviles */
-  .accordion-sidebar label[data-mobile-label-enhanced],
-  .accordion-panel-content label[data-mobile-label-enhanced] {
-    /* Asegurar area táctil adecuada */
-    min-height: 25px !important; /* Reducido de 44px a 25px */
-    padding: 8px 4px !important;
-    cursor: pointer !important;
-    
-    /* Prevenir selección de texto */
-    user-select: none !important;
-    -webkit-user-select: none !important;
-    -moz-user-select: none !important;
-    -ms-user-select: none !important;
-    
-    /* Layout mejorado */
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px;
-    
-    /* Feedback visual en tap */
-    transition: background-color 0.1s ease;
-  }
-  
-  /* Feedback táctil para labels de checkboxes */
-  .accordion-sidebar label[data-mobile-label-enhanced]:active,
-  .accordion-panel-content label[data-mobile-label-enhanced]:active {
-    background-color: rgba(33, 150, 243, 0.1) !important;
-    border-radius: 6px;
-  }
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .sidebar-container {
-    width: 200px;
-  }
-  
-  .toolbar-container {
-    height: 50px;
-    padding: 0 2px;
-    gap: 5px;
-  }
-  
-  button {
-    padding: 2px 2px;
-    font-size: 11px;
-  }
-}
-
-/* Accordion sidebar específicamente para móviles */
 .accordion-sidebar {
   width: 200px;
   max-width: 200px;
@@ -864,23 +291,4 @@ button.active:hover {
   border-left: 1px solid #e0e0e0;
   overflow: hidden;
   box-sizing: border-box;
-}
-
-@media (max-width: 768px) {
-  .accordion-sidebar {
-    border-left: none;
-    border-top: 1px solid #e0e0e0;
-  }
-  
-  /* Panel headers más grandes en móviles */
-  .accordion-panel-header {
-    min-height: 56px;
-    padding: 2px 2px;
-    font-size: 16px;
-  }
-  
-  /* Contenido de paneles sin padding extra en móviles */
-  .accordion-panel-content {
-    padding: 0;
-  }
 }

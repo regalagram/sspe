@@ -102,8 +102,7 @@ class PencilManager {
    * Activar modo pencil - llamado por ToolModeManager
    */
   activatePencil(): void {
-    console.log('✏️ PencilManager: Activating pencil mode');
-    const store = useEditorStore.getState();
+        const store = useEditorStore.getState();
     store.setCreateMode('PENCIL');
   }
 
@@ -112,8 +111,7 @@ class PencilManager {
    * No genera recursión porque no llama de vuelta a ToolModeManager
    */
   activateExternally = (): void => {
-    console.log('✏️ PencilManager: Being activated externally by ToolModeManager');
-    const store = useEditorStore.getState();
+        const store = useEditorStore.getState();
     store.setCreateMode('PENCIL');
   };
 
@@ -122,8 +120,7 @@ class PencilManager {
    * No notifica de vuelta para evitar loops
    */
   deactivateExternally = (): void => {
-    console.log('✏️ PencilManager: Being deactivated externally by ToolModeManager');
-    
+        
     // Finalizar dibujo actual si está en progreso
     if (this.state.isDrawing) {
       this.state.isDrawing = false;
@@ -137,15 +134,13 @@ class PencilManager {
       store.setMode('select');
     }
     
-    console.log('✏️ PencilManager: External deactivation completed');
-  };
+      };
 
   /**
    * Salir del modo pencil - llamado cuando el usuario presiona Escape o Exit
    */
   exitPencil = (): void => {
-    console.log('✏️ PencilManager: Exiting pencil mode');
-    
+        
     // Finalizar dibujo actual si está en progreso
     if (this.state.isDrawing) {
       this.state.isDrawing = false;
@@ -155,8 +150,7 @@ class PencilManager {
     
     // Verificar si fue activado por ToolModeManager
     if (toolModeManager.isActive('pencil')) {
-      console.log('✏️ PencilManager: Notifying ToolModeManager of deactivation');
-      toolModeManager.notifyModeDeactivated('pencil');
+            toolModeManager.notifyModeDeactivated('pencil');
     } else {
       // Solo cambiar modo del editor si no fue coordinado por ToolModeManager
       const store = useEditorStore.getState();
