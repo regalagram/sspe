@@ -108,47 +108,14 @@ class PencilManager {
       return false;
     }
 
-    const {
-      addPath,
-      pushToHistory,
-    } = this.editorStore;
-
-    // Start new drawing session
+    // Start new drawing session but don't create path yet
     this.state.isDrawing = true;
     this.state.rawPoints = [{ ...svgPoint, timestamp: Date.now() }];
     this.state.lastPoint = svgPoint;
-
-    // Create new path with the correct starting position to avoid default M 100,100
     
-    const pathId = addPath(this.state.strokeStyle, svgPoint.x, svgPoint.y);
-    
-    
-    // Get the existing subpath that was created with the path
-    // Need to get fresh state after addPath call
-    const currentState = useEditorStore.getState();
-    const createdPath = currentState.paths.find((p: any) => p.id === pathId);
-    
-    const subPathId = createdPath?.subPaths[0]?.id;
-    
-    if (!subPathId) {
-      console.error('PencilManager: Failed to find created subpath');
-      return false;
-    }
-    
-    this.state.currentPath = pathId;
-    this.state.currentSubPath = subPathId;
-    
-    
-    // Make the initial point visible immediately with a small dot
-    const { replaceSubPathCommands } = this.editorStore;
-    const initialCommands: Omit<SVGCommand, 'id'>[] = [
-      { command: 'M', x: svgPoint.x, y: svgPoint.y },
-      { command: 'L', x: svgPoint.x + 1, y: svgPoint.y }, // Small line to make it visible
-    ];
-    
-    replaceSubPathCommands(this.state.currentSubPath, initialCommands);
-    
-    pushToHistory();
+    // Don't create path yet - we'll create it only when we start drawing
+    this.state.currentPath = null;
+    this.state.currentSubPath = null;
 
     // Set up global mouse events for drawing
     this.setupGlobalMouseEvents();
@@ -176,7 +143,7 @@ class PencilManager {
     const { svgPoint } = context;
     const { lastPoint } = this.state;
 
-    if (!lastPoint || !this.state.currentSubPath || !this.editorStore) {
+    if (!lastPoint || !this.editorStore) {
       
       return true;
     }
@@ -192,6 +159,30 @@ class PencilManager {
     if (distance < this.minDistance) {
       
       return true;
+    }
+
+    // If this is the first real movement (second point), create the path and save state
+    if (this.state.rawPoints.length === 1 && this.editorStore) {
+      // Save the clean state BEFORE creating any path
+      this.editorStore.pushToHistory();
+      
+      // Now create the path
+      const { addPath } = this.editorStore;
+      const firstPoint = this.state.rawPoints[0];
+      const pathId = addPath(this.state.strokeStyle, firstPoint.x, firstPoint.y);
+      
+      // Get the existing subpath that was created with the path
+      const currentState = useEditorStore.getState();
+      const createdPath = currentState.paths.find((p: any) => p.id === pathId);
+      const subPathId = createdPath?.subPaths[0]?.id;
+      
+      if (!subPathId) {
+        console.error('PencilManager: Failed to find created subpath');
+        return true;
+      }
+      
+      this.state.currentPath = pathId;
+      this.state.currentSubPath = subPathId;
     }
 
     // Add point to raw points collection
@@ -224,16 +215,22 @@ class PencilManager {
     e.preventDefault();
     e.stopPropagation();
 
+    // Check if we have meaningful drawing content (more than just the initial point)
+    const hasDrawingContent = this.state.rawPoints.length > 1;
+
+    if (hasDrawingContent && this.state.currentPath) {
+      // Final smoothing pass
+      this.updateSmoothPath();
+      
+      // No need to push to history here - we already saved the initial state
+      // when the first movement happened
+    } else {
+      // If we only have the initial point, no path was created, so nothing to clean up
+      // The state remains clean as if nothing happened
+    }
+
     // Finish drawing
     this.state.isDrawing = false;
-
-    // Final smoothing pass
-    this.updateSmoothPath();
-
-    // Push final state to history
-    if (this.editorStore) {
-      this.editorStore.pushToHistory();
-    }
 
     // Reset state
     this.resetDrawingState();
@@ -244,19 +241,16 @@ class PencilManager {
   private updateSmoothPath() {
     if (!this.state.currentSubPath || this.state.rawPoints.length < 1 || !this.editorStore) return;
 
-    
     const { replaceSubPathCommands } = this.editorStore;
 
-    // For a single point, create a small circle to make it visible
+    // For a single point, create a minimal visible mark
     if (this.state.rawPoints.length === 1) {
       const point = this.state.rawPoints[0];
       
-      
       const svgCommands: Omit<SVGCommand, 'id'>[] = [
         { command: 'M', x: point.x, y: point.y },
-        { command: 'L', x: point.x + 0.1, y: point.y } // Tiny line to make it visible
+        { command: 'L', x: point.x + 0.5, y: point.y } // Very small line to make it visible
       ];
-      
       
       replaceSubPathCommands(this.state.currentSubPath, svgCommands);
       return;
@@ -264,7 +258,6 @@ class PencilManager {
 
     // Apply tldraw-style smoothing and simplification
     const smoothedPoints = tldrawSmoother.smoothPoints(this.state.rawPoints);
-    
     
     // Calculate pressure for potential variable stroke width
     const pointsWithPressure = tldrawSmoother.calculatePressure(smoothedPoints);
@@ -329,7 +322,6 @@ class PencilManager {
       }
     }
 
-    
     // Replace subpath commands with smoothed version
     replaceSubPathCommands(this.state.currentSubPath, svgCommands);
   }
@@ -461,16 +453,22 @@ class PencilManager {
     const syntheticMouseEvent = e as any;
     if (syntheticMouseEvent.fromTouch) return;
 
+    // Check if we have meaningful drawing content (more than just the initial point)
+    const hasDrawingContent = this.state.rawPoints.length > 1;
+
+    if (hasDrawingContent && this.state.currentPath) {
+      // Final smoothing pass
+      this.updateSmoothPath();
+      
+      // No need to push to history here - we already saved the initial state
+      // when the first movement happened
+    } else {
+      // If we only have the initial point, no path was created, so nothing to clean up
+      // The state remains clean as if nothing happened
+    }
+
     // Finish drawing
     this.state.isDrawing = false;
-
-    // Final smoothing pass
-    this.updateSmoothPath();
-
-    // Push final state to history
-    if (this.editorStore) {
-      this.editorStore.pushToHistory();
-    }
 
     // Reset state and remove global listeners
     this.resetDrawingState();
@@ -507,7 +505,7 @@ class PencilManager {
   private addPointToPath(svgPoint: Point) {
     const { lastPoint } = this.state;
 
-    if (!lastPoint || !this.state.currentSubPath || !this.editorStore) return;
+    if (!lastPoint || !this.editorStore) return;
 
     // Throttle updates for better performance
     const now = Date.now();
@@ -521,6 +519,30 @@ class PencilManager {
     );
 
     if (distance < this.minDistance) return;
+
+    // If this is the first real movement (second point), create the path and save state
+    if (this.state.rawPoints.length === 1 && this.editorStore) {
+      // Save the clean state BEFORE creating any path
+      this.editorStore.pushToHistory();
+      
+      // Now create the path
+      const { addPath } = this.editorStore;
+      const firstPoint = this.state.rawPoints[0];
+      const pathId = addPath(this.state.strokeStyle, firstPoint.x, firstPoint.y);
+      
+      // Get the existing subpath that was created with the path
+      const currentState = useEditorStore.getState();
+      const createdPath = currentState.paths.find((p: any) => p.id === pathId);
+      const subPathId = createdPath?.subPaths[0]?.id;
+      
+      if (!subPathId) {
+        console.error('PencilManager: Failed to find created subpath');
+        return;
+      }
+      
+      this.state.currentPath = pathId;
+      this.state.currentSubPath = subPathId;
+    }
 
     // Add point to raw points collection
     this.state.rawPoints.push({ ...svgPoint, timestamp: Date.now() });
