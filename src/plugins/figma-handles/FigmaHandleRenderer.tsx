@@ -101,12 +101,31 @@ export const FigmaHandleRenderer: React.FC = () => {
       const newState = figmaHandleManager.getState();
       setHandleState(newState);
       
-      // Force a re-render by updating a key
-      setRenderKey(prev => prev + 1);
+      // NO incrementar renderKey durante el drag - esto causa que React desmonte los elementos
+      // Solo incrementar cuando NO estamos en drag
+      if (!newState.dragState.isDragging) {
+        setRenderKey(prev => prev + 1);
+      }
     });
     
     return unsubscribe;
   }, []);
+
+  // Memoize drag state to prevent unnecessary re-renders during drag
+  const dragStateInfo = React.useMemo(() => {
+    const isDragging = handleState.dragState.isDragging;
+    const dragCommandId = handleState.dragState.commandId;
+    const dragHandleType = handleState.dragState.handleType;
+    
+    return {
+      isDragging,
+      dragCommandId,
+      dragHandleType,
+      pairedHandle: isDragging && dragCommandId && dragHandleType 
+        ? figmaHandleManager.findPairedHandle(dragCommandId, dragHandleType) 
+        : null
+    };
+  }, [handleState.dragState.isDragging, handleState.dragState.commandId, handleState.dragState.handleType]);
 
   if (!paths || paths.length === 0) {
     return null;
@@ -126,18 +145,14 @@ export const FigmaHandleRenderer: React.FC = () => {
     return null;
   }
 
-  // Durante el drag, solo mostrar el handle que se arrastra y su pareja
-  const isDragging = handleState.dragState.isDragging;
-  const dragCommandId = handleState.dragState.commandId;
-  const dragHandleType = handleState.dragState.handleType;
-  
-  // Si estamos en modo drag, obtener información de la pareja
-  const pairedHandle = isDragging && dragCommandId && dragHandleType 
-    ? figmaHandleManager.findPairedHandle(dragCommandId, dragHandleType) 
-    : null;
+  // Use memoized drag state info
+  const { isDragging, dragCommandId, dragHandleType, pairedHandle } = dragStateInfo;
+
+  // Use stable key during drag to prevent React from dismounting elements
+  const stableKey = isDragging ? `figma-handle-renderer-stable` : `figma-handle-renderer-${renderKey}`;
 
   return (
-    <g key={`figma-handle-renderer-${renderKey}`}>
+    <g key={stableKey}>
       {paths.map((path) => 
         path.subPaths.map((subPath) => {
           // If feature is disabled, only show control points for selected sub-paths
@@ -203,10 +218,16 @@ export const FigmaHandleRenderer: React.FC = () => {
                     {/* First control point (x1y1) - handle saliente */}
                     {prevPosition && (
                       <>
-                        {/* Mostrar este handle si no estamos en drag, o si es el handle específico que debe mostrarse */}
-                        {(!isDragging || 
-                          (isDragging && command.id === dragCommandId && dragHandleType === 'outgoing') ||
-                          (isDragging && isPairedCommand && pairedHandle?.controlPoint === 'x1y1')) && (
+                        {/* Mostrar este handle: SIEMPRE si estamos arrastrando este comando y este control point */}
+                        {(() => {
+                          const isBeingDragged = isDragging && command.id === dragCommandId && dragHandleType === 'outgoing';
+                          const shouldShow = !isDragging || 
+                            (isDragging && command.id === dragCommandId) ||
+                            (isDragging && isPairedCommand && pairedHandle?.controlPoint === 'x1y1');
+                          
+                          // Si estamos arrastrando este control point específico, SIEMPRE mostrarlo
+                          return shouldShow || isBeingDragged;
+                        })() && (
                           <>
                             <line
                               x1={prevPosition.x}
@@ -229,7 +250,9 @@ export const FigmaHandleRenderer: React.FC = () => {
                               style={{ cursor: 'grab' }}
                               data-command-id={command.id}
                               data-control-point="x1y1"
-                              opacity={colors.opacity || 1}
+                              opacity={isDragging && command.id === dragCommandId && dragHandleType === 'outgoing' ? 1.0 : (colors.opacity || 1)}
+                              // Durante el drag, hacer el punto más visible
+                              filter={isDragging && command.id === dragCommandId && dragHandleType === 'outgoing' ? 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' : undefined}
                             />
                           </>
                         )}
@@ -239,10 +262,16 @@ export const FigmaHandleRenderer: React.FC = () => {
                     {/* Second control point (x2y2) - handle entrante */}
                     {controlPoints.length >= 2 && (
                       <>
-                        {/* Mostrar este handle si no estamos en drag, o si es el handle específico que debe mostrarse */}
-                        {(!isDragging || 
-                          (isDragging && command.id === dragCommandId && dragHandleType === 'incoming') ||
-                          (isDragging && isPairedCommand && pairedHandle?.controlPoint === 'x2y2')) && (
+                        {/* Mostrar este handle: SIEMPRE si estamos arrastrando este comando y este control point */}
+                        {(() => {
+                          const isBeingDragged = isDragging && command.id === dragCommandId && dragHandleType === 'incoming';
+                          const shouldShow = !isDragging || 
+                            (isDragging && command.id === dragCommandId) ||
+                            (isDragging && isPairedCommand && pairedHandle?.controlPoint === 'x2y2');
+                          
+                          // Si estamos arrastrando este control point específico, SIEMPRE mostrarlo
+                          return shouldShow || isBeingDragged;
+                        })() && (
                           <>
                             <line
                               x1={position.x}
@@ -265,7 +294,9 @@ export const FigmaHandleRenderer: React.FC = () => {
                               style={{ cursor: 'grab' }}
                               data-command-id={command.id}
                               data-control-point="x2y2"
-                              opacity={colors.opacity || 1}
+                              opacity={isDragging && command.id === dragCommandId && dragHandleType === 'incoming' ? 1.0 : (colors.opacity || 1)}
+                              // Durante el drag, hacer el punto más visible
+                              filter={isDragging && command.id === dragCommandId && dragHandleType === 'incoming' ? 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' : undefined}
                             />
                           </>
                         )}

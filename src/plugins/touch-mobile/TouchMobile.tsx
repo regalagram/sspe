@@ -212,7 +212,7 @@ export const useTouchEventHandlers = () => {
   };
 
   const handleTouchEnd = (e: React.TouchEvent<SVGElement>) => {
-    if (isTouchDevice) {
+    if (isTouchDevice && (e.touches.length >= 2 || e.changedTouches.length >= 2)) {
       console.log('📱 TouchMobile: Multi-touch end', e.touches.length, 'touches remaining');
       e.preventDefault();
       onTouchEnd(e.nativeEvent as TouchEvent);
@@ -220,7 +220,7 @@ export const useTouchEventHandlers = () => {
   };
 
   const handleTouchCancel = (e: React.TouchEvent<SVGElement>) => {
-    if (isTouchDevice) {
+    if (isTouchDevice && (e.touches.length >= 2 || e.changedTouches.length >= 2)) {
       console.log('📱 TouchMobile: Multi-touch cancel');
       e.preventDefault();
       onTouchCancel(e.nativeEvent as TouchEvent);

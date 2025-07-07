@@ -64,6 +64,9 @@ const mapTouchToMouseEvent = (touchEvent: TouchEvent, mouseEventType: string, to
 let isDragging = false;
 let dragStartElement: Element | null = null;
 let dragStartTouch: Touch | null = null;
+let activeTouchSession = false; // Para prevenir touchstart duplicados durante una sesión activa
+let lastTouchStartTime = 0; // Para detectar touchstart duplicados muy rápidos
+let lastTouchStartPosition = { x: 0, y: 0 }; // Para detectar touchstart duplicados por posición
 
 export function enableGlobalTouchToMouse() {
   // Solo instalar una vez
@@ -86,9 +89,34 @@ export function enableGlobalTouchToMouse() {
     if (e.touches.length !== 1) return;
     
     const touch = e.touches[0];
-    dragStartElement = e.target as Element;
+    const element = e.target as Element;
+    const currentTime = e.timeStamp || Date.now();
+    
+    // Si ya tenemos una sesión de touch activa, ignorar nuevos touchstart
+    if (activeTouchSession) {
+      console.log('Ignoring touchstart - session already active');
+      return;
+    }
+    
+    // Protección mejorada: ignorar touchstart duplicados por tiempo Y posición
+    const timeDiff = currentTime - lastTouchStartTime;
+    const positionDiff = Math.abs(touch.clientX - lastTouchStartPosition.x) + Math.abs(touch.clientY - lastTouchStartPosition.y);
+    
+    if (timeDiff < 100 && positionDiff < 5) {
+      console.log('Ignoring duplicate touchstart - same position and time:', {
+        timeDiff: timeDiff + 'ms',
+        positionDiff: positionDiff + 'px'
+      });
+      return;
+    }
+    
+    // Iniciar nueva sesión de touch
+    activeTouchSession = true;
+    dragStartElement = element;
     dragStartTouch = touch;
     isDragging = false;
+    lastTouchStartTime = currentTime;
+    lastTouchStartPosition = { x: touch.clientX, y: touch.clientY };
     
     console.log('Processing touchstart:', {
       target: dragStartElement.tagName,
@@ -221,7 +249,17 @@ export function enableGlobalTouchToMouse() {
 
   document.addEventListener('touchend', (e) => {
     const touch = e.changedTouches[0];
-    if (!touch || !dragStartElement) return;
+    console.log('🔥 Global touchend received:', { 
+      changedTouches: e.changedTouches.length, 
+      touches: e.touches.length,
+      hasDragStartElement: !!dragStartElement,
+      activeTouchSession
+    });
+    
+    if (!touch || !dragStartElement) {
+      console.log('🔥 Early return from touchend - no touch or dragStartElement');
+      return;
+    }
     
     console.log('Touch end detected');
     
@@ -242,6 +280,9 @@ export function enableGlobalTouchToMouse() {
       dragStartTouch = null;
       currentTouchEventId = null;
       processedElements.clear();
+      activeTouchSession = false; // Cerrar sesión de touch
+      lastTouchStartTime = 0; // Reset timing
+      lastTouchStartPosition = { x: 0, y: 0 }; // Reset position
       return;
     }
     
@@ -304,11 +345,15 @@ export function enableGlobalTouchToMouse() {
     }
     
     // Reset state
+    console.log('🔥 Resetting state after touchend');
     isDragging = false;
     dragStartElement = null;
     dragStartTouch = null;
     currentTouchEventId = null;
     processedElements.clear();
+    activeTouchSession = false; // Cerrar sesión de touch
+    lastTouchStartTime = 0; // Reset timing
+    lastTouchStartPosition = { x: 0, y: 0 }; // Reset position
   }, { passive: false });
 
   document.addEventListener('touchcancel', (e) => {
@@ -320,5 +365,8 @@ export function enableGlobalTouchToMouse() {
     dragStartTouch = null;
     currentTouchEventId = null;
     processedElements.clear();
+    activeTouchSession = false; // Cerrar sesión de touch
+    lastTouchStartTime = 0; // Reset timing
+    lastTouchStartPosition = { x: 0, y: 0 }; // Reset position
   }, { passive: false });
 }
