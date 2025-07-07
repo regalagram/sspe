@@ -21,9 +21,7 @@ import { Transform } from '../plugins/transform/Transform';
 import { ArrangePlugin } from '../plugins/arrange/Arrange';
 import { ReorderPlugin } from '../plugins/reorder/Reorder';
 import { PanelModePlugin } from '../plugins/panelmode/PanelMode';
-
 import { DeletePlugin } from '../plugins/delete/Delete';
-import { BezierNormalizePlugin } from '../plugins/bezier-normalize/BezierNormalize';
 import { FigmaHandlesPlugin } from '../plugins/figma-handles/FigmaHandles';
 import { CurvesPlugin } from '../plugins/curves/Curves';
 
@@ -59,7 +57,6 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(CurvesPlugin); // Depends on mouse-interaction
   pluginManager.registerPlugin(SubPathTransformPlugin); // Depends on selection
   pluginManager.registerPlugin(PointTransformPlugin); // Depends on selection
-  pluginManager.registerPlugin(BezierNormalizePlugin); // Depends on selection
   pluginManager.registerPlugin(FigmaHandlesPlugin); // Depends on selection and mouse-interaction
   
   // Register remaining plugins
