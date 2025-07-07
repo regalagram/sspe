@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG Parser Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 4px solid #ddd;
+            background: #f9f9f9;
+        }
+        .pass {
+            color: #28a745;
+            border-left-color: #28a745;
+        }
+        .fail {
+            color: #dc3545;
+            border-left-color: #dc3545;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SVG Parser Test - fill="none" Fix</h1>
+        <p>This test checks if the SVG parser correctly handles <code>fill="none"</code> attributes.</p>
+        
+        <button onclick="runTest()">Run Test</button>
+        <button onclick="clearResults()">Clear Results</button>
+        
+        <div id="results"></div>
+    </div>
+
+    <script type="module">
+        // Import the parser (this will work in the dev environment)
+        import { parseSVGToSubPaths } from './src/utils/svg-parser.ts';
+        
+        // Make it available globally for the test
+        window.parseSVGToSubPaths = parseSVGToSubPaths;
+        
+        window.runTest = function() {
+            const results = document.getElementById('results');
+            
+            // Test SVG with fill="none"
+            const testSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200">
+                <path d="M 50 50 L 150 50 L 150 150 L 50 150 Z" 
+                      fill="none" 
+                      stroke="red" 
+                      stroke-width="3"/>
+                <path d="M 200 50 L 280 50 L 280 150 L 200 150 Z" 
+                      fill="blue" 
+                      stroke="green" 
+                      stroke-width="2"/>
+                <path d="M 50 170 L 150 170 L 200 170 L 200 190 L 50 190 Z" 
+                      style="fill: none; stroke: purple; stroke-width: 2;"/>
+            </svg>`;
+            
+            let output = '<h2>Test Results</h2>';
+            
+            try {
+                console.log('Testing SVG:', testSvg);
+                const paths = parseSVGToSubPaths(testSvg);
+                
+                output += `<div class="test-result">
+                    <h3>Parse Success</h3>
+                    <p>✅ Successfully parsed ${paths.length} paths</p>
+                </div>`;
+                
+                paths.forEach((path, index) => {
+                    const style = path.style;
+                    const expectedResults = [
+                        { fill: 'none', stroke: '#ff0000', strokeWidth: 3 },
+                        { fill: '#0000ff', stroke: '#008000', strokeWidth: 2 },
+                        { fill: 'none', stroke: '#800080', strokeWidth: 2 }
+                    ];
+                    
+                    const expected = expectedResults[index] || {};
+                    
+                    output += `<div class="test-result">
+                        <h3>Path ${index + 1}</h3>
+                        <p><strong>Parsed Style:</strong></p>
+                        <pre>${JSON.stringify(style, null, 2)}</pre>
+                        <p><strong>Expected:</strong></p>
+                        <pre>${JSON.stringify(expected, null, 2)}</pre>`;
+                    
+                    let allMatched = true;
+                    for (const [key, expectedValue] of Object.entries(expected)) {
+                        const actualValue = style[key];
+                        if (actualValue !== expectedValue) {
+                            output += `<p class="fail">❌ ${key}: expected "${expectedValue}", got "${actualValue}"</p>`;
+                            allMatched = false;
+                        } else {
+                            output += `<p class="pass">✅ ${key}: "${actualValue}" matches</p>`;
+                        }
+                    }
+                    
+                    if (allMatched) {
+                        output += '<p class="pass">✅ All properties match!</p>';
+                    } else {
+                        output += '<p class="fail">❌ Some properties don\'t match</p>';
+                    }
+                    
+                    output += '</div>';
+                });
+                
+            } catch (error) {
+                output += `<div class="test-result fail">
+                    <h3>Parse Error</h3>
+                    <p>❌ Error: ${error.message}</p>
+                    <pre>${error.stack}</pre>
+                </div>`;
+            }
+            
+            results.innerHTML = output;
+        };
+        
+        window.clearResults = function() {
+            document.getElementById('results').innerHTML = '';
+        };
+        
+        // Auto-run test on load
+        setTimeout(() => {
+            runTest();
+        }, 500);
+    </script>
+</body>
+</html>

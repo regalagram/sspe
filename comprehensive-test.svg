@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <!-- Test 1: fill="none" with stroke -->
+  <path d="M 50 50 L 150 50 L 150 150 L 50 150 Z" 
+        fill="none" 
+        stroke="red" 
+        stroke-width="3"/>
+  
+  <!-- Test 2: fill="blue" with stroke (for comparison) -->
+  <path d="M 200 50 L 300 50 L 300 150 L 200 150 Z" 
+        fill="blue" 
+        stroke="green" 
+        stroke-width="2"/>
+  
+  <!-- Test 3: style="fill: none" -->
+  <path d="M 50 200 L 150 200 L 150 250 L 50 250 Z" 
+        style="fill: none; stroke: purple; stroke-width: 2"/>
+  
+  <!-- Test 4: stroke="none" with fill -->
+  <path d="M 200 200 L 300 200 L 300 250 L 200 250 Z" 
+        fill="orange" 
+        stroke="none"/>
+  
+  <!-- Test 5: Both fill="none" and stroke="none" -->
+  <circle cx="350" cy="100" r="30" 
+          fill="none" 
+          stroke="none"/>
+</svg>

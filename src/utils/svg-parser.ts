@@ -304,7 +304,8 @@ export function parsePathStyle(element: Element, useComputedStyles = false): Pat
   
   // Helper function to normalize color values and extract opacity
   const normalizeColorWithOpacity = (color: string | null | undefined): { color?: string; opacity?: number } => {
-    if (!color || color.trim() === '' || color === 'none') return {};
+    if (!color || color.trim() === '') return {};
+    if (color === 'none') return { color: 'none' };
     const result = parseColorWithOpacity(color.trim());
     return {
       color: result.color, // Always return the color (converted or original)
@@ -314,7 +315,8 @@ export function parsePathStyle(element: Element, useComputedStyles = false): Pat
   
   // Legacy helper for backward compatibility
   const normalizeColor = (color: string | null | undefined): string | undefined => {
-    if (!color || color.trim() === '' || color === 'none') return undefined;
+    if (!color || color.trim() === '') return undefined;
+    if (color === 'none') return 'none';
     return convertRgbToHex(color.trim());
   };
   
@@ -335,10 +337,10 @@ export function parsePathStyle(element: Element, useComputedStyles = false): Pat
     const stroke = getStyleProp('stroke');
     
     const normalizedFill = normalizeColor(fill);
-    if (normalizedFill) style.fill = normalizedFill;
+    if (normalizedFill !== undefined) style.fill = normalizedFill;
     
     const normalizedStroke = normalizeColor(stroke);
-    if (normalizedStroke) style.stroke = normalizedStroke;
+    if (normalizedStroke !== undefined) style.stroke = normalizedStroke;
     
     const strokeWidth = getNumericStyleProp('stroke-width');
     if (strokeWidth !== undefined) style.strokeWidth = strokeWidth;
@@ -374,11 +376,11 @@ export function parsePathStyle(element: Element, useComputedStyles = false): Pat
     
     // Parse fill color and extract opacity if present
     const fillResult = normalizeColorWithOpacity(fill);
-    if (fillResult.color) style.fill = fillResult.color;
+    if (fillResult.color !== undefined) style.fill = fillResult.color;
     
     // Parse stroke color and extract opacity if present
     const strokeResult = normalizeColorWithOpacity(stroke);
-    if (strokeResult.color) style.stroke = strokeResult.color;
+    if (strokeResult.color !== undefined) style.stroke = strokeResult.color;
     
     const parsedStrokeWidth = parseNumericValue(strokeWidth);
     if (parsedStrokeWidth !== undefined) style.strokeWidth = parsedStrokeWidth;
@@ -416,7 +418,7 @@ export function parsePathStyle(element: Element, useComputedStyles = false): Pat
         switch (property) {
           case 'fill': {
             const fillInlineResult = normalizeColorWithOpacity(value);
-            if (fillInlineResult.color) style.fill = fillInlineResult.color;
+            if (fillInlineResult.color !== undefined) style.fill = fillInlineResult.color;
             // Apply opacity from RGBA fill if no explicit fill-opacity in inline styles
             if (fillInlineResult.opacity !== undefined && style.fillOpacity === undefined) {
               style.fillOpacity = fillInlineResult.opacity;
@@ -425,7 +427,7 @@ export function parsePathStyle(element: Element, useComputedStyles = false): Pat
           }
           case 'stroke': {
             const strokeInlineResult = normalizeColorWithOpacity(value);
-            if (strokeInlineResult.color) style.stroke = strokeInlineResult.color;
+            if (strokeInlineResult.color !== undefined) style.stroke = strokeInlineResult.color;
             // Apply opacity from RGBA stroke if no explicit stroke-opacity in inline styles
             if (strokeInlineResult.opacity !== undefined && style.strokeOpacity === undefined) {
               style.strokeOpacity = strokeInlineResult.opacity;

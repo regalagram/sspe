@@ -292,7 +292,7 @@ export const PathRenderer: React.FC = () => {
           <path
             key={`path-${path.id}`}
             d={d}
-            fill={isWireframeMode ? 'none' : path.style.fill}
+            fill={isWireframeMode ? 'none' : (path.style.fill || 'none')}
             stroke={isWireframeMode ? '#000000' : path.style.stroke}
             strokeWidth={isWireframeMode ? wireframeStrokeWidth : (path.style.strokeWidth || 1) / viewport.zoom}
             strokeDasharray={isWireframeMode ? undefined : path.style.strokeDasharray}
