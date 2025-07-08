@@ -74,7 +74,7 @@ export const ShortcutsPanel: React.FC = () => {
                     fontFamily: 'inherit',
                     fontSize: 11,
                     boxShadow: '0 1px 1px rgba(0,0,0,0.04)'
-                  }}>{s.key.length === 1 ? s.key.toUpperCase() : s.key}</kbd>
+                  }}>{s.key.length === 1 ? s.key : s.key}</kbd>
                 </div>
                 <div style={{ color: '#444', fontSize: 11, paddingTop: 4, paddingBottom: 4 }}>{s.description}</div>
               </div>

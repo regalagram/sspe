@@ -315,7 +315,8 @@ export const SelectionTools: React.FC<SelectionToolsProps> = ({
 };
 
 export const SelectionToolsComponent: React.FC = () => {
-  const { mode, selection, setMode, clearSelection } = useEditorStore();
+  const { mode, selection, clearSelection } = useEditorStore();
+  // Usar toolModeManager para cambiar el modo global
   
   const selectedCount = 
     selection.selectedPaths.length + 
@@ -326,7 +327,7 @@ export const SelectionToolsComponent: React.FC = () => {
     <div>
       <SelectionTools
         currentMode={mode.current}
-        onSetSelectionMode={() => setMode('select')}
+        onSetSelectionMode={() => toolModeManager.setMode('select')}
         onClearSelection={clearSelection}
         selectedCount={selectedCount}
       />

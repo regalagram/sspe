@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { UIComponentDefinition } from '../../core/PluginSystem';
 import { usePanelModeStore } from './PanelManager';
 import { ChevronDown, ChevronRight, X } from 'lucide-react';
+import { useToolModeState } from '../../hooks/useToolMode';
 
 interface AccordionSidebarProps {
   plugins: UIComponentDefinition[];
@@ -16,6 +17,7 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
   } = usePanelModeStore();
 
   const panelsContainerRef = useRef<HTMLDivElement>(null);
+  const toolMode = useToolModeState();
   
   const visiblePanels = getVisiblePanels();
   
@@ -119,7 +121,31 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
   return (
     <div className="accordion-sidebar" style={sidebarStyle}>
       <div style={headerStyle}>
-        <span>Panels</span>
+        <span>
+          Panels
+          <span
+            style={{
+              display: 'inline-block',
+              marginLeft: 10,
+              padding: '2px 2px',
+              borderRadius: 12,
+              background: '#e3eaff',
+              color: '#2563eb',
+              fontWeight: 700,
+              fontSize: 10,
+              letterSpacing: 1,
+              border: '1px solid #b6c6f5',
+              boxShadow: '0 1px 2px rgba(80,120,255,0.04)',
+              verticalAlign: 'middle',
+              minWidth: 60,
+              textAlign: 'center',
+              transition: 'background 0.2s',
+            }}
+            title="Active tool mode"
+          >
+            {toolMode.activeMode?.toUpperCase() || '—'}
+          </span>
+        </span>
         <button
           style={closeButtonStyle}
           onClick={handleCloseAccordion}

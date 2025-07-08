@@ -80,7 +80,7 @@ export const UndoRedoPlugin: Plugin = {
       }
     },
     {
-      key: 'z',
+      key: 'Z',
       modifiers: ['ctrl', 'shift'],
       description: 'Redo (Alternative)',
       action: () => {
