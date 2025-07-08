@@ -18,7 +18,7 @@ export const SubPathTransformPlugin: Plugin = {
   ],
   shortcuts: [
     {
-      key: 's',
+      key: 'M',
       modifiers: ['ctrl', 'shift'],
       plugin: 'subpath-transform',
       description: 'Apply smoothing to selected commands/subpaths',
@@ -29,7 +29,7 @@ export const SubPathTransformPlugin: Plugin = {
       },
     },
     {
-      key: 'i',
+      key: 'I',
       modifiers: ['ctrl'],
       plugin: 'subpath-transform',
       description: 'Apply simplification to selected commands/subpaths',
@@ -40,7 +40,7 @@ export const SubPathTransformPlugin: Plugin = {
       },
     },
     {
-      key: 't',
+      key: 'T',
       modifiers: ['ctrl', 'shift'],
       plugin: 'subpath-transform',
       description: 'Focus translate input',
@@ -58,7 +58,7 @@ export const SubPathTransformPlugin: Plugin = {
       }
     },
     {
-      key: 'r',
+      key: 'R',
       modifiers: ['ctrl', 'shift'],
       plugin: 'subpath-transform',
       description: 'Focus rotation input',
@@ -76,7 +76,7 @@ export const SubPathTransformPlugin: Plugin = {
       }
     },
     {
-      key: 'e',
+      key: 'E',
       modifiers: ['ctrl', 'shift'],
       plugin: 'subpath-transform',
       description: 'Focus scale input',
@@ -90,7 +90,7 @@ export const SubPathTransformPlugin: Plugin = {
       }
     },
     {
-      key: 'h',
+      key: 'H',
       modifiers: ['ctrl', 'shift'],
       plugin: 'subpath-transform',
       description: 'Mirror horizontally',
@@ -101,7 +101,7 @@ export const SubPathTransformPlugin: Plugin = {
       }
     },
     {
-      key: 'v',
+      key: 'V',
       modifiers: ['ctrl', 'shift'],
       plugin: 'subpath-transform',
       description: 'Mirror vertically',

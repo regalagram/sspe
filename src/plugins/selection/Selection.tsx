@@ -379,8 +379,7 @@ export const SelectionPlugin: Plugin = {
       }
     },
     {
-      key: 'd',
-      modifiers: ['ctrl'],
+      key: 'Escape',
       description: 'Deselect All',
       plugin: 'selection',
       action: () => {
