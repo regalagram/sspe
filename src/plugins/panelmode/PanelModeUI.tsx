@@ -69,7 +69,7 @@ export const PanelModeUI: React.FC = () => {
     fontSize: '12px',
     background: 'white',
     border: '1px solid #e0e0e0',
-    margin: '2px', // Small margin for scroll area
+    margin: '2px 4px', // Small margin for scroll area
   };
 
   const toggleButtonStyle: React.CSSProperties = {
@@ -86,7 +86,7 @@ export const PanelModeUI: React.FC = () => {
     fontSize: '11px',
     color: '#666',
     textAlign: 'center',
-    padding: '8px',
+    padding: '4px',
     background: '#f0f8ff',
     borderRadius: '4px',
     border: '1px solid #e0e8f0',
@@ -103,7 +103,6 @@ export const PanelModeUI: React.FC = () => {
     transition: 'all 0.2s ease',
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
     width: '100%',
     justifyContent: 'center',
   };
@@ -126,11 +125,6 @@ export const PanelModeUI: React.FC = () => {
     <div style={containerStyle}>
       {/* Panel Management Section */}
       <div>
-        <div style={titleStyle}>
-          <Settings size={12} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
-          Panel Visibility
-        </div>
-
         {/* Hide/Show All Buttons */}
         <div style={{
           display: 'flex',
@@ -152,7 +146,6 @@ export const PanelModeUI: React.FC = () => {
               }
             }}
           >
-            <Eye size={14} />
             Show All
           </button>
           <button
@@ -170,23 +163,16 @@ export const PanelModeUI: React.FC = () => {
               }
             }}
           >
-            <EyeOff size={14} />
             Hide All
           </button>
         </div>
         
         <div 
-          className="panel-visibility-scroll"
           style={{ 
             display: 'flex', 
             flexDirection: 'column', 
-            gap: '4px',
-            maxHeight: '200px',
+            maxHeight: '340px',
             overflowY: 'auto',
-            padding: '4px',
-            border: '1px solid #e0e0e0',
-            borderRadius: '4px',
-            background: '#fafafa'
           }}
         >
           {panels.length === 0 ? (
@@ -208,14 +194,6 @@ export const PanelModeUI: React.FC = () => {
                     fontWeight: panel.enabled ? 500 : 400
                   }}>
                     {panel.name}
-                  </span>
-                  <span style={{ 
-                    fontSize: '10px', 
-                    color: '#888',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}>
-                    {panel.originalPosition || 'unknown'}
                   </span>
                 </div>
                 <button

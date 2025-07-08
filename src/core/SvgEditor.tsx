@@ -82,12 +82,14 @@ export const SvgEditor: React.FC = () => {
       {/* Render sidebar as accordion */}
       {accordionVisible && <AccordionSidebar plugins={allPanels} />}
 
-      {/* Accordion toggle button - always show (since we're always in accordion mode) */}
-      <AccordionToggleButton
-        accordionVisible={accordionVisible}
-        toggleAccordionVisible={toggleAccordionVisible}
-        isFullscreen={isFullscreen}
-      />
+      {/* Accordion toggle button - solo mostrar cuando el acordeón NO está visible */}
+      {!accordionVisible && (
+        <AccordionToggleButton
+          accordionVisible={accordionVisible}
+          toggleAccordionVisible={toggleAccordionVisible}
+          isFullscreen={isFullscreen}
+        />
+      )}
     </div>
   );
 };
