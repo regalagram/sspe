@@ -59,8 +59,8 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
   const [rotationExpanded, setRotationExpanded] = useState(false);
   const [translationExpanded, setTranslationExpanded] = useState(false);
   const [mirrorExpanded, setMirrorExpanded] = useState(false);
-  const [smoothingExpanded, setSmoothingExpanded] = useState(false);
-  const [simplificationExpanded, setSimplificationExpanded] = useState(false);
+  const [smoothingExpanded, setSmoothingExpanded] = useState(true);
+  const [simplificationExpanded, setSimplificationExpanded] = useState(true);
   
   // Smoothing and Simplification settings with localStorage persistence
   const [simplifyTolerance, setSimplifyTolerance] = usePersistentState('pathSimplification.tolerance', 0.1);
@@ -498,6 +498,112 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
         
         {hasSelectedSubPaths && (
           <>
+            {/* Smoothing Section */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div 
+                style={{ 
+                  fontSize: '12px', 
+                  color: '#666', 
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                onClick={() => setSmoothingExpanded(!smoothingExpanded)}
+              >
+                <span style={{ transform: smoothingExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
+                Smoothing
+              </div>
+              
+              {smoothingExpanded && (
+                <>
+                  <PluginButton
+                    icon={<Waves size={14} />}
+                    text="Smooth"
+                    color="#007acc"
+                    active={false}
+                    disabled={!canApplySmoothing()}
+                    onClick={handleSmooth}
+                  />
+                </>
+              )}
+            </div>
+
+            {/* Simplification Section */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div 
+                style={{ 
+                  fontSize: '12px', 
+                  color: '#666', 
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                onClick={() => setSimplificationExpanded(!simplificationExpanded)}
+              >
+                <span style={{ transform: simplificationExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
+                Simplification
+              </div>
+              
+              {simplificationExpanded && (
+                <>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Tolerance</div>
+                      <input
+                        type="number"
+                        value={simplifyTolerance}
+                        onChange={(e) => setSimplifyTolerance(parseFloat(e.target.value) || 0.1)}
+                        min="0.01"
+                        max="1"
+                        step="0.01"
+                        style={{ 
+                          width: '100%', 
+                          padding: '4px', 
+                          fontSize: '12px',
+                          border: '1px solid #ddd',
+                          borderRadius: '3px'
+                        }}
+                      />
+                    </div>
+                    
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Distance</div>
+                      <input
+                        type="number"
+                        value={simplifyDistance}
+                        onChange={(e) => setSimplifyDistance(parseInt(e.target.value) || 10)}
+                        min="1"
+                        max="50"
+                        step="1"
+                        style={{ 
+                          width: '100%', 
+                          padding: '4px', 
+                          fontSize: '12px',
+                          border: '1px solid #ddd',
+                          borderRadius: '3px'
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <PluginButton
+                    icon={<Minimize2 size={14} />}
+                    text="Simplificate"
+                    color="#007acc"
+                    active={false}
+                    disabled={!canApplySimplification()}
+                    onClick={handleSimplify}
+                  />
+                </>
+              )}
+            </div>
+
             {/* Scale Section */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <div 
@@ -866,115 +972,8 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
               )}
             </div>
 
-            {/* Smoothing Section */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div 
-                style={{ 
-                  fontSize: '12px', 
-                  color: '#666', 
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-                onClick={() => setSmoothingExpanded(!smoothingExpanded)}
-              >
-                <span style={{ transform: smoothingExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
-                Smoothing
-              </div>
-              
-              {smoothingExpanded && (
-                <>
-                  <PluginButton
-                    icon={<Waves size={14} />}
-                    text="Smooth"
-                    color="#007acc"
-                    active={false}
-                    disabled={!canApplySmoothing()}
-                    onClick={handleSmooth}
-                  />
-                </>
-              )}
-            </div>
-
-            {/* Simplification Section */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div 
-                style={{ 
-                  fontSize: '12px', 
-                  color: '#666', 
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-                onClick={() => setSimplificationExpanded(!simplificationExpanded)}
-              >
-                <span style={{ transform: simplificationExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
-                Simplification
-              </div>
-              
-              {simplificationExpanded && (
-                <>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Tolerance</div>
-                      <input
-                        type="number"
-                        value={simplifyTolerance}
-                        onChange={(e) => setSimplifyTolerance(parseFloat(e.target.value) || 0.1)}
-                        min="0.01"
-                        max="1"
-                        step="0.01"
-                        style={{ 
-                          width: '100%', 
-                          padding: '4px', 
-                          fontSize: '12px',
-                          border: '1px solid #ddd',
-                          borderRadius: '3px'
-                        }}
-                      />
-                    </div>
-                    
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Distance</div>
-                      <input
-                        type="number"
-                        value={simplifyDistance}
-                        onChange={(e) => setSimplifyDistance(parseInt(e.target.value) || 10)}
-                        min="1"
-                        max="50"
-                        step="1"
-                        style={{ 
-                          width: '100%', 
-                          padding: '4px', 
-                          fontSize: '12px',
-                          border: '1px solid #ddd',
-                          borderRadius: '3px'
-                        }}
-                      />
-                    </div>
-                  </div>
-                  
-                  <PluginButton
-                    icon={<Minimize2 size={14} />}
-                    text="Simplificate"
-                    color="#007acc"
-                    active={false}
-                    disabled={!canApplySimplification()}
-                    onClick={handleSimplify}
-                  />
-                </>
-              )}
-            </div>
-
             {/* Reset Section - Only visible when there are values to reset */}
             {hasValuesToReset() && (
-              <div style={{ paddingTop: '8px', borderTop: '1px solid #eee' }}>
                 <PluginButton
                   icon={<RotateCcw size={14} />}
                   text="Reset Values"
@@ -983,7 +982,6 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                   disabled={false}
                   onClick={resetTransforms}
                 />
-              </div>
             )}
           </>
         )}
