@@ -107,12 +107,13 @@
   },
   {
     "plugin": "Curves",
-    "key": "c",
+    "key": "u",
     "description": "Curve Tool"
   },
   {
     "plugin": "Curves",
     "key": "b",
+    "modifiers": ["ctrl"],
     "description": "Bézier Curve Tool"
   },
   {
