@@ -30,7 +30,6 @@ export const GlobalKeyboardPlugin: Plugin = {
           }
         }
       },
-      plugin: 'global-keyboard',
       description: 'Delete selected commands or curve points'
     },
     {
@@ -55,7 +54,6 @@ export const GlobalKeyboardPlugin: Plugin = {
           }
         }
       },
-      plugin: 'global-keyboard',
       description: 'Delete selected commands or curve points'
     },
     {
@@ -71,7 +69,6 @@ export const GlobalKeyboardPlugin: Plugin = {
           }
         }
       },
-      plugin: 'global-keyboard',
       description: 'Finish curve path'
     },
     {
@@ -92,7 +89,6 @@ export const GlobalKeyboardPlugin: Plugin = {
           editorStore.clearSelection();
         }
       },
-      plugin: 'global-keyboard',
       description: 'Exit current tool or clear selection'
     }
   ],

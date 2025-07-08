@@ -54,7 +54,7 @@ export interface ShortcutDefinition {
   modifiers?: ('ctrl' | 'alt' | 'shift' | 'meta')[];
   action: () => void;
   description: string;
-  plugin: string; // The plugin id or name this shortcut belongs to
+  plugin?: string; // The plugin id or name this shortcut belongs to (assigned automatically)
 }
 
 export interface UIComponentDefinition {
@@ -203,6 +203,8 @@ export class PluginManager {
     
     // Register shortcuts (permitir múltiples por combinación)
     plugin.shortcuts?.forEach(shortcut => {
+      // Assign plugin id automatically if not set
+      if (!shortcut.plugin) shortcut.plugin = plugin.id;
       const key = this.getShortcutKey(shortcut);
       if (!this.shortcuts.has(key)) this.shortcuts.set(key, [] as ShortcutDefinition[]);
       this.shortcuts.get(key)!.push(shortcut);

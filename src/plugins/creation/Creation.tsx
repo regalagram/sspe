@@ -24,7 +24,6 @@ export const CreationPlugin: Plugin = {
     {
       key: 'm',
       description: 'Move To Tool',
-      plugin: 'creation',
       action: () => {
         toolModeManager.setMode('creation', { commandType: 'M' });
       }
@@ -32,7 +31,6 @@ export const CreationPlugin: Plugin = {
     {
       key: 'l',
       description: 'Line To Tool',
-      plugin: 'creation',
       action: () => {
         toolModeManager.setMode('creation', { commandType: 'L' });
       }
@@ -40,7 +38,6 @@ export const CreationPlugin: Plugin = {
     {
       key: 'c',
       description: 'Cubic Bezier Tool',
-      plugin: 'creation',
       action: () => {
         toolModeManager.setMode('creation', { commandType: 'C' });
       }
@@ -48,7 +45,6 @@ export const CreationPlugin: Plugin = {
     {
       key: 'z',
       description: 'Close Path Tool',
-      plugin: 'creation',
       action: () => {
         toolModeManager.setMode('creation', { commandType: 'Z' });
       }
@@ -56,7 +52,6 @@ export const CreationPlugin: Plugin = {
     {
       key: 'Escape',
       description: 'Exit Create Mode',
-      plugin: 'creation',
       action: () => {
         toolModeManager.setMode('select');
       }

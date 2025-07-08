@@ -56,7 +56,6 @@ export const ReorderPlugin: Plugin = {
     {
       key: ']',
       modifiers: ['shift'],
-      plugin: 'reorder',
       description: 'Bring to Front',
       action: () => {
         if (reorderManager.hasValidSelection()) {
@@ -67,7 +66,6 @@ export const ReorderPlugin: Plugin = {
     {
       key: ']',
       modifiers: [],
-      plugin: 'reorder',
       description: 'Bring Forward',
       action: () => {
         if (reorderManager.hasValidSelection()) {
@@ -78,7 +76,6 @@ export const ReorderPlugin: Plugin = {
     {
       key: '[',
       modifiers: [],
-      plugin: 'reorder',
       description: 'Send Backward',
       action: () => {
         if (reorderManager.hasValidSelection()) {
@@ -89,7 +86,6 @@ export const ReorderPlugin: Plugin = {
     {
       key: '[',
       modifiers: ['shift'],
-      plugin: 'reorder',
       description: 'Send to Back',
       action: () => {
         if (reorderManager.hasValidSelection()) {

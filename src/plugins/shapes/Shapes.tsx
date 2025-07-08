@@ -31,7 +31,6 @@ export const ShapesPlugin: Plugin = {
       key: 's',
       modifiers: ['shift'],
       description: 'Focus Shapes Panel',
-      plugin: 'shapes',
       action: () => {
         // Focus the shapes panel or bring it to front
         const shapesPanel = document.querySelector('[data-panel-id="shapes-panel"]') as HTMLElement;
@@ -43,7 +42,6 @@ export const ShapesPlugin: Plugin = {
     {
       key: 'Escape',
       description: 'Exit Shape Creation Mode',
-      plugin: 'shapes',
       action: () => {
         shapeManager.stopShapeCreation();
       }

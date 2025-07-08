@@ -367,7 +367,6 @@ export const SVGPlugin: Plugin = {
     {
       key: 's',
       modifiers: ['ctrl', 'shift'],
-      plugin: 'svg-editor',
       description: 'Focus SVG Editor',
       action: () => {
         // Focus the SVG textarea if visible

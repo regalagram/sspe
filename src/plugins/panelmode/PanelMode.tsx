@@ -110,7 +110,6 @@ export const PanelModePlugin: Plugin = {
       key: 'Tab',
       modifiers: ['ctrl'],
       description: 'Toggle Panel Visibility (Focus PanelMode)',
-      plugin: 'panelmode',
       action: () => {
         // Focus the panel mode UI if it exists
         const panelModeElement = document.querySelector('[data-panel-id="panel-mode-controls"]');

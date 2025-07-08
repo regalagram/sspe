@@ -461,7 +461,6 @@ export const VisualDebugPlugin: Plugin = {
       key: 'c',
       modifiers: ['ctrl'],
       description: 'Toggle Command Points',
-      plugin: 'visual-debug',
       action: () => {
         const store = useEditorStore.getState();
         store.toggleFeature('command-points');
@@ -471,7 +470,6 @@ export const VisualDebugPlugin: Plugin = {
       key: 'p',
       modifiers: ['ctrl'],
       description: 'Toggle Control Points',
-      plugin: 'visual-debug',
       action: () => {
         const store = useEditorStore.getState();
         store.toggleFeature('control-points');
@@ -481,7 +479,6 @@ export const VisualDebugPlugin: Plugin = {
       key: 'w',
       modifiers: ['ctrl'],
       description: 'Toggle Wireframe Mode',
-      plugin: 'visual-debug',
       action: () => {
         const store = useEditorStore.getState();
         store.toggleFeature('wireframe');

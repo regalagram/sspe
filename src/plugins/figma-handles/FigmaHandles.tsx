@@ -43,7 +43,6 @@ export const FigmaHandlesPlugin: Plugin = {
   shortcuts: [
     {
       key: 'Alt+H',
-      plugin: 'figma-handles',
       description: 'Convertir a handles simétricos',
       action: () => {
         const state = figmaHandleManager.getState();

@@ -57,7 +57,6 @@ export const ArrangePlugin: Plugin = {
       key: 'a',
       modifiers: ['shift'],
       description: 'Focus First SubPath (shows Arrange panel)',
-      plugin: 'arrange',
       action: () => {
         // Focus first available subpath to trigger arrange panel
         const store = useEditorStore.getState();
@@ -70,7 +69,6 @@ export const ArrangePlugin: Plugin = {
       key: 'l',
       modifiers: ['alt'],
       description: 'Align Left',
-      plugin: 'arrange',
       action: () => {
         if (arrangeManager.hasValidSelection()) {
           arrangeManager.alignLeft();
@@ -81,7 +79,6 @@ export const ArrangePlugin: Plugin = {
       key: 'c',
       modifiers: ['alt'],
       description: 'Align Center',
-      plugin: 'arrange',
       action: () => {
         if (arrangeManager.hasValidSelection()) {
           arrangeManager.alignCenter();
@@ -92,7 +89,6 @@ export const ArrangePlugin: Plugin = {
       key: 'r',
       modifiers: ['alt'],
       description: 'Align Right',
-      plugin: 'arrange',
       action: () => {
         if (arrangeManager.hasValidSelection()) {
           arrangeManager.alignRight();
@@ -103,7 +99,6 @@ export const ArrangePlugin: Plugin = {
       key: 't',
       modifiers: ['alt'],
       description: 'Align Top',
-      plugin: 'arrange',
       action: () => {
         if (arrangeManager.hasValidSelection()) {
           arrangeManager.alignTop();
@@ -114,7 +109,6 @@ export const ArrangePlugin: Plugin = {
       key: 'm',
       modifiers: ['alt'],
       description: 'Align Middle',
-      plugin: 'arrange',
       action: () => {
         if (arrangeManager.hasValidSelection()) {
           arrangeManager.alignMiddle();
@@ -125,7 +119,6 @@ export const ArrangePlugin: Plugin = {
       key: 'b',
       modifiers: ['alt'],
       description: 'Align Bottom',
-      plugin: 'arrange',
       action: () => {
         if (arrangeManager.hasValidSelection()) {
           arrangeManager.alignBottom();
@@ -136,7 +129,6 @@ export const ArrangePlugin: Plugin = {
       key: 'h',
       modifiers: ['alt', 'shift'],
       description: 'Flip Horizontally',
-      plugin: 'arrange',
       action: () => {
         if (arrangeManager.hasValidSelection()) {
           arrangeManager.flipHorizontally();
@@ -147,7 +139,6 @@ export const ArrangePlugin: Plugin = {
       key: 'v',
       modifiers: ['alt', 'shift'],
       description: 'Flip Vertically',
-      plugin: 'arrange',
       action: () => {
         if (arrangeManager.hasValidSelection()) {
           arrangeManager.flipVertically();

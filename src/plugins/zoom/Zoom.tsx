@@ -139,7 +139,6 @@ export const ZoomPlugin: Plugin = {
       key: '+',
       modifiers: ['ctrl'],
       description: 'Zoom In',
-      plugin: 'zoom',
       action: () => {
         const store = useEditorStore.getState();
         store.zoomIn();
@@ -149,7 +148,6 @@ export const ZoomPlugin: Plugin = {
       key: '-',
       modifiers: ['ctrl'],
       description: 'Zoom Out',
-      plugin: 'zoom',
       action: () => {
         const store = useEditorStore.getState();
         store.zoomOut();
@@ -159,7 +157,6 @@ export const ZoomPlugin: Plugin = {
       key: '0',
       modifiers: ['ctrl'],
       description: 'Zoom to Fit',
-      plugin: 'zoom',
       action: () => {
         const store = useEditorStore.getState();
         store.zoomToFit();
@@ -169,7 +166,6 @@ export const ZoomPlugin: Plugin = {
       key: 'r',
       modifiers: ['ctrl'],
       description: 'Reset View',
-      plugin: 'zoom',
       action: () => {
         const store = useEditorStore.getState();
         store.resetView();
@@ -179,7 +175,6 @@ export const ZoomPlugin: Plugin = {
       key: '0',
       modifiers: ['ctrl', 'shift'],
       description: 'Zoom to Selection',
-      plugin: 'zoom',
       action: () => {
         const store = useEditorStore.getState();
         if (store.selection.selectedCommands.length > 0) {
@@ -191,7 +186,6 @@ export const ZoomPlugin: Plugin = {
       key: 's',
       modifiers: ['ctrl', 'shift'],
       description: 'Zoom to Selected SubPath',
-      plugin: 'zoom',
       action: () => {
         const store = useEditorStore.getState();
         if (store.selection.selectedSubPaths.length > 0) {
