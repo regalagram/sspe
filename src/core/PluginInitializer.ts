@@ -1,3 +1,4 @@
+import { ShortcutsPlugin } from '../plugins/shortcuts/Shortcuts';
 import { pluginManager } from './PluginSystem';
 import { ZoomPlugin } from '../plugins/zoom/Zoom';
 import { GridPlugin } from '../plugins/grid/Grid';
@@ -64,4 +65,5 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(ArrangePlugin);
   pluginManager.registerPlugin(ReorderPlugin);
   pluginManager.registerPlugin(PanelModePlugin);
+  pluginManager.registerPlugin(ShortcutsPlugin);
 };
