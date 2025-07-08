@@ -378,6 +378,7 @@ export const SelectionPlugin: Plugin = {
     },
     {
       key: 'Escape',
+      modifiers: ['shift'],
       description: 'Deselect All',
       action: () => {
         const store = useEditorStore.getState();
