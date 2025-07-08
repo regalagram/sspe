@@ -7,8 +7,9 @@ interface DimensionsInfoProps {
 }
 
 export const DimensionsInfo: React.FC<DimensionsInfoProps> = ({ bounds, viewport }) => {
-  // Calculate the position below the bounding box
-  const infoY = bounds.y + bounds.height + 20 / viewport.zoom;
+  // Calculate the position below the bounding box (in world coordinates, so it appears at a fixed screen distance)
+  const screenDistance = 20; // px in screen space
+  const infoY = bounds.y + bounds.height + screenDistance / viewport.zoom;
   const infoX = bounds.x + bounds.width / 2; // Center horizontally
   
   // Format dimensions to show reasonable precision
@@ -23,52 +24,51 @@ export const DimensionsInfo: React.FC<DimensionsInfoProps> = ({ bounds, viewport
   const height = formatDimension(Math.abs(bounds.height));
   const dimensionText = `${width} × ${height}`;
 
-  // Calculate text dimensions for background sizing
-  const fontSize = Math.max(10, 12 / viewport.zoom);
-  const padding = Math.max(4, 6 / viewport.zoom);
+  // Calculate text dimensions for background sizing (in screen space)
+  const fontSize = 12;
+  const padding = 6;
   const textWidth = dimensionText.length * fontSize * 0.6; // Approximate text width
   const boxWidth = textWidth + padding * 2;
   const boxHeight = fontSize + padding * 2;
-  
-  // Ensure the info box doesn't go outside reasonable bounds
-  const safeInfoX = Math.max(boxWidth / 2, Math.min(infoX, bounds.x + bounds.width - boxWidth / 2));
+  // Ensure the info box doesn't go outside reasonable bounds (in world coordinates)
+  const safeInfoX = Math.max(boxWidth / 2 / viewport.zoom, Math.min(infoX, bounds.x + bounds.width - boxWidth / 2 / viewport.zoom));
   
   return (
-    <g>
+    <g
+      transform={`translate(${safeInfoX},${infoY}) scale(${1 / viewport.zoom})`}
+      style={{ pointerEvents: 'none' }}
+    >
       {/* Background rectangle */}
       <rect
-        x={safeInfoX - boxWidth / 2}
-        y={infoY - boxHeight / 2}
+        x={-boxWidth / 2}
+        y={-boxHeight / 2}
         width={boxWidth}
         height={boxHeight}
         fill="rgba(0, 0, 0, 0.85)"
-        rx={Math.max(2, 4 / viewport.zoom)}
-        pointerEvents="none"
+        rx={4}
       />
-      
+
       {/* Dimensions text */}
       <text
-        x={safeInfoX}
-        y={infoY + fontSize / 3} // Adjust for text baseline
+        x={0}
+        y={fontSize / 3}
         textAnchor="middle"
         fontSize={fontSize}
         fill="white"
         fontFamily="system-ui, -apple-system, sans-serif"
         fontWeight="500"
-        pointerEvents="none"
       >
         {dimensionText}
       </text>
-      
+
       {/* Optional: Add a subtle connection line to the bounding box */}
       <line
-        x1={safeInfoX}
-        y1={bounds.y + bounds.height + Math.max(1, 2 / viewport.zoom)}
-        x2={safeInfoX}
-        y2={infoY - boxHeight / 2}
+        x1={0}
+        y1={-(boxHeight / 2)}
+        x2={0}
+        y2={-(boxHeight / 2 + 8)}
         stroke="rgba(255, 255, 255, 0.3)"
-        strokeWidth={Math.max(0.5, 1 / viewport.zoom)}
-        pointerEvents="none"
+        strokeWidth={1}
       />
     </g>
   );
