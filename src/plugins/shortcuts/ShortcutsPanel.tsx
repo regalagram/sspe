@@ -1,48 +1,29 @@
-import React, { useEffect, useState } from 'react';
 
-interface Shortcut {
-  plugin: string;
-  key: string;
-  modifiers?: string[];
-  description: string;
-}
+import React from 'react';
+import { pluginManager } from '../../core/PluginSystem';
 
-const SHORTCUTS_PATH = '/shortcuts.json';
 
 
 export const ShortcutsPanel: React.FC = () => {
-  const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  // Obtener shortcuts activos directamente del sistema
+  const shortcuts = React.useMemo(() => {
+    // @ts-ignore
+    return pluginManager.getAllShortcuts().slice().sort((a, b) => {
+      if (!a.plugin && !b.plugin) return 0;
+      if (!a.plugin) return 1;
+      if (!b.plugin) return -1;
+      return a.plugin.localeCompare(b.plugin);
+    });
+  }, []);
 
   // Agrupar shortcuts por plugin
   const grouped = React.useMemo(() => {
-    return (shortcuts || []).reduce((acc: Record<string, Shortcut[]>, s) => {
+    return (shortcuts || []).reduce((acc: Record<string, typeof shortcuts>, s) => {
       if (!acc[s.plugin]) acc[s.plugin] = [];
       acc[s.plugin].push(s);
       return acc;
-    }, {});
+    }, {} as Record<string, typeof shortcuts>);
   }, [shortcuts]);
-
-  useEffect(() => {
-    fetch(SHORTCUTS_PATH)
-      .then((res) => {
-        if (!res.ok) throw new Error('No se pudo cargar shortcuts.json');
-        return res.json();
-      })
-      .then((data) => {
-        // Ordenar por nombre de plugin
-        setShortcuts(
-          data.slice().sort((a: Shortcut, b: Shortcut) =>
-            a.plugin.localeCompare(b.plugin)
-          )
-        );
-      })
-      .catch((e) => setError(e.message));
-  }, []);
-
-  if (error) {
-    return <div style={{ color: 'red', padding: 16 }}>Error: {error}</div>;
-  }
 
   return (
     <div style={{ maxHeight: 400, overflowY: 'auto', fontFamily: 'system-ui, sans-serif' }}>

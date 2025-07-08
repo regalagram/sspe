@@ -368,6 +368,7 @@ export const SubPathListPlugin: Plugin = {
     {
       key: 'p',
       modifiers: ['ctrl', 'shift'],
+      plugin: 'subpath-list',
       description: 'Focus Sub-Path List',
       action: () => {
         // Focus the sub-path list panel
@@ -380,6 +381,7 @@ export const SubPathListPlugin: Plugin = {
     {
       key: 'a',
       modifiers: ['ctrl', 'shift'],
+      plugin: 'subpath-list',
       description: 'Select All Sub-Paths',
       action: () => {
         const store = useEditorStore.getState();

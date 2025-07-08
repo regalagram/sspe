@@ -65,6 +65,7 @@ export const UndoRedoPlugin: Plugin = {
       key: 'z',
       modifiers: ['ctrl'],
       description: 'Undo',
+      plugin: 'undo-redo',
       action: () => {
         const store = useEditorStore.getState();
         store.undo();
@@ -74,6 +75,7 @@ export const UndoRedoPlugin: Plugin = {
       key: 'y',
       modifiers: ['ctrl'],
       description: 'Redo',
+      plugin: 'undo-redo',
       action: () => {
         const store = useEditorStore.getState();
         store.redo();
@@ -83,6 +85,7 @@ export const UndoRedoPlugin: Plugin = {
       key: 'z',
       modifiers: ['ctrl', 'shift'],
       description: 'Redo (Alternative)',
+      plugin: 'undo-redo',
       action: () => {
         const store = useEditorStore.getState();
         store.redo();

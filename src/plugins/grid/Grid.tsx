@@ -467,6 +467,7 @@ export const GridPlugin: Plugin = {
       key: 'g',
       modifiers: ['ctrl'],
       description: 'Toggle Grid',
+      plugin: 'grid',
       action: () => {
         const store = useEditorStore.getState();
         store.toggleGrid();
@@ -476,6 +477,7 @@ export const GridPlugin: Plugin = {
       key: 'g',
       modifiers: ['ctrl', 'shift'],
       description: 'Toggle Snap to Grid',
+      plugin: 'grid',
       action: () => {
         const store = useEditorStore.getState();
         store.toggleSnapToGrid();

@@ -356,6 +356,7 @@ export const SelectionPlugin: Plugin = {
     {
       key: 'v',
       description: 'Selection Tool',
+      plugin: 'selection',
       action: () => {
         toolModeManager.setMode('select');
       }
@@ -364,6 +365,7 @@ export const SelectionPlugin: Plugin = {
       key: 'a',
       modifiers: ['ctrl'],
       description: 'Select All',
+      plugin: 'selection',
       action: () => {
         const store = useEditorStore.getState();
         
@@ -380,6 +382,7 @@ export const SelectionPlugin: Plugin = {
       key: 'd',
       modifiers: ['ctrl'],
       description: 'Deselect All',
+      plugin: 'selection',
       action: () => {
         const store = useEditorStore.getState();
         store.clearSelection();

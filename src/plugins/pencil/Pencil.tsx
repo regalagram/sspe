@@ -32,6 +32,7 @@ export const PencilPlugin: Plugin = {
     {
       key: 'p',
       description: 'Activate Pencil Tool',
+      plugin: 'pencil',
       action: () => {
         toolModeManager.setMode('pencil');
       }
@@ -39,10 +40,9 @@ export const PencilPlugin: Plugin = {
     {
       key: 'Escape',
       description: 'Exit Pencil Mode',
+      plugin: 'pencil',
       action: () => {
-        if (toolModeManager.isActive('pencil')) {
-          toolModeManager.setMode('select');
-        }
+        toolModeManager.setMode('select');
       }
     }
   ],

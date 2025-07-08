@@ -78,6 +78,7 @@ export const FullscreenPlugin: Plugin = {
     {
       key: 'F11',
       description: 'Toggle Fullscreen',
+      plugin: 'fullscreen',
       action: () => {
         const component = document.querySelector('.fullscreen-control') as HTMLButtonElement;
         component?.click();
@@ -87,6 +88,7 @@ export const FullscreenPlugin: Plugin = {
       key: 'f',
       modifiers: ['ctrl'],
       description: 'Toggle Fullscreen (Alternative)',
+      plugin: 'fullscreen',
       action: () => {
         const component = document.querySelector('.fullscreen-control') as HTMLButtonElement;
         component?.click();

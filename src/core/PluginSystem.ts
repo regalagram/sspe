@@ -54,6 +54,7 @@ export interface ShortcutDefinition {
   modifiers?: ('ctrl' | 'alt' | 'shift' | 'meta')[];
   action: () => void;
   description: string;
+  plugin: string; // The plugin id or name this shortcut belongs to
 }
 
 export interface UIComponentDefinition {
@@ -64,9 +65,10 @@ export interface UIComponentDefinition {
 }
 
 export class PluginManager {
+
   private plugins: Map<string, Plugin> = new Map();
   private activeTools: Set<string> = new Set();
-  private shortcuts: Map<string, ShortcutDefinition> = new Map();
+  private shortcuts: Map<string, ShortcutDefinition[]> = new Map();
   private svgRef: React.RefObject<SVGSVGElement | null> | null = null;
   private editorStore: any = null;
   public isShapeCreationMode: boolean = false;
@@ -199,10 +201,11 @@ export class PluginManager {
     plugin.enabled = true;
     plugin.onActivate?.();
     
-    // Register shortcuts
+    // Register shortcuts (permitir múltiples por combinación)
     plugin.shortcuts?.forEach(shortcut => {
       const key = this.getShortcutKey(shortcut);
-      this.shortcuts.set(key, shortcut);
+      if (!this.shortcuts.has(key)) this.shortcuts.set(key, [] as ShortcutDefinition[]);
+      this.shortcuts.get(key)!.push(shortcut);
     });
   }
   
@@ -213,10 +216,17 @@ export class PluginManager {
     plugin.enabled = false;
     plugin.onDeactivate?.();
     
-    // Unregister shortcuts
+    // Unregister shortcuts (solo los de este plugin)
     plugin.shortcuts?.forEach(shortcut => {
       const key = this.getShortcutKey(shortcut);
-      this.shortcuts.delete(key);
+      if (this.shortcuts.has(key)) {
+        const arr = (this.shortcuts.get(key) as ShortcutDefinition[]).filter(s => s !== shortcut);
+        if (arr.length > 0) {
+          this.shortcuts.set(key, arr);
+        } else {
+          this.shortcuts.delete(key);
+        }
+      }
     });
   }
   
@@ -234,6 +244,17 @@ export class PluginManager {
   }
   
   handleKeyDown(event: KeyboardEvent): boolean {
+    // Log para debug de teclas
+    console.log('[PluginSystem] keydown:', {
+      key: event.key,
+      code: event.code,
+      ctrl: event.ctrlKey,
+      shift: event.shiftKey,
+      alt: event.altKey,
+      meta: event.metaKey,
+      target: event.target
+    });
+
     // First, let plugins handle the event
     for (const plugin of this.plugins.values()) {
       if (plugin.enabled && plugin.handleKeyDown) {
@@ -241,23 +262,61 @@ export class PluginManager {
         if (handled) return true;
       }
     }
-    
+
     // If no plugin handled it, check shortcuts
     const modifiers: string[] = [];
     if (event.ctrlKey) modifiers.push('ctrl');
     if (event.altKey) modifiers.push('alt');
     if (event.shiftKey) modifiers.push('shift');
     if (event.metaKey) modifiers.push('meta');
-    
+
     const key = modifiers.length > 0 ? `${modifiers.sort().join('+')}+${event.key}` : event.key;
-    const shortcut = this.shortcuts.get(key);
-    
-    if (shortcut) {
-      event.preventDefault();
-      shortcut.action();
+    const shortcuts = this.shortcuts.get(key);
+
+    if (shortcuts && shortcuts.length > 0) {
+      // Si hay varios shortcuts para la misma combinación, priorizar el del modo activo
+      let mode = undefined;
+      try {
+        // @ts-ignore
+        mode = window.toolModeManager ? window.toolModeManager.getActiveMode() : undefined;
+      } catch (e) {
+        // fallback: no hay toolModeManager
+      }
+      let found = false;
+      if (mode) {
+        // Prioridad exacta: plugin === mode
+        for (const s of shortcuts) {
+          if (s.plugin && s.plugin.toLowerCase() === mode.toLowerCase()) {
+            event.preventDefault();
+            console.log('[PluginSystem] shortcut triggered (by mode):', key, s);
+            s.action();
+            found = true;
+            break;
+          }
+        }
+        // Si no hay coincidencia exacta, buscar por includes (fallback heurístico)
+        if (!found) {
+          for (const s of shortcuts) {
+            if ((s.description && s.description.toLowerCase().includes(mode.toLowerCase())) ||
+                (s.plugin && s.plugin.toLowerCase().includes(mode.toLowerCase()))) {
+              event.preventDefault();
+              console.log('[PluginSystem] shortcut triggered (by mode-heuristic):', key, s);
+              s.action();
+              found = true;
+              break;
+            }
+          }
+        }
+      }
+      if (!found) {
+        // Si no se encontró por modo, ejecuta el primero
+        event.preventDefault();
+        console.log('[PluginSystem] shortcut triggered (default):', key, shortcuts[0]);
+        shortcuts[0].action();
+      }
       return true;
     }
-    
+
     return false;
   }
   
@@ -271,6 +330,19 @@ export class PluginManager {
     }
     
     return false;
+  }
+
+  /**
+   * Returns a flat array of all registered shortcuts from enabled plugins.
+   */
+  getAllShortcuts(): ShortcutDefinition[] {
+    const all: ShortcutDefinition[] = [];
+    for (const plugin of this.getEnabledPlugins()) {
+      if (plugin.shortcuts) {
+        all.push(...plugin.shortcuts);
+      }
+    }
+    return all;
   }
 }
 

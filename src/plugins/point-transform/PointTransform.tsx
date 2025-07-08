@@ -20,6 +20,7 @@ export const PointTransformPlugin: Plugin = {
     {
       key: 'l',
       modifiers: ['ctrl', 'shift'],
+      plugin: 'point-transform',
       description: 'Convert selected commands to Line To (L)',
       action: () => {
         const event = new CustomEvent('point-transform-to-line');
@@ -29,6 +30,7 @@ export const PointTransformPlugin: Plugin = {
     {
       key: 'c',
       modifiers: ['ctrl', 'shift'],
+      plugin: 'point-transform',
       description: 'Convert selected commands to Cubic Bézier (C)',
       action: () => {
         const event = new CustomEvent('point-transform-to-curve');

@@ -20,6 +20,7 @@ export const SubPathTransformPlugin: Plugin = {
     {
       key: 's',
       modifiers: ['ctrl', 'shift'],
+      plugin: 'subpath-transform',
       description: 'Apply smoothing to selected commands/subpaths',
       action: () => {
         // Trigger smoothing
@@ -30,6 +31,7 @@ export const SubPathTransformPlugin: Plugin = {
     {
       key: 'i',
       modifiers: ['ctrl'],
+      plugin: 'subpath-transform',
       description: 'Apply simplification to selected commands/subpaths',
       action: () => {
         // Trigger simplification
@@ -40,6 +42,7 @@ export const SubPathTransformPlugin: Plugin = {
     {
       key: 't',
       modifiers: ['ctrl', 'shift'],
+      plugin: 'subpath-transform',
       description: 'Focus translate input',
       action: () => {
         // Focus on the first translate input field
@@ -57,6 +60,7 @@ export const SubPathTransformPlugin: Plugin = {
     {
       key: 'r',
       modifiers: ['ctrl', 'shift'],
+      plugin: 'subpath-transform',
       description: 'Focus rotation input',
       action: () => {
         // Focus on the rotation input field
@@ -74,6 +78,7 @@ export const SubPathTransformPlugin: Plugin = {
     {
       key: 'e',
       modifiers: ['ctrl', 'shift'],
+      plugin: 'subpath-transform',
       description: 'Focus scale input',
       action: () => {
         // Focus on the first scale input field
@@ -87,6 +92,7 @@ export const SubPathTransformPlugin: Plugin = {
     {
       key: 'h',
       modifiers: ['ctrl', 'shift'],
+      plugin: 'subpath-transform',
       description: 'Mirror horizontally',
       action: () => {
         // Trigger horizontal mirror
@@ -97,6 +103,7 @@ export const SubPathTransformPlugin: Plugin = {
     {
       key: 'v',
       modifiers: ['ctrl', 'shift'],
+      plugin: 'subpath-transform',
       description: 'Mirror vertically',
       action: () => {
         // Trigger vertical mirror

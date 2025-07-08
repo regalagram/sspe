@@ -93,6 +93,7 @@ export const DeletePlugin: Plugin = {
     {
       key: 'Delete',
       description: 'Delete selected elements',
+      plugin: 'delete',
       action: () => {
         const state = useEditorStore.getState();
         const hasSelection = 
@@ -127,6 +128,7 @@ export const DeletePlugin: Plugin = {
     {
       key: 'Backspace',
       description: 'Delete selected elements (Alternative)',
+      plugin: 'delete',
       action: () => {
         const state = useEditorStore.getState();
         const hasSelection = 
@@ -162,6 +164,7 @@ export const DeletePlugin: Plugin = {
       key: 'd',
       modifiers: ['ctrl'],
       description: 'Delete selected elements (Ctrl+D)',
+      plugin: 'delete',
       action: () => {
         const state = useEditorStore.getState();
         const hasSelection = 

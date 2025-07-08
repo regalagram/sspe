@@ -25,6 +25,7 @@ export const CurvesPlugin: Plugin = {
     {
       key: 'u',
       description: 'Curve Tool',
+      plugin: 'curves',
       action: () => {
         toolModeManager.setMode('curves');
       }
@@ -33,6 +34,7 @@ export const CurvesPlugin: Plugin = {
       key: 'b',
       modifiers: ['ctrl'],
       description: 'Bézier Curve Tool',
+      plugin: 'curves',
       action: () => {
         toolModeManager.setMode('curves');
       }
@@ -40,15 +42,15 @@ export const CurvesPlugin: Plugin = {
     {
       key: 'Escape',
       description: 'Exit Curve Tool',
+      plugin: 'curves',
       action: () => {
-        if (toolModeManager.isActive('curves')) {
-          toolModeManager.setMode('select');
-        }
+        toolModeManager.setMode('select');
       }
     },
     {
       key: 'Enter',
       description: 'Finish Path',
+      plugin: 'curves',
       action: () => {
         curvesManager.manualFinishPath();
       }
