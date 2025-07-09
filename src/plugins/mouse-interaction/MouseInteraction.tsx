@@ -40,7 +40,14 @@ class MouseInteractionManager {
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.code === 'Space' && !e.repeat) {
+    // Only intercept spacebar if not focused on input/textarea/contentEditable
+    const target = e.target as HTMLElement | null;
+    const isEditable = target && (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      (target as HTMLElement).isContentEditable
+    );
+    if (e.code === 'Space' && !e.repeat && !isEditable) {
       e.preventDefault();
       this.state.isSpacePressed = true;
       // Update cursor for all SVG elements
@@ -49,7 +56,14 @@ class MouseInteractionManager {
   };
 
   private handleKeyUp = (e: KeyboardEvent) => {
-    if (e.code === 'Space') {
+    // Only intercept spacebar if not focused on input/textarea/contentEditable
+    const target = e.target as HTMLElement | null;
+    const isEditable = target && (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'TEXTAREA' ||
+      (target as HTMLElement).isContentEditable
+    );
+    if (e.code === 'Space' && !isEditable) {
       e.preventDefault();
       this.state.isSpacePressed = false;
       this.state.isPanning = false; // Stop panning if space is released

@@ -246,6 +246,31 @@ export class PluginManager {
   }
   
   handleKeyDown(event: KeyboardEvent): boolean {
+    // --- SVG/canvas focus logic (strict TypeScript) ---
+    const active = document.activeElement as HTMLElement | null;
+    let isSVGCanvasFocused = false;
+    let isInput = false;
+    let isBody = false;
+    if (active) {
+      const tag = typeof active.tagName === 'string' ? active.tagName.toUpperCase() : '';
+      isSVGCanvasFocused =
+        tag === 'SVG' ||
+        (typeof active.closest === 'function' && !!active.closest('svg'));
+      isInput =
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        (typeof (active as HTMLElement).isContentEditable === 'boolean' && (active as HTMLElement).isContentEditable === true);
+      isBody = active === document.body;
+    }
+    // Si el foco está en un input, textarea o contentEditable, nunca ejecutar shortcuts
+    if (isInput) {
+      return false;
+    }
+    // Solo ejecutar shortcuts si el foco está en el SVG/canvas o en el body
+    if (!isSVGCanvasFocused && !isBody) {
+      return false;
+    }
+
     // Log para debug de teclas
     console.log('[PluginSystem] keydown:', {
       key: event.key,
@@ -259,14 +284,14 @@ export class PluginManager {
 
     // First, let plugins handle the event
     for (const plugin of this.plugins.values()) {
-      if (plugin.enabled && plugin.handleKeyDown) {
+      if (plugin.enabled && typeof plugin.handleKeyDown === 'function') {
         const handled = plugin.handleKeyDown(event);
         if (handled) return true;
       }
     }
 
     // If no plugin handled it, check shortcuts
-    const modifiers: string[] = [];
+    const modifiers: Array<'ctrl' | 'alt' | 'shift' | 'meta'> = [];
     if (event.ctrlKey) modifiers.push('ctrl');
     if (event.altKey) modifiers.push('alt');
     if (event.shiftKey) modifiers.push('shift');
@@ -277,7 +302,7 @@ export class PluginManager {
 
     if (shortcuts && shortcuts.length > 0) {
       // Si hay varios shortcuts para la misma combinación, priorizar el del modo activo
-      let mode = undefined;
+      let mode: string | undefined = undefined;
       try {
         // @ts-ignore
         mode = window.toolModeManager ? window.toolModeManager.getActiveMode() : undefined;

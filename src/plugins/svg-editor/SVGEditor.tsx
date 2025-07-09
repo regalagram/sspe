@@ -105,17 +105,20 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
     setIsEditing(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Apply changes on Ctrl+Enter
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Permitir siempre la tecla espacio y teclas de edición normales
+    // Solo interceptar Ctrl+Enter y Escape
     if (e.ctrlKey && e.key === 'Enter') {
       e.preventDefault();
       handleApplyChanges();
+      return;
     }
-    // Revert changes on Escape
     if (e.key === 'Escape') {
       e.preventDefault();
       handleRevert();
+      return;
     }
+    // No hacer preventDefault para ninguna otra tecla
   };
 
   return (

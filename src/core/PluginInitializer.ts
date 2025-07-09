@@ -12,7 +12,6 @@ import { SubPathListPlugin } from '../plugins/subpath-list/SubPathList';
 import { MouseInteractionPlugin } from '../plugins/mouse-interaction/MouseInteraction';
 import { PathRendererPlugin } from '../plugins/path-renderer/PathRenderer';
 import { CommandPlugin } from '../plugins/command/Command';
-import { GlobalKeyboardPlugin } from '../plugins/global-keyboard/GlobalKeyboard';
 import { VisualDebugPlugin } from '../plugins/visual-debug/VisualDebug';
 import { SubPathTransformPlugin } from '../plugins/subpath-transform/SubPathTransform';
 import { PointTransformPlugin } from '../plugins/point-transform/PointTransform';
@@ -43,7 +42,6 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(VisualDebugPlugin);
   pluginManager.registerPlugin(CommandPlugin);
   pluginManager.registerPlugin(CreationPlugin);
-  pluginManager.registerPlugin(GlobalKeyboardPlugin);
   pluginManager.registerPlugin(ZoomPlugin);
   pluginManager.registerPlugin(GridPlugin);
   pluginManager.registerPlugin(UndoRedoPlugin);

@@ -303,7 +303,6 @@ export const PathStyleComponent: React.FC = () => {
         Editing {selectedPaths.length} path{selectedPaths.length !== 1 ? 's' : ''} with matching styles
       </div>
       <PathStyleControls
-        key={renderKey}
         hasSelection={true}
         pathStyle={firstPathStyle}
         onStyleChange={handleStyleChange}
