@@ -105,16 +105,10 @@ interface EditorActions {
 const loadInitialState = (): EditorState => {
   const preferences = loadPreferences();
   const storedPrecision = preferences.precision ?? 2;
-  const savedSVG = loadSVG();
   const savedState = loadEditorState();
   let initialPaths: SVGPath[] = [];
-  if (savedSVG) {
-    try {
-      initialPaths = parseSVGToSubPaths(savedSVG);
-    } catch (error) {
-      console.warn('Failed to parse saved SVG, falling back to default:', error);
-      initialPaths = [];
-    }
+  if (savedState && Array.isArray(savedState.paths)) {
+    initialPaths = savedState.paths;
   } else {
     // Hardcoded SVG fallback
     const hardcodedSVG = `
@@ -195,14 +189,18 @@ const loadInitialState = (): EditorState => {
       } else if (Array.isArray(savedState.enabledFeatures)) {
         enabledFeatures = new Set(savedState.enabledFeatures);
       } else if (typeof savedState.enabledFeatures === 'object' && savedState.enabledFeatures !== null) {
+        console.log(savedState);
         enabledFeatures = new Set(Object.keys(savedState.enabledFeatures));
       }
+    }
+    // Log para saber si se está leyendo desde localStorage
+    if (typeof window !== 'undefined' && window.localStorage) {
+      console.log('[SVG Editor] Estado cargado desde localStorage.');
     }
     return {
       ...baseState,
       ...savedState,
-      enabledFeatures,
-      paths: baseState.paths, // paths solo desde SVG
+      enabledFeatures
     };
   }
   return baseState;
@@ -1689,17 +1687,12 @@ export const useEditorStore = create<EditorState & EditorActions>()(
 const debouncedSave = debounce('editor-autosave', (state: EditorState) => {
   // Serializar SVG (debería haber una función que lo haga, aquí se asume paths -> SVG string)
   // Si tienes una función exportSVG(paths: SVGPath[]): string, úsala aquí
-  let svgString = '';
-  if (typeof window !== 'undefined' && (window as any).exportSVG) {
-    svgString = (window as any).exportSVG(state.paths);
-  } else {
-    // Fallback: no guardar si no hay función
-    svgString = '';
-  }
-  if (svgString) saveSVG(svgString);
-  // Guardar estado del editor (sin paths ni history)
+  // Guardar estado del editor (sin history)
   const { history, ...rest } = state;
   saveEditorState({ ...rest });
+  if (typeof window !== 'undefined' && window.localStorage) {
+    console.log('[SVG Editor] Estado del editor guardado en localStorage.');
+  }
 }, 500);
 
 // Suscribirse a todos los cambios relevantes
