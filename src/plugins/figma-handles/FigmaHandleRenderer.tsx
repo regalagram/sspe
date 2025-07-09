@@ -155,28 +155,25 @@ export const FigmaHandleRenderer: React.FC = () => {
     <g key={stableKey}>
       {paths.map((path) => 
         path.subPaths.map((subPath) => {
+          // No mostrar puntos de control para subpaths bloqueados
+          if (subPath.locked) return null;
           // If feature is disabled, only show control points for selected sub-paths
           const isSubPathSelected = selection.selectedSubPaths.includes(subPath.id);
           const shouldShowSubPath = enabledFeatures.has('control-points') || isSubPathSelected;
-          
           return subPath.commands.map((command, commandIndex) => {
             // Get the absolute position of the command
             const position = getAbsoluteCommandPosition(command, subPath, path.subPaths);
             if (!position) return null;
-            
             const isCommandSelected = selection.selectedCommands.includes(command.id);
-            
             // Check if this command has control points in the handle state
             const hasControlPoints = handleState.controlPoints.has(command.id);
             const controlPointInfoForCheck = handleState.controlPoints.get(command.id);
-            
             // Show control points if:
             // 1. Feature is enabled, OR
             // 2. Sub-path is selected, OR 
             // 3. This specific command is selected, OR
             // 4. This command has control points to show (from FigmaHandleManager)
             const shouldShowCommand = shouldShowSubPath || isCommandSelected || hasControlPoints;
-            
             if (!shouldShowCommand) return null;
             
             // Durante el drag, solo mostrar el comando que se arrastra y su pareja

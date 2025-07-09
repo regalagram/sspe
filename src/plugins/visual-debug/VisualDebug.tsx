@@ -233,30 +233,25 @@ export const CommandPointsRenderer: React.FC = () => {
     <>
       {paths.map((path) => 
         path.subPaths.map((subPath) => {
+          // No mostrar puntos para subpaths bloqueados
+          if (subPath.locked) return null;
           // If feature is disabled, only show points for selected sub-paths
           const isSubPathSelected = selection.selectedSubPaths.includes(subPath.id);
           const shouldShowSubPath = enabledFeatures.has('command-points') || isSubPathSelected;
-          
           return subPath.commands.map((command) => {
             // Get the absolute position of the command
             const position = getAbsoluteCommandPosition(command, subPath, path.subPaths);
-            
             if (!position) return null;
-
             const isCommandSelected = selection.selectedCommands.includes(command.id);
-            
             // Show command point if:
             // 1. Feature is enabled, OR
             // 2. Sub-path is selected, OR 
             // 3. This specific command is selected
             const shouldShowCommand = shouldShowSubPath || isCommandSelected;
-            
             if (!shouldShowCommand) return null;
-
             // Calcular radio responsivo basado en el dispositivo con factores de tamaño
             const baseRadius = getControlPointSize(isMobile, isTablet);
             const radius = (baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.commandPointsFactor) / viewport.zoom;
-
             return (
               <circle
                 key={`command-${command.id}-v${renderVersion}`}
@@ -281,134 +276,7 @@ export const CommandPointsRenderer: React.FC = () => {
   );
 };
 
-// Control Points Renderer Component
-export const ControlPointsRenderer: React.FC = () => {
-  const { paths, enabledFeatures, viewport, selection, visualDebugSizes } = useEditorStore();
-  const { isMobile, isTablet } = useMobileDetection();
 
-  if (!paths || paths.length === 0) {
-    return null;
-  }
-
-  // Si el plugin figma-handles está activo, no renderizar control points básicos
-  // ya que el figma-handles proporciona una versión mejorada
-  const figmaHandlesPlugin = pluginManager.getPlugin('figma-handles');
-  if (figmaHandlesPlugin && figmaHandlesPlugin.enabled) {
-    return null;
-  }
-
-  // Check if any sub-path is selected or any command is selected
-  const hasSelectedSubPath = selection.selectedSubPaths.length > 0;
-  const hasSelectedCommand = selection.selectedCommands.length > 0;
-  
-  // Show if feature is enabled OR if any sub-path is selected OR if any command is selected
-  const shouldShow = enabledFeatures.has('control-points') || hasSelectedSubPath || hasSelectedCommand;
-  
-  if (!shouldShow) {
-    return null;
-  }
-
-  return (
-    <>
-      {paths.map((path) => 
-        path.subPaths.map((subPath) => {
-          // If feature is disabled, only show control points for selected sub-paths
-          const isSubPathSelected = selection.selectedSubPaths.includes(subPath.id);
-          const shouldShowSubPath = enabledFeatures.has('control-points') || isSubPathSelected;
-          
-          return subPath.commands.map((command, commandIndex) => {
-            // Get the absolute position of the command
-            const position = getAbsoluteCommandPosition(command, subPath, path.subPaths);
-            if (!position) return null;
-            
-            const isCommandSelected = selection.selectedCommands.includes(command.id);
-            
-            // Show control points if:
-            // 1. Feature is enabled, OR
-            // 2. Sub-path is selected, OR 
-            // 3. This specific command is selected
-            const shouldShowCommand = shouldShowSubPath || isCommandSelected;
-            
-            if (!shouldShowCommand) return null;
-            
-            // Calcular radio responsivo basado en el dispositivo con factores de tamaño
-            const baseRadius = getControlPointSize(isMobile, isTablet);
-            const radius = (baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.controlPointsFactor) / viewport.zoom;
-            
-            // Find previous command position for connecting control points
-            const prevCommand = commandIndex > 0 ? subPath.commands[commandIndex - 1] : null;
-            const prevPosition = prevCommand ? getAbsoluteCommandPosition(prevCommand, subPath, path.subPaths) : null;
-            
-            // Get absolute control points for this command with path context
-            const controlPoints = getAbsoluteControlPoints(command, subPath, path.subPaths);
-            
-            return (
-              <g key={`control-${command.id}`}>
-                {/* Render control points for cubic curves */}
-                {command.command === 'C' && controlPoints.length >= 2 && (
-                  <>
-                    {/* First control point connects to previous command position */}
-                    {prevPosition && (
-                      <>
-                        <line
-                          x1={prevPosition.x}
-                          y1={prevPosition.y}
-                          x2={controlPoints[0].x}
-                          y2={controlPoints[0].y}
-                          stroke="#999"
-                          strokeWidth={1 / viewport.zoom}
-                          strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
-                          pointerEvents="none"
-                        />
-                        <circle
-                          cx={controlPoints[0].x}
-                          cy={controlPoints[0].y}
-                          r={radius * 0.7}
-                          fill="#999"
-                          stroke="#666"
-                          strokeWidth={1 / viewport.zoom}
-                          style={{ cursor: 'grab' }}
-                          data-command-id={command.id}
-                          data-control-point="x1y1"
-                        />
-                      </>
-                    )}
-                    {/* Second control point connects to current command position */}
-                    {controlPoints.length >= 2 && (
-                      <>
-                        <line
-                          x1={position.x}
-                          y1={position.y}
-                          x2={controlPoints[1].x}
-                          y2={controlPoints[1].y}
-                          stroke="#999"
-                          strokeWidth={1 / viewport.zoom}
-                          strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
-                          pointerEvents="none"
-                        />
-                        <circle
-                          cx={controlPoints[1].x}
-                          cy={controlPoints[1].y}
-                          r={radius * 0.7}
-                          fill="#999"
-                          stroke="#666"
-                          strokeWidth={1 / viewport.zoom}
-                          style={{ cursor: 'grab' }}
-                          data-command-id={command.id}
-                          data-control-point="x2y2"
-                        />
-                      </>
-                    )}
-                  </>
-                )}
-              </g>
-            );
-          });
-        })
-      )}
-    </>
-  );
-};
 
 // Main Visual Debug Component
 export const VisualDebugComponent: React.FC = () => {
@@ -498,12 +366,6 @@ export const VisualDebugPlugin: Plugin = {
       component: CommandPointsRenderer,
       position: 'svg-content',
       order: 30, // Render on top of paths but below control points
-    },
-    {
-      id: 'control-points-renderer',
-      component: ControlPointsRenderer,
-      position: 'svg-content',
-      order: 20, // Render between paths and command points
     }
   ]
 };
