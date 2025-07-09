@@ -211,72 +211,63 @@ export const PathRenderer: React.FC = () => {
   return (
     <>
       {paths.map((path) => {
-        // Check if any subpath of this path is selected
-        const hasSelectedSubPath = path.subPaths.some(subPath => 
-          selection.selectedSubPaths.includes(subPath.id)
-        );
-        
-        // Join all sub-paths into a single d string
+        // Render the main path (all subpaths joined)
         const d = path.subPaths.map(subPathToString).join(' ');
-        
-     
-        // Wireframe mode overrides path styles
         const isWireframeMode = enabledFeatures.has('wireframe');
-        const wireframeStrokeWidth = 2 / viewport.zoom; // Fixed visual thickness independent of zoom
-        
+        const wireframeStrokeWidth = 2 / viewport.zoom;
         return (
-          <path
-            key={`path-${path.id}`}
-            d={d}
-            fill={isWireframeMode ? 'none' : (path.style.fill || 'none')}
-            stroke={isWireframeMode ? '#000000' : path.style.stroke}
-            strokeWidth={isWireframeMode ? wireframeStrokeWidth : (path.style.strokeWidth || 1) / viewport.zoom}
-            strokeDasharray={isWireframeMode ? undefined : path.style.strokeDasharray}
-            strokeLinecap={isWireframeMode ? 'round' : path.style.strokeLinecap}
-            strokeLinejoin={isWireframeMode ? 'round' : path.style.strokeLinejoin}
-            fillOpacity={isWireframeMode ? 0 : path.style.fillOpacity}
-            strokeOpacity={isWireframeMode ? 1 : path.style.strokeOpacity}
-            fillRule={path.style.fillRule || 'nonzero'}
-            style={{
-              cursor: 'grab', // Show that paths can be dragged directly
-              pointerEvents: 'all',
-            }}
-            onMouseDown={(e) => {
-              // Only handle left mouse button
-              if (e.button !== 0) return;
-              
-              e.stopPropagation();
-              
-              // Get the SVG element from the path's parent
-              const svgElement = (e.target as SVGPathElement).closest('svg');
-              if (svgElement) {
-                const point = getTransformedPoint(e as React.MouseEvent<SVGElement>, svgElement);
-                const foundSubPath = findSubPathAtPoint(path, point, 15);
-                
-                if (foundSubPath) {
-                  // If Shift is pressed, just select without starting drag
-                  if (e.shiftKey) {
-                    selectSubPathByPoint(path.id, point, true);
-                    return;
-                  }
-                  
-                  // If subpath is not selected, select it and start drag immediately
-                  if (!selection.selectedSubPaths.includes(foundSubPath.id)) {
-                    selectSubPathMultiple(foundSubPath.id, false);
-                    // Start drag immediately
-                    handleSubPathMouseDown(e, foundSubPath.id);
-                  } else {
-                    // If already selected, just start drag
-                    handleSubPathMouseDown(e, foundSubPath.id);
-                  }
-                }
-              }
-            }}
-            onClick={(e) => {
-              // This is now only for fallback cases where mousedown didn't handle it
-              e.stopPropagation();
-            }}
-          />
+          <g key={`path-group-${path.id}`}>
+            {/* Main visible path */}
+            <path
+              key={`path-${path.id}`}
+              d={d}
+              fill={isWireframeMode ? 'none' : (path.style.fill || 'none')}
+              stroke={isWireframeMode ? '#000000' : path.style.stroke}
+              strokeWidth={isWireframeMode ? wireframeStrokeWidth : (path.style.strokeWidth || 1) / viewport.zoom}
+              strokeDasharray={isWireframeMode ? undefined : path.style.strokeDasharray}
+              strokeLinecap={isWireframeMode ? 'round' : path.style.strokeLinecap}
+              strokeLinejoin={isWireframeMode ? 'round' : path.style.strokeLinejoin}
+              fillOpacity={isWireframeMode ? 0 : path.style.fillOpacity}
+              strokeOpacity={isWireframeMode ? 1 : path.style.strokeOpacity}
+              fillRule={path.style.fillRule || 'nonzero'}
+              style={{ pointerEvents: 'all' }}
+            />
+            {/* Invisible overlays for interaction, only for unlocked subpaths */}
+            {path.subPaths.map((subPath) => {
+              if (subPath.locked) return null;
+              const dSub = subPathToStringInContext(subPath, path.subPaths);
+              return (
+                <path
+                  key={`subpath-interact-${subPath.id}`}
+                  d={dSub}
+                  fill="none"
+                  stroke="transparent"
+                  strokeWidth={12 / viewport.zoom}
+                  style={{
+                    cursor: 'grab',
+                    pointerEvents: 'all',
+                  }}
+                  onMouseDown={(e) => {
+                    // Only handle left mouse button
+                    if (e.button !== 0) return;
+                    e.stopPropagation();
+                    // Get the SVG element from the path's parent
+                    const svgElement = (e.target as SVGPathElement).closest('svg');
+                    if (svgElement) {
+                      const point = getTransformedPoint(e as React.MouseEvent<SVGElement>, svgElement);
+                      // Si hay otro subpath debajo, seleccionarlo
+                      const foundSubPath = findSubPathAtPoint(path, point, 15);
+                      if (foundSubPath && foundSubPath.id !== subPath.id) {
+                        selectSubPathByPoint(path.id, point, e.shiftKey);
+                        return;
+                      }
+                    }
+                    handleSubPathMouseDown(e, subPath.id);
+                  }}
+                />
+              );
+            })}
+          </g>
         );
       })}
 

@@ -207,13 +207,14 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
           padding: 0,
           marginRight: 6,
           cursor: 'pointer',
-          color: subPath.locked ? '#d32f2f' : '#888',
           display: 'flex',
           alignItems: 'center',
         }}
         tabIndex={-1}
       >
-        {subPath.locked ? <Lock size={16} /> : <Unlock size={16} />}
+        {subPath.locked
+          ? <Lock size={20} strokeWidth={3.2} color="#111" style={{ filter: 'drop-shadow(0 1px 0 #888)' }} />
+          : <Unlock size={20} strokeWidth={2.2} color="#bbb" />}
       </button>
       <div style={{ flex: 1 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
