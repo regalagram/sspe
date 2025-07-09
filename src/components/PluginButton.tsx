@@ -49,9 +49,8 @@ export const PluginButton: React.FC<PluginButtonProps> = ({
         fontSize: `${fontSize}px`,
         fontWeight: 800,
         opacity: disabled ? 0.6 : 1,
-        boxShadow: active ? '0 2px 8px rgba(0,0,0,0.08)' : undefined,
         transition: 'all 0.2s',
-        outline: active ? `2px solid ${color}` : 'none',
+        outline: 'none',
         width: fullWidth ? '100%' : 'auto',
         userSelect: 'none',
       }}
