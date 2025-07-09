@@ -458,57 +458,66 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       })),
     
     moveSubPath: (subPathId, delta) => {
-      set((state) => ({
-        paths: state.paths.map((path) => ({
-          ...path,
-          subPaths: path.subPaths.map((subPath) =>
-            subPath.id === subPathId
-              ? {
-                  ...subPath,
-                  commands: subPath.commands.map((cmd) => {
-                    // Calculate new positions
-                    let newX = cmd.x !== undefined ? cmd.x + delta.x : cmd.x;
-                    let newY = cmd.y !== undefined ? cmd.y + delta.y : cmd.y;
-                    let newX1 = cmd.x1 !== undefined ? cmd.x1 + delta.x : cmd.x1;
-                    let newY1 = cmd.y1 !== undefined ? cmd.y1 + delta.y : cmd.y1;
-                    let newX2 = cmd.x2 !== undefined ? cmd.x2 + delta.x : cmd.x2;
-                    let newY2 = cmd.y2 !== undefined ? cmd.y2 + delta.y : cmd.y2;
+      set((state) => {
+        // No mover si el subpath está lockeado
+        const isLocked = state.paths.some(path =>
+          path.subPaths.some(subPath => subPath.id === subPathId && subPath.locked)
+        );
+        if (isLocked) {
+          return {};
+        }
+        return {
+          paths: state.paths.map((path) => ({
+            ...path,
+            subPaths: path.subPaths.map((subPath) =>
+              subPath.id === subPathId
+                ? {
+                    ...subPath,
+                    commands: subPath.commands.map((cmd) => {
+                      // Calculate new positions
+                      let newX = cmd.x !== undefined ? cmd.x + delta.x : cmd.x;
+                      let newY = cmd.y !== undefined ? cmd.y + delta.y : cmd.y;
+                      let newX1 = cmd.x1 !== undefined ? cmd.x1 + delta.x : cmd.x1;
+                      let newY1 = cmd.y1 !== undefined ? cmd.y1 + delta.y : cmd.y1;
+                      let newX2 = cmd.x2 !== undefined ? cmd.x2 + delta.x : cmd.x2;
+                      let newY2 = cmd.y2 !== undefined ? cmd.y2 + delta.y : cmd.y2;
 
-                    // Apply snap to grid if enabled
-                    if (state.grid.snapToGrid) {
-                      if (newX !== undefined && newY !== undefined) {
-                        const snapped = snapToGrid({ x: newX, y: newY }, state.grid.size);
-                        newX = snapped.x;
-                        newY = snapped.y;
+                      // Apply snap to grid if enabled
+                      if (state.grid.snapToGrid) {
+                        if (newX !== undefined && newY !== undefined) {
+                          const snapped = snapToGrid({ x: newX, y: newY }, state.grid.size);
+                          newX = snapped.x;
+                          newY = snapped.y;
+                        }
+                        if (newX1 !== undefined && newY1 !== undefined) {
+                          const snapped = snapToGrid({ x: newX1, y: newY1 }, state.grid.size);
+                          newX1 = snapped.x;
+                          newY1 = snapped.y;
+                        }
+                        if (newX2 !== undefined && newY2 !== undefined) {
+                          const snapped = snapToGrid({ x: newX2, y: newY2 }, state.grid.size);
+                          newX2 = snapped.x;
+                          newY2 = snapped.y;
+                        }
                       }
-                      if (newX1 !== undefined && newY1 !== undefined) {
-                        const snapped = snapToGrid({ x: newX1, y: newY1 }, state.grid.size);
-                        newX1 = snapped.x;
-                        newY1 = snapped.y;
-                      }
-                      if (newX2 !== undefined && newY2 !== undefined) {
-                        const snapped = snapToGrid({ x: newX2, y: newY2 }, state.grid.size);
-                        newX2 = snapped.x;
-                        newY2 = snapped.y;
-                      }
-                    }
 
-                    return {
-                      ...cmd,
-                      // Apply the calculated positions
-                      x: newX,
-                      y: newY,
-                      x1: newX1,
-                      y1: newY1,
-                      x2: newX2,
-                      y2: newY2,
-                    };
-                  }),
-                }
-              : subPath
-          ),
-        })),
-      }));
+                      return {
+                        ...cmd,
+                        // Apply the calculated positions
+                        x: newX,
+                        y: newY,
+                        x1: newX1,
+                        y1: newY1,
+                        x2: newX2,
+                        y2: newY2,
+                      };
+                    }),
+                  }
+                : subPath
+            ),
+          })),
+        };
+      });
     },
     
     // Transform actions
