@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { EditorState, SVGCommand, SVGPath, Point, EditorCommandType, PathStyle, ViewportState } from '../types';
+import { EditorState, SVGCommand, SVGPath, Point, EditorCommandType, PathStyle, ViewportState,SVGSubPath } from '../types';
 import { generateId } from '../utils/id-utils.js';
 import { loadPreferences, savePreferences, UserPreferences } from '../utils/persistence';
 import { createNewPath } from '../utils/subpath-utils';
@@ -38,6 +38,9 @@ interface EditorActions {
   replaceSubPathCommands: (subPathId: string, commands: Omit<SVGCommand, 'id'>[]) => void;
   updatePathStyle: (pathId: string, style: Partial<PathStyle>) => void;
   replacePaths: (newPaths: SVGPath[]) => void;
+
+  // SubPath manipulation actions
+  updateSubPath: (subPathId: string, updates: Partial<SVGSubPath>) => void;
   
   // Viewport actions
   setZoom: (zoom: number, center?: Point) => void;
@@ -206,6 +209,15 @@ export const useEditorStore = create<EditorState & EditorActions>()(
   subscribeWithSelector((set, get) => ({
     ...initialState,
     
+    updateSubPath: (subPathId, updates) =>
+      set((state) => ({
+        paths: state.paths.map((path) => ({
+          ...path,
+          subPaths: path.subPaths.map((subPath) =>
+            subPath.id === subPathId ? { ...subPath, ...updates } : subPath
+          ),
+        })),
+      })),
     // Selection actions
     selectPath: (pathId) =>
       set((state) => ({
@@ -218,21 +230,45 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       })),
       
     selectSubPath: (subPathId) =>
-      set((state) => ({
-        selection: {
-          ...state.selection,
-          selectedSubPaths: [subPathId],
-          selectedPaths: [],
-          selectedCommands: [],
-        },
-      })),
+      set((state) => {
+        // Buscar el subpath y chequear si está lockeado
+        const isLocked = state.paths.some(path =>
+          path.subPaths.some(subPath => subPath.id === subPathId && subPath.locked)
+        );
+        if (isLocked) {
+          // Si está lockeado, no seleccionar
+          return {
+            selection: {
+              ...state.selection,
+              selectedSubPaths: [],
+              selectedPaths: [],
+              selectedCommands: [],
+            },
+          };
+        }
+        return {
+          selection: {
+            ...state.selection,
+            selectedSubPaths: [subPathId],
+            selectedPaths: [],
+            selectedCommands: [],
+          },
+        };
+      }),
       
     selectSubPathMultiple: (subPathId, isShiftPressed = false) =>
       set((state) => {
+        // Buscar el subpath y chequear si está lockeado
+        const isLocked = state.paths.some(path =>
+          path.subPaths.some(subPath => subPath.id === subPathId && subPath.locked)
+        );
+        if (isLocked) {
+          // Si está lockeado, no seleccionar ni modificar selección
+          return { selection: { ...state.selection } };
+        }
         if (isShiftPressed && state.selection.selectedSubPaths.length > 0) {
           // Si Shift está presionado y hay sub-paths seleccionados
           const currentSelection = state.selection.selectedSubPaths;
-          
           if (currentSelection.includes(subPathId)) {
             // Si ya está seleccionado, lo removemos de la selección
             return {
@@ -268,33 +304,75 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       }),
       
     selectCommand: (commandId) =>
-      set((state) => ({
-        selection: {
-          ...state.selection,
-          selectedCommands: [commandId],
-          selectedPaths: [],
-          selectedSubPaths: [],
-        },
-      })),
+      set((state) => {
+        // Buscar el subpath al que pertenece el comando y chequear si está lockeado
+        let isLocked = false;
+        for (const path of state.paths) {
+          for (const subPath of path.subPaths) {
+            if (subPath.commands.some(cmd => cmd.id === commandId)) {
+              if (subPath.locked) {
+                isLocked = true;
+              }
+              break;
+            }
+          }
+          if (isLocked) break;
+        }
+        if (isLocked) {
+          // Si el subpath está lockeado, no seleccionar el comando
+          return {
+            selection: {
+              ...state.selection,
+              selectedCommands: [],
+              selectedPaths: [],
+              selectedSubPaths: [],
+            },
+          };
+        }
+        return {
+          selection: {
+            ...state.selection,
+            selectedCommands: [commandId],
+            selectedPaths: [],
+            selectedSubPaths: [],
+          },
+        };
+      }),
       
     selectMultiple: (ids, type) =>
       set((state) => {
         const newSelection = { ...state.selection };
-        
         if (type === 'paths') {
           newSelection.selectedPaths = ids;
           newSelection.selectedSubPaths = [];
           newSelection.selectedCommands = [];
         } else if (type === 'subpaths') {
-          newSelection.selectedSubPaths = ids;
+          // Filtrar subpaths lockeados
+          const allowed = ids.filter(id =>
+            !state.paths.some(path =>
+              path.subPaths.some(subPath => subPath.id === id && subPath.locked)
+            )
+          );
+          newSelection.selectedSubPaths = allowed;
           newSelection.selectedPaths = [];
           newSelection.selectedCommands = [];
         } else if (type === 'commands') {
-          newSelection.selectedCommands = ids;
+          // Filtrar comandos que pertenezcan a subpaths lockeados
+          const allowed = ids.filter(cmdId => {
+            for (const path of state.paths) {
+              for (const subPath of path.subPaths) {
+                if (subPath.commands.some(cmd => cmd.id === cmdId)) {
+                  if (subPath.locked) return false;
+                  return true;
+                }
+              }
+            }
+            return false;
+          });
+          newSelection.selectedCommands = allowed;
           newSelection.selectedPaths = [];
           newSelection.selectedSubPaths = [];
         }
-        
         return { selection: newSelection };
       }),
       

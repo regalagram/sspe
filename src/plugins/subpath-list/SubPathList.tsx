@@ -4,6 +4,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { getAllSubPaths } from '../../utils/subpath-utils';
 import { subPathToString } from '../../utils/path-utils';
 import { Eye, EyeOff } from 'lucide-react';
+import { Lock, Unlock } from 'lucide-react';
 import { SVGPath, SVGSubPath } from '../../types';
 
 interface SubPathWireframeProps {
@@ -160,10 +161,16 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
   isSelected,
   onSelect,
 }) => {
+  const updateSubPath = useEditorStore(s => s.updateSubPath);
   // Get first command for display info
   const firstCommand = subPath.commands[0];
   const commandCount = subPath.commands.length;
-  
+
+  const handleLockToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    updateSubPath(subPath.id, { locked: !subPath.locked });
+  };
+
   return (
     <div
       onClick={onSelect}
@@ -176,6 +183,9 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
         marginBottom: '3px',
         fontSize: '12px',
         transition: 'all 0.2s ease',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
       }}
       onMouseEnter={(e) => {
         if (!isSelected) {
@@ -188,23 +198,41 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
         }
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-        <SubPathWireframe subPath={subPath} isSelected={isSelected} />
-        <div style={{ width: '100%', textAlign: 'center' }}>
-          <div style={{ marginBottom: '4px' }}>
-            <span style={{ 
-              fontWeight: '500', 
-              color: isSelected ? '#2196f3' : '#333',
-              fontSize: '11px'
-            }}>
-              Sub-Path {subPath.id.slice(-6)}
-            </span>
-          </div>
-          
-          <div style={{ color: '#666', fontSize: '10px', lineHeight: '1.3' }}>
-            <div>Start: {firstCommand?.command} {firstCommand?.x?.toFixed(0)},{firstCommand?.y?.toFixed(0)}</div>
-            <div>{commandCount} command{commandCount !== 1 ? 's' : ''}</div>
-            <div style={{ color: '#999' }}>Path: {path.id.slice(-6)}</div>
+      <button
+        onClick={handleLockToggle}
+        title={subPath.locked ? 'Desbloquear subpath' : 'Bloquear subpath'}
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          marginRight: 6,
+          cursor: 'pointer',
+          color: subPath.locked ? '#d32f2f' : '#888',
+          display: 'flex',
+          alignItems: 'center',
+        }}
+        tabIndex={-1}
+      >
+        {subPath.locked ? <Lock size={16} /> : <Unlock size={16} />}
+      </button>
+      <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+          <SubPathWireframe subPath={subPath} isSelected={isSelected} />
+          <div style={{ width: '100%', textAlign: 'center' }}>
+            <div style={{ marginBottom: '4px' }}>
+              <span style={{
+                fontWeight: '500',
+                color: isSelected ? '#2196f3' : '#333',
+                fontSize: '11px',
+              }}>
+                Sub-Path {subPath.id.slice(-6)}
+              </span>
+            </div>
+            <div style={{ color: '#666', fontSize: '10px', lineHeight: '1.3' }}>
+              <div>Start: {firstCommand?.command} {firstCommand?.x?.toFixed(0)},{firstCommand?.y?.toFixed(0)}</div>
+              <div>{commandCount} command{commandCount !== 1 ? 's' : ''}</div>
+              <div style={{ color: '#999' }}>Path: {path.id.slice(-6)}</div>
+            </div>
           </div>
         </div>
       </div>
