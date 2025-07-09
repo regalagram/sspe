@@ -6,8 +6,6 @@ import {
   loadPreferences,
   savePreferences,
   UserPreferences,
-  saveSVG,
-  loadSVG,
   saveEditorState,
   loadEditorState,
   debounce
