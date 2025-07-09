@@ -30,7 +30,62 @@ export interface UserPreferences {
   };
 }
 
+
+// Storage keys for SVG and editor state
 const STORAGE_KEY = 'svg-editor-preferences';
+const SVG_STORAGE_KEY = 'sspe-svg';
+const EDITOR_STATE_KEY = 'sspe-editor-state';
+
+// Simple debounce util (per key)
+const debounceMap: Record<string, ReturnType<typeof setTimeout> | undefined> = {};
+export function debounce<T extends (...args: any[]) => void>(key: string, fn: T, delay = 500): (...args: Parameters<T>) => void {
+  return (...args: Parameters<T>) => {
+    if (debounceMap[key]) clearTimeout(debounceMap[key]);
+    debounceMap[key] = setTimeout(() => {
+      fn(...args);
+      debounceMap[key] = undefined;
+    }, delay);
+  };
+}
+
+// Save SVG string to localStorage
+export function saveSVG(svgString: string): void {
+  try {
+    localStorage.setItem(SVG_STORAGE_KEY, svgString);
+  } catch (error) {
+    console.warn('Failed to save SVG to localStorage:', error);
+  }
+}
+
+// Load SVG string from localStorage
+export function loadSVG(): string | null {
+  try {
+    return localStorage.getItem(SVG_STORAGE_KEY);
+  } catch (error) {
+    console.warn('Failed to load SVG from localStorage:', error);
+    return null;
+  }
+}
+
+// Save editor state (except SVG) to localStorage
+export function saveEditorState(state: any): void {
+  try {
+    localStorage.setItem(EDITOR_STATE_KEY, JSON.stringify(state));
+  } catch (error) {
+    console.warn('Failed to save editor state to localStorage:', error);
+  }
+}
+
+// Load editor state from localStorage
+export function loadEditorState(): any | null {
+  try {
+    const stored = localStorage.getItem(EDITOR_STATE_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch (error) {
+    console.warn('Failed to load editor state from localStorage:', error);
+    return null;
+  }
+}
 
 const defaultPreferences: UserPreferences = {
   zoom: 1,

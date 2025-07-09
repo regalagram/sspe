@@ -2,7 +2,16 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { EditorState, SVGCommand, SVGPath, Point, EditorCommandType, PathStyle, ViewportState,SVGSubPath } from '../types';
 import { generateId } from '../utils/id-utils.js';
-import { loadPreferences, savePreferences, UserPreferences } from '../utils/persistence';
+import {
+  loadPreferences,
+  savePreferences,
+  UserPreferences,
+  saveSVG,
+  loadSVG,
+  saveEditorState,
+  loadEditorState,
+  debounce
+} from '../utils/persistence';
 import { createNewPath } from '../utils/subpath-utils';
 import { parseSVGToSubPaths } from '../utils/svg-parser';
 import { findSubPathAtPoint, snapToGrid, getAllPathsBounds, getSelectedElementsBounds, getSelectedSubPathsBounds } from '../utils/path-utils';
@@ -92,31 +101,38 @@ interface EditorActions {
   setVisualDebugTransformRotateFactor: (factor: number) => void;
 }
 
-// Load preferences from localStorage
-const preferences = loadPreferences();
-const storedPrecision = preferences.precision ?? 2; // Use nullish coalescing to support 0
-
-const createInitialState = (): EditorState => {
-  // Hardcoded SVG to load as initial state
-  const hardcodedSVG = `
+// Cargar SVG y estado del editor desde localStorage si existen
+const loadInitialState = (): EditorState => {
+  const preferences = loadPreferences();
+  const storedPrecision = preferences.precision ?? 2;
+  const savedSVG = loadSVG();
+  const savedState = loadEditorState();
+  let initialPaths: SVGPath[] = [];
+  if (savedSVG) {
+    try {
+      initialPaths = parseSVGToSubPaths(savedSVG);
+    } catch (error) {
+      console.warn('Failed to parse saved SVG, falling back to default:', error);
+      initialPaths = [];
+    }
+  } else {
+    // Hardcoded SVG fallback
+    const hardcodedSVG = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-32 -32 953 755">
   <path d="M 643 257 C 744 33 296 -150 174 237 C 52 746 439 766 643 257 Z M 643 257 C 602 135 500 33 439 196 C 439 53 317 74 195 216 M 215 264 C 439 142 476 298 215 563 M 11 481 L 154 481 M 520 481 C 602 502 663 461 704 481 M 364 153 C 364 143 374 133 384 133 C 396 133 404 143 404 153 C 404 166 396 174 384 174 C 374 174 364 166 364 153 Z M 373 150 C 373 145 378 142 381 142 C 386 142 389 145 389 150 C 389 155 386 158 381 158 C 378 158 373 155 373 150 Z M 492 155 C 492 143 502 135 512 135 C 525 135 533 143 533 155 C 533 166 525 176 512 176 C 502 176 492 166 492 155 Z M 504 155 C 504 152 507 147 512 147 C 517 147 520 152 520 155 C 520 160 517 164 512 164 C 507 164 504 160 504 155 Z" fill="none" stroke="#000000" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
   <path d="M 819 321 C 812 323 808 326 806 331 C 806 334 806 334 799 333 C 793 332 791 332 792 333 C 792 334 796 336 803 339 C 817 345 818 345 818 350 C 818 352 816 361 812 377 C 808 390 808 390 808 407 C 808 421 808 421 809 438 C 812 469 812 468 816 485 C 819 495 819 497 819 501 C 819 505 819 505 815 502 C 811 499 808 499 807 503 C 807 506 809 507 810 504 C 811 502 810 502 815 506 C 821 510 822 510 821 501 C 821 494 821 492 818 478 C 815 466 814 464 813 453 C 813 448 812 441 812 437 C 811 427 810 415 810 402 C 811 389 811 388 816 370 C 821 347 821 347 819 345 C 817 344 817 343 810 339 C 805 337 805 337 806 336 C 808 335 810 336 812 337 C 819 341 827 342 830 339 C 832 337 832 337 830 336 C 827 332 818 331 813 332 C 811 333 811 333 811 331 C 811 325 815 323 825 323 C 854 323 867 349 873 417 C 873 421 874 427 875 432 C 876 445 875 470 871 487 C 870 493 870 493 871 493 C 872 494 867 510 866 510 C 865 510 863 507 860 496 C 857 484 852 468 849 459 C 845 446 842 434 840 421 C 838 402 838 395 842 384 C 845 374 845 367 842 367 C 841 367 838 370 836 375 C 830 384 830 384 829 381 C 828 374 832 364 837 360 C 843 354 847 355 850 362 C 852 368 855 368 853 362 C 849 352 844 350 837 357 C 828 365 823 382 828 387 C 830 388 830 388 833 384 C 836 377 840 373 841 373 C 842 373 842 375 840 383 C 836 396 835 400 837 412 C 838 430 842 446 853 479 C 856 488 859 498 860 503 C 863 513 864 514 866 514 C 868 514 876 490 874 487 C 874 486 874 485 875 480 C 879 452 879 445 873 394 C 871 385 871 382 868 367 C 861 333 844 317 819 321 M 824 335 C 827 336 828 337 827 338 C 824 339 815 337 815 335 C 815 334 821 334 824 335" fill="#000000" stroke="#000000" />
   <path d="M 868 589 C 865 590 859 593 854 595 C 843 600 839 601 828 604 C 824 605 817 607 813 608 C 798 612 789 614 770 615 C 733 617 720 616 693 610 C 688 609 673 604 672 602 C 671 601 670 600 670 596 C 669 594 667 590 665 589 C 660 586 656 588 645 598 C 636 608 634 609 622 616 C 613 622 593 635 591 637 C 585 642 601 644 618 641 C 645 636 646 636 648 649 C 649 661 651 666 655 670 C 665 680 672 662 673 622 C 673 611 673 608 674 608 C 674 608 678 609 682 610 C 708 619 724 621 752 619 C 784 618 798 616 824 609 C 844 604 847 603 859 596 C 869 592 871 591 872 592 C 876 594 867 601 857 604 C 850 606 851 605 853 610 C 854 614 854 614 853 620 C 851 630 850 637 850 656 C 850 673 850 675 849 675 C 847 675 846 668 843 649 C 841 639 841 639 820 637 C 798 634 779 635 755 640 C 748 641 746 641 720 641 C 688 642 692 641 690 650 C 684 673 683 677 685 677 C 687 677 687 674 690 660 C 694 643 692 645 705 645 C 721 645 750 644 766 641 C 786 638 826 639 836 643 C 838 644 839 646 839 650 C 839 659 843 673 846 676 C 852 684 853 682 854 656 C 854 632 856 611 858 608 C 858 608 859 607 861 607 C 871 603 879 593 876 588 C 875 587 875 587 868 589 M 663 593 C 667 597 667 600 663 603 C 654 606 651 610 648 624 C 646 633 646 633 641 633 C 639 633 637 634 635 634 C 633 634 631 635 629 636 C 627 636 623 637 620 637 C 614 639 598 640 596 638 C 595 637 602 632 623 620 C 634 613 638 609 647 601 C 657 592 660 590 663 593 M 667 605 C 670 607 670 636 668 650 C 667 657 662 670 660 670 C 659 670 656 666 654 663 C 646 647 649 614 659 607 C 662 605 666 604 667 605" fill="#000000" stroke="#000000" />
 </svg>
-  `;
-
-  let initialPaths: SVGPath[] = [];
-  
-  try {
-    // Parse the hardcoded SVG into the app's format
-    initialPaths = parseSVGToSubPaths(hardcodedSVG);
-  } catch (error) {
-    console.warn('Failed to parse hardcoded SVG, falling back to empty paths:', error);
-    initialPaths = [];
+    `;
+    try {
+      initialPaths = parseSVGToSubPaths(hardcodedSVG);
+    } catch (error) {
+      initialPaths = [];
+    }
   }
 
-  return {
+  // Estado base
+  const baseState: EditorState = {
     paths: initialPaths,
     selection: {
       selectedPaths: [],
@@ -149,16 +165,16 @@ const createInitialState = (): EditorState => {
     },
     isFullscreen: false,
     enabledFeatures: new Set([
-      'zoom', 
-      'pan', 
-      'select', 
+      'zoom',
+      'pan',
+      'select',
       'grid',
       ...(preferences.showCommandPoints ? ['command-points'] : []),
       ...(preferences.showControlPoints ? ['control-points'] : []),
       ...(preferences.wireframeMode ? ['wireframe'] : [])
     ]),
     renderVersion: 0,
-    precision: storedPrecision, // Precisión inicial
+    precision: storedPrecision,
     visualDebugSizes: preferences.visualDebugSizes || {
       globalFactor: 1.0,
       commandPointsFactor: 1.0,
@@ -167,9 +183,32 @@ const createInitialState = (): EditorState => {
       transformRotateFactor: 1.0,
     },
   };
+
+  // Si hay estado guardado, mergear (sin sobrescribir paths)
+  if (savedState && typeof savedState === 'object') {
+    // Solo mergear propiedades de primer nivel relevantes
+    // Asegurar que enabledFeatures sea siempre un Set
+    let enabledFeatures = baseState.enabledFeatures;
+    if (savedState.enabledFeatures) {
+      if (savedState.enabledFeatures instanceof Set) {
+        enabledFeatures = savedState.enabledFeatures;
+      } else if (Array.isArray(savedState.enabledFeatures)) {
+        enabledFeatures = new Set(savedState.enabledFeatures);
+      } else if (typeof savedState.enabledFeatures === 'object' && savedState.enabledFeatures !== null) {
+        enabledFeatures = new Set(Object.keys(savedState.enabledFeatures));
+      }
+    }
+    return {
+      ...baseState,
+      ...savedState,
+      enabledFeatures,
+      paths: baseState.paths, // paths solo desde SVG
+    };
+  }
+  return baseState;
 };
 
-const initialState = createInitialState();
+const initialState = loadInitialState();
 
 // Helper function to save current preferences
 const saveCurrentPreferences = (state: EditorState) => {
@@ -1007,7 +1046,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         viewportHeight = window.innerHeight * 0.8; // 80% of window height
       }
       
-      
       // Validate viewport dimensions
       if (!isFinite(viewportWidth) || !isFinite(viewportHeight) || viewportWidth <= 0 || viewportHeight <= 0) {
         console.warn('Invalid viewport dimensions:', viewportWidth, viewportHeight);
@@ -1646,3 +1684,31 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     },
   }))
 );
+
+// Guardado automático debounced de SVG y editor state
+const debouncedSave = debounce('editor-autosave', (state: EditorState) => {
+  // Serializar SVG (debería haber una función que lo haga, aquí se asume paths -> SVG string)
+  // Si tienes una función exportSVG(paths: SVGPath[]): string, úsala aquí
+  let svgString = '';
+  if (typeof window !== 'undefined' && (window as any).exportSVG) {
+    svgString = (window as any).exportSVG(state.paths);
+  } else {
+    // Fallback: no guardar si no hay función
+    svgString = '';
+  }
+  if (svgString) saveSVG(svgString);
+  // Guardar estado del editor (sin paths ni history)
+  const { history, ...rest } = state;
+  saveEditorState({ ...rest });
+}, 500);
+
+// Suscribirse a todos los cambios relevantes
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    // Suscribirse a todos los cambios del estado completo
+    useEditorStore.subscribe(
+      state => state, // selector: todo el estado
+      debouncedSave
+    );
+  }, 0);
+}
