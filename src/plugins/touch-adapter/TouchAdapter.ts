@@ -7,6 +7,10 @@ interface TouchState {
   isPinching: boolean;
   initialPinchDistance: number;
   initialZoom: number;
+  isPanning: boolean;
+  panStartPoint: { x: number; y: number } | null;
+  initialPan: { x: number; y: number } | null;
+  lastCenter: { x: number; y: number } | null;
 }
 
 const touchState: TouchState = {
@@ -14,7 +18,11 @@ const touchState: TouchState = {
   lastTouchTime: 0,
   isPinching: false,
   initialPinchDistance: 0,
-  initialZoom: 1
+  initialZoom: 1,
+  isPanning: false,
+  panStartPoint: null,
+  initialPan: null,
+  lastCenter: null
 };
 
 export const TouchAdapterPlugin: Plugin = {
@@ -86,7 +94,7 @@ function createMouseEvent(
 function handleTouchStart(e: TouchEvent) {
   e.preventDefault();
   const svgElement = e.currentTarget as SVGSVGElement;
-  
+
   // Detectar double tap para zoom
   const currentTime = Date.now();
   if (currentTime - touchState.lastTouchTime < 300 && e.touches.length === 1) {
@@ -94,25 +102,32 @@ function handleTouchStart(e: TouchEvent) {
     return;
   }
   touchState.lastTouchTime = currentTime;
-  
-  // Manejar pinch-to-zoom
+
   if (e.touches.length === 2) {
-    touchState.isPinching = true;
+    // Iniciar gesto con dos dedos
     const touch1 = e.touches[0];
     const touch2 = e.touches[1];
+    const centerX = (touch1.clientX + touch2.clientX) / 2;
+    const centerY = (touch1.clientY + touch2.clientY) / 2;
+    
+    // Guardar estado inicial
+    touchState.panStartPoint = { x: centerX, y: centerY };
+    touchState.lastCenter = { x: centerX, y: centerY };
+    touchState.initialPan = { ...useEditorStore.getState().viewport.pan };
     touchState.initialPinchDistance = Math.hypot(
       touch2.clientX - touch1.clientX,
       touch2.clientY - touch1.clientY
     );
     touchState.initialZoom = useEditorStore.getState().viewport.zoom;
+    touchState.isPanning = true;
+    touchState.isPinching = false;
     return;
   }
-  
+
   // Single touch - simular mousedown
   if (e.touches.length === 1) {
     const touch = e.touches[0];
     touchState.activeTouches.set(touch.identifier, touch);
-    
     const target = document.elementFromPoint(touch.clientX, touch.clientY);
     if (target) {
       const mouseEvent = createMouseEvent('mousedown', touch, target, svgElement);
@@ -124,33 +139,72 @@ function handleTouchStart(e: TouchEvent) {
 function handleTouchMove(e: TouchEvent) {
   e.preventDefault();
   const svgElement = e.currentTarget as SVGSVGElement;
-  
-  // Manejar pinch-to-zoom
-  if (touchState.isPinching && e.touches.length === 2) {
+  const store = useEditorStore.getState();
+
+  if (e.touches.length === 2 && touchState.initialPan && touchState.lastCenter) {
     const touch1 = e.touches[0];
     const touch2 = e.touches[1];
+    const currentCenterX = (touch1.clientX + touch2.clientX) / 2;
+    const currentCenterY = (touch1.clientY + touch2.clientY) / 2;
     const currentDistance = Math.hypot(
       touch2.clientX - touch1.clientX,
       touch2.clientY - touch1.clientY
     );
     
-    const scale = currentDistance / touchState.initialPinchDistance;
-    const newZoom = Math.max(0.1, Math.min(10, touchState.initialZoom * scale));
+    // Detectar si es pinch basándose en el cambio de distancia
+    const distanceChange = Math.abs(currentDistance - touchState.initialPinchDistance);
+    const centerMovement = Math.hypot(
+      currentCenterX - touchState.panStartPoint!.x,
+      currentCenterY - touchState.panStartPoint!.y
+    );
     
-    // Calcular punto central del pinch
-    const centerX = (touch1.clientX + touch2.clientX) / 2;
-    const centerY = (touch1.clientY + touch2.clientY) / 2;
-    
-    const store = useEditorStore.getState();
-    store.setZoom(newZoom, { x: centerX, y: centerY });
+    // Si la distancia entre dedos cambia más que el movimiento del centro, es pinch
+    if (distanceChange > 20 && distanceChange > centerMovement * 0.5) {
+      touchState.isPinching = true;
+    }
+
+    if (touchState.isPinching) {
+      // Pinch-to-zoom
+      const scale = currentDistance / touchState.initialPinchDistance;
+      const newZoom = Math.max(0.1, Math.min(10, touchState.initialZoom * scale));
+      
+      // Zoom centrado en el punto medio entre los dedos
+      const rect = svgElement.getBoundingClientRect();
+      const zoomPoint = {
+        x: currentCenterX - rect.left,
+        y: currentCenterY - rect.top
+      };
+      
+      // Calcular nuevo pan para mantener el punto de zoom fijo
+      const scaleDiff = newZoom / store.viewport.zoom;
+      const newPan = {
+        x: zoomPoint.x - (zoomPoint.x - store.viewport.pan.x) * scaleDiff,
+        y: zoomPoint.y - (zoomPoint.y - store.viewport.pan.y) * scaleDiff
+      };
+      
+      store.setZoom(newZoom);
+      store.setPan(newPan);
+    } else if (touchState.isPanning) {
+      // Pan - usar el movimiento incremental desde el último frame
+      const dx = currentCenterX - touchState.lastCenter.x;
+      const dy = currentCenterY - touchState.lastCenter.y;
+      
+      // Aplicar el desplazamiento considerando el zoom actual
+      store.setPan({
+        x: store.viewport.pan.x + dx,
+        y: store.viewport.pan.y + dy
+      });
+      
+      // Actualizar última posición
+      touchState.lastCenter = { x: currentCenterX, y: currentCenterY };
+    }
     return;
   }
-  
+
   // Single touch - simular mousemove
   if (e.touches.length === 1) {
     const touch = e.touches[0];
     touchState.activeTouches.set(touch.identifier, touch);
-    
     const target = document.elementFromPoint(touch.clientX, touch.clientY);
     if (target) {
       const mouseEvent = createMouseEvent('mousemove', touch, target, svgElement);
@@ -162,36 +216,36 @@ function handleTouchMove(e: TouchEvent) {
 function handleTouchEnd(e: TouchEvent) {
   e.preventDefault();
   const svgElement = e.currentTarget as SVGSVGElement;
-  
-  // Terminar pinch
+
+  // Terminar pinch y pan
   if (e.touches.length < 2) {
     touchState.isPinching = false;
+    touchState.isPanning = false;
+    touchState.panStartPoint = null;
+    touchState.initialPan = null;
+    touchState.lastCenter = null;
   }
-  
+
   // Procesar cada touch que terminó
   for (let i = 0; i < e.changedTouches.length; i++) {
     const touch = e.changedTouches[i];
     const lastTouch = touchState.activeTouches.get(touch.identifier);
-    
     if (lastTouch) {
       const target = document.elementFromPoint(lastTouch.clientX, lastTouch.clientY);
       if (target) {
         // Simular mouseup
         const mouseUpEvent = createMouseEvent('mouseup', lastTouch, target, svgElement);
         target.dispatchEvent(mouseUpEvent);
-        
         // Simular click si no hubo movimiento significativo
         const moved = Math.hypot(
           touch.clientX - lastTouch.clientX,
           touch.clientY - lastTouch.clientY
         );
-        
         if (moved < 10) {
           const clickEvent = createMouseEvent('click', lastTouch, target, svgElement);
           target.dispatchEvent(clickEvent);
         }
       }
-      
       touchState.activeTouches.delete(touch.identifier);
     }
   }
@@ -201,15 +255,31 @@ function handleTouchCancel(e: TouchEvent) {
   // Limpiar estado
   touchState.activeTouches.clear();
   touchState.isPinching = false;
+  touchState.isPanning = false;
+  touchState.panStartPoint = null;
+  touchState.initialPan = null;
+  touchState.lastCenter = null;
 }
 
 function handleDoubleTap(touch: Touch, svgElement: SVGSVGElement) {
   const store = useEditorStore.getState();
-  const point = getTouchPoint(touch, svgElement);
+  const rect = svgElement.getBoundingClientRect();
+  const point = {
+    x: touch.clientX - rect.left,
+    y: touch.clientY - rect.top
+  };
   
   // Zoom in 2x en el punto tocado
   const currentZoom = store.viewport.zoom;
   const newZoom = Math.min(currentZoom * 2, 10);
   
-  store.setZoom(newZoom, { x: touch.clientX, y: touch.clientY });
+  // Calcular nuevo pan para mantener el punto tocado fijo
+  const scaleDiff = newZoom / currentZoom;
+  const newPan = {
+    x: point.x - (point.x - store.viewport.pan.x) * scaleDiff,
+    y: point.y - (point.y - store.viewport.pan.y) * scaleDiff
+  };
+  
+  store.setZoom(newZoom);
+  store.setPan(newPan);
 }
