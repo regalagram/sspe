@@ -225,8 +225,8 @@ export const PathRenderer: React.FC = () => {
               stroke={isWireframeMode ? '#000000' : path.style.stroke}
               strokeWidth={isWireframeMode ? wireframeStrokeWidth : (path.style.strokeWidth || 1) / viewport.zoom}
               strokeDasharray={isWireframeMode ? undefined : path.style.strokeDasharray}
-              strokeLinecap={isWireframeMode ? 'round' : path.style.strokeLinecap}
-              strokeLinejoin={isWireframeMode ? 'round' : path.style.strokeLinejoin}
+              strokeLinecap={path.style.strokeLinecap}
+              strokeLinejoin={path.style.strokeLinejoin}
               fillOpacity={isWireframeMode ? 0 : path.style.fillOpacity}
               strokeOpacity={isWireframeMode ? 1 : path.style.strokeOpacity}
               fillRule={path.style.fillRule || 'nonzero'}
@@ -243,10 +243,9 @@ export const PathRenderer: React.FC = () => {
                   d={dSub}
                   fill="none"
                   stroke="#fff"
-                  strokeWidth={wireframeStrokeWidth}
-                  strokeDasharray={`${8 / viewport.zoom},${5 / viewport.zoom}`}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+                  strokeWidth={wireframeStrokeWidth - 0.8 / viewport.zoom}
+                  strokeLinecap={path.style.strokeLinecap}
+                  strokeLinejoin={path.style.strokeLinejoin}
                   style={{ pointerEvents: 'none' }}
                 />
               );
