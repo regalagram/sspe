@@ -1,5 +1,7 @@
 import React, { MouseEvent, WheelEvent } from 'react';
+import { useEditorStore } from '../store/editorStore';
 import { getSVGPoint } from '../utils/transform-utils';
+import type { EditorState } from '../types';
 
 export interface SVGPoint {
   x: number;
@@ -26,7 +28,7 @@ export interface Plugin {
   version: string;
   enabled: boolean;
   dependencies?: string[];
-  initialize?: (editor: any) => void;
+  initialize?: (editor: ReturnType<typeof useEditorStore>) => void;
   destroy?: () => void;
   onActivate?: () => void;
   onDeactivate?: () => void;
@@ -57,31 +59,31 @@ export interface ShortcutDefinition {
   plugin?: string; // The plugin id or name this shortcut belongs to (assigned automatically)
 }
 
+
 export interface UIComponentDefinition {
   id: string;
-  component: React.ComponentType<any>;
+  component: React.ComponentType<{}>;
   position: 'toolbar' | 'sidebar' | 'statusbar' | 'contextmenu' | 'svg-content';
   order?: number;
 }
 
 export class PluginManager {
-
   private plugins: Map<string, Plugin> = new Map();
   private activeTools: Set<string> = new Set();
   private shortcuts: Map<string, ShortcutDefinition[]> = new Map();
   private svgRef: React.RefObject<SVGSVGElement | null> | null = null;
-  private editorStore: any = null;
+  private editorStore: ReturnType<typeof useEditorStore> | null = null;
   public isShapeCreationMode: boolean = false;
-  
+
   setSVGRef(ref: React.RefObject<SVGSVGElement | null>): void {
     this.svgRef = ref;
   }
 
-  setEditorStore(store: any): void {
+  setEditorStore(store: ReturnType<typeof useEditorStore>): void {
     this.editorStore = store;
   }
 
-  getEditorStore(): any {
+  getEditorStore(): ReturnType<typeof useEditorStore> | null {
     return this.editorStore;
   }
 
@@ -95,7 +97,9 @@ export class PluginManager {
 
   getSVGPoint(e: MouseEvent<SVGElement>): SVGPoint {
     if (!this.svgRef || !this.editorStore) return { x: 0, y: 0 };
-    return getSVGPoint(e, this.svgRef, this.editorStore.viewport);
+    const store = this.editorStore as { viewport: EditorState['viewport'] };
+    const viewport = store.viewport ?? { x: 0, y: 0, width: 0, height: 0, zoom: 1, pan: { x: 0, y: 0 } };
+    return getSVGPoint(e, this.svgRef, viewport);
   }
 
   handleMouseEvent(
