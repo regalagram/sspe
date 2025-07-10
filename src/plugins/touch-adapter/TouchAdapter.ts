@@ -11,10 +11,6 @@ interface TouchState {
   panStartPoint: { x: number; y: number } | null;
   initialPan: { x: number; y: number } | null;
   lastCenter: { x: number; y: number } | null;
-  isDragging: boolean;
-  dragTarget: Element | null;
-  lastDragPoint: { x: number; y: number } | null;
-  hasFiredMouseDown: boolean;
 }
 
 const touchState: TouchState = {
@@ -26,12 +22,11 @@ const touchState: TouchState = {
   isPanning: false,
   panStartPoint: null,
   initialPan: null,
-  lastCenter: null,
-  isDragging: false,
-  dragTarget: null,
-  lastDragPoint: null,
-  hasFiredMouseDown: false
+  lastCenter: null
 };
+
+// Track if we have active synthetic mouse events
+let syntheticMouseActive = false;
 
 export const TouchAdapterPlugin: Plugin = {
   id: 'touch-adapter',
@@ -46,21 +41,18 @@ export const TouchAdapterPlugin: Plugin = {
     // Prevenir comportamiento por defecto en móviles
     svgElement.style.touchAction = 'none';
     
-    // Event listeners
-    svgElement.addEventListener('touchstart', handleTouchStart, { passive: false });
-    svgElement.addEventListener('touchmove', handleTouchMove, { passive: false });
-    svgElement.addEventListener('touchend', handleTouchEnd, { passive: false });
-    svgElement.addEventListener('touchcancel', handleTouchCancel, { passive: false });
+    // Event listeners - captura en fase de captura para interceptar antes
+    document.addEventListener('touchstart', handleTouchStart, { passive: false, capture: true });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false, capture: true });
+    document.addEventListener('touchend', handleTouchEnd, { passive: false, capture: true });
+    document.addEventListener('touchcancel', handleTouchCancel, { passive: false, capture: true });
   },
   
   destroy: () => {
-    const svgElement = document.querySelector('svg');
-    if (!svgElement) return;
-    
-    svgElement.removeEventListener('touchstart', handleTouchStart);
-    svgElement.removeEventListener('touchmove', handleTouchMove);
-    svgElement.removeEventListener('touchend', handleTouchEnd);
-    svgElement.removeEventListener('touchcancel', handleTouchCancel);
+    document.removeEventListener('touchstart', handleTouchStart, { capture: true });
+    document.removeEventListener('touchmove', handleTouchMove, { capture: true });
+    document.removeEventListener('touchend', handleTouchEnd, { capture: true });
+    document.removeEventListener('touchcancel', handleTouchCancel, { capture: true });
   }
 };
 
@@ -72,41 +64,18 @@ function getTouchPoint(touch: Touch, svgElement: SVGSVGElement): DOMPoint {
   return pt.matrixTransform(svgElement.getScreenCTM()?.inverse());
 }
 
-// Crea un evento mouse sintético desde un touch
-function createMouseEvent(
-  type: string, 
-  touch: Touch, 
-  target: Element,
-  svgElement: SVGSVGElement
-): MouseEvent {
-  const event = new MouseEvent(type, {
-    bubbles: true,
-    cancelable: true,
-    view: window,
-    clientX: touch.clientX,
-    clientY: touch.clientY,
-    screenX: touch.screenX,
-    screenY: touch.screenY,
-    button: 0,
-    buttons: type === 'mouseup' ? 0 : 1,
-    relatedTarget: null,
-    ctrlKey: false,
-    shiftKey: false,
-    altKey: false,
-    metaKey: false
-  });
-  
-  return event;
-}
-
 function handleTouchStart(e: TouchEvent) {
+  // Solo procesar si el target está dentro de un SVG
+  const svgElement = (e.target as Element).closest('svg');
+  if (!svgElement) return;
+  
   e.preventDefault();
-  const svgElement = e.currentTarget as SVGSVGElement;
+  e.stopPropagation();
 
   // Detectar double tap para zoom
   const currentTime = Date.now();
   if (currentTime - touchState.lastTouchTime < 300 && e.touches.length === 1) {
-    handleDoubleTap(e.touches[0], svgElement);
+    handleDoubleTap(e.touches[0], svgElement as SVGSVGElement);
     return;
   }
   touchState.lastTouchTime = currentTime;
@@ -132,27 +101,46 @@ function handleTouchStart(e: TouchEvent) {
     return;
   }
 
-  // Single touch - simular mousedown
+  // Single touch - convertir a mousedown
   if (e.touches.length === 1) {
     const touch = e.touches[0];
     touchState.activeTouches.set(touch.identifier, touch);
-    const target = document.elementFromPoint(touch.clientX, touch.clientY);
-    if (target) {
-      // Iniciar estado de arrastre
-      touchState.isDragging = true;
-      touchState.dragTarget = target;
-      touchState.lastDragPoint = { x: touch.clientX, y: touch.clientY };
-      touchState.hasFiredMouseDown = true;
-      
-      const mouseEvent = createMouseEvent('mousedown', touch, target, svgElement);
-      target.dispatchEvent(mouseEvent);
+    syntheticMouseActive = true;
+    
+    // Crear y despachar evento mousedown sintético
+    const mouseEvent = new MouseEvent('mousedown', {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      detail: 1,
+      screenX: touch.screenX,
+      screenY: touch.screenY,
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      metaKey: false,
+      button: 0,
+      buttons: 1,
+      relatedTarget: null
+    });
+    
+    // Despachar en el target original
+    if (e.target) {
+      e.target.dispatchEvent(mouseEvent);
     }
   }
 }
 
 function handleTouchMove(e: TouchEvent) {
+  // Solo procesar si el target está dentro de un SVG
+  const svgElement = (e.target as Element).closest('svg');
+  if (!svgElement) return;
+  
   e.preventDefault();
-  const svgElement = e.currentTarget as SVGSVGElement;
+  e.stopPropagation();
+  
   const store = useEditorStore.getState();
 
   if (e.touches.length === 2 && touchState.initialPan && touchState.lastCenter) {
@@ -164,14 +152,17 @@ function handleTouchMove(e: TouchEvent) {
       touch2.clientX - touch1.clientX,
       touch2.clientY - touch1.clientY
     );
-    
+
     // Detectar si es pinch basándose en el cambio de distancia
     const distanceChange = Math.abs(currentDistance - touchState.initialPinchDistance);
     const centerMovement = Math.hypot(
       currentCenterX - touchState.panStartPoint!.x,
       currentCenterY - touchState.panStartPoint!.y
     );
-    
+
+    // LOG: movimiento del centro y cambio de distancia
+    console.log('[TouchMove] centerMovement:', centerMovement, 'distanceChange:', distanceChange, 'dx:', currentCenterX - touchState.lastCenter.x, 'dy:', currentCenterY - touchState.lastCenter.y);
+
     // Si la distancia entre dedos cambia más que el movimiento del centro, es pinch
     if (distanceChange > 20 && distanceChange > centerMovement * 0.5) {
       touchState.isPinching = true;
@@ -181,88 +172,88 @@ function handleTouchMove(e: TouchEvent) {
       // Pinch-to-zoom
       const scale = currentDistance / touchState.initialPinchDistance;
       const newZoom = Math.max(0.1, Math.min(10, touchState.initialZoom * scale));
-      
+
       // Zoom centrado en el punto medio entre los dedos
       const rect = svgElement.getBoundingClientRect();
       const zoomPoint = {
         x: currentCenterX - rect.left,
         y: currentCenterY - rect.top
       };
-      
+
       // Calcular nuevo pan para mantener el punto de zoom fijo
       const scaleDiff = newZoom / store.viewport.zoom;
       const newPan = {
         x: zoomPoint.x - (zoomPoint.x - store.viewport.pan.x) * scaleDiff,
         y: zoomPoint.y - (zoomPoint.y - store.viewport.pan.y) * scaleDiff
       };
-      
+
       store.setZoom(newZoom);
       store.setPan(newPan);
     } else if (touchState.isPanning) {
       // Pan - usar el movimiento incremental desde el último frame
       const dx = currentCenterX - touchState.lastCenter.x;
       const dy = currentCenterY - touchState.lastCenter.y;
-      
-      // Aplicar el desplazamiento considerando el zoom actual
+
+      // LOG: movimiento incremental
+      console.log('[TouchMove] Pan dx:', dx, 'dy:', dy);
+
+      // Aplicar el desplazamiento
       store.setPan({
         x: store.viewport.pan.x + dx,
         y: store.viewport.pan.y + dy
       });
-      
+
       // Actualizar última posición
       touchState.lastCenter = { x: currentCenterX, y: currentCenterY };
     }
     return;
   }
 
-  // Single touch - simular mousemove
-  if (e.touches.length === 1) {
+  // Single touch - convertir a mousemove
+  if (e.touches.length === 1 && syntheticMouseActive) {
     const touch = e.touches[0];
     touchState.activeTouches.set(touch.identifier, touch);
-    
-    // Si estamos arrastrando y ya se disparó el mousedown
-    if (touchState.isDragging && touchState.hasFiredMouseDown && touchState.dragTarget) {
-      // Solo emitir el evento global si realmente nos movimos
-      if (touchState.lastDragPoint) {
-        const dx = touch.clientX - touchState.lastDragPoint.x;
-        const dy = touch.clientY - touchState.lastDragPoint.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance > 0.5) {
-          // Crear un evento mousemove global
-          // IMPORTANTE: No establecer target ni currentTarget aquí
-          const globalMouseEvent = new MouseEvent('mousemove', {
-            bubbles: true,
-            cancelable: true,
-            view: window,
-            clientX: touch.clientX,
-            clientY: touch.clientY,
-            screenX: touch.screenX,
-            screenY: touch.screenY,
-            button: 0,
-            buttons: 1
-          });
-          
-          // Disparar en el documento para los listeners globales
-          document.dispatchEvent(globalMouseEvent);
-          
-          touchState.lastDragPoint = { x: touch.clientX, y: touch.clientY };
-        }
-      }
-    } else if (!touchState.isDragging) {
-      // Si no estamos arrastrando, comportamiento normal
-      const target = document.elementFromPoint(touch.clientX, touch.clientY);
-      if (target) {
-        const mouseEvent = createMouseEvent('mousemove', touch, target, svgElement);
-        target.dispatchEvent(mouseEvent);
-      }
-    }
+
+    // LOG: touchmove single
+    console.log('[TOUCH-DEBUG] Single touchmove', {
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      screenX: touch.screenX,
+      screenY: touch.screenY,
+      identifier: touch.identifier
+    });
+
+    // Crear evento mousemove sintético
+    const mouseEvent = new MouseEvent('mousemove', {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      detail: 1,
+      screenX: touch.screenX,
+      screenY: touch.screenY,
+      clientX: touch.clientX,
+      clientY: touch.clientY,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      metaKey: false,
+      button: 0,
+      buttons: 1,
+      relatedTarget: null
+    });
+
+    // Despachar en el documento para que sea capturado por listeners globales
+    document.dispatchEvent(mouseEvent);
   }
 }
 
 function handleTouchEnd(e: TouchEvent) {
+  // Solo procesar si el target está dentro de un SVG
+  const svgElement = (e.target as Element).closest('svg');
+  if (!svgElement) return;
+  
   e.preventDefault();
-  const svgElement = e.currentTarget as SVGSVGElement;
+  e.stopPropagation();
 
   // Terminar pinch y pan
   if (e.touches.length < 2) {
@@ -277,56 +268,72 @@ function handleTouchEnd(e: TouchEvent) {
   for (let i = 0; i < e.changedTouches.length; i++) {
     const touch = e.changedTouches[i];
     const lastTouch = touchState.activeTouches.get(touch.identifier);
-    if (lastTouch) {
-      // Si estábamos arrastrando y se disparó mousedown
-      if (touchState.isDragging && touchState.hasFiredMouseDown) {
-        // Emitir mouseup global
-        const globalMouseUpEvent = new MouseEvent('mouseup', {
-          bubbles: true,
-          cancelable: true,
-          view: window,
-          clientX: touch.clientX,
-          clientY: touch.clientY,
-          screenX: touch.screenX,
-          screenY: touch.screenY,
-          button: 0,
-          buttons: 0
-        });
-        
-        document.dispatchEvent(globalMouseUpEvent);
-      } else {
-        // Si no estábamos arrastrando, emitir eventos normales
-        const target = document.elementFromPoint(lastTouch.clientX, lastTouch.clientY);
+    
+    if (lastTouch && syntheticMouseActive) {
+      // Crear evento mouseup sintético
+      const mouseEvent = new MouseEvent('mouseup', {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        detail: 1,
+        screenX: touch.screenX,
+        screenY: touch.screenY,
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        ctrlKey: false,
+        altKey: false,
+        shiftKey: false,
+        metaKey: false,
+        button: 0,
+        buttons: 0,
+        relatedTarget: null
+      });
+      
+      // Despachar en el documento
+      document.dispatchEvent(mouseEvent);
+      
+      // Si no hubo movimiento significativo, generar click
+      const moved = Math.hypot(
+        touch.clientX - lastTouch.clientX,
+        touch.clientY - lastTouch.clientY
+      );
+      if (moved < 10) {
+        const target = document.elementFromPoint(touch.clientX, touch.clientY);
         if (target) {
-          const mouseUpEvent = createMouseEvent('mouseup', lastTouch, target, svgElement);
-          target.dispatchEvent(mouseUpEvent);
-          
-          // Simular click si no hubo movimiento significativo
-          const moved = Math.hypot(
-            touch.clientX - lastTouch.clientX,
-            touch.clientY - lastTouch.clientY
-          );
-          if (moved < 10) {
-            const clickEvent = createMouseEvent('click', lastTouch, target, svgElement);
-            target.dispatchEvent(clickEvent);
-          }
+          const clickEvent = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            detail: 1,
+            screenX: touch.screenX,
+            screenY: touch.screenY,
+            clientX: touch.clientX,
+            clientY: touch.clientY,
+            ctrlKey: false,
+            altKey: false,
+            shiftKey: false,
+            metaKey: false,
+            button: 0,
+            buttons: 0
+          });
+          target.dispatchEvent(clickEvent);
         }
       }
-      
-      touchState.activeTouches.delete(touch.identifier);
     }
+    
+    touchState.activeTouches.delete(touch.identifier);
   }
 
-  // Limpiar estado de arrastre si no quedan touches
+  // Limpiar estado si no quedan touches
   if (e.touches.length === 0) {
-    touchState.isDragging = false;
-    touchState.dragTarget = null;
-    touchState.lastDragPoint = null;
-    touchState.hasFiredMouseDown = false;
+    syntheticMouseActive = false;
   }
 }
 
 function handleTouchCancel(e: TouchEvent) {
+  e.preventDefault();
+  e.stopPropagation();
+  
   // Limpiar estado
   touchState.activeTouches.clear();
   touchState.isPinching = false;
@@ -334,10 +341,7 @@ function handleTouchCancel(e: TouchEvent) {
   touchState.panStartPoint = null;
   touchState.initialPan = null;
   touchState.lastCenter = null;
-  touchState.isDragging = false;
-  touchState.dragTarget = null;
-  touchState.lastDragPoint = null;
-  touchState.hasFiredMouseDown = false;
+  syntheticMouseActive = false;
 }
 
 function handleDoubleTap(touch: Touch, svgElement: SVGSVGElement) {
