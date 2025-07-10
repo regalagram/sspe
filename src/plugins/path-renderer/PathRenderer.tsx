@@ -232,7 +232,27 @@ export const PathRenderer: React.FC = () => {
               fillRule={path.style.fillRule || 'nonzero'}
               style={{ pointerEvents: 'all' }}
             />
-            {/* Invisible overlays for interaction, only for unlocked subpaths */}
+
+            {/* Dibujar subpaths lockeados en wireframe con dash */}
+            {isWireframeMode && path.subPaths.map((subPath) => {
+              if (!subPath.locked) return null;
+              const dSub = subPathToStringInContext(subPath, path.subPaths);
+              return (
+                <path
+                  key={`subpath-locked-wireframe-${subPath.id}`}
+                  d={dSub}
+                  fill="none"
+                  stroke="#fff"
+                  strokeWidth={wireframeStrokeWidth}
+                  strokeDasharray={`${8 / viewport.zoom},${5 / viewport.zoom}`}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ pointerEvents: 'none' }}
+                />
+              );
+            })}
+
+            {/* Invisible overlays for interaction, solo para subpaths desbloqueados */}
             {path.subPaths.map((subPath) => {
               if (subPath.locked) return null;
               const dSub = subPathToStringInContext(subPath, path.subPaths);
