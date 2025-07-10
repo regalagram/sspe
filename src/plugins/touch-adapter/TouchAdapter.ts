@@ -11,6 +11,10 @@ interface TouchState {
   panStartPoint: { x: number; y: number } | null;
   initialPan: { x: number; y: number } | null;
   lastCenter: { x: number; y: number } | null;
+  isDragging: boolean;
+  dragTarget: Element | null;
+  lastDragPoint: { x: number; y: number } | null;
+  hasFiredMouseDown: boolean;
 }
 
 const touchState: TouchState = {
@@ -22,7 +26,11 @@ const touchState: TouchState = {
   isPanning: false,
   panStartPoint: null,
   initialPan: null,
-  lastCenter: null
+  lastCenter: null,
+  isDragging: false,
+  dragTarget: null,
+  lastDragPoint: null,
+  hasFiredMouseDown: false
 };
 
 export const TouchAdapterPlugin: Plugin = {
@@ -71,9 +79,7 @@ function createMouseEvent(
   target: Element,
   svgElement: SVGSVGElement
 ): MouseEvent {
-  const point = getTouchPoint(touch, svgElement);
-  
-  return new MouseEvent(type, {
+  const event = new MouseEvent(type, {
     bubbles: true,
     cancelable: true,
     view: window,
@@ -82,13 +88,15 @@ function createMouseEvent(
     screenX: touch.screenX,
     screenY: touch.screenY,
     button: 0,
-    buttons: 1,
+    buttons: type === 'mouseup' ? 0 : 1,
     relatedTarget: null,
     ctrlKey: false,
     shiftKey: false,
     altKey: false,
     metaKey: false
   });
+  
+  return event;
 }
 
 function handleTouchStart(e: TouchEvent) {
@@ -130,6 +138,12 @@ function handleTouchStart(e: TouchEvent) {
     touchState.activeTouches.set(touch.identifier, touch);
     const target = document.elementFromPoint(touch.clientX, touch.clientY);
     if (target) {
+      // Iniciar estado de arrastre
+      touchState.isDragging = true;
+      touchState.dragTarget = target;
+      touchState.lastDragPoint = { x: touch.clientX, y: touch.clientY };
+      touchState.hasFiredMouseDown = true;
+      
       const mouseEvent = createMouseEvent('mousedown', touch, target, svgElement);
       target.dispatchEvent(mouseEvent);
     }
@@ -205,10 +219,43 @@ function handleTouchMove(e: TouchEvent) {
   if (e.touches.length === 1) {
     const touch = e.touches[0];
     touchState.activeTouches.set(touch.identifier, touch);
-    const target = document.elementFromPoint(touch.clientX, touch.clientY);
-    if (target) {
-      const mouseEvent = createMouseEvent('mousemove', touch, target, svgElement);
-      target.dispatchEvent(mouseEvent);
+    
+    // Si estamos arrastrando y ya se disparó el mousedown
+    if (touchState.isDragging && touchState.hasFiredMouseDown && touchState.dragTarget) {
+      // Solo emitir el evento global si realmente nos movimos
+      if (touchState.lastDragPoint) {
+        const dx = touch.clientX - touchState.lastDragPoint.x;
+        const dy = touch.clientY - touchState.lastDragPoint.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance > 0.5) {
+          // Crear un evento mousemove global
+          // IMPORTANTE: No establecer target ni currentTarget aquí
+          const globalMouseEvent = new MouseEvent('mousemove', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            clientX: touch.clientX,
+            clientY: touch.clientY,
+            screenX: touch.screenX,
+            screenY: touch.screenY,
+            button: 0,
+            buttons: 1
+          });
+          
+          // Disparar en el documento para los listeners globales
+          document.dispatchEvent(globalMouseEvent);
+          
+          touchState.lastDragPoint = { x: touch.clientX, y: touch.clientY };
+        }
+      }
+    } else if (!touchState.isDragging) {
+      // Si no estamos arrastrando, comportamiento normal
+      const target = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (target) {
+        const mouseEvent = createMouseEvent('mousemove', touch, target, svgElement);
+        target.dispatchEvent(mouseEvent);
+      }
     }
   }
 }
@@ -231,23 +278,51 @@ function handleTouchEnd(e: TouchEvent) {
     const touch = e.changedTouches[i];
     const lastTouch = touchState.activeTouches.get(touch.identifier);
     if (lastTouch) {
-      const target = document.elementFromPoint(lastTouch.clientX, lastTouch.clientY);
-      if (target) {
-        // Simular mouseup
-        const mouseUpEvent = createMouseEvent('mouseup', lastTouch, target, svgElement);
-        target.dispatchEvent(mouseUpEvent);
-        // Simular click si no hubo movimiento significativo
-        const moved = Math.hypot(
-          touch.clientX - lastTouch.clientX,
-          touch.clientY - lastTouch.clientY
-        );
-        if (moved < 10) {
-          const clickEvent = createMouseEvent('click', lastTouch, target, svgElement);
-          target.dispatchEvent(clickEvent);
+      // Si estábamos arrastrando y se disparó mousedown
+      if (touchState.isDragging && touchState.hasFiredMouseDown) {
+        // Emitir mouseup global
+        const globalMouseUpEvent = new MouseEvent('mouseup', {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+          screenX: touch.screenX,
+          screenY: touch.screenY,
+          button: 0,
+          buttons: 0
+        });
+        
+        document.dispatchEvent(globalMouseUpEvent);
+      } else {
+        // Si no estábamos arrastrando, emitir eventos normales
+        const target = document.elementFromPoint(lastTouch.clientX, lastTouch.clientY);
+        if (target) {
+          const mouseUpEvent = createMouseEvent('mouseup', lastTouch, target, svgElement);
+          target.dispatchEvent(mouseUpEvent);
+          
+          // Simular click si no hubo movimiento significativo
+          const moved = Math.hypot(
+            touch.clientX - lastTouch.clientX,
+            touch.clientY - lastTouch.clientY
+          );
+          if (moved < 10) {
+            const clickEvent = createMouseEvent('click', lastTouch, target, svgElement);
+            target.dispatchEvent(clickEvent);
+          }
         }
       }
+      
       touchState.activeTouches.delete(touch.identifier);
     }
+  }
+
+  // Limpiar estado de arrastre si no quedan touches
+  if (e.touches.length === 0) {
+    touchState.isDragging = false;
+    touchState.dragTarget = null;
+    touchState.lastDragPoint = null;
+    touchState.hasFiredMouseDown = false;
   }
 }
 
@@ -259,6 +334,10 @@ function handleTouchCancel(e: TouchEvent) {
   touchState.panStartPoint = null;
   touchState.initialPan = null;
   touchState.lastCenter = null;
+  touchState.isDragging = false;
+  touchState.dragTarget = null;
+  touchState.lastDragPoint = null;
+  touchState.hasFiredMouseDown = false;
 }
 
 function handleDoubleTap(touch: Touch, svgElement: SVGSVGElement) {
