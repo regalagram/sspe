@@ -470,6 +470,14 @@ const CreationTool: React.FC = () => {
 - ✅ Plugins with injectable dependencies
 - ✅ Clear separation of logic and presentation
 
+
+
+## 🌐 Interface Language
+
+**All button labels, interface texts, and messages must be in English.** This includes panel titles, tooltips, menus, error messages, and any information visible to the user.
+
+---
+
 ## 📏 Code Standards
 
 ### 20. **Naming Conventions**
