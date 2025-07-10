@@ -17,10 +17,7 @@ export interface SVGCommand {
 export interface SVGSubPath {
   id: string;
   commands: SVGCommand[];
-  /**
-   * Si está en true, el subpath queda inmovilizado e inseleccionable.
-   */
-  locked?: boolean;
+  locked?: boolean; // If true, subpath is locked and unselectable
 }
 
 export interface SVGPath {
