@@ -242,13 +242,18 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
 };
 
 export const SubPathListComponent: React.FC = () => {
+  // All hooks must be at the top level, before any return or condition
   const { 
     paths, 
     selection, 
     selectSubPath, 
     selectSubPathMultiple,
     clearSelection, 
-    zoomToSubPath 
+    zoomToSubPath,
+    lockAllSubPaths,
+    unlockAllSubPaths,
+    invertAllSubPaths,
+    lockSelectedSubPaths
   } = useEditorStore();
   // Estado local para mantener la lista de sub-paths
   const [subPathsList, setSubPathsList] = useState<Array<{ path: SVGPath; subPath: SVGSubPath }>>([]);
@@ -323,6 +328,70 @@ export const SubPathListComponent: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+        <button
+          onClick={lockAllSubPaths}
+          style={{
+            fontSize: '10px',
+            padding: '2px 8px',
+            borderRadius: '3px',
+            border: '1px solid #bbb',
+            background: '#f5f5f5',
+            cursor: 'pointer',
+            color: '#333',
+            fontWeight: 500
+          }}
+        >
+          Lock All
+        </button>
+        <button
+          onClick={unlockAllSubPaths}
+          style={{
+            fontSize: '10px',
+            padding: '2px 8px',
+            borderRadius: '3px',
+            border: '1px solid #bbb',
+            background: '#f5f5f5',
+            cursor: 'pointer',
+            color: '#333',
+            fontWeight: 500
+          }}
+        >
+          Unlock All
+        </button>
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        <button
+          onClick={lockSelectedSubPaths}
+          style={{
+            fontSize: '10px',
+            padding: '2px 8px',
+            borderRadius: '3px',
+            border: '1px solid #bbb',
+            background: '#f5f5f5',
+            cursor: 'pointer',
+            color: '#333',
+            fontWeight: 500
+          }}
+        >
+          Lock Selection
+        </button>
+        <button
+          onClick={invertAllSubPaths}
+          style={{
+            fontSize: '10px',
+            padding: '2px 8px',
+            borderRadius: '3px',
+            border: '1px solid #bbb',
+            background: '#f5f5f5',
+            cursor: 'pointer',
+            color: '#333',
+            fontWeight: 500
+          }}
+        >
+          Invert Lock
+        </button>
+      </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
         <span style={{ fontSize: '11px', color: '#666', fontWeight: 500 }}>
           {subPathsList.length} Sub-Path{subPathsList.length !== 1 ? 's' : ''} Available

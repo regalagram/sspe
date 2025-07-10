@@ -17,6 +17,24 @@ import { findSubPathAtPoint, snapToGrid, getAllPathsBounds, getSelectedElementsB
 import { scaleSubPath, rotateSubPath, translateSubPath, getSubPathCenter, mirrorSubPathHorizontal, mirrorSubPathVertical } from '../utils/transform-subpath-utils';
 
 interface EditorActions {
+  /**
+   * Lock only the selected sub-paths.
+   */
+  lockSelectedSubPaths: () => void;
+  /**
+   * Lock all sub-paths in all paths.
+   */
+  lockAllSubPaths: () => void;
+
+  /**
+   * Unlock all sub-paths in all paths.
+   */
+  unlockAllSubPaths: () => void;
+
+  /**
+   * Invert lock state for all sub-paths in all paths.
+   */
+  invertAllSubPaths: () => void;
   // Selection actions
   selectPath: (pathId: string) => void;
   selectSubPath: (subPathId: string) => void;
@@ -1814,6 +1832,63 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
         
         return newState;
+      });
+    },
+
+    /**
+     * Lock only the selected sub-paths.
+     */
+    lockSelectedSubPaths: () => {
+      set((state) => {
+        const selectedIds = state.selection.selectedSubPaths;
+        if (!selectedIds || selectedIds.length === 0) return {};
+        const newPaths = state.paths.map(path => ({
+          ...path,
+          subPaths: path.subPaths.map(subPath =>
+            selectedIds.includes(subPath.id)
+              ? { ...subPath, locked: true }
+              : subPath
+          )
+        }));
+        return { paths: newPaths };
+      });
+    },
+    /**
+     * Lock all sub-paths in all paths.
+     */
+    lockAllSubPaths: () => {
+      set((state) => {
+        const newPaths = state.paths.map(path => ({
+          ...path,
+          subPaths: path.subPaths.map(subPath => ({ ...subPath, locked: true }))
+        }));
+        return { paths: newPaths };
+      });
+    },
+
+    /**
+     * Unlock all sub-paths in all paths.
+     */
+    unlockAllSubPaths: () => {
+      set((state) => {
+        const newPaths = state.paths.map(path => ({
+          ...path,
+          subPaths: path.subPaths.map(subPath => ({ ...subPath, locked: false }))
+        }));
+        return { paths: newPaths };
+      });
+    },
+
+    /**
+     * Invert lock state for all sub-paths in all paths.
+     */
+    invertAllSubPaths: () => {
+      set((state) => {
+        const newPaths = state.paths.map(path => ({
+          ...path,
+          subPaths: path.subPaths.map(subPath => ({ ...subPath, locked: !subPath.locked }))
+        }));
+        return { paths: newPaths };
       });
     },
   }))
