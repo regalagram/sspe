@@ -95,9 +95,10 @@ const Component = () => {
 ### Plugin Creation Template
 ```typescript
 // File: src/plugins/[plugin-name]/index.ts
-import { Plugin } from '@/types';
-import { PluginControls } from '@/components/PluginControls';
-import { PluginRenderer } from '@/components/PluginRenderer';
+import { Plugin } from '../../core/PluginSystem';
+import { useEditorStore } from '../../store/editorStore';
+import { PluginControls } from './PluginControls';
+import { PluginRenderer } from './PluginRenderer';
 
 export const MyPlugin: Plugin = {
   id: 'my-plugin',
@@ -255,19 +256,14 @@ export const snapToGrid = (point: Point, gridSize: number): Point => ({
 
 ## Plugin Registration
 ```typescript
-// In src/core/PluginSystem.ts
-import { MyPlugin } from '@/plugins/my-plugin';
+// In src/core/PluginInitializer.ts
+import { MyPlugin } from '../plugins/shortcuts/MyPlugin';
 
-const plugins = [
-  MyPlugin,
-  // Other plugins...
-];
 
-plugins.forEach(plugin => {
-  if (plugin.enabled) {
-    registerPlugin(plugin);
-  }
-});
+export const initializePlugins = (): void => {
+  // Register base dependencies first
+  pluginManager.registerPlugin(MyPlugin); 
+};
 ```
 
 ## TypeScript Interfaces

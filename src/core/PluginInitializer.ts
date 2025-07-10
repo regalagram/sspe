@@ -24,6 +24,7 @@ import { PanelModePlugin } from '../plugins/panelmode/PanelMode';
 import { DeletePlugin } from '../plugins/delete/Delete';
 import { FigmaHandlesPlugin } from '../plugins/figma-handles/FigmaHandles';
 import { CurvesPlugin } from '../plugins/curves/Curves';
+import { TouchAdapterPlugin } from '../plugins/touch-adapter/TouchAdapter';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -38,6 +39,7 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(Transform);
   
   // Register other core plugins
+  pluginManager.registerPlugin(TouchAdapterPlugin);
   pluginManager.registerPlugin(PathRendererPlugin);
   pluginManager.registerPlugin(VisualDebugPlugin);
   pluginManager.registerPlugin(CommandPlugin);
