@@ -69,6 +69,16 @@ export const DeleteComponent: React.FC = () => {
       removeCommand(commandId);
     });
 
+    // Eliminar paths vacíos
+    setTimeout(() => {
+      const state = useEditorStore.getState();
+      state.paths.forEach(path => {
+        if (path.subPaths.length === 0) {
+          state.removePath(path.id);
+        }
+      });
+    }, 0);
+
     // Clear selection after deletion
     clearSelection();
   };
@@ -119,6 +129,16 @@ export const DeletePlugin: Plugin = {
         state.selection.selectedCommands.forEach(commandId => {
           state.removeCommand(commandId);
         });
+
+        // Eliminar paths vacíos
+        setTimeout(() => {
+          const current = useEditorStore.getState();
+          current.paths.forEach(path => {
+            if (path.subPaths.length === 0) {
+              current.removePath(path.id);
+            }
+          });
+        }, 0);
 
         // Clear selection after deletion
         state.clearSelection();

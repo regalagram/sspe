@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { EditorState, SVGCommand, SVGPath, Point, EditorCommandType, PathStyle, ViewportState,SVGSubPath } from '../types';
 import { generateId } from '../utils/id-utils.js';
+import { duplicatePath, duplicateSubPath, duplicateCommand } from '../utils/duplicate-utils';
 import {
   loadPreferences,
   savePreferences,
@@ -24,6 +25,8 @@ interface EditorActions {
   selectMultiple: (ids: string[], type: 'paths' | 'subpaths' | 'commands') => void;
   clearSelection: () => void;
   selectSubPathByPoint: (pathId: string, point: Point, isShiftPressed?: boolean) => void;
+  /** Duplica la selección actual (paths, subpaths o comandos). */
+  duplicateSelection: () => void;
   moveSubPath: (subPathId: string, delta: Point) => void;
   
   // Transform actions
@@ -243,6 +246,141 @@ function roundToPrecision(val: number | undefined, precision: number): number | 
 export const useEditorStore = create<EditorState & EditorActions>()(
   subscribeWithSelector((set, get) => ({
     ...initialState,
+    /**
+     * Duplica la selección actual (paths, subpaths o comandos).
+     * Si hay paths seleccionados, duplica esos paths.
+     * Si hay subpaths seleccionados, duplica esos subpaths en sus paths.
+     * Si hay comandos seleccionados, duplica esos comandos en sus subpaths.
+     */
+    duplicateSelection: () => {
+      set((state) => {
+        const { selection, paths } = state;
+        let newPaths = [...paths];
+        let newSelection = { ...selection };
+        const OFFSET = 32; // px
+        // Utilidades para mover entidades
+        function offsetCommand(cmd: SVGCommand, dx: number, dy: number): SVGCommand {
+          return {
+            ...cmd,
+            x: cmd.x !== undefined ? cmd.x + dx : cmd.x,
+            y: cmd.y !== undefined ? cmd.y + dy : cmd.y,
+            x1: cmd.x1 !== undefined ? cmd.x1 + dx : cmd.x1,
+            y1: cmd.y1 !== undefined ? cmd.y1 + dy : cmd.y1,
+            x2: cmd.x2 !== undefined ? cmd.x2 + dx : cmd.x2,
+            y2: cmd.y2 !== undefined ? cmd.y2 + dy : cmd.y2,
+          };
+        }
+        function offsetSubPath(subPath: SVGSubPath, dx: number, dy: number): SVGSubPath {
+          return {
+            ...subPath,
+            commands: subPath.commands.map(cmd => offsetCommand(cmd, dx, dy)),
+          };
+        }
+        function offsetPath(path: SVGPath, dx: number, dy: number): SVGPath {
+          return {
+            ...path,
+            subPaths: path.subPaths.map(sp => offsetSubPath(sp, dx, dy)),
+          };
+        }
+        // Calcular bounding box de la selección
+        let bounds: import('../types').BoundingBox | null = null;
+        if (selection.selectedPaths.length > 0) {
+          // Bounding box de los paths seleccionados
+          bounds = getAllPathsBounds(paths.filter(p => selection.selectedPaths.includes(p.id)));
+        } else if (selection.selectedSubPaths.length > 0) {
+          // Bounding box de los subpaths seleccionados
+          const selectedSubPaths: SVGSubPath[] = [];
+          paths.forEach(path => {
+            path.subPaths.forEach(subPath => {
+              if (selection.selectedSubPaths.includes(subPath.id)) {
+                selectedSubPaths.push(subPath);
+              }
+            });
+          });
+          if (selectedSubPaths.length > 0) {
+            // Usar getAllPathsBounds para subpaths: crear paths temporales
+            const tempPaths = selectedSubPaths.map(sp => ({ id: '', subPaths: [sp], style: {} }));
+            bounds = getAllPathsBounds(tempPaths);
+          }
+        } else if (selection.selectedCommands.length > 0) {
+          // Bounding box de los comandos seleccionados
+          bounds = getSelectedElementsBounds(paths, selection.selectedCommands);
+        }
+        // Offset para que la duplicación no quede encima
+        const dx = bounds ? (bounds.width > 0 ? bounds.width + OFFSET : OFFSET) : OFFSET;
+        const dy = bounds ? (bounds.height > 0 ? bounds.height + OFFSET : OFFSET) : OFFSET;
+
+        if (selection.selectedPaths.length > 0) {
+          // Duplicar paths completos y moverlos
+          const duplicated = selection.selectedPaths.map(pathId => {
+            const orig = paths.find(p => p.id === pathId);
+            return orig ? offsetPath(duplicatePath(orig), dx, dy) : null;
+          }).filter(Boolean) as typeof paths;
+          newPaths = [...paths, ...duplicated];
+          // Seleccionar SOLO los nuevos paths
+          newSelection = {
+            selectedPaths: duplicated.map(p => p.id),
+            selectedSubPaths: [],
+            selectedCommands: [],
+            selectedControlPoints: [],
+          };
+        } else if (selection.selectedSubPaths.length > 0) {
+          // Duplicar subpaths dentro de sus paths y moverlos
+          let newSubPathIds: string[] = [];
+          newPaths = paths.map(path => {
+            const toDuplicate = path.subPaths.filter(sp => selection.selectedSubPaths.includes(sp.id));
+            if (toDuplicate.length === 0) return path;
+            const duplicated = toDuplicate.map(sp => {
+              const dup = offsetSubPath(duplicateSubPath(sp), dx, dy);
+              newSubPathIds.push(dup.id);
+              return dup;
+            });
+            return {
+              ...path,
+              subPaths: [...path.subPaths, ...duplicated],
+            };
+          });
+          // Nueva selección: SOLO los subpaths duplicados
+          newSelection = {
+            selectedPaths: [],
+            selectedSubPaths: newSubPathIds,
+            selectedCommands: [],
+            selectedControlPoints: [],
+          };
+        } else if (selection.selectedCommands.length > 0) {
+          // Duplicar comandos dentro de sus subpaths y moverlos
+          let newCmdIds: string[] = [];
+          newPaths = paths.map(path => ({
+            ...path,
+            subPaths: path.subPaths.map(subPath => {
+              const cmdsToDuplicate = subPath.commands.filter(cmd => selection.selectedCommands.includes(cmd.id));
+              if (cmdsToDuplicate.length === 0) return subPath;
+              const duplicated = cmdsToDuplicate.map(cmd => {
+                const dup = offsetCommand(duplicateCommand(cmd), dx, dy);
+                newCmdIds.push(dup.id);
+                return dup;
+              });
+              return {
+                ...subPath,
+                commands: [...subPath.commands, ...duplicated],
+              };
+            })
+          }));
+          // Nueva selección: SOLO los comandos duplicados
+          newSelection = {
+            selectedPaths: [],
+            selectedSubPaths: [],
+            selectedCommands: newCmdIds,
+            selectedControlPoints: [],
+          };
+        }
+
+        return {
+          paths: newPaths,
+          selection: newSelection,
+        };
+      });
+    },
     
     updateSubPath: (subPathId, updates) =>
       set((state) => ({

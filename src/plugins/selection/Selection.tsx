@@ -2,6 +2,7 @@ import React, { useState, MouseEvent } from 'react';
 import { Plugin, MouseEventHandler, MouseEventContext } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { PluginButton } from '../../components/PluginButton';
+import { Copy } from 'lucide-react';
 import { MousePointer2, XCircle } from 'lucide-react';
 import { getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
@@ -281,6 +282,7 @@ export const SelectionTools: React.FC<SelectionToolsProps> = ({
   onClearSelection,
   selectedCount,
 }) => {
+  const duplicateSelection = useEditorStore(s => s.duplicateSelection);
   return (
     <div className="selection-tools" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <PluginButton
@@ -298,6 +300,14 @@ export const SelectionTools: React.FC<SelectionToolsProps> = ({
         active={false}
         disabled={selectedCount === 0}
         onClick={onClearSelection}
+      />
+      <PluginButton
+        icon={<Copy size={16} />}
+        text="Duplicar selección"
+        color="#28a745"
+        active={false}
+        disabled={selectedCount === 0}
+        onClick={duplicateSelection}
       />
       <div style={{ 
         fontSize: '12px', 
