@@ -252,8 +252,30 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
     height: '16px',
   };
 
+
+  // Pointer event logic to distinguish tap vs scroll
+  const pointerStartY = useRef<number | null>(null);
+  const pointerMoved = useRef<boolean>(false);
+
   const handlePointerDown = (e: React.PointerEvent) => {
-    onToggle();
+    pointerStartY.current = e.clientY;
+    pointerMoved.current = false;
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (pointerStartY.current !== null) {
+      if (Math.abs(e.clientY - pointerStartY.current) > 10) {
+        pointerMoved.current = true;
+      }
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (pointerStartY.current !== null && !pointerMoved.current) {
+      onToggle();
+    }
+    pointerStartY.current = null;
+    pointerMoved.current = false;
   };
 
   return (
@@ -262,6 +284,8 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
         data-accordion-panel-header="true"
         style={headerStyle}
         onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
         onPointerEnter={(e) => {
           if (!isExpanded) {
             e.currentTarget.style.background = '#f5f5f5';
