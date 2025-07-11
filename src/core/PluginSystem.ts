@@ -265,15 +265,7 @@ export class PluginManager {
     }
 
     // Log para debug de teclas
-    console.log('[PluginSystem] keydown:', {
-      key: event.key,
-      code: event.code,
-      ctrl: event.ctrlKey,
-      shift: event.shiftKey,
-      alt: event.altKey,
-      meta: event.metaKey,
-      target: event.target
-    });
+    //console.log('[PluginSystem] keydown:', { key: event.key, code: event.code, ctrl: event.ctrlKey, shift: event.shiftKey, alt: event.altKey, meta: event.metaKey, target: event.target });
 
     // First, let plugins handle the event
     for (const plugin of this.plugins.values()) {
@@ -331,7 +323,7 @@ export class PluginManager {
       if (!found) {
         // Si no se encontró por modo, ejecuta el primero
         event.preventDefault();
-        console.log('[PluginSystem] shortcut triggered (default):', key, shortcuts[0]);
+        //console.log('[PluginSystem] shortcut triggered (default):', key, shortcuts[0]);
         shortcuts[0].action();
       }
       return true;
