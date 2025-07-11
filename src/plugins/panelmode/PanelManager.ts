@@ -36,9 +36,33 @@ interface PanelModeActions {
 type PanelModeStore = PanelModeState & PanelModeActions;
 
 // Load saved mode from localStorage
+
+// Load saved mode from localStorage
 const loadSavedMode = (): PanelMode => {
-  // Always use accordion mode
+  try {
+    const saved = localStorage.getItem('sspe-panel-mode');
+    if (saved) return saved as PanelMode;
+  } catch {}
   return 'accordion';
+};
+
+// Load saved accordionExpandedPanel from localStorage
+const loadSavedAccordionExpandedPanel = (): string | null => {
+  try {
+    const saved = localStorage.getItem('sspe-accordion-expanded-panel');
+    if (saved === null || saved === 'null') return null;
+    return saved;
+  } catch {}
+  return null;
+};
+
+// Load saved accordionVisible from localStorage
+const loadSavedAccordionVisible = (): boolean => {
+  try {
+    const saved = localStorage.getItem('sspe-accordion-visible');
+    if (saved !== null) return saved === 'true';
+  } catch {}
+  return true;
 };
 
 // Load saved panel configurations
@@ -55,46 +79,37 @@ const loadSavedPanels = (): Map<string, PanelConfig> => {
   return new Map();
 };
 
+
 export const usePanelModeStore = create<PanelModeStore>()(
   subscribeWithSelector((set, get) => ({
     mode: loadSavedMode(),
     panels: loadSavedPanels(),
-    accordionExpandedPanel: null,
-    accordionVisible: true, // Default to visible
+    accordionExpandedPanel: loadSavedAccordionExpandedPanel(),
+    accordionVisible: loadSavedAccordionVisible(),
 
     setMode: (mode: PanelMode) => {
       set({ mode });
       try {
         localStorage.setItem('sspe-panel-mode', mode);
-      } catch {
-        // Ignore storage errors
-      }
+      } catch {}
     },
 
     registerPanel: (config: PanelConfig) => {
       set((state) => {
         const newPanels = new Map(state.panels);
         const existingPanel = newPanels.get(config.id);
-        
-        // If panel exists, preserve its enabled state and only update other properties
         if (existingPanel) {
           newPanels.set(config.id, {
             ...config,
-            enabled: existingPanel.enabled, // Preserve enabled state
+            enabled: existingPanel.enabled,
           });
         } else {
-          // New panel, use the provided config
           newPanels.set(config.id, config);
         }
-        
-        // Save to localStorage
         try {
           const configsObj = Object.fromEntries(newPanels.entries());
           localStorage.setItem('sspe-panel-configs', JSON.stringify(configsObj));
-        } catch {
-          // Ignore storage errors
-        }
-        
+        } catch {}
         return { panels: newPanels };
       });
     },
@@ -105,45 +120,33 @@ export const usePanelModeStore = create<PanelModeStore>()(
         const panel = newPanels.get(panelId);
         if (panel) {
           newPanels.set(panelId, { ...panel, enabled: true });
-          
-          // Save to localStorage
           try {
             const configsObj = Object.fromEntries(newPanels.entries());
             localStorage.setItem('sspe-panel-configs', JSON.stringify(configsObj));
-          } catch {
-            // Ignore storage errors
-          }
+          } catch {}
         }
         return { panels: newPanels };
       });
     },
 
     disablePanel: (panelId: string) => {
-      // Prevent disabling the Panel Mode panel itself
-      if (panelId === 'panel-mode-ui') {
-        return;
-      }
-      
+      if (panelId === 'panel-mode-ui') return;
       set((state) => {
         const newPanels = new Map(state.panels);
         const panel = newPanels.get(panelId);
         if (panel) {
           newPanels.set(panelId, { ...panel, enabled: false });
-          
-          // If this panel is currently expanded in accordion, close it
           const newState: any = { panels: newPanels };
           if (state.accordionExpandedPanel === panelId) {
             newState.accordionExpandedPanel = null;
+            try {
+              localStorage.setItem('sspe-accordion-expanded-panel', 'null');
+            } catch {}
           }
-          
-          // Save to localStorage
           try {
             const configsObj = Object.fromEntries(newPanels.entries());
             localStorage.setItem('sspe-panel-configs', JSON.stringify(configsObj));
-          } catch {
-            // Ignore storage errors
-          }
-          
+          } catch {}
           return newState;
         }
         return { panels: newPanels };
@@ -151,11 +154,7 @@ export const usePanelModeStore = create<PanelModeStore>()(
     },
 
     togglePanel: (panelId: string) => {
-      // Prevent toggling the Panel Mode panel itself
-      if (panelId === 'panel-mode-ui') {
-        return;
-      }
-      
+      if (panelId === 'panel-mode-ui') return;
       const panel = get().panels.get(panelId);
       if (panel) {
         if (panel.enabled) {
@@ -168,14 +167,26 @@ export const usePanelModeStore = create<PanelModeStore>()(
 
     setAccordionExpanded: (panelId: string | null) => {
       set({ accordionExpandedPanel: panelId });
+      try {
+        localStorage.setItem('sspe-accordion-expanded-panel', panelId === null ? 'null' : panelId);
+      } catch {}
     },
 
     setAccordionVisible: (visible: boolean) => {
       set({ accordionVisible: visible });
+      try {
+        localStorage.setItem('sspe-accordion-visible', visible ? 'true' : 'false');
+      } catch {}
     },
 
     toggleAccordionVisible: () => {
-      set((state) => ({ accordionVisible: !state.accordionVisible }));
+      set((state) => {
+        const newVisible = !state.accordionVisible;
+        try {
+          localStorage.setItem('sspe-accordion-visible', newVisible ? 'true' : 'false');
+        } catch {}
+        return { accordionVisible: newVisible };
+      });
     },
 
     reorderPanel: (panelId: string, newOrder: number) => {
@@ -184,14 +195,10 @@ export const usePanelModeStore = create<PanelModeStore>()(
         const panel = newPanels.get(panelId);
         if (panel) {
           newPanels.set(panelId, { ...panel, order: newOrder });
-          
-          // Save to localStorage
           try {
             const configsObj = Object.fromEntries(newPanels.entries());
             localStorage.setItem('sspe-panel-configs', JSON.stringify(configsObj));
-          } catch {
-            // Ignore storage errors
-          }
+          } catch {}
         }
         return { panels: newPanels };
       });
