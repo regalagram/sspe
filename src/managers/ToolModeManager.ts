@@ -32,179 +32,166 @@ export interface ToolModeOptions {
 export class ToolModeManager {
   private state: ToolModeState = { activeMode: 'select' };
   private listeners: Array<(state: ToolModeState) => void> = [];
-  
+
   // Referencias a managers externos (se setean dinámicamente)
   private shapeManager: any = null;
   private curvesManager: any = null;
   private pencilManager: any = null;
   private creationManager: any = null;
-  
+
   constructor() {
-      }
-  
+  }
+
   /**
    * Registrar managers externos para coordinación
    */
   setShapeManager(manager: any) {
     this.shapeManager = manager;
   }
-  
+
   setCurvesManager(manager: any) {
     this.curvesManager = manager;
   }
-  
+
   setPencilManager(manager: any) {
     this.pencilManager = manager;
   }
-  
+
   setCreationManager(manager: any) {
     this.creationManager = manager;
   }
-  
+
   /**
    * Obtener el estado actual del modo
    */
   getState(): ToolModeState {
     return { ...this.state };
   }
-  
+
   getActiveMode(): ToolMode {
     return this.state.activeMode;
   }
-  
+
   /**
    * Verificar si un modo específico está activo
    */
   isActive(mode: ToolMode): boolean {
     return this.state.activeMode === mode;
   }
-  
+
   /**
    * Cambiar modo con desactivación automática del anterior
    */
   setMode(mode: ToolMode, options?: ToolModeOptions): void {
     const previousMode = this.state.activeMode;
-    
-        
+
     // Si ya estamos en el modo solicitado, no hacer nada
     if (previousMode === mode && this.isModeConfigurationSame(options)) {
-            return;
+      return;
     }
-    
+
     // Desactivar modo anterior
     this.deactivateCurrentMode();
-    
+
     // Activar nuevo modo
     this.activateNewMode(mode, options);
-    
+
     // Notificar cambio
     this.notifyListeners();
-    
-      }
-  
+
+  }
+
   /**
    * Verificar si la configuración del modo es la misma
    */
   private isModeConfigurationSame(options?: ToolModeOptions): boolean {
     if (!options) return true;
-    
-    return this.state.createSubMode === options.commandType && 
-           this.state.shapeId === options.shapeId;
+
+    return this.state.createSubMode === options.commandType &&
+      this.state.shapeId === options.shapeId;
   }
-  
+
   /**
    * Desactivar el modo actual
    */
   private deactivateCurrentMode(): void {
     const currentMode = this.state.activeMode;
-    
-        
+
     switch (currentMode) {
       case 'shapes':
         if (this.shapeManager) {
-                    this.shapeManager.stopShapeCreation();
+          this.shapeManager.stopShapeCreation();
         }
         break;
-        
+
       case 'curves':
         if (this.curvesManager) {
-                    this.curvesManager.deactivateExternally();
+          this.curvesManager.deactivateExternally();
         }
         break;
-        
+
       case 'pencil':
-                if (this.pencilManager) {
+        console.log('Desactivando Pencil Manager');
+        if (this.pencilManager) {
           this.pencilManager.deactivateExternally();
-        } else {
-          // Fallback si no hay manager
-          const store = useEditorStore.getState();
-          if (store.mode.current === 'create' && store.mode.createMode?.commandType === 'PENCIL') {
-            store.exitCreateMode();
-          }
-        }
+        } 
         break;
-        
+
       case 'creation':
-                if (this.creationManager) {
+        if (this.creationManager) {
           this.creationManager.deactivateExternally();
-        } else {
-          // Fallback si no hay manager
-          const editorStore = useEditorStore.getState();
-          if (editorStore.mode.current === 'create') {
-            editorStore.exitCreateMode();
-          }
         }
         break;
-        
+
       case 'select':
         // Select mode no necesita desactivación especial
         break;
     }
-    
+
     // Limpiar estado anterior
     this.state.createSubMode = undefined;
     this.state.shapeId = undefined;
     this.state.metadata = undefined;
   }
-  
+
   /**
    * Activar el nuevo modo
    */
   private activateNewMode(mode: ToolMode, options?: ToolModeOptions): void {
-        
+
     this.state.activeMode = mode;
-    
+
     switch (mode) {
       case 'shapes':
         if (options?.shapeId && this.shapeManager) {
           this.state.shapeId = options.shapeId;
           this.state.metadata = options.metadata;
-                    this.shapeManager.startShapeCreation(options.shapeId);
+          this.shapeManager.startShapeCreation(options.shapeId);
         }
         break;
-        
+
       case 'curves':
         if (this.curvesManager) {
-                    this.curvesManager.activateExternally();
+          this.curvesManager.activateExternally();
         } else {
           // Fallback si no hay manager
           useEditorStore.getState().setMode('curves');
         }
         break;
-        
+
       case 'pencil':
-                if (this.pencilManager) {
+        if (this.pencilManager) {
           this.pencilManager.activateExternally();
         } else {
           // Fallback si no hay manager
           useEditorStore.getState().setCreateMode('PENCIL');
         }
         break;
-        
+
       case 'creation':
         if (options?.commandType) {
           this.state.createSubMode = options.commandType;
-                    if (this.creationManager) {
+          if (this.creationManager) {
             this.creationManager.activateExternally(options.commandType);
           } else {
             // Fallback si no hay manager
@@ -212,13 +199,13 @@ export class ToolModeManager {
           }
         }
         break;
-        
+
       case 'select':
-                useEditorStore.getState().setMode('select');
+        useEditorStore.getState().setMode('select');
         break;
     }
   }
-  
+
   /**
    * Agregar listener para cambios de estado
    */
@@ -231,7 +218,7 @@ export class ToolModeManager {
       }
     };
   }
-  
+
   /**
    * Notificar a todos los listeners
    */
@@ -244,17 +231,17 @@ export class ToolModeManager {
       }
     });
   }
-  
+
   /**
    * Método para casos especiales donde un manager necesita notificar
    * que ha sido desactivado externamente (ej: Escape key)
    */
   notifyModeDeactivated(mode: ToolMode): void {
     if (this.state.activeMode === mode) {
-            this.setMode('select');
+      this.setMode('select');
     }
   }
-  
+
   /**
    * Obtener información del modo para debugging
    */

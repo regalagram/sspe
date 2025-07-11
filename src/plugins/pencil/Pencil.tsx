@@ -2,7 +2,6 @@ import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { pencilManager } from './PencilManager';
 import { PencilUI } from './PencilUI';
-import { PencilDebug } from './PencilDebug';
 import { toolModeManager } from '../../managers/ToolModeManager';
 
 export const PencilPlugin: Plugin = {
@@ -27,13 +26,6 @@ export const PencilPlugin: Plugin = {
   },
   
   shortcuts: [
-    {
-      key: 'p',
-      description: 'Activate Pencil Tool',
-      action: () => {
-        toolModeManager.setMode('pencil');
-      }
-    },
     {
       key: 'Escape',
       description: 'Exit Pencil Mode',
@@ -65,12 +57,6 @@ export const PencilPlugin: Plugin = {
       component: PencilUI,
       position: 'sidebar',
       order: 4
-    },
-    {
-      id: 'pencil-debug',
-      component: PencilDebug,
-      position: 'svg-content',
-      order: 100
     }
   ]
 };

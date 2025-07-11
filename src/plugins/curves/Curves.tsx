@@ -23,21 +23,6 @@ export const CurvesPlugin: Plugin = {
   
   shortcuts: [
     {
-      key: 'u',
-      description: 'Curve Tool',
-      action: () => {
-        toolModeManager.setMode('curves');
-      }
-    },
-    {
-      key: 'b',
-      modifiers: ['ctrl'],
-      description: 'Bézier Curve Tool',
-      action: () => {
-        toolModeManager.setMode('curves');
-      }
-    },
-    {
       key: 'Escape',
       description: 'Exit Curve Tool',
       action: () => {
