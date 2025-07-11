@@ -9,7 +9,7 @@
 
 ## Core Architecture Rules
 
-### 1. Plugin System (MANDATORY)
+### Plugin System (MANDATORY)
 
 Every feature MUST be a plugin following this interface:
 
@@ -27,18 +27,18 @@ interface Plugin {
   tools?: ToolDefinition[];
   shortcuts?: ShortcutDefinition[];
   ui?: UIComponentDefinition[];
-  mouseHandlers?: MouseEventHandler;
+  pointerHandlers?: PointerEventHandler;
   handleKeyDown?: (e: KeyboardEvent) => boolean;
   handleKeyUp?: (e: KeyboardEvent) => boolean;
 }
 ```
 
-### 2. UI Component Positions
+### UI Component Positions
 Only these positions are valid:
 - `accordion` - Collapsible panels in sidebar
 - `svg-content` - Inside SVG canvas
 
-### 3. Directory Structure (STRICT)
+### Directory Structure (STRICT)
 ```
 src/
 ├── core/               # Core system only
@@ -72,6 +72,17 @@ src/
 - `utils/`: Shared utilities used by multiple plugins
 - `styles/`: Global CSS files only
 - `hooks/`: Custom React hooks shared across plugins
+
+### Pointer Event Management (MANDATORY)
+
+**Always use pointer event management for all input interactions.**
+
+- All event handling must use Pointer events (`PointerEvent`).
+- Do **not** use Mouse, Touch, or Pencil event handlers directly.
+- All plugins, UI components, and logic must be designed for pointer event compatibility.
+- This ensures unified handling for mouse, touch, pen, and other input devices.
+
+**DO NOT** use `onMouseDown`, `onTouchStart`, or any device-specific event. Use only `onPointerDown`, `onPointerMove`, `onPointerUp`, etc.
 
 ## Code Generation Rules
 
@@ -133,8 +144,8 @@ export const MyPlugin: Plugin = {
     }
   ],
   
-  mouseHandlers: {
-    onMouseDown: (e, context) => {
+  pointerHandlers: {
+    onPointerDown: (e, context) => {
       // Return true to stop propagation
       return false;
     }
@@ -181,11 +192,11 @@ const SVGElement: React.FC = () => {
 };
 ```
 
-### Mouse Event Handling
+### Pointer Event Handling
 ```typescript
-// In plugin mouseHandlers
-mouseHandlers: {
-  onMouseDown: (e: MouseEvent<SVGElement>, context: MouseEventContext) => {
+// In plugin pointerHandlers
+pointerHandlers: {
+  onPointerDown: (e: PointerEvent<SVGElement>, context: PointerEventContext) => {
     const element = e.target as SVGElement;
     const elementType = element.dataset.elementType;
     const elementId = element.dataset.elementId;
@@ -211,7 +222,8 @@ mouseHandlers: {
 7. **Separate UI and logic** components
 8. **Scale elements** inversely to zoom
 9. **Use data attributes** for element identification
-10. **Return boolean** from mouse handlers
+10. **Return boolean** from pointer handlers
+11. **Always use pointer event management for all input**
 
 ### DON'T ❌
 1. **No business logic** in UI components
@@ -223,6 +235,7 @@ mouseHandlers: {
 7. **No multiple active tools**
 8. **No features outside plugins**
 9. **No imperative APIs**
+10. **Never use Mouse, Touch, or Pencil event handlers** (`onMouseDown`, `onTouchStart`, etc.)
 
 ## Common Patterns
 
@@ -356,8 +369,9 @@ When generating code:
 6. Register in plugin system
 7. Use central store for state
 8. Scale SVG elements with zoom
-9. Handle mouse events properly
+9. Handle pointer events properly
 10. Add keyboard shortcuts
 11. Test with enable/disable
+12. Always use pointer event management for all input (never Mouse, Touch, or Pencil events)
 
 Remember: **Everything is a plugin, no exceptions.**

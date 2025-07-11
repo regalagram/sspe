@@ -10,6 +10,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+  overscroll-behavior-x: none;
 }
 
 #root {
@@ -296,6 +298,11 @@ button.active:hover {
   user-select: none;
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  /* Asegurar que el contenedor ocupe todo el espacio necesario */
+  width: 100%;
+  height: 100vh;
+  position: relative;
 }
 
 
@@ -320,5 +327,11 @@ button.active:hover {
 }
 
 .svg-editor svg {
+  overscroll-behavior: none;
+  overscroll-behavior-x: none;
   touch-action: none;
+}
+
+html,body {
+    overscroll-behavior-x: none
 }
