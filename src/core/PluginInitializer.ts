@@ -24,6 +24,7 @@ import { PanelModePlugin } from '../plugins/panelmode/PanelMode';
 import { DeletePlugin } from '../plugins/delete/Delete';
 import { FigmaHandlesPlugin } from '../plugins/figma-handles/FigmaHandles';
 import { CurvesPlugin } from '../plugins/curves/Curves';
+import { GesturesPlugin } from '../plugins/gestures/Gestures';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -32,6 +33,7 @@ import { CurvesPlugin } from '../plugins/curves/Curves';
 export const initializePlugins = (): void => {
   // Register base dependencies first
   pluginManager.registerPlugin(PointerInteractionPlugin); // Required by pencil
+  pluginManager.registerPlugin(GesturesPlugin); // Gestures for pinch/pan on canvas, need to be before selection and transform plugins
   pluginManager.registerPlugin(SelectionPlugin); // Required by subpath-transform and point-transform
   
   // Register Transform early so it can handle transform handles before PathRenderer
