@@ -3,6 +3,7 @@ import { PluginButton } from '../../components/PluginButton';
 import { SHAPE_TEMPLATES, ShapeTemplate } from './ShapeDefinitions';
 import { shapeManager } from './ShapeManager';
 import { toolModeManager } from '../../managers/ToolModeManager';
+import { useEditorStore } from '../../store/editorStore';
 import { 
   Square, 
   Circle, 
@@ -147,48 +148,38 @@ const SizeControl: React.FC<SizeControlProps> = ({ size, onSizeChange }) => {
 };
 
 export const ShapesUI: React.FC = () => {
+  const { shapeSize = 50, setShapeSize } = useEditorStore();
   const [activeShapeId, setActiveShapeId] = useState<string | null>(null);
-  const [currentSize, setCurrentSize] = useState<number>(50);
 
-  // Initialize shape manager with current size on mount
   React.useEffect(() => {
-    shapeManager.setCurrentSize(currentSize);
-  }, []);
+    shapeManager.setCurrentSize(shapeSize);
+  }, [shapeSize]);
 
-  // Sync with shape manager state
   React.useEffect(() => {
     const checkShapeManagerState = () => {
       const managerShapeId = shapeManager.getCurrentShapeId();
       const isCreating = shapeManager.isInShapeCreationMode();
-      
       if (!isCreating || !managerShapeId) {
         setActiveShapeId(null);
       } else if (managerShapeId !== activeShapeId) {
         setActiveShapeId(managerShapeId);
       }
     };
-
-    // Check state periodically (could be optimized with events)
     const interval = setInterval(checkShapeManagerState, 100);
-    
     return () => clearInterval(interval);
   }, [activeShapeId]);
 
   const handleShapeSelect = (shapeId: string) => {
-            
     if (activeShapeId === shapeId) {
-      // Deselect if clicking the same shape
-            setActiveShapeId(null);
+      setActiveShapeId(null);
       if (toolModeManager.isActive('shapes')) {
         toolModeManager.setMode('select');
       } else {
         shapeManager.stopShapeCreation();
       }
     } else {
-      // Select new shape
-            setActiveShapeId(shapeId);
-      shapeManager.setCurrentSize(currentSize);
-      // Usar ToolModeManager para coordinar la activación
+      setActiveShapeId(shapeId);
+      shapeManager.setCurrentSize(shapeSize);
       toolModeManager.setMode('shapes', { shapeId: shapeId });
     }
   };
@@ -203,11 +194,10 @@ export const ShapesUI: React.FC = () => {
   };
 
   const handleSizeChange = (newSize: number) => {
-    setCurrentSize(newSize);
+    setShapeSize(newSize);
     shapeManager.setCurrentSize(newSize);
   };
 
-  // Get all shapes from all categories
   const allShapes = SHAPE_TEMPLATES;
 
   return (
@@ -217,10 +207,7 @@ export const ShapesUI: React.FC = () => {
         flexDirection: 'column',
         gap: '8px',
       }}>
-        {/* Size Control */}
-        <SizeControl size={currentSize} onSizeChange={handleSizeChange} />
-
-        {/* Shape Buttons Grid */}
+        <SizeControl size={shapeSize} onSizeChange={handleSizeChange} />
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
@@ -236,8 +223,6 @@ export const ShapesUI: React.FC = () => {
             />
           ))}
         </div>
-
-        {/* Exit Shape Mode Button */}
         {activeShapeId && (
             <PluginButton
               icon={<LogOut size={16} />}

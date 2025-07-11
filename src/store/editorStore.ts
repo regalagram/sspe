@@ -9,6 +9,7 @@ import { parseSVGToSubPaths } from '../utils/svg-parser';
 import { findSubPathAtPoint, snapToGrid, getAllPathsBounds, getSelectedElementsBounds, getSelectedSubPathsBounds } from '../utils/path-utils';
 import { scaleSubPath, rotateSubPath, translateSubPath, getSubPathCenter, mirrorSubPathHorizontal, mirrorSubPathVertical } from '../utils/transform-subpath-utils';
 interface EditorActions {
+  setShapeSize: (size: number) => void;
   addCommand: (subPathId: string, command: Omit<SVGCommand, 'id'>) => string;
   addPath: (style?: PathStyle, x?: number, y?: number) => string;
   addSubPath: (pathId: string) => string;
@@ -148,6 +149,11 @@ function roundToPrecision(val: number | undefined, precision: number): number | 
 }
 export const useEditorStore = create<EditorState & EditorActions>()(
   subscribeWithSelector((set, get) => ({
+    setShapeSize: (size) => {
+      set((state) => ({
+        shapeSize: Math.max(10, Math.min(300, size)),
+      }));
+    },
     ...initialState,
     duplicateSelection: () => {
       set((state) => {
@@ -1262,8 +1268,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       })),
     toggleFeature: (feature) =>
       set((state) => {
-        console.log('Toggling feature:', feature);
-        console.log('Current enabled features:', state.enabledFeatures);
         if (!(feature in state.enabledFeatures)) {
           return {};
         }

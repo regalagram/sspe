@@ -91,6 +91,7 @@ export interface EditorMode {
 }
 
 export interface EditorState {
+  shapeSize?: number;
   paths: SVGPath[];
   selection: SelectionState;
   viewport: ViewportState;
