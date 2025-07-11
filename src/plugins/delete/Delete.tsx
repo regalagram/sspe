@@ -33,54 +33,58 @@ export const DeleteControl: React.FC<DeleteControlProps> = ({
   );
 };
 
-export const DeleteComponent: React.FC = () => {
-  const { 
-    selection, 
-    removePath, 
-    removeSubPath, 
-    removeCommand, 
-    clearSelection,
-    pushToHistory 
-  } = useEditorStore();
+// Método reutilizable para ejecutar la secuencia de borrado
+export function executeDelete(editorState?: any) {
+  // Si se pasa un estado, usarlo; si no, usar el hook actual
+  const state = editorState ?? useEditorStore.getState();
 
+  const hasSelection =
+    state.selection.selectedPaths.length > 0 ||
+    state.selection.selectedSubPaths.length > 0 ||
+    state.selection.selectedCommands.length > 0;
+  if (!hasSelection) return;
+
+  // Save current state to history before deletion
+  state.pushToHistory();
+
+  // Delete selected paths
+  state.selection.selectedPaths.forEach((pathId: string) => {
+    state.removePath(pathId);
+  });
+
+  // Delete selected subpaths
+  state.selection.selectedSubPaths.forEach((subPathId: string) => {
+    state.removeSubPath(subPathId);
+  });
+
+  // Delete selected commands
+  state.selection.selectedCommands.forEach((commandId: string) => {
+    state.removeCommand(commandId);
+  });
+
+  // Eliminar paths vacíos
+  setTimeout(() => {
+    const current = useEditorStore.getState();
+    current.paths.forEach((path: any) => {
+      if (path.subPaths.length === 0) {
+        current.removePath(path.id);
+      }
+    });
+  }, 500);
+
+  // Clear selection after deletion
+  state.clearSelection();
+}
+
+export const DeleteComponent: React.FC = () => {
+  const { selection } = useEditorStore();
   const hasSelection = 
     selection.selectedPaths.length > 0 || 
     selection.selectedSubPaths.length > 0 || 
     selection.selectedCommands.length > 0;
 
   const handleDelete = () => {
-    if (!hasSelection) return;
-
-    // Save current state to history before deletion
-    pushToHistory();
-
-    // Delete selected paths
-    selection.selectedPaths.forEach(pathId => {
-      removePath(pathId);
-    });
-
-    // Delete selected subpaths
-    selection.selectedSubPaths.forEach(subPathId => {
-      removeSubPath(subPathId);
-    });
-
-    // Delete selected commands
-    selection.selectedCommands.forEach(commandId => {
-      removeCommand(commandId);
-    });
-
-    // Eliminar paths vacíos
-    setTimeout(() => {
-      const state = useEditorStore.getState();
-      state.paths.forEach(path => {
-        if (path.subPaths.length === 0) {
-          state.removePath(path.id);
-        }
-      });
-    }, 0);
-
-    // Clear selection after deletion
-    clearSelection();
+    executeDelete();
   };
 
   return (
@@ -104,78 +108,16 @@ export const DeletePlugin: Plugin = {
       key: 'Delete',
       description: 'Delete selected elements',
       action: () => {
-        const state = useEditorStore.getState();
-        const hasSelection = 
-          state.selection.selectedPaths.length > 0 || 
-          state.selection.selectedSubPaths.length > 0 || 
-          state.selection.selectedCommands.length > 0;
-
-        if (!hasSelection) return;
-
-        // Save current state to history before deletion
-        state.pushToHistory();
-
-        // Delete selected paths
-        state.selection.selectedPaths.forEach(pathId => {
-          state.removePath(pathId);
-        });
-
-        // Delete selected subpaths
-        state.selection.selectedSubPaths.forEach(subPathId => {
-          state.removeSubPath(subPathId);
-        });
-
-        // Delete selected commands
-        state.selection.selectedCommands.forEach(commandId => {
-          state.removeCommand(commandId);
-        });
-
-        // Eliminar paths vacíos
-        setTimeout(() => {
-          const current = useEditorStore.getState();
-          current.paths.forEach(path => {
-            if (path.subPaths.length === 0) {
-              current.removePath(path.id);
-            }
-          });
-        }, 0);
-
-        // Clear selection after deletion
-        state.clearSelection();
+        // @ts-ignore
+        executeDelete(useEditorStore.getState());
       }
     },
     {
       key: 'Backspace',
       description: 'Delete selected elements (Alternative)',
       action: () => {
-        const state = useEditorStore.getState();
-        const hasSelection = 
-          state.selection.selectedPaths.length > 0 || 
-          state.selection.selectedSubPaths.length > 0 || 
-          state.selection.selectedCommands.length > 0;
-
-        if (!hasSelection) return;
-
-        // Save current state to history before deletion
-        state.pushToHistory();
-
-        // Delete selected paths
-        state.selection.selectedPaths.forEach(pathId => {
-          state.removePath(pathId);
-        });
-
-        // Delete selected subpaths
-        state.selection.selectedSubPaths.forEach(subPathId => {
-          state.removeSubPath(subPathId);
-        });
-
-        // Delete selected commands
-        state.selection.selectedCommands.forEach(commandId => {
-          state.removeCommand(commandId);
-        });
-
-        // Clear selection after deletion
-        state.clearSelection();
+        // @ts-ignore
+        executeDelete(useEditorStore.getState());
       }
     },
     {
@@ -183,34 +125,8 @@ export const DeletePlugin: Plugin = {
       modifiers: ['ctrl'],
       description: 'Delete selected elements (Ctrl+D)',
       action: () => {
-        const state = useEditorStore.getState();
-        const hasSelection = 
-          state.selection.selectedPaths.length > 0 || 
-          state.selection.selectedSubPaths.length > 0 || 
-          state.selection.selectedCommands.length > 0;
-
-        if (!hasSelection) return;
-
-        // Save current state to history before deletion
-        state.pushToHistory();
-
-        // Delete selected paths
-        state.selection.selectedPaths.forEach(pathId => {
-          state.removePath(pathId);
-        });
-
-        // Delete selected subpaths
-        state.selection.selectedSubPaths.forEach(subPathId => {
-          state.removeSubPath(subPathId);
-        });
-
-        // Delete selected commands
-        state.selection.selectedCommands.forEach(commandId => {
-          state.removeCommand(commandId);
-        });
-
-        // Clear selection after deletion
-        state.clearSelection();
+        // @ts-ignore
+        executeDelete(useEditorStore.getState());
       }
     }
   ],
