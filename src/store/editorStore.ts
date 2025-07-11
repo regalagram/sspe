@@ -151,12 +151,8 @@ const loadInitialState = (): EditorState => {
       } else if (Array.isArray(savedState.enabledFeatures)) {
         enabledFeatures = new Set(savedState.enabledFeatures);
       } else if (typeof savedState.enabledFeatures === 'object' && savedState.enabledFeatures !== null) {
-        console.log(savedState);
         enabledFeatures = new Set(Object.keys(savedState.enabledFeatures));
       }
-    }
-    if (typeof window !== 'undefined' && window.localStorage) {
-      console.log('[SVG Editor] Estado cargado desde localStorage.');
     }
     return {
       ...baseState,
@@ -1493,9 +1489,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
 const debouncedSave = debounce('editor-autosave', (state: EditorState) => {
   const { history, ...rest } = state;
   saveEditorState({ ...rest });
-  if (typeof window !== 'undefined' && window.localStorage) {
-    console.log('[SVG Editor] Estado del editor guardado en localStorage.');
-  }
 }, 500);
 if (typeof window !== 'undefined') {
   setTimeout(() => {
