@@ -41,26 +41,42 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
     }
   }, [accordionExpandedPanel]);
   
-  // Filter plugins based on visible panels
+  // Grupo prioritario de plugins por id
+  const priorityIds = [
+    'creation-tools',
+    'curves-ui',
+    'delete-control',
+    'undo-redo-controls',
+    'pencil-tools',
+    'selection-tools',
+    'shapes-panel',
+    'path-style-controls',
+    'zoom-controls',
+  ];
+
+  // Filtrar plugins visibles
   const visiblePlugins = plugins.filter(plugin => 
     visiblePanels.some(panel => panel.id === plugin.id)
   );
 
-  // Sort plugins alphabetically, keeping Panel Mode first
-  const sortedPlugins = visiblePlugins.sort((a, b) => {
-    const panelA = visiblePanels.find(p => p.id === a.id);
-    const panelB = visiblePanels.find(p => p.id === b.id);
-    
-    // Panel Mode should always be first
-    if (a.id === 'panel-mode-ui') return -1;
-    if (b.id === 'panel-mode-ui') return 1;
-    
-    // Sort all other plugins alphabetically by name
-    const nameA = panelA?.name || a.id;
-    const nameB = panelB?.name || b.id;
-    
-    return nameA.localeCompare(nameB);
-  });
+  // Panel Mode plugin
+  const panelModePlugin = visiblePlugins.find(p => p.id === 'panel-mode-ui');
+
+  // Plugins prioritarios en el orden definido, tipados correctamente
+  const priorityPlugins: UIComponentDefinition[] = priorityIds
+    .map(id => visiblePlugins.find(p => p.id === id))
+    .filter((p): p is UIComponentDefinition => !!p);
+
+  // Plugins restantes (excluyendo panelModePlugin y prioritarios), ordenados alfabéticamente
+  const otherPlugins = visiblePlugins
+    .filter(p => p.id !== 'panel-mode-ui' && !priorityIds.includes(p.id))
+    .sort((a, b) => {
+      const panelA = visiblePanels.find(pan => pan.id === a.id);
+      const panelB = visiblePanels.find(pan => pan.id === b.id);
+      const nameA = panelA?.name || a.id;
+      const nameB = panelB?.name || b.id;
+      return nameA.localeCompare(nameB);
+    });
 
   const handleCloseAccordion = () => {
     setAccordionVisible(false);
@@ -74,10 +90,6 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
       setAccordionExpanded(panelId);
     }
   };
-
-  // Get Panel Mode plugin and all others
-  const panelModePlugin = sortedPlugins.find(p => p.id === 'panel-mode-ui');
-  const otherPlugins = sortedPlugins.filter(p => p.id !== 'panel-mode-ui');
 
   const sidebarStyle: React.CSSProperties = {
     width: '200px',
@@ -173,7 +185,8 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
               onToggle={() => handlePanelToggle(panelModePlugin.id)}
               panelId={panelModePlugin.id}
             />
-            {otherPlugins.length > 0 && (
+            {/* Divider after Panel Mode */}
+            {(priorityPlugins.length > 0 || otherPlugins.length > 0) && (
               <div style={{ 
                 height: '1px',
                 background: '#e0e0e0',
@@ -183,11 +196,35 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
           </>
         )}
 
-        {/* All other plugins in alphabetical order */}
+        {/* Plugins prioritarios */}
+        {priorityPlugins.map((plugin) => {
+          const panel = visiblePanels.find(p => p.id === plugin.id);
+          const isExpanded = accordionExpandedPanel === plugin.id;
+          return (
+            <AccordionPanel
+              key={plugin.id}
+              plugin={plugin}
+              panel={panel}
+              isExpanded={isExpanded}
+              onToggle={() => handlePanelToggle(plugin.id)}
+              panelId={plugin.id}
+            />
+          );
+        })}
+
+        {/* Divider after Panel Mode: entre prioritarios y otros si ambos existen */}
+        {priorityPlugins.length > 0 && otherPlugins.length > 0 && (
+          <div style={{ 
+            height: '1px',
+            background: '#e0e0e0',
+            margin: '4px 0'
+          }} />
+        )}
+
+        {/* Plugins restantes en orden alfabético */}
         {otherPlugins.map((plugin) => {
           const panel = visiblePanels.find(p => p.id === plugin.id);
           const isExpanded = accordionExpandedPanel === plugin.id;
-          
           return (
             <AccordionPanel
               key={plugin.id}
