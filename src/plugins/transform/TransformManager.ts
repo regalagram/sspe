@@ -260,25 +260,25 @@ export class TransformManager {
       {
         id: 'nw',
         type: 'corner',
-        position: { x: x - resizeHandleSize / 2, y: y - resizeHandleSize / 2 },
+        position: { x: x , y: y  },
         cursor: 'nw-resize'
       },
       {
         id: 'ne',
         type: 'corner',
-        position: { x: x + width - resizeHandleSize / 2, y: y - resizeHandleSize / 2 },
+        position: { x: x + width , y: y  },
         cursor: 'ne-resize'
       },
       {
         id: 'sw',
         type: 'corner',
-        position: { x: x - resizeHandleSize / 2, y: y + height - resizeHandleSize / 2 },
+        position: { x: x , y: y + height  },
         cursor: 'sw-resize'
       },
       {
         id: 'se',
         type: 'corner',
-        position: { x: x + width - resizeHandleSize / 2, y: y + height - resizeHandleSize / 2 },
+        position: { x: x + width, y: y + height },
         cursor: 'se-resize'
       },
       // Rotation handle - positioned above the center of the top edge

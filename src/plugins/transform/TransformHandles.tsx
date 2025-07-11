@@ -28,10 +28,33 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
 
   // Calcular tamaño responsivo para los handles con factores de tamaño
   const baseHandleSize = getControlPointSize(isMobile, isTablet);
-  const strokeWidth = 1.5 / viewport.zoom;
+  const strokeWidth = 1 / viewport.zoom;
   // Menor multiplier de hover en móviles para evitar que se pongan demasiado grandes
   const hoverMultiplier = isMobile ? 1.3 : isTablet ? 1.4 : 1.5;
 
+
+  // Función para calcular el offset de cada esquina, usando la dirección de la esquina
+  function getCornerOffset(handle: TransformHandle, size: number) {
+    // El margen depende de los factores visuales y el zoom
+    const margin = (
+      baseHandleSize *
+      visualDebugSizes.globalFactor *
+      visualDebugSizes.commandPointsFactor *
+      visualDebugSizes.transformResizeFactor * 1
+    )/ viewport.zoom;
+
+    // Determinar la dirección de la esquina
+    // NW: (-margin, -margin)
+    // NE: (+margin, -margin)
+    // SW: (-margin, +margin)
+    // SE: (+margin, +margin)
+    let dx = 0, dy = 0;
+    const centerX = bounds.x + bounds.width / 2;
+    const centerY = bounds.y + bounds.height / 2;
+    dx = handle.position.x < centerX ? -margin : margin;
+    dy = handle.position.y < centerY ? -margin : margin;
+    return { dx, dy };
+  }
 
   return (
     <g className="transform-handles">
@@ -53,15 +76,24 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
       {/* Transform handles */}
       {handles.map((handle) => {
         const isHovered = hoveredHandle === handle.id;
-        
         // Calcular tamaño específico para cada tipo de handle
         const sizeFactor = handle.type === 'corner' 
           ? visualDebugSizes.transformResizeFactor 
           : visualDebugSizes.transformRotateFactor;
-        
         const handleSize = (baseHandleSize * visualDebugSizes.globalFactor * sizeFactor) / viewport.zoom;
         const hoverSize = handleSize * hoverMultiplier;
         const currentSize = isHovered ? hoverSize : handleSize;
+
+        // Debug: mostrar posiciones en consola
+        if (handle.type === 'corner') {
+          console.log('Handle:', handle.id, 'Pos:', handle.position, 'BBox:', bounds, 'currentSize:', currentSize, 'Offset:', getCornerOffset(handle, currentSize));
+        }
+
+        // Calcular offset para handles de esquina
+        let offset = { dx: 0, dy: 0 };
+        if (handle.type === 'corner') {
+          offset = getCornerOffset(handle, currentSize);
+        }
 
         return (
           <g
@@ -79,11 +111,12 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
             {handle.type === 'corner' ? (
               /* Square corner handles for scaling */
               <rect
-                x={handle.position.x}
-                y={handle.position.y}
+                x={handle.position.x + offset.dx - currentSize / 2}
+                y={handle.position.y + offset.dy - currentSize / 2}
                 width={currentSize}
                 height={currentSize}
-                fill="white"
+                fill="#007acc"
+                fillOpacity={0.3}
                 stroke="#007acc"
                 strokeWidth={strokeWidth}
                 data-handle-id={handle.id}
@@ -97,23 +130,15 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
             ) : (
               /* Circular rotation handle */
               <g>
-                {/* Connection line from bounding box to rotation handle */}
-                <line
-                  x1={bounds.x + bounds.width / 2}
-                  y1={bounds.y}
-                  x2={handle.position.x + currentSize / 2}
-                  y2={handle.position.y + currentSize / 2}
-                  stroke="#28a745"
-                  strokeWidth={strokeWidth}
-                  strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
-                />
+
                 {/* Rotation handle circle */}
                 <circle
                   cx={handle.position.x + currentSize / 2}
                   cy={handle.position.y + currentSize / 2}
                   r={currentSize / 2}
-                  fill="white"
-                  stroke="#28a745"
+                  fill="#007acc"
+                  fillOpacity={0.3}
+                  stroke="#007acc"
                   strokeWidth={strokeWidth}
                   data-handle-id={handle.id}
                   data-handle-type="rotation"
@@ -123,23 +148,6 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
                     transition: 'all 0.1s ease'
                   }}
                 />
-                {/* Rotation symbol ↻ */}
-                <text
-                  x={handle.position.x + currentSize / 2}
-                  y={handle.position.y + currentSize / 2}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  fontSize={`${currentSize * 0.8}px`}
-                  fill="#28a745"
-                  style={{
-                    pointerEvents: 'none',
-                    userSelect: 'none',
-                    fontFamily: 'monospace',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  ↻
-                </text>
               </g>
             )}
           </g>
