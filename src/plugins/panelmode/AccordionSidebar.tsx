@@ -80,7 +80,6 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
 
   const handleCloseAccordion = () => {
     setAccordionVisible(false);
-    setAccordionExpanded(null);
   };
 
   const handlePanelToggle = (panelId: string) => {
