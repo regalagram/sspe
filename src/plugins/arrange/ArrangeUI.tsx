@@ -1,6 +1,5 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { PluginButton } from '../../components/PluginButton';
 import { 
   AlignLeft, 
   AlignCenter, 

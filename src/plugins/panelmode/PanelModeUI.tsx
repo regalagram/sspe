@@ -3,7 +3,6 @@ import { usePanelModeStore } from './PanelManager';
 import { 
   Eye, 
   EyeOff, 
-  Settings,
 } from 'lucide-react';
 
 export const PanelModeUI: React.FC = () => {

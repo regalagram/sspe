@@ -6,7 +6,6 @@ import { parseSVGToSubPaths } from '../../utils/svg-parser';
 import { calculateViewBoxFromSVGString } from '../../utils/viewbox-utils';
 import { PluginButton } from '../../components/PluginButton';
 import { RotateCcw, CheckCircle2, Trash2, Upload, Download } from 'lucide-react';
-import { savePreferences, loadPreferences } from '../../utils/persistence';
 
 interface PrecisionControlProps {
   precision: number;

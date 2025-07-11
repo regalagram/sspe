@@ -1,4 +1,3 @@
-import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { PointTransformControls } from './PointTransformControls';
 

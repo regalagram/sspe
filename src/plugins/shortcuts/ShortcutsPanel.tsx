@@ -1,13 +1,7 @@
-
-
 import React from 'react';
 import { pluginManager } from '../../core/PluginSystem';
 import { ShortcutsViewSelector } from './ShortcutsViewSelector';
 import { ShortcutsByKeyList } from './ShortcutsByKeyList';
-
-
-
-
 
 export const ShortcutsPanel: React.FC = () => {
   const [view, setView] = React.useState<'byPlugin' | 'byKey'>('byPlugin');

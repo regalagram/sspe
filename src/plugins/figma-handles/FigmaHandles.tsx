@@ -1,4 +1,3 @@
-import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { FigmaHandleControls } from './FigmaHandleUI';
 import { FigmaHandleRenderer } from './FigmaHandleRenderer';

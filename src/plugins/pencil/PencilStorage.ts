@@ -1,7 +1,3 @@
-/**
- * Storage utilities for Pencil plugin data persistence
- */
-
 export interface PencilStorageData {
   strokeStyle: {
     stroke: string;
@@ -22,9 +18,6 @@ export interface PencilStorageData {
 const STORAGE_KEY = 'pencil-tool-settings';
 
 export class PencilStorage {
-  /**
-   * Save pencil settings to localStorage
-   */
   static save(data: PencilStorageData): void {
     try {
       const json = JSON.stringify(data);
@@ -34,9 +27,6 @@ export class PencilStorage {
     }
   }
 
-  /**
-   * Load pencil settings from localStorage
-   */
   static load(): PencilStorageData | null {
     try {
       const json = localStorage.getItem(STORAGE_KEY);
@@ -57,9 +47,6 @@ export class PencilStorage {
     }
   }
 
-  /**
-   * Clear pencil settings from localStorage
-   */
   static clear(): void {
     try {
       localStorage.removeItem(STORAGE_KEY);
@@ -68,9 +55,6 @@ export class PencilStorage {
     }
   }
 
-  /**
-   * Get default pencil settings
-   */
   static getDefaults(): PencilStorageData {
     return {
       strokeStyle: {
@@ -90,9 +74,6 @@ export class PencilStorage {
     };
   }
 
-  /**
-   * Validate that the loaded data has the correct structure
-   */
   private static isValidData(data: any): data is PencilStorageData {
     if (!data || typeof data !== 'object') return false;
 
@@ -124,9 +105,6 @@ export class PencilStorage {
     return true;
   }
 
-  /**
-   * Create a snapshot of current settings for storage
-   */
   static createSnapshot(strokeStyle: any, smootherParams: any): PencilStorageData {
     return {
       strokeStyle: { ...strokeStyle },

@@ -1,9 +1,9 @@
-import { SVGSubPath, SVGCommand, PathStyle, SVGCommandType, SVGPath } from '../types';
+import { SVGCommand, PathStyle, SVGCommandType, SVGPath } from '../types';
 import { parsePath, absolutize, normalize, serialize } from 'path-data-parser';
 import { generateId } from './id-utils';
 import { decomposeIntoSubPaths } from './subpath-utils';
 import { convertRgbToHex, parseColorWithOpacity } from './color-utils';
-import { parseTransformString, transformPoint, type TransformMatrix } from './transform-utils';
+import { parseTransformString, transformPoint } from './transform-utils';
 
 /**
  * List of attributes to copy when converting shapes to paths

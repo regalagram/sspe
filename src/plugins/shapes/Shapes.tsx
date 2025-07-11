@@ -1,27 +1,17 @@
-import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { shapeManager, shapePointerHandlers } from './ShapeManager';
 import { ShapesUI } from './ShapesUI';
-
-
-
-
 export const ShapesPlugin: Plugin = {
   id: 'shapes',
   name: 'Shapes',
   version: '1.0.0',
   enabled: true,
-
   initialize: (editor) => {
-    // Initialize the shape manager with the editor store
     shapeManager.setEditorStore(editor);
   },
-
   destroy: () => {
-    // Clean up when plugin is destroyed
     shapeManager.stopShapeCreation();
   },
-
   shortcuts: [
     {
       key: 'Escape',
@@ -31,9 +21,7 @@ export const ShapesPlugin: Plugin = {
       }
     }
   ],
-
   pointerHandlers: shapePointerHandlers,
-
   ui: [
     {
       id: 'shapes-panel',
@@ -41,7 +29,5 @@ export const ShapesPlugin: Plugin = {
       position: 'sidebar',
       order: 3
     },
-
-    // ...existing code...
   ]
 };

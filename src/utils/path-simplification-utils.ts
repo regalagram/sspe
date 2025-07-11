@@ -1,4 +1,4 @@
-import { SVGCommand, SVGSubPath, Point } from '../types';
+import { SVGCommand } from '../types';
 import { pointsOnPath } from 'points-on-path';
 import { getPointSmooth, normalizeZCommandsForSmoothing } from './point-smooth';
 

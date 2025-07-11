@@ -1,6 +1,5 @@
-import { Point, BoundingBox, SVGCommand, SVGSubPath, SVGPath } from '../../types';
-import { getSubPathBounds, getAllPathsBounds, getSelectedElementsBounds } from '../../utils/path-utils';
-import { translateSubPath, getSubPathCenter } from '../../utils/transform-subpath-utils';
+import { SVGSubPath } from '../../types';
+import { getSubPathBounds } from '../../utils/path-utils';
 
 interface ArrangeBounds {
   x: number;

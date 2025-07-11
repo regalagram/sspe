@@ -1,5 +1,5 @@
 import React, { useState, PointerEvent } from 'react';
-import { Plugin, PointerEventHandler, PointerEventContext } from '../../core/PluginSystem';
+import { Plugin, PointerEventContext } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { PluginButton } from '../../components/PluginButton';
 import { Copy } from 'lucide-react';

@@ -5,7 +5,6 @@ import { generateId } from '../utils/id-utils.js';
 import { duplicatePath, duplicateSubPath, duplicateCommand } from '../utils/duplicate-utils';
 import { saveEditorState, loadEditorState, debounce } from '../utils/persistence';
 import { createNewPath } from '../utils/subpath-utils';
-import { parseSVGToSubPaths } from '../utils/svg-parser';
 import { findSubPathAtPoint, snapToGrid, getAllPathsBounds, getSelectedElementsBounds, getSelectedSubPathsBounds } from '../utils/path-utils';
 import { scaleSubPath, rotateSubPath, translateSubPath, getSubPathCenter, mirrorSubPathHorizontal, mirrorSubPathVertical } from '../utils/transform-subpath-utils';
 interface EditorActions {

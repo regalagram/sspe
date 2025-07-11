@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-
 import { useEditorStore } from '../../store/editorStore';
 import { transformManager, TransformHandle, TransformBounds } from './TransformManager';
 import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';

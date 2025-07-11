@@ -3,7 +3,6 @@ import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { getAllSubPaths } from '../../utils/subpath-utils';
 import { subPathToString } from '../../utils/path-utils';
-import { Eye, EyeOff } from 'lucide-react';
 import { Lock, Unlock } from 'lucide-react';
 import { SVGPath, SVGSubPath } from '../../types';
 

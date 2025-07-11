@@ -19,7 +19,7 @@ export const AccordionToggleButton: React.FC<AccordionToggleButtonProps> = ({
   return (
     <button
       data-accordion-toggle="true"
-      onClick={(e) => {
+      onPointerDown={(e) => {
         toggleAccordionVisible();
       }}
       style={{

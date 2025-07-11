@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { PluginButton } from '../../components/PluginButton';
-import { Link, Unlink, CornerDownLeft, CornerUpRight } from 'lucide-react';
+import { Link, Unlink, CornerDownLeft } from 'lucide-react';
 import { figmaHandleManager } from './FigmaHandleManager';
 import { ControlPointType } from '../../types';
 

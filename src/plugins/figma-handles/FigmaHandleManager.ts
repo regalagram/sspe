@@ -1,5 +1,4 @@
 import { SVGCommand, Point, ControlPointType, ControlPointInfo, BezierHandleState } from '../../types';
-import { useEditorStore } from '../../store/editorStore';
 export class FigmaHandleManager {
   private editorStore: any;
   private state: BezierHandleState = {
