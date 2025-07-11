@@ -511,7 +511,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                   alignItems: 'center',
                   gap: '4px'
                 }}
-                onClick={() => setSmoothingExpanded(!smoothingExpanded)}
+                onPointerDown={() => setSmoothingExpanded(!smoothingExpanded)}
               >
                 <span style={{ transform: smoothingExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
                 Smoothing
@@ -525,7 +525,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                     color="#007acc"
                     active={false}
                     disabled={!canApplySmoothing()}
-                    onClick={handleSmooth}
+                    onPointerDown={handleSmooth}
                   />
                 </>
               )}
@@ -544,7 +544,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                   alignItems: 'center',
                   gap: '4px'
                 }}
-                onClick={() => setSimplificationExpanded(!simplificationExpanded)}
+                onPointerDown={() => setSimplificationExpanded(!simplificationExpanded)}
               >
                 <span style={{ transform: simplificationExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
                 Simplification
@@ -598,7 +598,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                     color="#007acc"
                     active={false}
                     disabled={!canApplySimplification()}
-                    onClick={handleSimplify}
+                    onPointerDown={handleSimplify}
                   />
                 </>
               )}
@@ -617,7 +617,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                   alignItems: 'center',
                   gap: '4px'
                 }}
-                onClick={() => setScaleExpanded(!scaleExpanded)}
+                onPointerDown={() => setScaleExpanded(!scaleExpanded)}
               >
                 <span style={{ transform: scaleExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
                 Scale
@@ -692,7 +692,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                     color="#007acc"
                     active={false}
                     disabled={false}
-                    onClick={handleScale}
+                    onPointerDown={handleScale}
                   />
                 </>
               )}
@@ -711,7 +711,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                   alignItems: 'center',
                   gap: '4px'
                 }}
-                onClick={() => setRotationExpanded(!rotationExpanded)}
+                onPointerDown={() => setRotationExpanded(!rotationExpanded)}
               >
                 <span style={{ transform: rotationExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
                 Rotation
@@ -749,7 +749,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                     ].map(({ angle, icon }) => (
                       <button
                         key={angle}
-                        onClick={() => setRotation(angle)}
+                        onPointerDown={() => setRotation(angle)}
                         style={{
                           padding: '4px 8px',
                           background: rotation === angle ? '#007acc' : '#f5f5f5',
@@ -776,7 +776,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                     color="#007acc"
                     active={false}
                     disabled={false}
-                    onClick={handleRotate}
+                    onPointerDown={handleRotate}
                   />
                 </>
               )}
@@ -795,7 +795,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                   alignItems: 'center',
                   gap: '4px'
                 }}
-                onClick={() => setTranslationExpanded(!translationExpanded)}
+                onPointerDown={() => setTranslationExpanded(!translationExpanded)}
               >
                 <span style={{ transform: translationExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
                 Translation
@@ -845,7 +845,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                     justifyContent: 'center'
                   }}>
                     <button
-                      onClick={() => { setTranslateX(0); setTranslateY(-10); }}
+                      onPointerDown={() => { setTranslateX(0); setTranslateY(-10); }}
                       style={{
                         padding: '4px 8px',
                         background: '#f5f5f5',
@@ -863,7 +863,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                       <ArrowUp size={12} /> 10
                     </button>
                     <button
-                      onClick={() => { setTranslateX(-10); setTranslateY(0); }}
+                      onPointerDown={() => { setTranslateX(-10); setTranslateY(0); }}
                       style={{
                         padding: '4px 8px',
                         background: '#f5f5f5',
@@ -881,7 +881,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                       <ArrowLeft size={12} /> 10
                     </button>
                     <button
-                      onClick={() => { setTranslateX(10); setTranslateY(0); }}
+                      onPointerDown={() => { setTranslateX(10); setTranslateY(0); }}
                       style={{
                         padding: '4px 8px',
                         background: '#f5f5f5',
@@ -899,7 +899,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                       <ArrowRight size={12} /> 10
                     </button>
                     <button
-                      onClick={() => { setTranslateX(0); setTranslateY(10); }}
+                      onPointerDown={() => { setTranslateX(0); setTranslateY(10); }}
                       style={{
                         padding: '4px 8px',
                         background: '#f5f5f5',
@@ -924,7 +924,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                     color="#007acc"
                     active={false}
                     disabled={false}
-                    onClick={handleTranslate}
+                    onPointerDown={handleTranslate}
                   />
                 </>
               )}
@@ -943,7 +943,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                   alignItems: 'center',
                   gap: '4px'
                 }}
-                onClick={() => setMirrorExpanded(!mirrorExpanded)}
+                onPointerDown={() => setMirrorExpanded(!mirrorExpanded)}
               >
                 <span style={{ transform: mirrorExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
                 Mirroring
@@ -957,7 +957,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                     color="#007acc"
                     active={false}
                     disabled={false}
-                    onClick={handleMirrorHorizontal}
+                    onPointerDown={handleMirrorHorizontal}
                   />
                   
                   <PluginButton
@@ -966,7 +966,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                     color="#007acc"
                     active={false}
                     disabled={false}
-                    onClick={handleMirrorVertical}
+                    onPointerDown={handleMirrorVertical}
                   />
                 </>
               )}
@@ -980,7 +980,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                   color="#6c757d"
                   active={false}
                   disabled={false}
-                  onClick={resetTransforms}
+                  onPointerDown={resetTransforms}
                 />
             )}
           </>

@@ -2,7 +2,6 @@ import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { pencilManager } from './PencilManager';
 import { PencilUI } from './PencilUI';
-import { PencilCursor } from './PencilCursor';
 import { PencilDebug } from './PencilDebug';
 import { toolModeManager } from '../../managers/ToolModeManager';
 
@@ -11,21 +10,20 @@ export const PencilPlugin: Plugin = {
   name: 'Pencil Drawing Tool',
   version: '1.0.0',
   enabled: true,
-  dependencies: ['mouse-interaction'],
+  dependencies: ['pointer-interaction'],
   
   initialize: (editor) => {
     pencilManager.setEditorStore(editor);
-    // Get SVG ref from plugin manager - we'll set it up later via a different mechanism
   },
 
   destroy: () => {
     pencilManager.destroy();
   },
   
-  mouseHandlers: {
-    onMouseDown: pencilManager.handleMouseDown,
-    onMouseMove: pencilManager.handleMouseMove,
-    onMouseUp: pencilManager.handleMouseUp,
+  pointerHandlers: {
+    onPointerDown: pencilManager.handlePointerDown,
+    onPointerMove: pencilManager.handlePointerMove,
+    onPointerUp: pencilManager.handlePointerUp,
   },
   
   shortcuts: [
@@ -67,12 +65,6 @@ export const PencilPlugin: Plugin = {
       component: PencilUI,
       position: 'sidebar',
       order: 4
-    },
-    {
-      id: 'pencil-cursor',
-      component: PencilCursor,
-      position: 'svg-content',
-      order: 50
     },
     {
       id: 'pencil-debug',

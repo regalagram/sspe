@@ -164,13 +164,13 @@ export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
   };
 
   const Button: React.FC<{
-    onClick: () => void;
+    onPointerDown: () => void;
     disabled: boolean;
     title: string;
     children: React.ReactNode;
-  }> = ({ onClick, disabled, title, children }) => (
+  }> = ({ onPointerDown, disabled, title, children }) => (
     <button
-      onClick={disabled ? undefined : onClick}
+      onPointerDown={disabled ? undefined : onPointerDown}
       disabled={disabled}
       title={title}
       style={disabled ? disabledStyle : buttonStyle}
@@ -188,28 +188,28 @@ export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
           <div style={titleStyle}>Align</div>
           <div style={gridStyle}>
             <Button
-              onClick={() => handleAlign('left')}
+              onPointerDown={() => handleAlign('left')}
               disabled={!hasMultipleSelection}
               title="Align Left"
             >
               <AlignLeft size={12} />
             </Button>
             <Button
-              onClick={() => handleAlign('center')}
+              onPointerDown={() => handleAlign('center')}
               disabled={!hasMultipleSelection}
               title="Align Center"
             >
               <AlignCenter size={12} />
             </Button>
             <Button
-              onClick={() => handleAlign('right')}
+              onPointerDown={() => handleAlign('right')}
               disabled={!hasMultipleSelection}
               title="Align Right"
             >
               <AlignRight size={12} />
             </Button>
             <Button
-              onClick={() => handleAlign('top')}
+              onPointerDown={() => handleAlign('top')}
               disabled={!hasMultipleSelection}
               title="Align Top"
             >
@@ -218,14 +218,14 @@ export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
           </div>
           <div style={gridWithMarginStyle}>
             <Button
-              onClick={() => handleAlign('middle')}
+              onPointerDown={() => handleAlign('middle')}
               disabled={!hasMultipleSelection}
               title="Align Middle"
             >
               <Circle size={12} />
             </Button>
             <Button
-              onClick={() => handleAlign('bottom')}
+              onPointerDown={() => handleAlign('bottom')}
               disabled={!hasMultipleSelection}
               title="Align Bottom"
             >
@@ -241,14 +241,14 @@ export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
           <h3 style={titleStyle}>Distribute</h3>
           <div style={gridStyle}>
             <Button
-              onClick={() => handleDistribute('horizontal')}
+              onPointerDown={() => handleDistribute('horizontal')}
               disabled={!hasThreeOrMore}
               title="Distribute Horizontally"
             >
               <ArrowLeftRight size={12} />
             </Button>
             <Button
-              onClick={() => handleDistribute('vertical')}
+              onPointerDown={() => handleDistribute('vertical')}
               disabled={!hasThreeOrMore}
               title="Distribute Vertically"
             >
@@ -264,14 +264,14 @@ export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
           <h3 style={titleStyle}>Stretch</h3>
           <div style={gridStyle}>
             <Button
-              onClick={() => handleStretch('horizontal')}
+              onPointerDown={() => handleStretch('horizontal')}
               disabled={!hasMultipleSelection}
               title="Stretch Horizontally"
             >
               <ArrowLeftRight size={12} />
             </Button>
             <Button
-              onClick={() => handleStretch('vertical')}
+              onPointerDown={() => handleStretch('vertical')}
               disabled={!hasMultipleSelection}
               title="Stretch Vertically"
             >
@@ -287,14 +287,14 @@ export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
           <h3 style={titleStyle}>Flip</h3>
           <div style={gridStyle}>
             <Button
-              onClick={() => handleFlip('horizontal')}
+              onPointerDown={() => handleFlip('horizontal')}
               disabled={!hasSelection}
               title="Flip Horizontally"
             >
               <FlipHorizontal size={12} />
             </Button>
             <Button
-              onClick={() => handleFlip('vertical')}
+              onPointerDown={() => handleFlip('vertical')}
               disabled={!hasSelection}
               title="Flip Vertically"
             >
@@ -310,21 +310,21 @@ export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
           <h3 style={titleStyle}>Stack</h3>
           <div style={gridStyle}>
             <Button
-              onClick={() => handleStack('pack')}
+              onPointerDown={() => handleStack('pack')}
               disabled={!hasMultipleSelection}
               title="Pack Elements"
             >
               <Package size={12} />
             </Button>
             <Button
-              onClick={() => handleStack('horizontal')}
+              onPointerDown={() => handleStack('horizontal')}
               disabled={!hasMultipleSelection}
               title="Stack Horizontally"
             >
               <Columns3 size={12} />
             </Button>
             <Button
-              onClick={() => handleStack('vertical')}
+              onPointerDown={() => handleStack('vertical')}
               disabled={!hasMultipleSelection}
               title="Stack Vertically"
             >

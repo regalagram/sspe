@@ -13,7 +13,7 @@ export const ShortcutsViewSelector: React.FC<{
         text="Sort by Plugin"
         color="#007acc"
         active={view === 'byPlugin'}
-        onClick={() => setView('byPlugin')}
+        onPointerDown={() => setView('byPlugin')}
         fullWidth
       />
       <PluginButton
@@ -21,7 +21,7 @@ export const ShortcutsViewSelector: React.FC<{
         text="Sort by Key"
         color="#007acc"
         active={view === 'byKey'}
-        onClick={() => setView('byKey')}
+        onPointerDown={() => setView('byKey')}
         fullWidth
       />
     </div>

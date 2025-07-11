@@ -25,7 +25,7 @@ export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({
         color="#007acc"
         active={false}
         disabled={!canUndo}
-        onClick={onUndo}
+        onPointerDown={onUndo}
       />
       <PluginButton
         icon={<Redo2 size={16} />}
@@ -33,7 +33,7 @@ export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({
         color="#007acc"
         active={false}
         disabled={!canRedo}
-        onClick={onRedo}
+        onPointerDown={onRedo}
       />
     </div>
   );

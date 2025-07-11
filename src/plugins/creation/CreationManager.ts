@@ -1,5 +1,5 @@
-import { MouseEvent } from 'react';
-import { MouseEventHandler, MouseEventContext } from '../../core/PluginSystem';
+import { PointerEventContext } from '../../core/PluginSystem';
+import { PointerEvent } from 'react';
 import { snapToGrid } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { useEditorStore } from '../../store/editorStore';
@@ -18,11 +18,11 @@ export class CreationManager {
     this.editorStore = store;
   }
 
-  getSVGPoint(e: MouseEvent<SVGElement>, svgRef: React.RefObject<SVGSVGElement | null>): { x: number; y: number } {
+  getSVGPoint(e: PointerEvent<SVGElement>, svgRef: React.RefObject<SVGSVGElement | null>): { x: number; y: number } {
     return getSVGPoint(e, svgRef, this.editorStore.viewport);
   }
 
-  handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+  handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     const { mode, grid, paths, addCommand, addPath, pushToHistory, setCreateMode } = this.editorStore;
     
     // Only handle if we're in create mode and no specific element is being clicked

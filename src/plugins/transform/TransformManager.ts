@@ -1,9 +1,9 @@
-import { MouseEvent } from 'react';
-import { MouseEventHandler, MouseEventContext } from '../../core/PluginSystem';
+import { PointerEvent } from 'react';
+import { PointerEventHandler, PointerEventContext } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { SVGCommand, Point, BoundingBox } from '../../types';
+import { SVGCommand, Point } from '../../types';
 import { calculateGlobalViewBox } from '../../utils/viewbox-utils';
-import { pathToString, subPathToString } from '../../utils/path-utils';
+import { subPathToString } from '../../utils/path-utils';
 import { getControlPointSize, getMobileDetectionValues } from '../../hooks/useMobileDetection';
 
 export interface TransformBounds {
@@ -30,7 +30,7 @@ interface TransformState {
   bounds: TransformBounds | null;
   handles: TransformHandle[];
   dragStart: Point | null;
-  currentPoint: Point | null; // Track current mouse position during transform
+  currentPoint: Point | null; // Track current pointer position during transform
   initialBounds: TransformBounds | null;
   initialCommands: { [commandId: string]: SVGCommand };
   onStateChange?: () => void; // Callback for state changes
@@ -397,8 +397,8 @@ export class TransformManager {
     return mirrorX || mirrorY;
   }
 
-  // Mouse event handlers
-  handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+  // pointer event handlers
+  handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     if (!this.hasValidSelection()) {
       return false;
     }
@@ -415,7 +415,7 @@ export class TransformManager {
     // Check if clicking within the bounds (for potential move operation)
     if (this.isPointInBounds(clickPoint)) {
       // Don't handle the event here, but prepare for potential movement
-      // The actual movement will be handled by other plugins (like mouse-interaction)
+      // The actual movement will be handled by other plugins (like pointer-interaction)
       // We just need to be ready to hide handles when movement starts
       return false; // Let other plugins handle the movement
     }
@@ -423,14 +423,14 @@ export class TransformManager {
     return false;
   };
 
-  handleMouseMove = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+  handlePointerMove = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     if (!this.state.isTransforming) return false;
 
     this.updateTransform(context.svgPoint);
     return true;
   };
 
-  handleMouseUp = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+  handlePointerUp = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     if (!this.state.isTransforming) return false;
 
     this.endTransform();
@@ -442,7 +442,7 @@ export class TransformManager {
     return !this.state.isMoving;
   }
 
-  // Methods to control movement state (called by other plugins like mouse-interaction)
+  // Methods to control movement state (called by other plugins like pointer-interaction)
   setMoving(isMoving: boolean) {
     if (this.state.isMoving !== isMoving) {
    
@@ -673,7 +673,7 @@ export class TransformManager {
     const store = this.editorStore || useEditorStore.getState();
     const { updateCommand } = store;
 
-    // Calculate rotation angle based on mouse movement
+    // Calculate rotation angle based on pointer movement
     const center = this.state.initialBounds.center;
     
     // Vector from center to initial point
@@ -855,9 +855,9 @@ export class TransformManager {
 
 export const transformManager = new TransformManager();
 
-// Mouse event handlers for the plugin system
-export const transformMouseHandlers: MouseEventHandler = {
-  onMouseDown: transformManager.handleMouseDown,
-  onMouseMove: transformManager.handleMouseMove,
-  onMouseUp: transformManager.handleMouseUp,
+// Pointer event handlers for the plugin system
+export const transformPointerHandlers: PointerEventHandler = {
+  onPointerDown: transformManager.handlePointerDown,
+  onPointerMove: transformManager.handlePointerMove,
+  onPointerUp: transformManager.handlePointerUp,
 };

@@ -88,13 +88,13 @@ export const ReorderUI: React.FC<ReorderUIProps> = ({ onClose }) => {
   };
 
   const Button: React.FC<{
-    onClick: () => void;
+    onPointerDown: () => void;
     disabled: boolean;
     title: string;
     children: React.ReactNode;
-  }> = ({ onClick, disabled, title, children }) => (
+  }> = ({ onPointerDown, disabled, title, children }) => (
     <button
-      onClick={disabled ? undefined : onClick}
+      onPointerDown={disabled ? undefined : onPointerDown}
       disabled={disabled}
       title={title}
       style={disabled ? disabledStyle : buttonStyle}
@@ -112,28 +112,28 @@ export const ReorderUI: React.FC<ReorderUIProps> = ({ onClose }) => {
           <div style={titleStyle}>Z-Order</div>
           <div style={gridStyle}>
             <Button
-              onClick={() => handleReorder('toFront')}
+              onPointerDown={() => handleReorder('toFront')}
               disabled={!hasSelection}
               title="Bring to Front"
             >
               <ChevronsUp size={12} />
             </Button>
             <Button
-              onClick={() => handleReorder('forward')}
+              onPointerDown={() => handleReorder('forward')}
               disabled={!hasSelection}
               title="Bring Forward"
             >
               <ChevronUp size={12} />
             </Button>
             <Button
-              onClick={() => handleReorder('backward')}
+              onPointerDown={() => handleReorder('backward')}
               disabled={!hasSelection}
               title="Send Backward"
             >
               <ChevronDown size={12} />
             </Button>
             <Button
-              onClick={() => handleReorder('toBack')}
+              onPointerDown={() => handleReorder('toBack')}
               disabled={!hasSelection}
               title="Send to Back"
             >

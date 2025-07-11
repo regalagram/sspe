@@ -175,7 +175,7 @@ export const FigmaHandleControls: React.FC = () => {
             icon={<Link size={16} />}
             text="Convertir a Simétrico"
             color={canConvertToMirrored ? '#10b981' : '#6b7280'}
-            onClick={convertToMirrored}
+            onPointerDown={convertToMirrored}
             disabled={!canConvertToMirrored}
             fullWidth={true}
           />

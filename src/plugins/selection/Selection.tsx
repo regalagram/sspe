@@ -1,9 +1,9 @@
-import React, { useState, MouseEvent } from 'react';
-import { Plugin, MouseEventHandler, MouseEventContext } from '../../core/PluginSystem';
+import React, { useState, PointerEvent } from 'react';
+import { Plugin, PointerEventHandler, PointerEventContext } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { PluginButton } from '../../components/PluginButton';
 import { Copy } from 'lucide-react';
-import { MousePointer2, XCircle } from 'lucide-react';
+import { Pointer, XCircle } from 'lucide-react';
 import { getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
@@ -41,11 +41,11 @@ class RectSelectionManager {
     this.listeners.forEach(listener => listener());
   }
 
-  getSVGPoint(e: MouseEvent<SVGElement>, svgRef: React.RefObject<SVGSVGElement | null>): { x: number; y: number } {
+  getSVGPoint(e: PointerEvent<SVGElement>, svgRef: React.RefObject<SVGSVGElement | null>): { x: number; y: number } {
     return getSVGPoint(e, svgRef, this.editorStore.viewport);
   }
 
-  handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+  handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     const { commandId, controlPoint } = context;
     const { mode } = this.editorStore;
 
@@ -75,7 +75,7 @@ class RectSelectionManager {
     return false;
   };
 
-  handleMouseMove = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+  handlePointerMove = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     if (this.state.isSelecting && this.state.selectionStart) {
       const svgPoint = this.getSVGPoint(e, context.svgRef);
       const x = Math.min(this.state.selectionStart.x, svgPoint.x);
@@ -90,7 +90,7 @@ class RectSelectionManager {
     return false;
   };
 
-  handleMouseUp = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+  handlePointerUp = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     if (this.state.isSelecting && this.state.selectionRect) {
       const { paths, selectMultiple, clearSelection } = this.editorStore;
       
@@ -286,12 +286,12 @@ export const SelectionTools: React.FC<SelectionToolsProps> = ({
   return (
     <div className="selection-tools" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <PluginButton
-        icon={<MousePointer2 size={16} />}
+        icon={<Pointer size={16} />}
         text="Selection Mode"
         color="#007acc"
         active={currentMode === 'select'}
         disabled={false}
-        onClick={onSetSelectionMode}
+        onPointerDown={onSetSelectionMode}
       />
       <PluginButton
         icon={<XCircle size={16} />}
@@ -299,7 +299,7 @@ export const SelectionTools: React.FC<SelectionToolsProps> = ({
         color="#dc3545"
         active={false}
         disabled={selectedCount === 0}
-        onClick={onClearSelection}
+        onPointerDown={onClearSelection}
       />
       <PluginButton
         icon={<Copy size={16} />}
@@ -307,7 +307,7 @@ export const SelectionTools: React.FC<SelectionToolsProps> = ({
         color="#28a745"
         active={false}
         disabled={selectedCount === 0}
-        onClick={duplicateSelection}
+        onPointerDown={duplicateSelection}
       />
       <div style={{ 
         fontSize: '12px', 
@@ -351,18 +351,18 @@ export const SelectionPlugin: Plugin = {
   name: 'Selection',
   version: '1.0.0',
   enabled: true,
-  dependencies: ['mouse-interaction'],
-  
+  dependencies: ['pointer-interaction'],
+
   initialize: (editor) => {
     rectSelectionManager.setEditorStore(editor);
   },
-  
-  mouseHandlers: {
-    onMouseDown: rectSelectionManager.handleMouseDown,
-    onMouseMove: rectSelectionManager.handleMouseMove,
-    onMouseUp: rectSelectionManager.handleMouseUp,
+
+  pointerHandlers: {
+    onPointerDown: rectSelectionManager.handlePointerDown,
+    onPointerMove: rectSelectionManager.handlePointerMove,
+    onPointerUp: rectSelectionManager.handlePointerUp,
   },
-  
+
   shortcuts: [
     {
       key: 'v',
@@ -377,13 +377,11 @@ export const SelectionPlugin: Plugin = {
       description: 'Select All',
       action: () => {
         const store = useEditorStore.getState();
-        
         const allCommandIds = store.paths.flatMap(path => 
           path.subPaths.flatMap(subPath => 
             subPath.commands.map(cmd => cmd.id)
           )
         );
-        
         store.selectMultiple(allCommandIds, 'commands');
       }
     },
@@ -397,7 +395,7 @@ export const SelectionPlugin: Plugin = {
       }
     }
   ],
-  
+
   ui: [
     {
       id: 'selection-tools',

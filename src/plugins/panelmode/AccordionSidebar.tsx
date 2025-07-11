@@ -148,11 +148,11 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
         </span>
         <button
           style={closeButtonStyle}
-          onClick={handleCloseAccordion}
-          onMouseEnter={(e) => {
+          onPointerDown={handleCloseAccordion}
+          onPointerEnter={(e) => {
             e.currentTarget.style.backgroundColor = '#e0e0e0';
           }}
-          onMouseLeave={(e) => {
+          onPointerLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
           title="Close panels"
@@ -252,7 +252,7 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
     height: '16px',
   };
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handlePointerDown = (e: React.PointerEvent) => {
     onToggle();
   };
 
@@ -260,15 +260,14 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
     <div data-panel-id={panelId}>
       <div 
         data-accordion-panel-header="true"
-        data-clickable="true"
         style={headerStyle}
-        onClick={handleClick}
-        onMouseEnter={(e) => {
+        onPointerDown={handlePointerDown}
+        onPointerEnter={(e) => {
           if (!isExpanded) {
             e.currentTarget.style.background = '#f5f5f5';
           }
         }}
-        onMouseLeave={(e) => {
+        onPointerLeave={(e) => {
           if (!isExpanded) {
             e.currentTarget.style.background = '#fafafa';
           }

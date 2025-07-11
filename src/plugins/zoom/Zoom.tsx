@@ -35,7 +35,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         color="#007acc"
         active={false}
         disabled={false}
-        onClick={onZoomIn}
+        onPointerDown={onZoomIn}
       />
       <PluginButton
         icon={<ZoomOut size={16} />}
@@ -43,7 +43,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         color="#007acc"
         active={false}
         disabled={false}
-        onClick={onZoomOut}
+        onPointerDown={onZoomOut}
       />
       <PluginButton
         icon={<Maximize2 size={16} />}
@@ -51,7 +51,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         color="#007acc"
         active={false}
         disabled={false}
-        onClick={onZoomToFit}
+        onPointerDown={onZoomToFit}
       />
       {hasSelection && (
         <PluginButton
@@ -60,7 +60,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
           color="#007acc"
           active={false}
           disabled={false}
-          onClick={onZoomToSelection}
+          onPointerDown={onZoomToSelection}
         />
       )}
       {hasSubPathSelection && (
@@ -70,7 +70,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
           color="#007acc"
           active={false}
           disabled={false}
-          onClick={onZoomToSubPath}
+          onPointerDown={onZoomToSubPath}
         />
       )}
       <PluginButton
@@ -79,7 +79,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
         color="#6c757d"
         active={false}
         disabled={false}
-        onClick={onResetView}
+        onPointerDown={onResetView}
       />
       <div style={{ 
         fontSize: '20px', 

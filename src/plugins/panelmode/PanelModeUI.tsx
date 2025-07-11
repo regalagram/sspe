@@ -134,13 +134,13 @@ export const PanelModeUI: React.FC = () => {
           <button
             style={allPanelsEnabled ? { ...buttonStyle, opacity: 0.5 } : enabledButtonStyle}
             disabled={allPanelsEnabled}
-            onClick={handleShowAll}
-            onMouseEnter={(e) => {
+            onPointerDown={handleShowAll}
+            onPointerEnter={(e) => {
               if (!allPanelsEnabled) {
                 e.currentTarget.style.background = '#16a34a';
               }
             }}
-            onMouseLeave={(e) => {
+            onPointerLeave={(e) => {
               if (!allPanelsEnabled) {
                 e.currentTarget.style.background = '#22c55e';
               }
@@ -151,13 +151,13 @@ export const PanelModeUI: React.FC = () => {
           <button
             style={allPanelsDisabled ? { ...buttonStyle, opacity: 0.5 } : disabledButtonStyle}
             disabled={allPanelsDisabled}
-            onClick={handleHideAll}
-            onMouseEnter={(e) => {
+            onPointerDown={handleHideAll}
+            onPointerEnter={(e) => {
               if (!allPanelsDisabled) {
                 e.currentTarget.style.background = '#dc2626';
               }
             }}
-            onMouseLeave={(e) => {
+            onPointerLeave={(e) => {
               if (!allPanelsDisabled) {
                 e.currentTarget.style.background = '#ef4444';
               }
@@ -201,12 +201,12 @@ export const PanelModeUI: React.FC = () => {
                     ...toggleButtonStyle,
                     color: panel.enabled ? '#22c55e' : '#ef4444'
                   }}
-                  onClick={() => togglePanel(panel.id)}
+                  onPointerDown={() => togglePanel(panel.id)}
                   title={panel.enabled ? 'Hide panel' : 'Show panel'}
-                  onMouseEnter={(e) => {
+                  onPointerEnter={(e) => {
                     e.currentTarget.style.background = '#e5e7eb';
                   }}
-                  onMouseLeave={(e) => {
+                  onPointerLeave={(e) => {
                     e.currentTarget.style.background = 'transparent';
                   }}
                 >

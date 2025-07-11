@@ -154,7 +154,7 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
             color="#6c757d"
             active={false}
             disabled={false}
-            onClick={handleRevert}
+            onPointerDown={handleRevert}
           />
           <PluginButton
             icon={<CheckCircle2 size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
@@ -162,7 +162,7 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
             color="#28a745"
             active={false}
             disabled={false}
-            onClick={handleApplyChanges}
+            onPointerDown={handleApplyChanges}
           />
         </div>
       )}
@@ -312,7 +312,7 @@ ${pathElements}
           color="#007bff"
           active={false}
           disabled={false}
-          onClick={handleUploadSVG}
+          onPointerDown={handleUploadSVG}
           fullWidth={true}
         />
         <PluginButton
@@ -321,7 +321,7 @@ ${pathElements}
           color="#28a745"
           active={false}
           disabled={paths.length === 0}
-          onClick={handleDownloadSVG}
+          onPointerDown={handleDownloadSVG}
           fullWidth={true}
         />
       </div>
@@ -352,7 +352,7 @@ ${pathElements}
           color="#dc3545"
           active={false}
           disabled={false}
-          onClick={handleClearAll}
+          onPointerDown={handleClearAll}
           fullWidth={true}
         />
       </div>

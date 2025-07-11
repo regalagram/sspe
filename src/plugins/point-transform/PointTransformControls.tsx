@@ -238,7 +238,7 @@ export const PointTransformControls: React.FC<PointTransformControlsProps> = () 
             icon={<ArrowUpDown size={16} />}
             text="to Line (L)"
             color="#0078cc"
-            onClick={transformToLine}
+            onPointerDown={transformToLine}
             disabled={!selectedCommands.some(({ command }) => 
               command.command === 'C' // Only allow converting curves to lines
             )}
@@ -249,7 +249,7 @@ export const PointTransformControls: React.FC<PointTransformControlsProps> = () 
             icon={<Spline size={16} />}
             text="to Curve (C)"
             color="#0078cc"
-            onClick={transformToCurve}
+            onPointerDown={transformToCurve}
             disabled={!selectedCommands.some(({ command }) => 
               command.command === 'L' // Solo permite convertir líneas a curvas (los comandos C se preservan sin cambios)
             )}

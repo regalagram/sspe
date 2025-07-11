@@ -21,7 +21,7 @@ export const DeleteControl: React.FC<DeleteControlProps> = ({
         color="#ff4444"
         active={hasSelection}
         disabled={!hasSelection}
-        onClick={onDelete}
+        onPointerDown={onDelete}
         fullWidth={true}
       />
       {hasSelection && (

@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { pluginManager } from '../core/PluginSystem';
 
-export const useGlobalMouseEvents = () => {
+export const useGlobalPointerEvents = () => {
   useEffect(() => {
-    const handleNativeMove = (e: MouseEvent) => {
+    const handleNativeMove = (e: PointerEvent) => {
       if (e.buttons === 1) {
-        const mouseEvent = {
+        const pointerEvent = {
           ...e,
           nativeEvent: e,
           currentTarget: e.target,
@@ -17,12 +17,12 @@ export const useGlobalMouseEvents = () => {
           preventDefault: () => e.preventDefault(),
           stopPropagation: () => e.stopPropagation(),
         } as any;
-        pluginManager.handleMouseEvent('mouseMove', mouseEvent);
+        pluginManager.handlePointerEvent('pointerMove', pointerEvent);
       }
     };
 
-    const handleNativeUp = (e: MouseEvent) => {
-      const mouseEvent = {
+    const handleNativeUp = (e: PointerEvent) => {
+      const pointerEvent = {
         ...e,
         nativeEvent: e,
         currentTarget: e.target,
@@ -34,15 +34,15 @@ export const useGlobalMouseEvents = () => {
         preventDefault: () => e.preventDefault(),
         stopPropagation: () => e.stopPropagation(),
       } as any;
-      pluginManager.handleMouseEvent('mouseUp', mouseEvent);
+      pluginManager.handlePointerEvent('pointerUp', pointerEvent);
     };
 
-    document.addEventListener('mousemove', handleNativeMove);
-    document.addEventListener('mouseup', handleNativeUp);
+    document.addEventListener('pointermove', handleNativeMove);
+    document.addEventListener('pointerup', handleNativeUp);
     
     return () => {
-      document.removeEventListener('mousemove', handleNativeMove);
-      document.removeEventListener('mouseup', handleNativeUp);
+      document.removeEventListener('pointermove', handleNativeMove);
+      document.removeEventListener('pointerup', handleNativeUp);
     };
   }, []);
 };

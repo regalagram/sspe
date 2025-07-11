@@ -17,7 +17,7 @@ export const PencilUI: React.FC = () => {
   // Colores consistentes con otros plugins
   const toolColor = '#007acc';
 
-  const handlePencilClick = () => {
+  const handlePencilPointerDown = () => {
         toolModeManager.setMode('pencil');
   };
 
@@ -98,8 +98,8 @@ export const PencilUI: React.FC = () => {
   const LabelWithTooltip: React.FC<{ paramKey: string; children: React.ReactNode }> = ({ paramKey, children }) => (
     <div style={{ position: 'relative' }}>
       <label 
-        onMouseEnter={() => setActiveTooltip(paramKey)}
-        onMouseLeave={() => setActiveTooltip(null)}
+        onPointerEnter={() => setActiveTooltip(paramKey)}
+        onPointerLeave={() => setActiveTooltip(null)}
         style={{ 
           fontSize: '10px', 
           fontWeight: '500', 
@@ -154,7 +154,7 @@ export const PencilUI: React.FC = () => {
             color={toolColor}
             active={isPencilActive}
             disabled={false}
-            onClick={handlePencilClick}
+            onPointerDown={handlePencilPointerDown}
           />
           
           {isPencilActive && (
@@ -164,7 +164,7 @@ export const PencilUI: React.FC = () => {
               color="#dc3545"
               active={false}
               disabled={false}
-              onClick={handleExitPencil}
+              onPointerDown={handleExitPencil}
             />
           )}
         </div>
@@ -291,7 +291,7 @@ export const PencilUI: React.FC = () => {
               marginTop: '8px'
             }}>
               <button
-                onClick={() => setShowAdvanced(!showAdvanced)}
+                onPointerDown={() => setShowAdvanced(!showAdvanced)}
                 style={{
                   width: '100%',
                   padding: '6px',
@@ -338,7 +338,7 @@ export const PencilUI: React.FC = () => {
                   </span>
                   <div style={{ display: 'flex', gap: '1px' }}>
                     <button
-                      onClick={() => handlePreset('precise')}
+                      onPointerDown={() => handlePreset('precise')}
                       style={{
                         flex: 1,
                         fontSize: '7px',
@@ -353,7 +353,7 @@ export const PencilUI: React.FC = () => {
                       Precise
                     </button>
                     <button
-                      onClick={() => handlePreset('fluid')}
+                      onPointerDown={() => handlePreset('fluid')}
                       style={{
                         flex: 1,
                         fontSize: '7px',
@@ -368,7 +368,7 @@ export const PencilUI: React.FC = () => {
                       Fluid
                     </button>
                     <button
-                      onClick={() => handlePreset('quick')}
+                      onPointerDown={() => handlePreset('quick')}
                       style={{
                         flex: 1,
                         fontSize: '7px',
@@ -463,7 +463,7 @@ export const PencilUI: React.FC = () => {
 
                 {/* Reset Button */}
                 <button
-                  onClick={handleResetSmoother}
+                  onPointerDown={handleResetSmoother}
                   style={{
                     padding: '4px 8px',
                     backgroundColor: '#e8e8e8',
@@ -481,7 +481,7 @@ export const PencilUI: React.FC = () => {
 
                 {/* Clear Saved Settings Button */}
                 <button
-                  onClick={handleClearSavedSettings}
+                  onPointerDown={handleClearSavedSettings}
                   style={{
                     padding: '4px 8px',
                     backgroundColor: '#ffe8e8',

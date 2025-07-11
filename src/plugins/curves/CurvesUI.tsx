@@ -37,7 +37,7 @@ export const CurvesUI: React.FC = () => {
             icon={<PenTool size={16} />}
             text="Activate Curve Tool"
             color="#007acc"
-            onClick={() => curvesManager.activateCurveTool()}
+            onPointerDown={() => curvesManager.activateCurveTool()}
           />
           <div style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>
             <p><strong>Curve Tool:</strong></p>
@@ -98,7 +98,7 @@ export const CurvesUI: React.FC = () => {
                   icon={<Square size={14} />}
                   text="Corner"
                   color="#666"
-                  onClick={() => {
+                  onPointerDown={() => {
                     if (curveState.selectedPointId) {
                       curvesManager.setPointType(curveState.selectedPointId, PointType.CORNER);
                     }
@@ -108,7 +108,7 @@ export const CurvesUI: React.FC = () => {
                   icon={<Circle size={14} />}
                   text="Smooth"
                   color="#666"
-                  onClick={() => {
+                  onPointerDown={() => {
                     if (curveState.selectedPointId) {
                       curvesManager.setPointType(curveState.selectedPointId, PointType.SMOOTH);
                     }
@@ -118,7 +118,7 @@ export const CurvesUI: React.FC = () => {
                   icon={<RotateCcw size={14} />}
                   text="Asymmetric"
                   color="#666"
-                  onClick={() => {
+                  onPointerDown={() => {
                     if (curveState.selectedPointId) {
                       curvesManager.setPointType(curveState.selectedPointId, PointType.ASYMMETRIC);
                     }
@@ -134,7 +134,7 @@ export const CurvesUI: React.FC = () => {
               icon={<PenTool size={16} />}
               text="Finish Path (Enter)"
               color="#28a745"
-              onClick={() => curvesManager.finishPath()}
+              onPointerDown={() => curvesManager.finishPath()}
             />
             
             {curveState.selectedPointId && (
@@ -142,7 +142,7 @@ export const CurvesUI: React.FC = () => {
                 icon={<Trash2 size={16} />}
                 text="Delete Selected Point"
                 color="#dc3545"
-                onClick={() => {
+                onPointerDown={() => {
                   curvesManager.deleteSelectedPoint();
                 }}
               />
@@ -152,7 +152,7 @@ export const CurvesUI: React.FC = () => {
               icon={<PenTool size={16} />}
               text="Exit Tool (Escape)"
               color="#6c757d"
-              onClick={() => curvesManager.exitCurveTool()}
+              onPointerDown={() => curvesManager.exitCurveTool()}
             />
           </div>
 

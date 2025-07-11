@@ -152,7 +152,7 @@ interface SubPathListItemProps {
   path: SVGPath;
   subPath: SVGSubPath;
   isSelected: boolean;
-  onSelect: (e: React.MouseEvent) => void;
+  onSelect: (e: React.PointerEvent) => void;
 }
 
 const SubPathListItem: React.FC<SubPathListItemProps> = ({
@@ -166,14 +166,14 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
   const firstCommand = subPath.commands[0];
   const commandCount = subPath.commands.length;
 
-  const handleLockToggle = (e: React.MouseEvent) => {
+  const handleLockToggle = (e: React.PointerEvent) => {
     e.stopPropagation();
     updateSubPath(subPath.id, { locked: !subPath.locked });
   };
 
   return (
     <div
-      onClick={onSelect}
+      onPointerDown={onSelect}
       style={{
         padding: '6px 8px',
         borderRadius: '4px',
@@ -187,19 +187,19 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
         alignItems: 'center',
         gap: 8,
       }}
-      onMouseEnter={(e) => {
+      onPointerEnter={(e) => {
         if (!isSelected) {
           (e.target as HTMLElement).style.backgroundColor = '#f5f5f5';
         }
       }}
-      onMouseLeave={(e) => {
+      onPointerLeave={(e) => {
         if (!isSelected) {
           (e.target as HTMLElement).style.backgroundColor = 'transparent';
         }
       }}
     >
       <button
-        onClick={handleLockToggle}
+        onPointerDown={handleLockToggle}
         title={subPath.locked ? 'Desbloquear subpath' : 'Bloquear subpath'}
         style={{
           background: 'none',
@@ -330,7 +330,7 @@ export const SubPathListComponent: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
         <button
-          onClick={lockAllSubPaths}
+          onPointerDown={lockAllSubPaths}
           style={{
             fontSize: '10px',
             padding: '2px 8px',
@@ -345,7 +345,7 @@ export const SubPathListComponent: React.FC = () => {
           Lock All
         </button>
         <button
-          onClick={unlockAllSubPaths}
+          onPointerDown={unlockAllSubPaths}
           style={{
             fontSize: '10px',
             padding: '2px 8px',
@@ -362,7 +362,7 @@ export const SubPathListComponent: React.FC = () => {
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
         <button
-          onClick={lockSelectedSubPaths}
+          onPointerDown={lockSelectedSubPaths}
           style={{
             fontSize: '10px',
             padding: '2px 8px',
@@ -377,7 +377,7 @@ export const SubPathListComponent: React.FC = () => {
           Lock Selection
         </button>
         <button
-          onClick={invertAllSubPaths}
+          onPointerDown={invertAllSubPaths}
           style={{
             fontSize: '10px',
             padding: '2px 8px',

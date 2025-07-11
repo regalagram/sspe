@@ -73,8 +73,8 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
               opacity: handleOpacity,
               transition: 'opacity 0.2s ease'
             }}
-            onMouseEnter={() => setHoveredHandle(handle.id)}
-            onMouseLeave={() => setHoveredHandle(null)}
+            onPointerEnter={() => setHoveredHandle(handle.id)}
+            onPointerLeave={() => setHoveredHandle(null)}
             data-transform-handle={handle.id}
           >
             {handle.type === 'corner' ? (

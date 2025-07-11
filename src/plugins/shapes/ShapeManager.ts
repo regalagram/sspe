@@ -1,5 +1,5 @@
-import { MouseEvent } from 'react';
-import { MouseEventHandler, MouseEventContext, pluginManager } from '../../core/PluginSystem';
+import { PointerEvent } from 'react';
+import { PointerEventHandler, PointerEventContext, pluginManager } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { getShapeById } from './ShapeDefinitions';
 import { snapToGrid } from '../../utils/path-utils';
@@ -96,8 +96,8 @@ export class ShapeManager {
     // No notificar a ToolModeManager para evitar loop
       };
 
-  // Mouse event handlers
-  handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+  // Pointer event handlers
+  handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     
     if (!this.isInShapeCreationMode() || !this.state.shapeId) {
             return false;
@@ -126,17 +126,16 @@ export class ShapeManager {
     return true;
   };
 
-  handleMouseMove = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+  handlePointerMove = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     if (!this.isInShapeCreationMode()) {
       return false;
     }
-
     // Update preview or cursor behavior if needed
     return false; // Don't consume the event
   };
 
-  handleMouseUp = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
-    // Shape insertion is handled in mouseDown for single-click shapes
+  handlePointerUp = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
+    // Shape insertion is handled in pointerDown for single-click shapes
     return false;
   };
 
@@ -196,9 +195,9 @@ export class ShapeManager {
 
 export const shapeManager = new ShapeManager();
 
-// Mouse event handlers for the plugin system
-export const shapeMouseHandlers: MouseEventHandler = {
-  onMouseDown: shapeManager.handleMouseDown,
-  onMouseMove: shapeManager.handleMouseMove,
-  onMouseUp: shapeManager.handleMouseUp,
+// Pointer event handlers for the plugin system
+export const shapePointerHandlers: PointerEventHandler = {
+  onPointerDown: shapeManager.handlePointerDown,
+  onPointerMove: shapeManager.handlePointerMove,
+  onPointerUp: shapeManager.handlePointerUp,
 };

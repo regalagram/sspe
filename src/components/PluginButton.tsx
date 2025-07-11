@@ -6,7 +6,7 @@ interface PluginButtonProps {
   color: string; // background color
   active?: boolean;
   disabled?: boolean;
-  onClick?: () => void;
+  onPointerDown?: () => void;
   fullWidth?: boolean;
 }
 
@@ -16,7 +16,7 @@ export const PluginButton: React.FC<PluginButtonProps> = ({
   color,
   active = false,
   disabled = false,
-  onClick,
+  onPointerDown,
   fullWidth = false,
 }) => {
   // Fixed sizes for desktop
@@ -25,14 +25,14 @@ export const PluginButton: React.FC<PluginButtonProps> = ({
   const padding = '4px 20px';
   const borderRadius = 18;
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handlePointerDown = (e: React.MouseEvent) => {
     if (disabled) return;
-    onClick?.();
+    onPointerDown?.();
   };
 
   return (
     <button
-      onClick={handleClick}
+      onPointerDown={handlePointerDown}
       disabled={disabled}
       style={{
         display: 'flex',

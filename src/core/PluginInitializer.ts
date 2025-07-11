@@ -9,7 +9,7 @@ import { PathStylePlugin } from '../plugins/path-style/PathStyle';
 import { SelectionPlugin } from '../plugins/selection/Selection';
 import { SVGPlugin } from '../plugins/svg-editor/SVGEditor';
 import { SubPathListPlugin } from '../plugins/subpath-list/SubPathList';
-import { MouseInteractionPlugin } from '../plugins/mouse-interaction/MouseInteraction';
+import { PointerInteractionPlugin } from '../plugins/pointer-interaction/PointerInteraction';
 import { PathRendererPlugin } from '../plugins/path-renderer/PathRenderer';
 import { CommandPlugin } from '../plugins/command/Command';
 import { VisualDebugPlugin } from '../plugins/visual-debug/VisualDebug';
@@ -24,7 +24,6 @@ import { PanelModePlugin } from '../plugins/panelmode/PanelMode';
 import { DeletePlugin } from '../plugins/delete/Delete';
 import { FigmaHandlesPlugin } from '../plugins/figma-handles/FigmaHandles';
 import { CurvesPlugin } from '../plugins/curves/Curves';
-import { detectMobileDevice } from '../hooks/useMobileDetection';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -32,7 +31,7 @@ import { detectMobileDevice } from '../hooks/useMobileDetection';
  */
 export const initializePlugins = (): void => {
   // Register base dependencies first
-  pluginManager.registerPlugin(MouseInteractionPlugin); // Required by pencil
+  pluginManager.registerPlugin(PointerInteractionPlugin); // Required by pencil
   pluginManager.registerPlugin(SelectionPlugin); // Required by subpath-transform and point-transform
   
   // Register Transform early so it can handle transform handles before PathRenderer

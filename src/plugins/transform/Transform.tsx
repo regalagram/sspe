@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { transformManager, transformMouseHandlers, TransformBounds, TransformHandle } from './TransformManager';
+import { transformManager, transformPointerHandlers, TransformBounds, TransformHandle } from './TransformManager';
 import { TransformHandles } from './TransformHandles';
 import { DimensionsInfo } from './DimensionsInfo';
 
@@ -118,5 +118,5 @@ export const Transform: Plugin = {
       position: 'svg-content'
     }
   ],
-  mouseHandlers: transformMouseHandlers
+  pointerHandlers: transformPointerHandlers
 };

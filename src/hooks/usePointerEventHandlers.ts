@@ -1,36 +1,36 @@
 import React from 'react';
 import { pluginManager } from '../core/PluginSystem';
 
-export const useMouseEventHandlers = () => {
-  const handleMouseDown = (e: React.MouseEvent<SVGElement>) => {
+export const usePointerEventHandlers = () => {
+  const handlePointerDown = (e: React.PointerEvent<SVGElement>) => {
     const target = e.target as SVGElement;
     const commandId = target.getAttribute('data-command-id') || undefined;
     const controlPoint = target.getAttribute('data-control-point') as 'x1y1' | 'x2y2' | undefined;
-    pluginManager.handleMouseEvent('mouseDown', e, commandId, controlPoint);
+    pluginManager.handlePointerEvent('pointerDown', e, commandId, controlPoint);
   };
   
-  const handleMouseMove = (e: React.MouseEvent<SVGElement>) => {
+  const handlePointerMove = (e: React.PointerEvent<SVGElement>) => {
     const target = e.target as SVGElement;
     const commandId = target.getAttribute('data-command-id') || undefined;
     const controlPoint = target.getAttribute('data-control-point') as 'x1y1' | 'x2y2' | undefined;
-    pluginManager.handleMouseEvent('mouseMove', e, commandId, controlPoint);
+    pluginManager.handlePointerEvent('pointerMove', e, commandId, controlPoint);
   };
   
-  const handleMouseUp = (e: React.MouseEvent<SVGElement>) => {
+  const handlePointerUp = (e: React.PointerEvent<SVGElement>) => {
     const target = e.target as SVGElement;
     const commandId = target.getAttribute('data-command-id') || undefined;
     const controlPoint = target.getAttribute('data-control-point') as 'x1y1' | 'x2y2' | undefined;
-    pluginManager.handleMouseEvent('mouseUp', e, commandId, controlPoint);
+    pluginManager.handlePointerEvent('pointerUp', e, commandId, controlPoint);
   };
   
   const handleWheel = (e: React.WheelEvent<SVGElement>) => {
-    pluginManager.handleMouseEvent('wheel', e);
+    pluginManager.handlePointerEvent('wheel', e);
   };
 
   return {
-    handleMouseDown,
-    handleMouseMove,
-    handleMouseUp,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
     handleWheel,
   };
 };

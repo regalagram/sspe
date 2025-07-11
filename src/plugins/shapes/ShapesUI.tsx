@@ -60,7 +60,7 @@ const ShapeButton: React.FC<ShapeButtonProps> = ({ shape, isActive, onSelect }) 
 
   return (
     <button
-      onClick={handleClick}
+      onPointerDown={handleClick}
       title={shape.name}
       style={{
         background: isActive ? '#007acc' : '#f8f9fa',
@@ -76,12 +76,12 @@ const ShapeButton: React.FC<ShapeButtonProps> = ({ shape, isActive, onSelect }) 
         minHeight: '36px',
         minWidth: '36px'
       }}
-      onMouseEnter={(e) => {
+      onPointerEnter={(e) => {
         if (!isActive) {
           e.currentTarget.style.background = '#e9ecef';
         }
       }}
-      onMouseLeave={(e) => {
+      onPointerLeave={(e) => {
         if (!isActive) {
           e.currentTarget.style.background = '#f8f9fa';
         }
@@ -245,7 +245,7 @@ export const ShapesUI: React.FC = () => {
               color="#dc3545"
               active={false}
               disabled={false}
-              onClick={handleExitShapeMode}
+              onPointerDown={handleExitShapeMode}
               fullWidth={true}
             />
         )}

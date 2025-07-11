@@ -10,14 +10,14 @@ export const CreationPlugin: Plugin = {
   name: 'Creation',
   version: '1.0.0',
   enabled: true,
-  dependencies: ['mouse-interaction'],
+  dependencies: ['pointer-interaction'],
   
   initialize: (editor) => {
     creationManager.setEditorStore(editor);
   },
   
-  mouseHandlers: {
-    onMouseDown: creationManager.handleMouseDown,
+  pointerHandlers: {
+    onPointerDown: creationManager.handlePointerDown,
   },
   
   shortcuts: [

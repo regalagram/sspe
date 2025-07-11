@@ -1,4 +1,4 @@
-import React, { MouseEvent, WheelEvent } from 'react';
+import React, { PointerEvent, WheelEvent } from 'react';
 import { useEditorStore } from '../store/editorStore';
 import { getSVGPoint } from '../utils/transform-utils';
 import type { EditorState } from '../types';
@@ -8,14 +8,14 @@ export interface SVGPoint {
   y: number;
 }
 
-export interface MouseEventHandler {
-  onMouseDown?: (e: MouseEvent<SVGElement>, context: MouseEventContext) => boolean;
-  onMouseMove?: (e: MouseEvent<SVGElement>, context: MouseEventContext) => boolean;
-  onMouseUp?: (e: MouseEvent<SVGElement>, context: MouseEventContext) => boolean;
-  onWheel?: (e: WheelEvent<SVGElement>, context: MouseEventContext) => boolean;
+export interface PointerEventHandler {
+  onPointerDown?: (e: PointerEvent<SVGElement>, context: PointerEventContext) => boolean;
+  onPointerMove?: (e: PointerEvent<SVGElement>, context: PointerEventContext) => boolean;
+  onPointerUp?: (e: PointerEvent<SVGElement>, context: PointerEventContext) => boolean;
+  onWheel?: (e: WheelEvent<SVGElement>, context: PointerEventContext) => boolean;
 }
 
-export interface MouseEventContext {
+export interface PointerEventContext {
   svgPoint: SVGPoint;
   svgRef: React.RefObject<SVGSVGElement | null>;
   commandId?: string;
@@ -35,7 +35,7 @@ export interface Plugin {
   tools?: ToolDefinition[];
   shortcuts?: ShortcutDefinition[];
   ui?: UIComponentDefinition[];
-  mouseHandlers?: MouseEventHandler;
+  pointerHandlers?: PointerEventHandler;
   handleKeyDown?: (e: KeyboardEvent) => boolean;
   handleKeyUp?: (e: KeyboardEvent) => boolean;
 }
@@ -95,87 +95,81 @@ export class PluginManager {
     return this.isShapeCreationMode;
   }
 
-  getSVGPoint(e: MouseEvent<SVGElement>): SVGPoint {
+  getSVGPoint(e: PointerEvent<SVGElement>): SVGPoint {
     if (!this.svgRef || !this.editorStore) return { x: 0, y: 0 };
     const store = this.editorStore as { viewport: EditorState['viewport'] };
     const viewport = store.viewport ?? { x: 0, y: 0, width: 0, height: 0, zoom: 1, pan: { x: 0, y: 0 } };
     return getSVGPoint(e, this.svgRef, viewport);
   }
 
-  handleMouseEvent(
-    eventType: 'mouseDown' | 'mouseMove' | 'mouseUp' | 'wheel',
-    e: MouseEvent<SVGElement> | WheelEvent<SVGElement>,
+  handlePointerEvent(
+    eventType: 'pointerDown' | 'pointerMove' | 'pointerUp' | 'wheel',
+    e: PointerEvent<SVGElement> | WheelEvent<SVGElement>,
     commandId?: string,
     controlPoint?: 'x1y1' | 'x2y2'
   ): boolean {
-    const context: MouseEventContext = {
-      svgPoint: this.getSVGPoint(e as MouseEvent<SVGElement>),
+    const context: PointerEventContext = {
+      svgPoint: this.getSVGPoint(e as PointerEvent<SVGElement>),
       svgRef: this.svgRef!,
       commandId,
       controlPoint
     };
 
     const target = e.target as SVGElement;
-    
-    const handleType = target && typeof target.getAttribute === 'function' 
-      ? target.getAttribute('data-handle-type') 
+    const handleType = target && typeof target.getAttribute === 'function'
+      ? target.getAttribute('data-handle-type')
       : null;
-    const handleId = target && typeof target.getAttribute === 'function' 
-      ? target.getAttribute('data-handle-id') 
+    const handleId = target && typeof target.getAttribute === 'function'
+      ? target.getAttribute('data-handle-id')
       : null;
-    
+
     // Process plugins in order, stop if any plugin handles the event
-    let pluginsToProcess = this.getEnabledPlugins();
-    
-    if ((handleType === 'transform' || handleType === 'rotation') && eventType === 'mouseDown') {
+    let pluginsToProcess: Plugin[] = this.getEnabledPlugins();
+
+    if ((handleType === 'transform' || handleType === 'rotation') && eventType === 'pointerDown') {
       // When clicking on a transform or rotation handle, prioritize Transform plugin
-      const transformPlugin = pluginsToProcess.find(p => p.id === 'transform');
-      const otherPlugins = pluginsToProcess.filter(p => p.id !== 'transform');
-      
+      const transformPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'transform');
+      const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'transform');
       if (transformPlugin) {
         pluginsToProcess = [transformPlugin, ...otherPlugins];
       }
-    } else if (commandId && eventType === 'mouseDown') {
-      // When clicking on a command, process MouseInteraction first, then others
-      const mouseInteractionPlugin = pluginsToProcess.find(p => p.id === 'mouse-interaction');
-      const otherPlugins = pluginsToProcess.filter(p => p.id !== 'mouse-interaction');
-      
-      if (mouseInteractionPlugin) {
-        pluginsToProcess = [mouseInteractionPlugin, ...otherPlugins];
+    } else if (commandId && eventType === 'pointerDown') {
+      // When clicking on a command, process PointerInteraction first, then others
+      const pointerInteractionPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'pointer-interaction');
+      const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'pointer-interaction');
+      if (pointerInteractionPlugin) {
+        pluginsToProcess = [pointerInteractionPlugin, ...otherPlugins];
       }
-    } else if (!commandId && eventType === 'mouseDown') {
+    } else if (!commandId && eventType === 'pointerDown') {
       // When clicking on empty canvas, prioritize shapes plugin if it's in creation mode
-      const shapesPlugin = pluginsToProcess.find(p => p.id === 'shapes');
+      const shapesPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'shapes');
       if (shapesPlugin && this.isShapeCreationMode) {
-        const otherPlugins = pluginsToProcess.filter(p => p.id !== 'shapes');
+        const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'shapes');
         pluginsToProcess = [shapesPlugin, ...otherPlugins];
       }
     }
-    
-    for (const plugin of pluginsToProcess) {
-      if (!plugin.mouseHandlers) continue;
 
+    for (const plugin of pluginsToProcess) {
+      if (!plugin.pointerHandlers) continue;
       let handled = false;
       switch (eventType) {
-        case 'mouseDown':
-          handled = plugin.mouseHandlers.onMouseDown?.(e as MouseEvent<SVGElement>, context) || false;
+        case 'pointerDown':
+          handled = plugin.pointerHandlers.onPointerDown?.(e as PointerEvent<SVGElement>, context) || false;
           break;
-        case 'mouseMove':
-          handled = plugin.mouseHandlers.onMouseMove?.(e as MouseEvent<SVGElement>, context) || false;
+        case 'pointerMove':
+          handled = plugin.pointerHandlers.onPointerMove?.(e as PointerEvent<SVGElement>, context) || false;
           break;
-        case 'mouseUp':
-          handled = plugin.mouseHandlers.onMouseUp?.(e as MouseEvent<SVGElement>, context) || false;
+        case 'pointerUp':
+          handled = plugin.pointerHandlers.onPointerUp?.(e as PointerEvent<SVGElement>, context) || false;
           break;
         case 'wheel':
-          handled = plugin.mouseHandlers.onWheel?.(e as WheelEvent<SVGElement>, context) || false;
+          handled = plugin.pointerHandlers.onWheel?.(e as WheelEvent<SVGElement>, context) || false;
           break;
       }
-
       if (handled) {
         return true;
       }
     }
-
     return false;
   }
   
@@ -186,27 +180,24 @@ export class PluginManager {
       this.enablePlugin(plugin.id);
     }
   }
-  
+
   enablePlugin(pluginId: string): void {
     const plugin = this.plugins.get(pluginId);
     if (!plugin) return;
-    
     // Check dependencies
     if (plugin.dependencies) {
       for (const dep of plugin.dependencies) {
-        const depPlugin = this.plugins.get(dep);
+        const depPlugin = this.plugins.get(dep as string);
         if (!depPlugin || !depPlugin.enabled) {
           console.warn(`Plugin ${pluginId} requires dependency ${dep} to be enabled`);
           return;
         }
       }
     }
-    
     plugin.enabled = true;
     plugin.onActivate?.();
-    
     // Register shortcuts (permitir múltiples por combinación)
-    plugin.shortcuts?.forEach(shortcut => {
+    plugin.shortcuts?.forEach((shortcut: ShortcutDefinition) => {
       // Assign plugin id automatically if not set
       if (!shortcut.plugin) shortcut.plugin = plugin.id;
       const key = this.getShortcutKey(shortcut);
@@ -218,12 +209,10 @@ export class PluginManager {
   disablePlugin(pluginId: string): void {
     const plugin = this.plugins.get(pluginId);
     if (!plugin) return;
-    
     plugin.enabled = false;
     plugin.onDeactivate?.();
-    
     // Unregister shortcuts (solo los de este plugin)
-    plugin.shortcuts?.forEach(shortcut => {
+    plugin.shortcuts?.forEach((shortcut: ShortcutDefinition) => {
       const key = this.getShortcutKey(shortcut);
       if (this.shortcuts.has(key)) {
         const arr = (this.shortcuts.get(key) as ShortcutDefinition[]).filter(s => s !== shortcut);

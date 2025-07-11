@@ -1,9 +1,7 @@
-import React, { MouseEvent } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { getAbsoluteCommandPosition, getAbsoluteControlPoints } from '../../utils/path-utils';
+import { getAbsoluteCommandPosition } from '../../utils/path-utils';
 import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';
-import { pluginManager } from '../../core/PluginSystem';
 
 interface VisualDebugControlsProps {
   commandPointsEnabled: boolean;
@@ -266,7 +264,7 @@ export const CommandPointsRenderer: React.FC = () => {
                   pointerEvents: 'all',
                   opacity: 0.9
                 }}
-                data-command-id={command.id} // For mouse event handling
+                data-command-id={command.id} // For pointer event handling
               />
             );
           });

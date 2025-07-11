@@ -5,13 +5,15 @@ import { subPathToString, getContrastColor, subPathToStringInContext, findSubPat
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
 
-// Global path drag manager to handle mouse events from plugin system
+// Global path drag manager to handle pointer events from plugin system
+import { PointerEventContext } from '../../core/PluginSystem';
+
 class PathDragManager {
   private currentDragHandlers: {
-    handleMouseMove: (e: React.MouseEvent<SVGElement>) => void;
+    handlePointerMove: (e: React.PointerEvent<SVGElement>) => void;
   } | null = null;
 
-  setDragHandlers(handlers: { handleMouseMove: (e: React.MouseEvent<SVGElement>) => void }) {
+  setDragHandlers(handlers: { handlePointerMove: (e: React.PointerEvent<SVGElement>) => void }) {
     this.currentDragHandlers = handlers;
   }
 
@@ -19,9 +21,9 @@ class PathDragManager {
     this.currentDragHandlers = null;
   }
 
-  handleMouseMove = (e: React.MouseEvent<SVGElement>, context: any): boolean => {
+  handlePointerMove = (e: React.PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     if (this.currentDragHandlers) {
-      this.currentDragHandlers.handleMouseMove(e);
+      this.currentDragHandlers.handlePointerMove(e);
       return true; // We handled the event
     }
     return false; // We didn't handle the event
@@ -61,14 +63,14 @@ export const PathRenderer: React.FC = () => {
     dragStarted: false,
   });
 
-  const getTransformedPoint = (e: React.MouseEvent<SVGElement>, svgElement: SVGSVGElement) => {
+  const getTransformedPoint = (e: React.PointerEvent<SVGElement>, svgElement: SVGSVGElement) => {
     // Create a fake ref object for compatibility with the utility function
     const svgRef = { current: svgElement };
     return getSVGPoint(e, svgRef, viewport);
   };
 
-  // Handle mouse down on subpath for dragging (selected or unselected)
-  const handleSubPathMouseDown = useCallback((e: React.MouseEvent<SVGElement>, subPathId: string) => {
+  // Handle pointer down on subpath for dragging (selected or unselected)
+  const handleSubPathPointerDown = useCallback((e: React.PointerEvent<SVGElement>, subPathId: string) => {
     e.stopPropagation();
     
     const svgElement = (e.target as SVGPathElement).closest('svg');
@@ -91,12 +93,12 @@ export const PathRenderer: React.FC = () => {
       });
       
       // Note: We don't call pushToHistory() or transformManager.setMoving(true) here
-      // That will be done when we detect actual dragging movement in handleMouseMove
+      // That will be done when we detect actual dragging movement in handlePointerMove
     }
   }, [viewport, selection.selectedSubPaths, selectSubPathMultiple]);
 
-  // Handle mouse move for dragging
-  const handleMouseMove = useCallback((e: React.MouseEvent<SVGElement>) => {
+  // Handle pointer move for dragging
+  const handlePointerMove = useCallback((e: React.PointerEvent<SVGElement>) => {
     if (!dragState.isDragging || !dragState.subPathId || !dragState.startPoint || !dragState.svgElement) return;
     
     const currentPoint = getTransformedPoint(e, dragState.svgElement);
@@ -154,8 +156,8 @@ export const PathRenderer: React.FC = () => {
     }));
   }, [dragState, moveSubPath, selection.selectedSubPaths, viewport, pushToHistory]);
 
-  // Handle mouse up to stop dragging
-  const handleMouseUp = useCallback((e?: React.MouseEvent<SVGElement>) => {
+  // Handle pointer up to stop dragging
+  const handlePointerUp = useCallback((e?: React.PointerEvent<SVGElement>) => {
     // Notify transform manager that movement ended only if actual dragging occurred
     if (dragState.isDragging && dragState.dragStarted) {
       transformManager.setMoving(false);
@@ -171,42 +173,42 @@ export const PathRenderer: React.FC = () => {
     });
   }, [dragState.isDragging, dragState.dragStarted]);
 
-  // Add global mouse event listeners for dragging
+  // Add global pointer event listeners for dragging
   React.useEffect(() => {
     if (dragState.isDragging && dragState.svgElement) {
       // Register with global path drag manager
       pathDragManager.setDragHandlers({
-        handleMouseMove
+        handlePointerMove
       });
 
-      const handleGlobalMouseMove = (e: MouseEvent) => {
-        // Convert global mouse event to React mouse event format
+      const handleGlobalPointerMove = (e: PointerEvent) => {
+        // Convert global pointer event to React pointer event format
         const mockEvent = {
           clientX: e.clientX,
           clientY: e.clientY,
           target: dragState.svgElement,
         } as any;
-        handleMouseMove(mockEvent);
+        handlePointerMove(mockEvent);
       };
 
-      const handleGlobalMouseUp = () => {
-        handleMouseUp();
+      const handleGlobalPointerUp = () => {
+        handlePointerUp();
       };
 
-      document.addEventListener('mousemove', handleGlobalMouseMove);
-      document.addEventListener('mouseup', handleGlobalMouseUp);
+      document.addEventListener('pointermove', handleGlobalPointerMove);
+      document.addEventListener('pointerup', handleGlobalPointerUp);
 
       return () => {
         // Cleanup
         pathDragManager.clearDragHandlers();
-        document.removeEventListener('mousemove', handleGlobalMouseMove);
-        document.removeEventListener('mouseup', handleGlobalMouseUp);
+        document.removeEventListener('pointermove', handleGlobalPointerMove);
+        document.removeEventListener('pointerup', handleGlobalPointerUp);
       };
     } else {
       // Clear handlers when not dragging
       pathDragManager.clearDragHandlers();
     }
-  }, [dragState.isDragging, dragState.svgElement, handleMouseMove, handleMouseUp]);
+  }, [dragState.isDragging, dragState.svgElement, handlePointerMove, handlePointerUp]);
 
   return (
     <>
@@ -266,14 +268,14 @@ export const PathRenderer: React.FC = () => {
                     cursor: 'grab',
                     pointerEvents: 'all',
                   }}
-                  onMouseDown={(e) => {
-                    // Only handle left mouse button
+                  onPointerDown={(e) => {
+                    // Only handle left pointer button
                     if (e.button !== 0) return;
                     e.stopPropagation();
                     // Get the SVG element from the path's parent
                     const svgElement = (e.target as SVGPathElement).closest('svg');
                     if (svgElement) {
-                      const point = getTransformedPoint(e as React.MouseEvent<SVGElement>, svgElement);
+                      const point = getTransformedPoint(e as React.PointerEvent<SVGElement>, svgElement);
                       // Si hay otro subpath debajo, seleccionarlo
                       const foundSubPath = findSubPathAtPoint(path, point, 15);
                       if (foundSubPath && foundSubPath.id !== subPath.id) {
@@ -281,7 +283,7 @@ export const PathRenderer: React.FC = () => {
                         return;
                       }
                     }
-                    handleSubPathMouseDown(e, subPath.id);
+                    handleSubPathPointerDown(e, subPath.id);
                   }}
                 />
               );
@@ -340,11 +342,11 @@ export const PathRenderer: React.FC = () => {
                     : 'grab',
                   filter: `drop-shadow(0 0 ${3 / viewport.zoom}px ${contrastColor})`,
                 }}
-                onMouseDown={(e) => {
+                onPointerDown={(e) => {
                   // Check if this is a potential drag operation
                   const svgElement = (e.target as SVGPathElement).closest('svg');
                   if (svgElement) {
-                    const point = getTransformedPoint(e as React.MouseEvent<SVGElement>, svgElement);
+                    const point = getTransformedPoint(e as React.PointerEvent<SVGElement>, svgElement);
                     
                     // Try to find if there's a different subpath at this point that should be selected
                     const foundSubPath = findSubPathAtPoint(path, point, 15);
@@ -358,7 +360,7 @@ export const PathRenderer: React.FC = () => {
                   }
                   
                   // Otherwise, proceed with normal drag operation
-                  handleSubPathMouseDown(e, subPath.id);
+                  handleSubPathPointerDown(e, subPath.id);
                 }}
               />
               
@@ -433,8 +435,8 @@ export const PathRendererPlugin: Plugin = {
       order: 10, // Render paths in background
     },
   ],
-  // Export mouse handlers so the plugin system can call them
-  mouseHandlers: {
-    onMouseMove: pathDragManager.handleMouseMove,
+  // Export pointer handlers so the plugin system can call them
+  pointerHandlers: {
+    onPointerMove: pathDragManager.handlePointerMove,
   },
 };

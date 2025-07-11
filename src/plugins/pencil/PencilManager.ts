@@ -1,8 +1,7 @@
-import { MouseEvent } from 'react';
-import { MouseEventContext } from '../../core/PluginSystem';
+import { PointerEvent } from 'react';
+import { PointerEventContext } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { generateId } from '../../utils/id-utils';
-import { SVGCommand, EditorCommandType, Point } from '../../types';
+import { SVGCommand, Point } from '../../types';
 import { tldrawSmoother, SmoothedPoint } from './TldrawSmoother';
 import { PencilStorage, PencilStorageData } from './PencilStorage';
 import { toolModeManager } from '../../managers/ToolModeManager';
@@ -125,7 +124,7 @@ class PencilManager {
     if (this.state.isDrawing) {
       this.state.isDrawing = false;
       this.resetDrawingState();
-      this.removeGlobalMouseEvents();
+      this.removeGlobalPointerEvents();
     }
     
     // Cambiar modo del editor a select - NO notificar a ToolModeManager para evitar loop
@@ -145,7 +144,7 @@ class PencilManager {
     if (this.state.isDrawing) {
       this.state.isDrawing = false;
       this.resetDrawingState();
-      this.removeGlobalMouseEvents();
+      this.removeGlobalPointerEvents();
     }
     
     // Verificar si fue activado por ToolModeManager
@@ -160,7 +159,7 @@ class PencilManager {
     }
   };
 
-  handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+  handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     if (!this.isPencilMode()) {
       return false;
     }
@@ -182,13 +181,13 @@ class PencilManager {
     this.state.currentPath = null;
     this.state.currentSubPath = null;
 
-    // Set up global mouse events for drawing
-    this.setupGlobalMouseEvents();
+    // Set up global pointer events for drawing
+    this.setupGlobalPointerEvents();
 
     return true;
   };
 
-  handleMouseMove = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+  handlePointerMove = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     if (!this.isPencilMode() || !this.state.isDrawing) {
       // 
       return false;
@@ -274,7 +273,7 @@ class PencilManager {
     return true;
   };
 
-  handleMouseUp = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+  handlePointerUp = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     if (!this.isPencilMode() || !this.state.isDrawing) return false;
 
     e.preventDefault();
@@ -480,34 +479,34 @@ class PencilManager {
   // Clean up method
   destroy() {
     this.resetDrawingState();
-    this.removeGlobalMouseEvents();
+    this.removeGlobalPointerEvents();
   }
 
-  private setupGlobalMouseEvents() {
-    document.addEventListener('mousemove', this.handleGlobalMouseMove);
-    document.addEventListener('mouseup', this.handleGlobalMouseUp);
+  private setupGlobalPointerEvents() {
+    document.addEventListener('pointermove', this.handleGlobalPointerMove);
+    document.addEventListener('pointerup', this.handleGlobalPointerUp);
   }
 
-  private removeGlobalMouseEvents() {
-    document.removeEventListener('mousemove', this.handleGlobalMouseMove);
-    document.removeEventListener('mouseup', this.handleGlobalMouseUp);
+  private removeGlobalPointerEvents() {
+    document.removeEventListener('pointermove', this.handleGlobalPointerMove);
+    document.removeEventListener('pointerup', this.handleGlobalPointerUp);
   }
 
-  private handleGlobalMouseMove = (e: globalThis.MouseEvent) => {
+  private handleGlobalPointerMove = (e: globalThis.PointerEvent) => {
     if (!this.state.isDrawing) return;
 
     // Find the SVG element
     const svg = document.querySelector('.svg-editor svg') as SVGSVGElement;
     if (!svg) return;
 
-    // Convert global mouse event to SVG coordinates
+    // Convert global pointer event to SVG coordinates
     const svgRect = svg.getBoundingClientRect();
     const svgPoint = this.clientToSVGPoint(e.clientX, e.clientY, svgRect);
 
     this.addPointToPath(svgPoint);
   };
 
-  private handleGlobalMouseUp = (e: globalThis.MouseEvent) => {
+  private handleGlobalPointerUp = (e: globalThis.PointerEvent) => {
     if (!this.state.isDrawing) return;
 
     // Check if we have meaningful drawing content (more than just the initial point)
@@ -529,7 +528,7 @@ class PencilManager {
 
     // Reset state and remove global listeners
     this.resetDrawingState();
-    this.removeGlobalMouseEvents();
+    this.removeGlobalPointerEvents();
   };
 
   private clientToSVGPoint(clientX: number, clientY: number, svgRect: DOMRect): Point {

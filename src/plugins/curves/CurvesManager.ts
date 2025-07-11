@@ -1,8 +1,8 @@
-import { MouseEvent } from 'react';
-import { MouseEventHandler, MouseEventContext } from '../../core/PluginSystem';
+import { PointerEventContext } from '../../core/PluginSystem';
+import { PointerEvent } from 'react';
 import { snapToGrid } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
-import { Point, SVGCommand } from '../../types';
+import { Point } from '../../types';
 import { toolModeManager } from '../../managers/ToolModeManager';
 
 export enum CurveToolMode {
@@ -121,7 +121,7 @@ export class CurvesManager {
     this.notifyListeners();
   }
 
-  getSVGPoint(e: MouseEvent<SVGElement>, svgRef: React.RefObject<SVGSVGElement | null>): Point {
+  getSVGPoint(e: PointerEvent<SVGElement>, svgRef: React.RefObject<SVGSVGElement | null>): Point {
     return getSVGPoint(e, svgRef, this.editorStore.viewport);
   }
 
@@ -372,7 +372,7 @@ export class CurvesManager {
     return null;
   };
 
-  handleMouseDown = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+  handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     if (!this.curveState.isActive) return false;
 
     const point = this.getSVGPoint(e, context.svgRef);
@@ -396,7 +396,7 @@ export class CurvesManager {
         return true;
       }
 
-      // Start creating new point - we'll determine if it's corner or smooth on mouse up
+      // Start creating new point - we'll determine if it's corner or smooth on pointer up
       const newPoint: CurvePoint = {
         id: `curve-point-${Date.now()}`,
         x: snappedPoint.x,
@@ -498,7 +498,7 @@ export class CurvesManager {
     return false;
   };
 
-  handleMouseMove = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+  handlePointerMove = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     if (!this.curveState.isActive) return false;
 
     const point = this.getSVGPoint(e, context.svgRef);
@@ -614,7 +614,7 @@ export class CurvesManager {
     return false;
   };
 
-  handleMouseUp = (e: MouseEvent<SVGElement>, context: MouseEventContext): boolean => {
+  handlePointerUp = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     if (!this.curveState.isActive) return false;
 
     
@@ -640,7 +640,7 @@ export class CurvesManager {
       return true;
     }
 
-    // Don't process double-click to finish - only handle via isDoubleClick in handleMouseDown
+    // Don't process double-click to finish - only handle via isDoubleClick in handlePointerDown
     if (this.curveState.mode === CurveToolMode.CREATING) {
       
       return false; // Let other handlers process this

@@ -1,9 +1,9 @@
-import { useMouseInteraction } from '../plugins/mouse-interaction/MouseInteraction';
+import { usePointerInteraction } from '../plugins/pointer-interaction/PointerInteraction';
 import { useRectSelection } from '../plugins/selection/Selection';
 import { usePencilCursor } from '../plugins/pencil/usePencilCursor';
 
 export const useCombinedCursor = () => {
-  const mouseInteraction = useMouseInteraction();
+  const mouseInteraction = usePointerInteraction();
   const rectSelection = useRectSelection();
   const pencilCursor = usePencilCursor();
   

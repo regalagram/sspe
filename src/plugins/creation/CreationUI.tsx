@@ -52,7 +52,7 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
             color={toolColor}
             active={currentMode === 'create' && createMode?.commandType === tool.command}
             disabled={false}
-            onClick={() => onSelectTool(tool.command)}
+            onPointerDown={() => onSelectTool(tool.command)}
           />
         ))}
         {currentMode === 'create' && (
@@ -62,7 +62,7 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
             color="#dc3545"
             active={false}
             disabled={false}
-            onClick={onExitCreateMode}
+            onPointerDown={onExitCreateMode}
           />
         )}
       </div>

@@ -73,27 +73,6 @@ export const FullscreenPlugin: Plugin = {
   name: 'Fullscreen',
   version: '1.0.0',
   enabled: true,
-  
-  shortcuts: [
-    {
-      key: 'F11',
-      description: 'Toggle Fullscreen',
-      action: () => {
-        const component = document.querySelector('.fullscreen-control') as HTMLButtonElement;
-        component?.click();
-      }
-    },
-    {
-      key: 'f',
-      modifiers: ['ctrl'],
-      description: 'Toggle Fullscreen (Alternative)',
-      action: () => {
-        const component = document.querySelector('.fullscreen-control') as HTMLButtonElement;
-        component?.click();
-      }
-    }
-  ],
-  
   ui: [
     {
       id: 'fullscreen-control',

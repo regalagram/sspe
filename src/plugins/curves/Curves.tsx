@@ -9,16 +9,16 @@ export const CurvesPlugin: Plugin = {
   name: 'Curves',
   version: '1.0.0',
   enabled: true,
-  dependencies: ['mouse-interaction'],
+  dependencies: ['pointer-interaction'],
   
   initialize: (editor) => {
     curvesManager.setEditorStore(editor);
   },
   
-  mouseHandlers: {
-    onMouseDown: curvesManager.handleMouseDown,
-    onMouseMove: curvesManager.handleMouseMove,
-    onMouseUp: curvesManager.handleMouseUp,
+  pointerHandlers: {
+    onPointerDown: curvesManager.handlePointerDown,
+    onPointerMove: curvesManager.handlePointerMove,
+    onPointerUp: curvesManager.handlePointerUp,
   },
   
   shortcuts: [

@@ -5,10 +5,10 @@ import { usePanelModeStore } from '../plugins/panelmode/PanelManager';
 import { initializePlugins } from './PluginInitializer';
 import { useCombinedCursor } from '../hooks/useCombinedCursor';
 import { useGlobalKeyboard } from '../hooks/useGlobalKeyboard';
-import { useGlobalMouseEvents } from '../hooks/useGlobalMouseEvents';
+import { useGlobalPointerEvents } from '../hooks/useGlobalPointerEvents';
 import { useEditorStyles } from '../hooks/useEditorStyles';
 import { usePluginInitialization } from '../hooks/usePluginInitialization';
-import { useMouseEventHandlers } from '../hooks/useMouseEventHandlers';
+import { usePointerEventHandlers } from '../hooks/usePointerEventHandlers';
 import { pluginManager } from './PluginSystem';
 import { AccordionSidebar } from '../plugins/panelmode/AccordionSidebar';
 import { AccordionToggleButton } from '../components/AccordionToggleButton';
@@ -44,13 +44,13 @@ export const SvgEditor: React.FC = () => {
   
   // Initialize global event handlers
   useGlobalKeyboard();
-  useGlobalMouseEvents();
+  useGlobalPointerEvents();
   
   // Initialize plugins
   usePluginInitialization(editorStore, svgRef);
   
   // Mouse event handlers
-  const { handleMouseDown, handleMouseMove, handleMouseUp, handleWheel } = useMouseEventHandlers();
+  const { handlePointerDown, handlePointerMove, handlePointerUp, handleWheel } = usePointerEventHandlers();
 
   return (
     <div className="svg-editor" style={editorStyle}>
@@ -65,10 +65,10 @@ export const SvgEditor: React.FC = () => {
           cursor: getCursor(),
           ...svgStyle
         }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
         onWheel={handleWheel}
       >
         <g transform={getSafeTransform(editorStore.viewport)}>
