@@ -7,9 +7,11 @@ interface VisualDebugControlsProps {
   commandPointsEnabled: boolean;
   controlPointsEnabled: boolean;
   wireframeEnabled: boolean;
+  hidePointsInSelect: boolean;
   onToggleCommandPoints: () => void;
   onToggleControlPoints: () => void;
   onToggleWireframe: () => void;
+  onToggleHidePointsInSelect: () => void;
 }
 
 // Size Controls Component
@@ -154,9 +156,11 @@ export const VisualDebugControls: React.FC<VisualDebugControlsProps> = ({
   commandPointsEnabled,
   controlPointsEnabled,
   wireframeEnabled,
+  hidePointsInSelect,
   onToggleCommandPoints,
   onToggleControlPoints,
   onToggleWireframe,
+  onToggleHidePointsInSelect,
 }) => {
   const checkboxStyle = {
     cursor: 'pointer',
@@ -183,7 +187,6 @@ export const VisualDebugControls: React.FC<VisualDebugControlsProps> = ({
         />
         Show Command Points
       </label>
-      
       <label style={labelStyle}>
         <input
           type="checkbox"
@@ -193,7 +196,6 @@ export const VisualDebugControls: React.FC<VisualDebugControlsProps> = ({
         />
         Show Control Points
       </label>
-      
       <label style={labelStyle}>
         <input
           type="checkbox"
@@ -202,6 +204,15 @@ export const VisualDebugControls: React.FC<VisualDebugControlsProps> = ({
           style={checkboxStyle}
         />
         View Wireframe
+      </label>
+      <label style={labelStyle}>
+        <input
+          type="checkbox"
+          checked={hidePointsInSelect}
+          onChange={onToggleHidePointsInSelect}
+          style={checkboxStyle}
+        />
+        Hide Points In Select
       </label>
     </div>
   );
@@ -219,10 +230,10 @@ export const CommandPointsRenderer: React.FC = () => {
   // Check if any sub-path is selected or any command is selected
   const hasSelectedSubPath = selection.selectedSubPaths.length > 0;
   const hasSelectedCommand = selection.selectedCommands.length > 0;
-  
+
   // Show if feature is enabled OR if any sub-path is selected OR if any command is selected
-  const shouldShow = enabledFeatures.has('command-points') || hasSelectedSubPath || hasSelectedCommand;
-  
+  const shouldShow = enabledFeatures.commandPointsEnabled || hasSelectedSubPath || hasSelectedCommand;
+
   if (!shouldShow) {
     return null;
   }
@@ -233,21 +244,18 @@ export const CommandPointsRenderer: React.FC = () => {
         path.subPaths.map((subPath) => {
           // No mostrar puntos para subpaths bloqueados
           if (subPath.locked) return null;
-          // If feature is disabled, only show points for selected sub-paths
           const isSubPathSelected = selection.selectedSubPaths.includes(subPath.id);
-          const shouldShowSubPath = enabledFeatures.has('command-points') || isSubPathSelected;
+          // Si hidePointsInSelect está activo y el subpath está seleccionado, no mostrar puntos
+          if (enabledFeatures.hidePointsInSelect && isSubPathSelected) return null;
+          const shouldShowSubPath = enabledFeatures.commandPointsEnabled || isSubPathSelected;
           return subPath.commands.map((command) => {
-            // Get the absolute position of the command
             const position = getAbsoluteCommandPosition(command, subPath, path.subPaths);
             if (!position) return null;
             const isCommandSelected = selection.selectedCommands.includes(command.id);
-            // Show command point if:
-            // 1. Feature is enabled, OR
-            // 2. Sub-path is selected, OR 
-            // 3. This specific command is selected
+            // Si hidePointsInSelect está activo y el comando está seleccionado, no mostrar punto
+            if (enabledFeatures.hidePointsInSelect && isCommandSelected) return null;
             const shouldShowCommand = shouldShowSubPath || isCommandSelected;
             if (!shouldShowCommand) return null;
-            // Calcular radio responsivo basado en el dispositivo con factores de tamaño
             const baseRadius = getControlPointSize(isMobile, isTablet);
             const radius = (baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.commandPointsFactor) / viewport.zoom;
             return (
@@ -264,7 +272,7 @@ export const CommandPointsRenderer: React.FC = () => {
                   pointerEvents: 'all',
                   opacity: 0.9
                 }}
-                data-command-id={command.id} // For pointer event handling
+                data-command-id={command.id}
               />
             );
           });
@@ -288,18 +296,18 @@ export const VisualDebugComponent: React.FC = () => {
     setVisualDebugTransformResizeFactor,
     setVisualDebugTransformRotateFactor
   } = useEditorStore();
-  
   return (
     <div>
       <VisualDebugControls
-        commandPointsEnabled={enabledFeatures.has('command-points')}
-        controlPointsEnabled={enabledFeatures.has('control-points')}
-        wireframeEnabled={enabledFeatures.has('wireframe')}
-        onToggleCommandPoints={() => toggleFeature('command-points')}
-        onToggleControlPoints={() => toggleFeature('control-points')}
-        onToggleWireframe={() => toggleFeature('wireframe')}
+        commandPointsEnabled={enabledFeatures.commandPointsEnabled}
+        controlPointsEnabled={enabledFeatures.controlPointsEnabled}
+        wireframeEnabled={enabledFeatures.wireframeEnabled}
+        hidePointsInSelect={enabledFeatures.hidePointsInSelect ?? false}
+        onToggleCommandPoints={() => toggleFeature('commandPointsEnabled')}
+        onToggleControlPoints={() => toggleFeature('controlPointsEnabled')}
+        onToggleWireframe={() => toggleFeature('wireframeEnabled')}
+        onToggleHidePointsInSelect={() => toggleFeature('hidePointsInSelect')}
       />
-      
       <SizeControls
         globalFactor={visualDebugSizes.globalFactor}
         commandPointsFactor={visualDebugSizes.commandPointsFactor}

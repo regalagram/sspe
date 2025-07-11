@@ -132,16 +132,16 @@ export const FigmaHandleRenderer: React.FC = () => {
   }
 
   // Check if control points feature is enabled
-  const controlPointsEnabled = enabledFeatures.has('control-points');
+  const controlPointsEnabled = enabledFeatures.controlPointsEnabled;
   
   // Check if any sub-path is selected or any command is selected
   const hasSelectedSubPath = selection.selectedSubPaths.length > 0;
   const hasSelectedCommand = selection.selectedCommands.length > 0;
   
   // Show if feature is enabled OR if any sub-path is selected OR if any command is selected
-  const shouldShow = controlPointsEnabled || hasSelectedSubPath || hasSelectedCommand;
-  
-  if (!shouldShow) {
+  const shouldShow = controlPointsEnabled || hasSelectedSubPath || hasSelectedCommand ;
+
+  if (!shouldShow || enabledFeatures.hidePointsInSelect) {
     return null;
   }
 
@@ -157,9 +157,10 @@ export const FigmaHandleRenderer: React.FC = () => {
         path.subPaths.map((subPath) => {
           // No mostrar puntos de control para subpaths bloqueados
           if (subPath.locked) return null;
+          
           // If feature is disabled, only show control points for selected sub-paths
           const isSubPathSelected = selection.selectedSubPaths.includes(subPath.id);
-          const shouldShowSubPath = enabledFeatures.has('control-points') || isSubPathSelected;
+          const shouldShowSubPath = enabledFeatures.controlPointsEnabled || isSubPathSelected;
           return subPath.commands.map((command, commandIndex) => {
             // Get the absolute position of the command
             const position = getAbsoluteCommandPosition(command, subPath, path.subPaths);
@@ -299,20 +300,7 @@ export const FigmaHandleRenderer: React.FC = () => {
                         )}
                       </>
                     )}
-                    
-                    {/* Indicador simple del tipo en el anchor cuando el comando está seleccionado (sin drag) */}
-                    {!isDragging && isCommandSelected && controlPointInfo && (
-                      <circle
-                        cx={position.x}
-                        cy={position.y}
-                        r={radius * 0.4}
-                        fill={colors.fill}
-                        stroke={colors.stroke}
-                        strokeWidth={0.5 / viewport.zoom}
-                        pointerEvents="none"
-                        opacity={0.7 * (colors.opacity || 1)}
-                      />
-                    )}
+
                   </>
                 ) : null}
               </g>

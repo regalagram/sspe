@@ -215,7 +215,7 @@ export const PathRenderer: React.FC = () => {
       {paths.map((path) => {
         // Render the main path (all subpaths joined)
         const d = path.subPaths.map(subPathToString).join(' ');
-        const isWireframeMode = enabledFeatures.has('wireframe');
+        const isWireframeMode = enabledFeatures.wireframeEnabled;
         const wireframeStrokeWidth = 2 / viewport.zoom;
         return (
           <g key={`path-group-${path.id}`}>
@@ -308,7 +308,7 @@ export const PathRenderer: React.FC = () => {
                 
                 // Use stroke color if available, otherwise use fill color
                 // But in wireframe mode, always use black since that's what's actually rendered
-                const primaryColor = enabledFeatures.has('wireframe') ? '#000000' : 
+                const primaryColor = enabledFeatures.wireframeEnabled ? '#000000' : 
                                     (pathStroke && pathStroke !== 'none') ? pathStroke : 
                                     (pathFill && pathFill !== 'none') ? pathFill : '#000000';
                 

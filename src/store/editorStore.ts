@@ -3,7 +3,7 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { EditorState, SVGCommand, SVGPath, Point, EditorCommandType, PathStyle, ViewportState, SVGSubPath } from '../types';
 import { generateId } from '../utils/id-utils.js';
 import { duplicatePath, duplicateSubPath, duplicateCommand } from '../utils/duplicate-utils';
-import { loadPreferences, savePreferences, UserPreferences, saveEditorState, loadEditorState, debounce } from '../utils/persistence';
+import { saveEditorState, loadEditorState, debounce } from '../utils/persistence';
 import { createNewPath } from '../utils/subpath-utils';
 import { parseSVGToSubPaths } from '../utils/svg-parser';
 import { findSubPathAtPoint, snapToGrid, getAllPathsBounds, getSelectedElementsBounds, getSelectedSubPathsBounds } from '../utils/path-utils';
@@ -13,9 +13,7 @@ interface EditorActions {
   addPath: (style?: PathStyle, x?: number, y?: number) => string;
   addSubPath: (pathId: string) => string;
   clearSelection: () => void;
-  disableFeature: (feature: string) => void;
   duplicateSelection: () => void;
-  enableFeature: (feature: string) => void;
   exitCreateMode: () => void;
   forceRender: () => void;
   invertAllSubPaths: () => void;
@@ -72,28 +70,10 @@ interface EditorActions {
   zoomToSubPath: () => void;
 }
 const loadInitialState = (): EditorState => {
-  const preferences = loadPreferences();
-  const storedPrecision = preferences.precision ?? 2;
   const savedState = loadEditorState();
-  let initialPaths: SVGPath[] = [];
-  if (savedState && Array.isArray(savedState.paths)) {
-    initialPaths = savedState.paths;
-  } else {
-    const hardcodedSVG = `
-<svg xmlns="http:
-  <path d="M 643 257 C 744 33 296 -150 174 237 C 52 746 439 766 643 257 Z M 643 257 C 602 135 500 33 439 196 C 439 53 317 74 195 216 M 215 264 C 439 142 476 298 215 563 M 11 481 L 154 481 M 520 481 C 602 502 663 461 704 481 M 364 153 C 364 143 374 133 384 133 C 396 133 404 143 404 153 C 404 166 396 174 384 174 C 374 174 364 166 364 153 Z M 373 150 C 373 145 378 142 381 142 C 386 142 389 145 389 150 C 389 155 386 158 381 158 C 378 158 373 155 373 150 Z M 492 155 C 492 143 502 135 512 135 C 525 135 533 143 533 155 C 533 166 525 176 512 176 C 502 176 492 166 492 155 Z M 504 155 C 504 152 507 147 512 147 C 517 147 520 152 520 155 C 520 160 517 164 512 164 C 507 164 504 160 504 155 Z" fill="none" stroke="#000000" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
-  <path d="M 819 321 C 812 323 808 326 806 331 C 806 334 806 334 799 333 C 793 332 791 332 792 333 C 792 334 796 336 803 339 C 817 345 818 345 818 350 C 818 352 816 361 812 377 C 808 390 808 390 808 407 C 808 421 808 421 809 438 C 812 469 812 468 816 485 C 819 495 819 497 819 501 C 819 505 819 505 815 502 C 811 499 808 499 807 503 C 807 506 809 507 810 504 C 811 502 810 502 815 506 C 821 510 822 510 821 501 C 821 494 821 492 818 478 C 815 466 814 464 813 453 C 813 448 812 441 812 437 C 811 427 810 415 810 402 C 811 389 811 388 816 370 C 821 347 821 347 819 345 C 817 344 817 343 810 339 C 805 337 805 337 806 336 C 808 335 810 336 812 337 C 819 341 827 342 830 339 C 832 337 832 337 830 336 C 827 332 818 331 813 332 C 811 333 811 333 811 331 C 811 325 815 323 825 323 C 854 323 867 349 873 417 C 873 421 874 427 875 432 C 876 445 875 470 871 487 C 870 493 870 493 871 493 C 872 494 867 510 866 510 C 865 510 863 507 860 496 C 857 484 852 468 849 459 C 845 446 842 434 840 421 C 838 402 838 395 842 384 C 845 374 845 367 842 367 C 841 367 838 370 836 375 C 830 384 830 384 829 381 C 828 374 832 364 837 360 C 843 354 847 355 850 362 C 852 368 855 368 853 362 C 849 352 844 350 837 357 C 828 365 823 382 828 387 C 830 388 830 388 833 384 C 836 377 840 373 841 373 C 842 373 842 375 840 383 C 836 396 835 400 837 412 C 838 430 842 446 853 479 C 856 488 859 498 860 503 C 863 513 864 514 866 514 C 868 514 876 490 874 487 C 874 486 874 485 875 480 C 879 452 879 445 873 394 C 871 385 871 382 868 367 C 861 333 844 317 819 321 M 824 335 C 827 336 828 337 827 338 C 824 339 815 337 815 335 C 815 334 821 334 824 335" fill="#000000" stroke="#000000" />
-  <path d="M 868 589 C 865 590 859 593 854 595 C 843 600 839 601 828 604 C 824 605 817 607 813 608 C 798 612 789 614 770 615 C 733 617 720 616 693 610 C 688 609 673 604 672 602 C 671 601 670 600 670 596 C 669 594 667 590 665 589 C 660 586 656 588 645 598 C 636 608 634 609 622 616 C 613 622 593 635 591 637 C 585 642 601 644 618 641 C 645 636 646 636 648 649 C 649 661 651 666 655 670 C 665 680 672 662 673 622 C 673 611 673 608 674 608 C 674 608 678 609 682 610 C 708 619 724 621 752 619 C 784 618 798 616 824 609 C 844 604 847 603 859 596 C 869 592 871 591 872 592 C 876 594 867 601 857 604 C 850 606 851 605 853 610 C 854 614 854 614 853 620 C 851 630 850 637 850 656 C 850 673 850 675 849 675 C 847 675 846 668 843 649 C 841 639 841 639 820 637 C 798 634 779 635 755 640 C 748 641 746 641 720 641 C 688 642 692 641 690 650 C 684 673 683 677 685 677 C 687 677 687 674 690 660 C 694 643 692 645 705 645 C 721 645 750 644 766 641 C 786 638 826 639 836 643 C 838 644 839 646 839 650 C 839 659 843 673 846 676 C 852 684 853 682 854 656 C 854 632 856 611 858 608 C 858 608 859 607 861 607 C 871 603 879 593 876 588 C 875 587 875 587 868 589 M 663 593 C 667 597 667 600 663 603 C 654 606 651 610 648 624 C 646 633 646 633 641 633 C 639 633 637 634 635 634 C 633 634 631 635 629 636 C 627 636 623 637 620 637 C 614 639 598 640 596 638 C 595 637 602 632 623 620 C 634 613 638 609 647 601 C 657 592 660 590 663 593 M 667 605 C 670 607 670 636 668 650 C 667 657 662 670 660 670 C 659 670 656 666 654 663 C 646 647 649 614 659 607 C 662 605 666 604 667 605" fill="#000000" stroke="#000000" />
-</svg>
-    `;
-    try {
-      initialPaths = parseSVGToSubPaths(hardcodedSVG);
-    } catch (error) {
-      initialPaths = [];
-    }
-  }
+  
   const baseState: EditorState = {
-    paths: initialPaths,
+    paths: <SVGPath[]>[],
     selection: {
       selectedPaths: [],
       selectedSubPaths: [],
@@ -101,17 +81,17 @@ const loadInitialState = (): EditorState => {
       selectedControlPoints: [],
     },
     viewport: {
-      zoom: preferences.zoom,
+      zoom: 1,
       pan: { x: 0, y: 0 },
       viewBox: { x: 0, y: 0, width: 800, height: 600 },
     },
     grid: {
-      enabled: preferences.gridEnabled,
-      size: preferences.gridSize,
+      enabled: true,
+      size: 10,
       color: '#e0e0e0',
       opacity: 0.5,
-      snapToGrid: preferences.snapToGrid,
-      showLabels: preferences.showLabels,
+      snapToGrid: true,
+      showLabels: true,
     },
     mode: {
       current: 'select' as const,
@@ -124,18 +104,15 @@ const loadInitialState = (): EditorState => {
       canRedo: false,
     },
     isFullscreen: false,
-    enabledFeatures: new Set([
-      'zoom',
-      'pan',
-      'select',
-      'grid',
-      ...(preferences.showCommandPoints ? ['command-points'] : []),
-      ...(preferences.showControlPoints ? ['control-points'] : []),
-      ...(preferences.wireframeMode ? ['wireframe'] : [])
-    ]),
+    enabledFeatures: {
+      commandPointsEnabled: false, 
+      controlPointsEnabled: false, 
+      wireframeEnabled: false,
+      hidePointsInSelect: false
+    },
     renderVersion: 0,
-    precision: storedPrecision,
-    visualDebugSizes: preferences.visualDebugSizes || {
+    precision: 2,
+    visualDebugSizes: {
       globalFactor: 1.0,
       commandPointsFactor: 1.0,
       controlPointsFactor: 1.0,
@@ -144,40 +121,18 @@ const loadInitialState = (): EditorState => {
     },
   };
   if (savedState && typeof savedState === 'object') {
-    let enabledFeatures = baseState.enabledFeatures;
-    if (savedState.enabledFeatures) {
-      if (savedState.enabledFeatures instanceof Set) {
-        enabledFeatures = savedState.enabledFeatures;
-      } else if (Array.isArray(savedState.enabledFeatures)) {
-        enabledFeatures = new Set(savedState.enabledFeatures);
-      } else if (typeof savedState.enabledFeatures === 'object' && savedState.enabledFeatures !== null) {
-        enabledFeatures = new Set(Object.keys(savedState.enabledFeatures));
-      }
-    }
+
     return {
       ...baseState,
       ...savedState,
-      enabledFeatures
+      mode: { current: 'select' as const,
+    }
     };
   }
   return baseState;
 };
 const initialState = loadInitialState();
-const saveCurrentPreferences = (state: EditorState) => {
-  const preferences: UserPreferences = {
-    zoom: state.viewport.zoom,
-    gridEnabled: state.grid.enabled,
-    gridSize: state.grid.size,
-    snapToGrid: state.grid.snapToGrid,
-    showLabels: state.grid.showLabels,
-    showControlPoints: state.enabledFeatures.has('control-points'),
-    showCommandPoints: state.enabledFeatures.has('command-points'),
-    wireframeMode: state.enabledFeatures.has('wireframe'),
-    precision: state.precision,
-    visualDebugSizes: state.visualDebugSizes,
-  };
-  savePreferences(preferences);
-};
+
 const validateViewport = (viewport: ViewportState) => {
   return {
     ...viewport,
@@ -955,7 +910,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         const newState = {
           viewport: newViewport,
         };
-        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
         return newState;
       }),
     zoomIn: (center) => {
@@ -1180,7 +1134,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             pan: { x: 0, y: 0 },
           }),
         };
-        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
         return newState;
       }),
     resetViewportCompletely: () =>
@@ -1192,7 +1146,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             viewBox: { x: 0, y: 0, width: 800, height: 600 },
           }),
         };
-        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
         return newState;
       }),
     setMode: (mode) =>
@@ -1228,7 +1182,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             enabled: !state.grid.enabled,
           },
         };
-        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
         return newState;
       }),
     setGridSize: (size) =>
@@ -1239,7 +1193,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             size,
           },
         };
-        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
         return newState;
       }),
     toggleSnapToGrid: () =>
@@ -1250,7 +1204,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             snapToGrid: !state.grid.snapToGrid,
           },
         };
-        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
         return newState;
       }),
     toggleGridLabels: () =>
@@ -1261,7 +1215,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             showLabels: !state.grid.showLabels,
           },
         };
-        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
         return newState;
       }),
     undo: () =>
@@ -1308,37 +1262,17 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       })),
     toggleFeature: (feature) =>
       set((state) => {
-        const newFeatures = new Set(state.enabledFeatures);
-        if (newFeatures.has(feature)) {
-          newFeatures.delete(feature);
-        } else {
-          newFeatures.add(feature);
+        console.log('Toggling feature:', feature);
+        console.log('Current enabled features:', state.enabledFeatures);
+        if (!(feature in state.enabledFeatures)) {
+          return {};
         }
-        const newState = { enabledFeatures: newFeatures };
-        if (feature === 'control-points' || feature === 'command-points' || feature === 'wireframe') {
-          setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
-        }
-        return newState;
-      }),
-    enableFeature: (feature) =>
-      set((state) => {
-        const newState = {
-          enabledFeatures: new Set([...state.enabledFeatures, feature]),
+        return {
+          enabledFeatures: {
+            ...state.enabledFeatures,
+            [feature]: !state.enabledFeatures[feature as keyof typeof state.enabledFeatures]
+          }
         };
-        if (feature === 'control-points' || feature === 'command-points' || feature === 'wireframe') {
-          setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
-        }
-        return newState;
-      }),
-    disableFeature: (feature) =>
-      set((state) => {
-        const newFeatures = new Set(state.enabledFeatures);
-        newFeatures.delete(feature);
-        const newState = { enabledFeatures: newFeatures };
-        if (feature === 'control-points' || feature === 'command-points' || feature === 'wireframe') {
-          setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
-        }
-        return newState;
       }),
     toggleFullscreen: () =>
       set((state) => ({
@@ -1373,7 +1307,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
           paths: newPaths,
           renderVersion: state.renderVersion + 1,
         };
-        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
         return newState;
       });
     },
@@ -1386,7 +1320,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
           },
           renderVersion: state.renderVersion + 1,
         };
-        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
         return newState;
       });
     },
@@ -1399,7 +1333,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
           },
           renderVersion: state.renderVersion + 1,
         };
-        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
         return newState;
       });
     },
@@ -1412,7 +1346,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
           },
           renderVersion: state.renderVersion + 1,
         };
-        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
         return newState;
       });
     },
@@ -1425,7 +1359,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
           },
           renderVersion: state.renderVersion + 1,
         };
-        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
         return newState;
       });
     },
@@ -1438,7 +1372,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
           },
           renderVersion: state.renderVersion + 1,
         };
-        setTimeout(() => saveCurrentPreferences({ ...state, ...newState }), 0);
+        
         return newState;
       });
     },

@@ -97,8 +97,13 @@ export interface EditorState {
   grid: GridState;
   mode: EditorMode;
   history: HistoryState;
-  isFullscreen: boolean;
-  enabledFeatures: Set<string>;
+  isFullscreen: boolean; 
+  enabledFeatures: {
+    commandPointsEnabled: boolean;
+    controlPointsEnabled: boolean;
+    wireframeEnabled: boolean;
+    hidePointsInSelect: boolean;
+  };
   renderVersion: number; // For forcing re-renders after coordinate conversions
   precision: number; // Nuevo campo: precisión de puntos (decimales)
   visualDebugSizes: {
