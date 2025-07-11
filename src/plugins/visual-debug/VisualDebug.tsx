@@ -296,6 +296,12 @@ export const VisualDebugComponent: React.FC = () => {
     setVisualDebugTransformResizeFactor,
     setVisualDebugTransformRotateFactor
   } = useEditorStore();
+  const handleClearLocalStorage = () => {
+    if (window.confirm('¿Seguro que quieres borrar todos los datos locales de la app?')) {
+      localStorage.clear();
+      window.location.reload();
+    }
+  };
   return (
     <div>
       <VisualDebugControls
@@ -320,6 +326,22 @@ export const VisualDebugComponent: React.FC = () => {
         onTransformResizeFactorChange={setVisualDebugTransformResizeFactor}
         onTransformRotateFactorChange={setVisualDebugTransformRotateFactor}
       />
+      <button
+        style={{
+          marginTop: '24px',
+          padding: '8px 12px',
+          background: '#dc3545',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          width: '100%'
+        }}
+        onClick={handleClearLocalStorage}
+      >
+        Borrar LocalStorage
+      </button>
     </div>
   );
 };

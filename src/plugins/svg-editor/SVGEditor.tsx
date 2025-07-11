@@ -305,24 +305,27 @@ ${pathElements}
     <div>
       {/* Upload/Download buttons */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
-        <PluginButton
-          icon={<Upload size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
-          text="Upload"
-          color="#007bff"
-          active={false}
-          disabled={false}
-          onPointerDown={handleUploadSVG}
-          fullWidth={true}
-        />
-        <PluginButton
-          icon={<Download size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />}
-          text="Download"
-          color="#28a745"
-          active={false}
+        <button
+          type="button"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '8px', fontSize: '13px', fontWeight: 500,
+            background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', width: '100%'
+          }}
+          onClick={handleUploadSVG}
+        >
+          <Upload size={16} style={{ verticalAlign: 'middle' }} /> Upload
+        </button>
+        <button
+          type="button"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '8px', fontSize: '13px', fontWeight: 500,
+            background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: paths.length === 0 ? 'not-allowed' : 'pointer', width: '100%', opacity: paths.length === 0 ? 0.6 : 1
+          }}
+          onClick={handleDownloadSVG}
           disabled={paths.length === 0}
-          onPointerDown={handleDownloadSVG}
-          fullWidth={true}
-        />
+        >
+          <Download size={16} style={{ verticalAlign: 'middle' }} /> Download
+        </button>
       </div>
       
       {/* Hidden file input */}
