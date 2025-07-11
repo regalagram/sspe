@@ -148,6 +148,7 @@ export const PencilUI: React.FC = () => {
           flexDirection: 'column',
           gap: '6px'
         }}>
+          {!isPencilActive && (
           <PluginButton
             icon={<Edit3 size={14} color={isPencilActive ? 'white' : '#333'} />}
             text="Pencil Tool"
@@ -156,7 +157,7 @@ export const PencilUI: React.FC = () => {
             disabled={false}
             onPointerDown={handlePencilPointerDown}
           />
-          
+          )}
           {isPencilActive && (
             <PluginButton
               icon={<LogOut size={16} />}
