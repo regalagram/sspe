@@ -106,10 +106,29 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
 
 export const Zoom: React.FC = () => {
   const { viewport, selection, zoomIn, zoomOut, zoomToFit, zoomToSelection, zoomToSubPath, resetView } = useEditorStore();
+  const svgRef = React.useRef<SVGSVGElement>(null);
 
-  // Calcula el centro actual del viewport
+  // Calcula el centro visible en pantalla y lo convierte a coordenadas SVG
   const getViewportCenter = () => {
-    // El centro en coordenadas SVG es el pan actual + la mitad del viewBox
+    const svgElement = document.querySelector('svg');
+    if (svgElement) {
+      const rect = svgElement.getBoundingClientRect();
+      // Centro en píxeles
+      const screenCenter = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+      // Convertir a coordenadas SVG
+      const pt = (svgElement as SVGSVGElement).createSVGPoint();
+      pt.x = screenCenter.x;
+      pt.y = screenCenter.y;
+      const screenCTM = (svgElement as SVGSVGElement).getScreenCTM();
+      if (screenCTM) {
+        const svgCenter = pt.matrixTransform(screenCTM.inverse());
+        return { x: svgCenter.x, y: svgCenter.y };
+      }
+    }
+    // Fallback: centro lógico
     const { pan, viewBox } = viewport;
     return {
       x: pan.x + (viewBox.width / 2),
@@ -125,7 +144,7 @@ export const Zoom: React.FC = () => {
   };
 
   return (
-    <div>
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <ZoomControls
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
@@ -137,6 +156,8 @@ export const Zoom: React.FC = () => {
         hasSelection={selection.selectedCommands.length > 0}
         hasSubPathSelection={selection.selectedSubPaths.length > 0}
       />
+      {/* SVG invisible para calcular el centro real visible */}
+      <svg ref={svgRef} style={{ position: 'absolute', width: '100%', height: '100%', pointerEvents: 'none', opacity: 0 }} />
     </div>
   );
 };
