@@ -377,7 +377,7 @@ export const VisualDebugPlugin: Plugin = {
       description: 'Toggle Wireframe Mode',
       action: () => {
         const store = useEditorStore.getState();
-        store.toggleFeature('wireframe');
+        store.toggleFeature('wireframeEnabled');
       }
     }
   ],
