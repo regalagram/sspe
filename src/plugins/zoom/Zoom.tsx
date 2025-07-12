@@ -107,11 +107,28 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
 export const Zoom: React.FC = () => {
   const { viewport, selection, zoomIn, zoomOut, zoomToFit, zoomToSelection, zoomToSubPath, resetView } = useEditorStore();
 
+  // Calcula el centro actual del viewport
+  const getViewportCenter = () => {
+    // El centro en coordenadas SVG es el pan actual + la mitad del viewBox
+    const { pan, viewBox } = viewport;
+    return {
+      x: pan.x + (viewBox.width / 2),
+      y: pan.y + (viewBox.height / 2),
+    };
+  };
+
+  const handleZoomIn = () => {
+    zoomIn(getViewportCenter());
+  };
+  const handleZoomOut = () => {
+    zoomOut(getViewportCenter());
+  };
+
   return (
     <div>
       <ZoomControls
-        onZoomIn={zoomIn}
-        onZoomOut={zoomOut}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
         onZoomToFit={zoomToFit}
         onZoomToSelection={zoomToSelection}
         onZoomToSubPath={zoomToSubPath}
