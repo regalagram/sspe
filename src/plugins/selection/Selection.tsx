@@ -2,7 +2,7 @@ import React, { useState, PointerEvent } from 'react';
 import { Plugin, PointerEventContext } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { PluginButton } from '../../components/PluginButton';
-import { Copy } from 'lucide-react';
+import { Copy, Type } from 'lucide-react';
 import { Pointer, XCircle } from 'lucide-react';
 import { getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
@@ -48,6 +48,11 @@ class RectSelectionManager {
   handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     const { commandId, controlPoint } = context;
     const { mode } = this.editorStore;
+    const activeToolMode = toolModeManager.getActiveMode();
+
+    if (activeToolMode === 'text') {
+      return false;
+    }
 
     // Check if clicking on a transform handle - if so, don't start rectangle selection
     const target = e.target as SVGElement;
@@ -272,6 +277,7 @@ export const SelectionRectRenderer: React.FC = () => {
 interface SelectionToolsProps {
   currentMode: string;
   onSetSelectionMode: () => void;
+  onSetTextMode: () => void;
   onClearSelection: () => void;
   selectedCount: number;
 }
@@ -279,6 +285,7 @@ interface SelectionToolsProps {
 export const SelectionTools: React.FC<SelectionToolsProps> = ({
   currentMode,
   onSetSelectionMode,
+  onSetTextMode,
   onClearSelection,
   selectedCount,
 }) => {
@@ -292,6 +299,14 @@ export const SelectionTools: React.FC<SelectionToolsProps> = ({
         active={currentMode === 'select'}
         disabled={false}
         onPointerDown={onSetSelectionMode}
+      />
+      <PluginButton
+        icon={<Type size={16} />}
+        text="Create Text"
+        color="#007acc"
+        active={currentMode === 'text'}
+        disabled={false}
+        onPointerDown={onSetTextMode}
       />
       <PluginButton
         icon={<XCircle size={16} />}
@@ -338,6 +353,7 @@ export const SelectionToolsComponent: React.FC = () => {
       <SelectionTools
         currentMode={mode.current}
         onSetSelectionMode={() => toolModeManager.setMode('select')}
+        onSetTextMode={() => toolModeManager.setMode('text')}
         onClearSelection={clearSelection}
         selectedCount={selectedCount}
       />
