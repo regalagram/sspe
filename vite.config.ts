@@ -6,15 +6,22 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    target: 'baseline-widely-available', // Vite 7 optimized browser target
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
+          utils: ['zustand', 'lucide-react'],
         },
       },
     },
   },
   server: {
     allowedHosts: true,
+    open: true, // Auto-open browser on dev start
+  },
+  // Optimize dependencies for better performance
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'zustand', 'lucide-react'],
   },
 });

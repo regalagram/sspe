@@ -25,7 +25,7 @@ export const PluginButton: React.FC<PluginButtonProps> = ({
   const padding = '4px 20px';
   const borderRadius = 18;
 
-  const handlePointerDown = (e: React.MouseEvent) => {
+  const handlePointerDown = (e: React.PointerEvent) => {
     if (disabled) return;
     onPointerDown?.();
   };

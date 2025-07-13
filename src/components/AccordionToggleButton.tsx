@@ -41,11 +41,11 @@ export const AccordionToggleButton: React.FC<AccordionToggleButtonProps> = ({
         color: 'white',
       }}
       title={accordionVisible ? 'Hide accordion sidebar' : 'Show accordion sidebar'}
-      onMouseEnter={(e) => {
+      onPointerEnter={(e) => {
         e.currentTarget.style.background = '#005a9e';
         e.currentTarget.style.transform = 'scale(1.1)';
       }}
-      onMouseLeave={(e) => {
+      onPointerLeave={(e) => {
         e.currentTarget.style.background = '#007acc';
         e.currentTarget.style.transform = 'scale(1)';
       }}

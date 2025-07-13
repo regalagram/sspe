@@ -30,11 +30,11 @@ const PresetPreview: React.FC<PresetPreviewProps> = ({ preset, onClick }) => {
         transition: 'all 0.2s ease',
         minWidth: '80px',
       }}
-      onMouseEnter={(e) => {
+      onPointerEnter={(e) => {
         e.currentTarget.style.backgroundColor = '#f5f5f5';
         e.currentTarget.style.borderColor = '#999';
       }}
-      onMouseLeave={(e) => {
+      onPointerLeave={(e) => {
         e.currentTarget.style.backgroundColor = '#fff';
         e.currentTarget.style.borderColor = '#ddd';
       }}
@@ -108,12 +108,12 @@ export const StylePresets: React.FC<StylePresetsProps> = ({ onPresetApply }) => 
               marginRight: '2px',
               transition: 'all 0.2s ease',
             }}
-            onMouseEnter={(e) => {
+            onPointerEnter={(e) => {
               if (selectedCategory !== category) {
                 e.currentTarget.style.backgroundColor = '#f5f5f5';
               }
             }}
-            onMouseLeave={(e) => {
+            onPointerLeave={(e) => {
               if (selectedCategory !== category) {
                 e.currentTarget.style.backgroundColor = 'transparent';
               }
