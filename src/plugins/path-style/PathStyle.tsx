@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { PathStyle, SVGPath } from '../../types';
 import { convertRgbToHex } from '../../utils/color-utils';
+import { StylePresets } from './StylePresets';
+import { PluginButton } from '../../components/PluginButton';
+import { Settings, Palette } from 'lucide-react';
 
 // Helper function to convert colors to hex format for color inputs
 const colorToHex = (color: string | undefined): string => {
@@ -30,8 +33,37 @@ export const PathStyleControls: React.FC<PathStyleControlsProps> = ({
   pathStyle,
   onStyleChange,
 }) => {
+  const [viewMode, setViewMode] = useState<'manual' | 'presets'>('manual');
+
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'manual' ? 'presets' : 'manual');
+  };
+
   return (
     <div className="path-style-controls" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* View Toggle Button */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+        <PluginButton
+          icon=""
+          text="Manual"
+          color="#007bff"
+          active={viewMode === 'manual'}
+          onPointerDown={() => setViewMode('manual')}
+        />
+        <PluginButton
+          icon=""
+          text="Presets"
+          color="#007bff"
+          active={viewMode === 'presets'}
+          onPointerDown={() => setViewMode('presets')}
+        />
+      </div>
+
+      {/* Conditional Content */}
+      {viewMode === 'presets' ? (
+        <StylePresets onPresetApply={onStyleChange} />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
           Fill Color:
@@ -196,6 +228,8 @@ export const PathStyleControls: React.FC<PathStyleControlsProps> = ({
           <option value="evenodd">evenodd</option>
         </select>
       </div>
+        </div>
+      )}
     </div>
   );
 };
