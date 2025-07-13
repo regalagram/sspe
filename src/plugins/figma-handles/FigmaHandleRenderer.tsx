@@ -141,7 +141,7 @@ export const FigmaHandleRenderer: React.FC = () => {
   // Show if feature is enabled OR if any sub-path is selected OR if any command is selected
   const shouldShow = controlPointsEnabled || hasSelectedSubPath || hasSelectedCommand ;
 
-  if (!shouldShow || enabledFeatures.hidePointsInSelect) {
+  if (!shouldShow) {
     return null;
   }
 
@@ -160,6 +160,9 @@ export const FigmaHandleRenderer: React.FC = () => {
           
           // If feature is disabled, only show control points for selected sub-paths
           const isSubPathSelected = selection.selectedSubPaths.includes(subPath.id);
+
+          if (enabledFeatures.hidePointsInSelect && isSubPathSelected) return null;
+
           const shouldShowSubPath = enabledFeatures.controlPointsEnabled || isSubPathSelected;
           return subPath.commands.map((command, commandIndex) => {
             // Get the absolute position of the command
