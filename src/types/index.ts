@@ -56,28 +56,12 @@ export interface ViewportState {
   viewBox: BoundingBox;
 }
 
-export interface SVGText {
-  id: string;
-  content: string;
-  x: number;
-  y: number;
-  fontFamily: string;
-  fontSize: number;
-  fontWeight: 'normal' | 'bold' | 'bolder' | 'lighter' | number;
-  fontStyle: 'normal' | 'italic';
-  textAnchor: 'start' | 'middle' | 'end';
-  textDecoration?: 'none' | 'underline' | 'overline' | 'line-through';
-  fill: string;
-  bbox?: { x: number; y: number; width: number; height: number; };
-}
-
 export interface SelectionState {
   selectedPaths: string[];
   selectedSubPaths: string[];
   selectedCommands: string[];
   selectedControlPoints: string[];
   selectionBox?: BoundingBox;
-  selectedTexts: string[];
 }
 
 export interface HistoryState {
@@ -109,7 +93,6 @@ export interface EditorMode {
 export interface EditorState {
   shapeSize?: number;
   paths: SVGPath[];
-  texts: SVGText[];
   selection: SelectionState;
   viewport: ViewportState;
   grid: GridState;
