@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { EditorState, SVGCommand, SVGPath, Point, EditorCommandType, PathStyle, ViewportState, SVGSubPath } from '../types';
+import { EditorState, SVGCommand, SVGPath, Point, EditorCommandType, PathStyle, ViewportState, SVGSubPath, SVGText } from '../types';
 import { generateId } from '../utils/id-utils.js';
 import { duplicatePath, duplicateSubPath, duplicateCommand } from '../utils/duplicate-utils';
 import { saveEditorState, loadEditorState, debounce } from '../utils/persistence';
@@ -8,6 +8,10 @@ import { createNewPath } from '../utils/subpath-utils';
 import { findSubPathAtPoint, snapToGrid, getAllPathsBounds, getSelectedElementsBounds, getSelectedSubPathsBounds } from '../utils/path-utils';
 import { scaleSubPath, rotateSubPath, translateSubPath, getSubPathCenter, mirrorSubPathHorizontal, mirrorSubPathVertical } from '../utils/transform-subpath-utils';
 interface EditorActions {
+  addText: (partialText: Partial<SVGText>) => void;
+  updateText: (textId: string, updates: Partial<SVGText>) => void;
+  deleteSelectedTexts: () => void;
+  selectText: (textId: string | null) => void;
   setShapeSize: (size: number) => void;
   addCommand: (subPathId: string, command: Omit<SVGCommand, 'id'>) => string;
   addPath: (style?: PathStyle, x?: number, y?: number) => string;
@@ -74,11 +78,13 @@ const loadInitialState = (): EditorState => {
   
   const baseState: EditorState = {
     paths: <SVGPath[]>[],
+    texts: [],
     selection: {
       selectedPaths: [],
       selectedSubPaths: [],
       selectedCommands: [],
       selectedControlPoints: [],
+      selectedTexts: [],
     },
     viewport: {
       zoom: 1,
@@ -154,6 +160,55 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       }));
     },
     ...initialState,
+    addText: (partialText) => {
+      const newText: SVGText = {
+        id: generateId(),
+        content: 'Texto',
+        x: 100,
+        y: 100,
+        fontFamily: 'Arial',
+        fontSize: 24,
+        fontWeight: 'normal',
+        fontStyle: 'normal',
+        textAnchor: 'start',
+        textDecoration: 'none',
+        fill: '#000000',
+        ...partialText,
+      };
+      set((state) => ({
+        texts: [...state.texts, newText],
+      }));
+    },
+    updateText: (textId, updates) => {
+      set((state) => ({
+        texts: state.texts.map((text) =>
+          text.id === textId ? { ...text, ...updates } : text
+        ),
+      }));
+    },
+    deleteSelectedTexts: () => {
+      set((state) => ({
+        texts: state.texts.filter(
+          (text) => !state.selection.selectedTexts.includes(text.id)
+        ),
+        selection: {
+          ...state.selection,
+          selectedTexts: [],
+        },
+      }));
+    },
+    selectText: (textId) => {
+      set((state) => ({
+        selection: {
+          ...state.selection,
+          selectedPaths: [],
+          selectedSubPaths: [],
+          selectedCommands: [],
+          selectedControlPoints: [],
+          selectedTexts: textId ? [textId] : [],
+        },
+      }));
+    },
     duplicateSelection: () => {
       set((state) => {
         const { selection, paths } = state;
@@ -215,6 +270,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             selectedSubPaths: [],
             selectedCommands: [],
             selectedControlPoints: [],
+            selectedTexts: [],
           };
         } else if (selection.selectedSubPaths.length > 0) {
           let newSubPathIds: string[] = [];
@@ -236,6 +292,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             selectedSubPaths: newSubPathIds,
             selectedCommands: [],
             selectedControlPoints: [],
+            selectedTexts: [],
           };
         } else if (selection.selectedCommands.length > 0) {
           let newCmdIds: string[] = [];
@@ -260,6 +317,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             selectedSubPaths: [],
             selectedCommands: newCmdIds,
             selectedControlPoints: [],
+            selectedTexts: [],
           };
         }
         return {
@@ -307,6 +365,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             selectedSubPaths: [subPathId],
             selectedPaths: [],
             selectedCommands: [],
+            selectedTexts: [],
           },
         };
       }),
@@ -327,6 +386,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
                 selectedSubPaths: currentSelection.filter(id => id !== subPathId),
                 selectedPaths: [],
                 selectedCommands: [],
+                selectedTexts: [],
               },
             };
           } else {
@@ -336,6 +396,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
                 selectedSubPaths: [...currentSelection, subPathId],
                 selectedPaths: [],
                 selectedCommands: [],
+                selectedTexts: [],
               },
             };
           }
@@ -380,6 +441,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
             selectedCommands: [commandId],
             selectedPaths: [],
             selectedSubPaths: [],
+            selectedTexts: [],
           },
         };
       }),
@@ -425,6 +487,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
           selectedSubPaths: [],
           selectedCommands: [],
           selectedControlPoints: [],
+          selectedTexts: [],
         },
       })),
     selectSubPathByPoint: (pathId, point, isShiftPressed = false) => {
@@ -883,11 +946,13 @@ export const useEditorStore = create<EditorState & EditorActions>()(
               })),
             })),
           })),
+          texts: [],
           selection: {
             selectedPaths: [],
             selectedSubPaths: [],
             selectedCommands: [],
             selectedControlPoints: [],
+            selectedTexts: [],
           },
         };
       }),
