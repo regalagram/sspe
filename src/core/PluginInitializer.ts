@@ -26,6 +26,9 @@ import { FigmaHandlesPlugin } from '../plugins/figma-handles/FigmaHandles';
 import { CurvesPlugin } from '../plugins/curves/Curves';
 import { GesturesPlugin } from '../plugins/gestures/Gestures';
 import { GradientPlugin } from '../plugins/gradients';
+import { TextRendererPlugin } from '../plugins/text-renderer';
+import { TextControlsPlugin } from '../plugins/text-controls';
+import { TextStylePlugin } from '../plugins/text-style';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -42,6 +45,7 @@ export const initializePlugins = (): void => {
   
   // Register other core plugins
   pluginManager.registerPlugin(PathRendererPlugin);
+  pluginManager.registerPlugin(TextRendererPlugin);
   pluginManager.registerPlugin(VisualDebugPlugin);
   pluginManager.registerPlugin(CommandPlugin);
   pluginManager.registerPlugin(CreationPlugin);
@@ -52,6 +56,8 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(DeletePlugin);
   pluginManager.registerPlugin(PathStylePlugin);
   pluginManager.registerPlugin(GradientPlugin);
+  pluginManager.registerPlugin(TextControlsPlugin);
+  pluginManager.registerPlugin(TextStylePlugin);
   pluginManager.registerPlugin(SVGPlugin);
   pluginManager.registerPlugin(SubPathListPlugin);
   

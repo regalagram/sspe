@@ -4,6 +4,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { subPathToString } from '../../utils/path-utils';
 import { parseSVGToSubPaths } from '../../utils/svg-parser';
 import { calculateViewBoxFromSVGString } from '../../utils/viewbox-utils';
+import { extractGradientsFromPaths } from '../../utils/gradient-utils';
 import { PluginButton } from '../../components/PluginButton';
 import { RotateCcw, CheckCircle2, Trash2, Upload, Download } from 'lucide-react';
 
@@ -170,21 +171,33 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
 };
 
 export const SVGComponent: React.FC = () => {
-  const { paths, viewport, replacePaths, resetViewportCompletely, precision, setPrecision } = useEditorStore();
+  const { paths, texts, viewport, replacePaths, resetViewportCompletely, precision, setPrecision } = useEditorStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Generate SVG string from current paths
+  // Generate SVG string from current paths and texts
   const generateSVGCode = (): string => {
-    // First, generate a basic SVG to calculate the proper viewBox
+    // Helper function to convert fill/stroke values to SVG format
+    const convertStyleValue = (value: any): string => {
+      if (!value || value === 'none') return 'none';
+      if (typeof value === 'string') return value;
+      if (typeof value === 'object' && value.id) {
+        return `url(#${value.id})`;
+      }
+      return 'none';
+    };
+
+    // Generate path elements
     const pathElements = paths.map((path) => {
-      // Crear una cadena con todos los sub-paths del path
       const pathData = path.subPaths.map(subPath => subPathToString(subPath)).join(' ');
       const style = path.style;
       
+      const fillValue = convertStyleValue(style.fill);
+      const strokeValue = convertStyleValue(style.stroke);
+      
       const attributes = [
         `d="${pathData}"`,
-        style.fill && style.fill !== 'none' ? `fill="${style.fill}"` : 'fill="none"',
-        style.stroke && style.stroke !== 'none' ? `stroke="${style.stroke}"` : '',
+        fillValue !== 'none' ? `fill="${fillValue}"` : 'fill="none"',
+        strokeValue !== 'none' ? `stroke="${strokeValue}"` : '',
         style.strokeWidth ? `stroke-width="${style.strokeWidth}"` : '',
         style.strokeDasharray ? `stroke-dasharray="${style.strokeDasharray}"` : '',
         style.strokeLinecap ? `stroke-linecap="${style.strokeLinecap}"` : '',
@@ -196,9 +209,133 @@ export const SVGComponent: React.FC = () => {
       return `  <path ${attributes} />`;
     }).join('\n');
 
+    // Generate text elements
+    const textElements = texts.map((text) => {
+      const style = text.style || {};
+      
+      const textFillValue = convertStyleValue(style.fill);
+      const textStrokeValue = convertStyleValue(style.stroke);
+      
+      const attributes = [
+        `x="${text.x}"`,
+        `y="${text.y}"`,
+        text.transform ? `transform="${text.transform}"` : '',
+        style.fontSize ? `font-size="${style.fontSize}"` : '',
+        style.fontFamily ? `font-family="${style.fontFamily}"` : '',
+        style.fontWeight ? `font-weight="${style.fontWeight}"` : '',
+        style.fontStyle ? `font-style="${style.fontStyle}"` : '',
+        style.textAnchor ? `text-anchor="${style.textAnchor}"` : '',
+        textFillValue !== 'none' ? `fill="${textFillValue}"` : '',
+        textStrokeValue !== 'none' ? `stroke="${textStrokeValue}"` : '',
+        style.strokeWidth ? `stroke-width="${style.strokeWidth}"` : '',
+        style.fillOpacity !== undefined && style.fillOpacity !== 1 ? `fill-opacity="${style.fillOpacity}"` : '',
+        style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${style.strokeOpacity}"` : '',
+      ].filter(Boolean).join(' ');
+
+      if (text.type === 'multiline') {
+        const spans = text.spans.map((span, index) => {
+          const spanFillValue = span.style?.fill ? convertStyleValue(span.style.fill) : '';
+          
+          const spanAttributes = [
+            `x="${text.x}"`,
+            `dy="${index === 0 ? 0 : (style.fontSize || 16) * 1.2}"`,
+            spanFillValue && spanFillValue !== textFillValue ? `fill="${spanFillValue}"` : '',
+            span.style?.fontWeight && span.style.fontWeight !== style.fontWeight ? `font-weight="${span.style.fontWeight}"` : '',
+          ].filter(Boolean).join(' ');
+          
+          return `    <tspan ${spanAttributes}>${span.content}</tspan>`;
+        }).join('\n');
+        
+        return `  <text ${attributes}>\n${spans}\n  </text>`;
+      } else {
+        return `  <text ${attributes}>${text.content}</text>`;
+      }
+    }).join('\n');
+
+    // Extract gradients and patterns from paths and text elements
+    const pathGradients = extractGradientsFromPaths(paths);
+    const textGradients = texts.flatMap(text => {
+      const gradients = [];
+      if (text.style?.fill && typeof text.style.fill === 'string' && text.style.fill.startsWith('url(#')) {
+        // This would need to be extracted from the actual gradient definitions
+        // For now, we'll include the predefined gradients
+      }
+      if (text.style?.stroke && typeof text.style.stroke === 'string' && text.style.stroke.startsWith('url(#')) {
+        // Similar for stroke gradients
+      }
+      return gradients;
+    });
+
+    // Add predefined gradients for text styling
+    const predefinedGradients = [
+      {
+        id: 'text-gradient-1',
+        type: 'linear' as const,
+        x1: 0, y1: 0, x2: 100, y2: 0,
+        stops: [
+          { id: 'stop-1', offset: 0, color: '#ff6b6b', opacity: 1 },
+          { id: 'stop-2', offset: 1, color: '#4ecdc4', opacity: 1 }
+        ]
+      },
+      {
+        id: 'text-gradient-2',
+        type: 'linear' as const,
+        x1: 0, y1: 0, x2: 100, y2: 100,
+        stops: [
+          { id: 'stop-3', offset: 0, color: '#667eea', opacity: 1 },
+          { id: 'stop-4', offset: 1, color: '#764ba2', opacity: 1 }
+        ]
+      },
+      {
+        id: 'text-gradient-3',
+        type: 'radial' as const,
+        cx: 50, cy: 50, r: 50,
+        stops: [
+          { id: 'stop-5', offset: 0, color: '#ffeaa7', opacity: 1 },
+          { id: 'stop-6', offset: 1, color: '#fab1a0', opacity: 1 }
+        ]
+      }
+    ];
+
+    const allGradients = [...pathGradients, ...textGradients, ...predefinedGradients];
+
+    // Generate gradient and pattern definitions
+    const generateDefinitions = () => {
+      if (allGradients.length === 0) return '';
+      
+      const defs = allGradients.map(gradient => {
+        switch (gradient.type) {
+          case 'linear':
+            const linearStops = gradient.stops.map(stop => 
+              `    <stop offset="${stop.offset * 100}%" stop-color="${stop.color}" stop-opacity="${stop.opacity}" />`
+            ).join('\n');
+            return `  <linearGradient id="${gradient.id}" x1="${gradient.x1}" y1="${gradient.y1}" x2="${gradient.x2}" y2="${gradient.y2}" gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">\n${linearStops}\n  </linearGradient>`;
+          
+          case 'radial':
+            const radialStops = gradient.stops.map(stop => 
+              `    <stop offset="${stop.offset * 100}%" stop-color="${stop.color}" stop-opacity="${stop.opacity}" />`
+            ).join('\n');
+            return `  <radialGradient id="${gradient.id}" cx="${gradient.cx}" cy="${gradient.cy}" r="${gradient.r}"${gradient.fx ? ` fx="${gradient.fx}"` : ''}${gradient.fy ? ` fy="${gradient.fy}"` : ''} gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">\n${radialStops}\n  </radialGradient>`;
+          
+          case 'pattern':
+            return `  <pattern id="${gradient.id}" width="${gradient.width}" height="${gradient.height}" patternUnits="${gradient.patternUnits || 'userSpaceOnUse'}"${gradient.patternContentUnits ? ` patternContentUnits="${gradient.patternContentUnits}"` : ''}${gradient.patternTransform ? ` patternTransform="${gradient.patternTransform}"` : ''}>\n    ${gradient.content}\n  </pattern>`;
+          
+          default:
+            return '';
+        }
+      }).filter(Boolean).join('\n');
+      
+      return `  <defs>\n${defs}\n  </defs>\n`;
+    };
+
+    const definitions = generateDefinitions();
+
+    // Combine all elements for viewBox calculation
+    const allElements = [pathElements, textElements].filter(Boolean).join('\n');
+
     // Create a temporary SVG with default viewBox to calculate proper bounds
     const tempSvgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
-${pathElements}
+${definitions}${allElements}
 </svg>`;
 
     // Calculate the proper viewBox using DOM-based method with precision
@@ -208,7 +345,7 @@ ${pathElements}
     const viewBoxString = viewBoxData ? viewBoxData.viewBox : "0 0 800 600";
 
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBoxString}">
-${pathElements}
+${definitions}${allElements}
 </svg>`;
   };
 
@@ -319,10 +456,10 @@ ${pathElements}
           type="button"
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '8px', fontSize: '13px', fontWeight: 500,
-            background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: paths.length === 0 ? 'not-allowed' : 'pointer', width: '100%', opacity: paths.length === 0 ? 0.6 : 1
+            background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: (paths.length === 0 && texts.length === 0) ? 'not-allowed' : 'pointer', width: '100%', opacity: (paths.length === 0 && texts.length === 0) ? 0.6 : 1
           }}
           onClick={handleDownloadSVG}
-          disabled={paths.length === 0}
+          disabled={paths.length === 0 && texts.length === 0}
         >
           <Download size={16} style={{ verticalAlign: 'middle' }} /> Download
         </button>

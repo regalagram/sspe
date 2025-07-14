@@ -92,107 +92,13 @@ class RectSelectionManager {
 
   handlePointerUp = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     if (this.state.isSelecting && this.state.selectionRect) {
-      const { paths, selectMultiple, clearSelection } = this.editorStore;
+      const { paths, texts, selectMultiple, clearSelection, selectInBox } = this.editorStore;
       
       const hasSignificantArea = this.state.selectionRect.width > 5 || this.state.selectionRect.height > 5;
       
       if (hasSignificantArea) {
-        const commandsInRect: { commandId: string; subPathId: string; pathId: string }[] = [];
-        const subPathsWithCommands = new Set<string>();
-        
-        paths.forEach((path: any) => {
-          path.subPaths.forEach((subPath: any) => {
-            subPath.commands.forEach((command: any) => {
-              const pos = getCommandPosition(command);
-              if (pos && 
-                pos.x >= this.state.selectionRect!.x &&
-                pos.x <= this.state.selectionRect!.x + this.state.selectionRect!.width &&
-                pos.y >= this.state.selectionRect!.y &&
-                pos.y <= this.state.selectionRect!.y + this.state.selectionRect!.height
-              ) {
-                commandsInRect.push({
-                  commandId: command.id,
-                  subPathId: subPath.id,
-                  pathId: path.id
-                });
-                subPathsWithCommands.add(subPath.id);
-              }
-            });
-          });
-        });
-
-        // Add Z commands from sub-paths that have other commands selected
-        paths.forEach((path: any) => {
-          path.subPaths.forEach((subPath: any) => {
-            if (subPathsWithCommands.has(subPath.id)) {
-              subPath.commands.forEach((command: any) => {
-                const pos = getCommandPosition(command);
-                if (!pos && !commandsInRect.some(item => item.commandId === command.id)) {
-                  commandsInRect.push({
-                    commandId: command.id,
-                    subPathId: subPath.id,
-                    pathId: path.id
-                  });
-                }
-              });
-            }
-          });
-        });
-
-        if (commandsInRect.length > 0) {
-          const subPathGroups = new Map<string, { commandIds: string[]; totalCommands: number }>();
-          
-          commandsInRect.forEach(({ commandId, subPathId }) => {
-            if (!subPathGroups.has(subPathId)) {
-              subPathGroups.set(subPathId, { commandIds: [], totalCommands: 0 });
-            }
-            subPathGroups.get(subPathId)!.commandIds.push(commandId);
-          });
-          
-          paths.forEach((path: any) => {
-            path.subPaths.forEach((subPath: any) => {
-              if (subPathGroups.has(subPath.id)) {
-                subPathGroups.get(subPath.id)!.totalCommands = subPath.commands.length;
-              }
-            });
-          });
-          
-          let allCommandsBelongToCompleteSubPaths = true;
-          const completeSubPathIds: string[] = [];
-          
-          subPathGroups.forEach((group, subPathId) => {
-            if (group.commandIds.length === group.totalCommands) {
-              completeSubPathIds.push(subPathId);
-            } else {
-              allCommandsBelongToCompleteSubPaths = false;
-            }
-          });
-          
-          if (allCommandsBelongToCompleteSubPaths && completeSubPathIds.length > 0) {
-            const { selectSubPathMultiple } = this.editorStore;
-            selectSubPathMultiple(completeSubPathIds[0], false);
-            for (let i = 1; i < completeSubPathIds.length; i++) {
-              selectSubPathMultiple(completeSubPathIds[i], true);
-            }
-          } else {
-            const selectedCommandIds = commandsInRect
-              .filter(item => {
-                for (const path of paths) {
-                  for (const subPath of path.subPaths) {
-                    const command = subPath.commands.find((cmd: any) => cmd.id === item.commandId);
-                    if (command) {
-                      return getCommandPosition(command) !== null;
-                    }
-                  }
-                }
-                return false;
-              })
-              .map(item => item.commandId);
-            selectMultiple(selectedCommandIds, 'commands');
-          }
-        } else {
-          clearSelection();
-        }
+        // Use the centralized selectInBox function for mixed selections
+        selectInBox(this.state.selectionRect);
       }
 
       this.state.isSelecting = false;
@@ -331,7 +237,8 @@ export const SelectionToolsComponent: React.FC = () => {
   const selectedCount = 
     selection.selectedPaths.length + 
     selection.selectedSubPaths.length + 
-    selection.selectedCommands.length;
+    selection.selectedCommands.length +
+    (selection.selectedTexts?.length || 0);
   
   return (
     <div>

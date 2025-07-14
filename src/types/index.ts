@@ -104,6 +104,8 @@ export interface SelectionState {
   selectedSubPaths: string[];
   selectedCommands: string[];
   selectedControlPoints: string[];
+  selectedTexts: string[];
+  selectedTextSpans: string[];
   selectionBox?: BoundingBox;
 }
 
@@ -136,6 +138,7 @@ export interface EditorMode {
 export interface EditorState {
   shapeSize?: number;
   paths: SVGPath[];
+  texts: TextElementType[];
   selection: SelectionState;
   viewport: ViewportState;
   grid: GridState;
@@ -192,3 +195,62 @@ export interface BezierHandleState {
     };
   };
 }
+
+// Text Element Types
+export interface TextStyle {
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: 'normal' | 'bold' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900';
+  fontStyle?: 'normal' | 'italic' | 'oblique';
+  textDecoration?: 'none' | 'underline' | 'overline' | 'line-through';
+  textAnchor?: 'start' | 'middle' | 'end';
+  dominantBaseline?: 'auto' | 'text-bottom' | 'alphabetic' | 'ideographic' | 'middle' | 'central' | 'mathematical' | 'hanging' | 'text-top';
+  fill?: string | GradientOrPattern;
+  fillOpacity?: number;
+  stroke?: string | GradientOrPattern;
+  strokeWidth?: number;
+  strokeOpacity?: number;
+  letterSpacing?: number;
+  wordSpacing?: number;
+  lineHeight?: number;
+}
+
+export interface TextElement {
+  id: string;
+  type: 'text';
+  content: string;
+  x: number;
+  y: number;
+  rotation?: number;
+  transform?: string;
+  style: TextStyle;
+  locked?: boolean;
+}
+
+// Multi-line text support
+export interface TextSpan {
+  id: string;
+  content: string;
+  x?: number;
+  y?: number;
+  dx?: number;
+  dy?: number;
+  style?: Partial<TextStyle>;
+}
+
+export interface MultilineTextElement {
+  id: string;
+  type: 'multiline-text';
+  x: number;
+  y: number;
+  rotation?: number;
+  transform?: string;
+  spans: TextSpan[];
+  style: TextStyle;
+  locked?: boolean;
+}
+
+export type TextElementType = TextElement | MultilineTextElement;
+
+// Update existing types to include text elements
+export type ElementType = 'path' | 'text' | 'multiline-text';

@@ -33,6 +33,7 @@ interface TransformState {
   currentPoint: Point | null; // Track current pointer position during transform
   initialBounds: TransformBounds | null;
   initialCommands: { [commandId: string]: SVGCommand };
+  initialTexts: { [textId: string]: any }; // Store initial text positions and properties
   onStateChange?: () => void; // Callback for state changes
   isMoving: boolean; // Track if selection is being moved (drag & drop)
 }
@@ -48,6 +49,7 @@ export class TransformManager {
     currentPoint: null,
     initialBounds: null,
     initialCommands: {},
+    initialTexts: {},
     onStateChange: undefined,
     isMoving: false
   };
@@ -85,11 +87,10 @@ export class TransformManager {
   // Calculate bounds from selected commands or subpaths using DOM-based calculation
   calculateBounds(): TransformBounds | null {
     const store = this.editorStore || useEditorStore.getState();
-    const { selection, paths } = store;
-    
+    const { selection, paths, texts } = store;
     
     // Create a temporary SVG element to calculate bounds using DOM
-    const tempSvg = this.createTempSVGForSelection(paths, selection);
+    const tempSvg = this.createTempSVGForSelection(paths, selection, texts);
     if (!tempSvg) {
       return null;
     }
@@ -132,7 +133,7 @@ export class TransformManager {
   }
 
   // Create a temporary SVG element containing only the selected elements
-  private createTempSVGForSelection(paths: any[], selection: any): SVGSVGElement | null {
+  private createTempSVGForSelection(paths: any[], selection: any, texts?: any[]): SVGSVGElement | null {
     if (typeof document === 'undefined') return null;
 
     const svgNS = 'http://www.w3.org/2000/svg';
@@ -211,8 +212,9 @@ export class TransformManager {
         }
       }
     }
-    // For selected subpaths
-    else if (selection.selectedSubPaths.length > 0) {
+    
+    // For selected subpaths (changed from else if to if)
+    if (selection.selectedSubPaths.length > 0) {
       
       for (const subPathId of selection.selectedSubPaths) {
         const subPath = this.findSubPathById(subPathId, paths);
@@ -224,6 +226,42 @@ export class TransformManager {
             tempSvg.appendChild(pathElement);
             hasContent = true;
           }
+        }
+      }
+    }
+
+    // For selected text elements
+    if (selection.selectedTexts?.length > 0 && texts) {
+      for (const textId of selection.selectedTexts) {
+        const text = texts.find((t: any) => t.id === textId);
+        if (text) {
+          const textElement = document.createElementNS(svgNS, 'text');
+          textElement.setAttribute('x', text.x.toString());
+          textElement.setAttribute('y', text.y.toString());
+          
+          if (text.style?.fontSize) {
+            textElement.setAttribute('font-size', text.style.fontSize.toString());
+          }
+          if (text.style?.fontFamily) {
+            textElement.setAttribute('font-family', text.style.fontFamily);
+          }
+          
+          if (text.type === 'text') {
+            textElement.textContent = text.content;
+          } else if (text.type === 'multiline-text') {
+            for (const span of text.spans) {
+              const tspanElement = document.createElementNS(svgNS, 'tspan');
+              tspanElement.textContent = span.content;
+              if (span.x !== undefined) tspanElement.setAttribute('x', span.x.toString());
+              if (span.y !== undefined) tspanElement.setAttribute('y', span.y.toString());
+              if (span.dx !== undefined) tspanElement.setAttribute('dx', span.dx.toString());
+              if (span.dy !== undefined) tspanElement.setAttribute('dy', span.dy.toString());
+              textElement.appendChild(tspanElement);
+            }
+          }
+          
+          tempSvg.appendChild(textElement);
+          hasContent = true;
         }
       }
     }
@@ -338,14 +376,16 @@ export class TransformManager {
     const store = this.editorStore || useEditorStore.getState();
     const { selection } = store;
     
-    // Need at least one subpath OR multiple commands to show transform controls
+    // Need at least one element to show transform controls
     // Single point selection doesn't make sense for transformation
     const hasValidSelection = (
       selection.selectedSubPaths.length > 0 || 
-      selection.selectedCommands.length > 1
+      selection.selectedCommands.length > 1 ||
+      selection.selectedTexts?.length > 0 ||
+      // Mixed selections are also valid
+      (selection.selectedSubPaths.length > 0 && selection.selectedTexts?.length > 0) ||
+      (selection.selectedCommands.length > 0 && selection.selectedTexts?.length > 0)
     );
-    
-
     
     return hasValidSelection;
   }
@@ -713,7 +753,7 @@ export class TransformManager {
 
   private applyTransformToCommands(transform: (x: number, y: number) => Point) {
     const store = this.editorStore || useEditorStore.getState();
-    const { updateCommand } = store;
+    const { updateCommand, updateText } = store;
 
     // Transform selected commands
     for (const commandId of Object.keys(this.state.initialCommands)) {
@@ -745,9 +785,81 @@ export class TransformManager {
         updateCommand(commandId, updates);
       }
     }
+
+    // Transform selected texts using SVG transform attribute
+    for (const textId of Object.keys(this.state.initialTexts)) {
+      const initialText = this.state.initialTexts[textId];
+      
+      // Calculate the transformation matrix for this text
+      let transformString = '';
+      
+      if (this.state.mode === 'scale') {
+        // Get scale factors and origin
+        const { scaleX, scaleY, originX, originY } = this.getScaleParams();
+        transformString = `matrix(${scaleX}, 0, 0, ${scaleY}, ${originX * (1 - scaleX)}, ${originY * (1 - scaleY)})`;
+      } else if (this.state.mode === 'rotate') {
+        // Get rotation angle and center
+        const { angle, centerX, centerY } = this.getRotationParams();
+        transformString = `rotate(${angle * 180 / Math.PI}, ${centerX}, ${centerY})`;
+      }
+      
+      // Apply the transform
+      const { updateTextTransform } = store;
+      updateTextTransform(textId, transformString);
+    }
   }
 
   private endTransform() {
+    const store = this.editorStore || useEditorStore.getState();
+    
+    // Apply final transformations permanently to text elements
+    for (const textId of Object.keys(this.state.initialTexts)) {
+      const initialText = this.state.initialTexts[textId];
+      
+      if (this.state.mode === 'scale') {
+        // For scaling, update position and potentially font size
+        const { scaleX, scaleY, originX, originY } = this.getScaleParams();
+        const finalX = originX + (initialText.x - originX) * scaleX;
+        const finalY = originY + (initialText.y - originY) * scaleY;
+        
+        const { updateTextPosition, updateTextTransform } = store;
+        updateTextPosition(textId, finalX, finalY);
+        
+        // For text scaling, we might want to scale the font size instead of using transform
+        // This makes the text clearer and behaves more like users expect
+        if (initialText.style?.fontSize) {
+          const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2;
+          const newFontSize = initialText.style.fontSize * avgScale;
+          store.updateTextStyle(textId, { fontSize: Math.max(1, newFontSize) });
+        }
+        
+        updateTextTransform(textId, ''); // Clear transform after applying
+      } else if (this.state.mode === 'rotate') {
+        // For rotation, calculate the new position and apply rotation to the text coordinate system
+        const { angle, centerX, centerY } = this.getRotationParams();
+        
+        // Calculate the new rotated position
+        const dx = initialText.x - centerX;
+        const dy = initialText.y - centerY;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        const finalX = centerX + dx * cos - dy * sin;
+        const finalY = centerY + dx * sin + dy * cos;
+        
+        // Update position to the rotated location
+        const { updateTextPosition, updateTextTransform } = store;
+        updateTextPosition(textId, finalX, finalY);
+        
+        // Calculate cumulative rotation including any existing rotation
+        const existingRotation = this.parseExistingRotation(initialText.transform || '');
+        const totalRotationDegrees = existingRotation + (angle * 180 / Math.PI);
+        
+        // Apply the cumulative rotation around the text's new position
+        const rotationTransform = `rotate(${totalRotationDegrees}, ${finalX}, ${finalY})`;
+        updateTextTransform(textId, rotationTransform);
+      }
+    }
+
     this.state.isTransforming = false;
     this.state.mode = null;
     this.state.activeHandle = null;
@@ -755,6 +867,7 @@ export class TransformManager {
     this.state.currentPoint = null;
     this.state.initialBounds = null;
     this.state.initialCommands = {};
+    this.state.initialTexts = {};
 
     // Trigger state change to show handles again
     this.triggerStateChange();
@@ -762,7 +875,7 @@ export class TransformManager {
 
   private storeInitialCommands() {
     const store = this.editorStore || useEditorStore.getState();
-    const { selection, paths } = store;
+    const { selection, paths, texts } = store;
 
     // Store selected commands
     for (const commandId of selection.selectedCommands) {
@@ -778,6 +891,20 @@ export class TransformManager {
       if (subPath) {
         for (const command of subPath.commands) {
           this.state.initialCommands[command.id] = { ...command };
+        }
+      }
+    }
+
+    // Store selected texts
+    if (selection.selectedTexts) {
+      for (const textId of selection.selectedTexts) {
+        const text = texts?.find((t: any) => t.id === textId);
+        if (text) {
+          this.state.initialTexts[textId] = { 
+            ...text,
+            // Deep copy spans for multiline text
+            spans: text.spans ? text.spans.map((span: any) => ({ ...span })) : undefined
+          };
         }
       }
     }
@@ -822,6 +949,108 @@ export class TransformManager {
       mirrorX: scaleX < 0,
       mirrorY: scaleY < 0
     };
+  }
+
+  // Helper methods for transformation parameters
+  private getScaleParams() {
+    if (!this.state.dragStart || !this.state.initialBounds || !this.state.activeHandle || !this.state.currentPoint) {
+      return { scaleX: 1, scaleY: 1, originX: 0, originY: 0 };
+    }
+
+    const deltaX = this.state.currentPoint.x - this.state.dragStart.x;
+    const deltaY = this.state.currentPoint.y - this.state.dragStart.y;
+    const { width: initialWidth, height: initialHeight, x: initialX, y: initialY } = this.state.initialBounds;
+
+    let scaleX = 1;
+    let scaleY = 1;
+    let originX = initialX;
+    let originY = initialY;
+
+    // Calculate scale factors based on active handle
+    switch (this.state.activeHandle) {
+      case 'nw':
+        scaleX = (initialWidth - deltaX) / initialWidth;
+        scaleY = (initialHeight - deltaY) / initialHeight;
+        originX = initialX + initialWidth;
+        originY = initialY + initialHeight;
+        break;
+      case 'ne':
+        scaleX = (initialWidth + deltaX) / initialWidth;
+        scaleY = (initialHeight - deltaY) / initialHeight;
+        originX = initialX;
+        originY = initialY + initialHeight;
+        break;
+      case 'sw':
+        scaleX = (initialWidth - deltaX) / initialWidth;
+        scaleY = (initialHeight + deltaY) / initialHeight;
+        originX = initialX + initialWidth;
+        originY = initialY;
+        break;
+      case 'se':
+        scaleX = (initialWidth + deltaX) / initialWidth;
+        scaleY = (initialHeight + deltaY) / initialHeight;
+        originX = initialX;
+        originY = initialY;
+        break;
+    }
+
+    // Check if shift is pressed to maintain aspect ratio
+    if (this.isShiftPressed) {
+      const scale = Math.min(Math.abs(scaleX), Math.abs(scaleY));
+      scaleX = scaleX < 0 ? -scale : scale;
+      scaleY = scaleY < 0 ? -scale : scale;
+    }
+
+    // Prevent collapse to zero
+    const minScale = 0.01;
+    if (Math.abs(scaleX) < minScale) {
+      scaleX = scaleX < 0 ? -minScale : minScale;
+    }
+    if (Math.abs(scaleY) < minScale) {
+      scaleY = scaleY < 0 ? -minScale : minScale;
+    }
+
+    return { scaleX, scaleY, originX, originY };
+  }
+
+  private getRotationParams() {
+    if (!this.state.dragStart || !this.state.initialBounds || !this.state.currentPoint) {
+      return { angle: 0, centerX: 0, centerY: 0 };
+    }
+
+    const center = this.state.initialBounds.center;
+    
+    // Vector from center to initial point
+    const initialVector = {
+      x: this.state.dragStart.x - center.x,
+      y: this.state.dragStart.y - center.y
+    };
+    
+    // Vector from center to current point
+    const currentVector = {
+      x: this.state.currentPoint.x - center.x,
+      y: this.state.currentPoint.y - center.y
+    };
+    
+    // Calculate angle between vectors
+    const initialAngle = Math.atan2(initialVector.y, initialVector.x);
+    const currentAngle = Math.atan2(currentVector.y, currentVector.x);
+    const angle = currentAngle - initialAngle;
+
+    return { angle, centerX: center.x, centerY: center.y };
+  }
+
+  // Helper method to parse existing rotation from transform string
+  private parseExistingRotation(transform: string): number {
+    if (!transform) return 0;
+    
+    // Look for rotate(angle, cx, cy) or rotate(angle)
+    const rotateMatch = transform.match(/rotate\(([^,)]+)/);
+    if (rotateMatch) {
+      return parseFloat(rotateMatch[1]) || 0;
+    }
+    
+    return 0;
   }
 
   // Helper method to normalize bounds that may have negative width/height due to mirroring

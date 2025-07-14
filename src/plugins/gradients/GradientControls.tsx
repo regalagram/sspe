@@ -149,6 +149,126 @@ export const GradientControls: React.FC = () => {
     });
   };
 
+  // Gradient presets with predefined gradients
+  const getGradientPresets = () => {
+    const linearPresets = [
+      {
+        name: 'Sunset',
+        type: 'linear' as const,
+        angle: 90,
+        stops: [
+          { id: 'stop-1', offset: 0, color: '#ff7b7b', opacity: 1 },
+          { id: 'stop-2', offset: 1, color: '#ff6b35', opacity: 1 }
+        ]
+      },
+      {
+        name: 'Ocean',
+        type: 'linear' as const,
+        angle: 135,
+        stops: [
+          { id: 'stop-1', offset: 0, color: '#667eea', opacity: 1 },
+          { id: 'stop-2', offset: 1, color: '#764ba2', opacity: 1 }
+        ]
+      },
+      {
+        name: 'Forest',
+        type: 'linear' as const,
+        angle: 45,
+        stops: [
+          { id: 'stop-1', offset: 0, color: '#11998e', opacity: 1 },
+          { id: 'stop-2', offset: 1, color: '#38ef7d', opacity: 1 }
+        ]
+      },
+      {
+        name: 'Purple Dream',
+        type: 'linear' as const,
+        angle: 180,
+        stops: [
+          { id: 'stop-1', offset: 0, color: '#c471ed', opacity: 1 },
+          { id: 'stop-2', offset: 1, color: '#f64f59', opacity: 1 }
+        ]
+      },
+      {
+        name: 'Cool Blue',
+        type: 'linear' as const,
+        angle: 0,
+        stops: [
+          { id: 'stop-1', offset: 0, color: '#2193b0', opacity: 1 },
+          { id: 'stop-2', offset: 1, color: '#6dd5ed', opacity: 1 }
+        ]
+      },
+      {
+        name: 'Fire',
+        type: 'linear' as const,
+        angle: 45,
+        stops: [
+          { id: 'stop-1', offset: 0, color: '#ff9a9e', opacity: 1 },
+          { id: 'stop-2', offset: 0.5, color: '#fecfef', opacity: 1 },
+          { id: 'stop-3', offset: 1, color: '#fecfef', opacity: 1 }
+        ]
+      }
+    ];
+
+    const radialPresets = [
+      {
+        name: 'Sun',
+        type: 'radial' as const,
+        stops: [
+          { id: 'stop-1', offset: 0, color: '#ffeaa7', opacity: 1 },
+          { id: 'stop-2', offset: 1, color: '#fab1a0', opacity: 1 }
+        ]
+      },
+      {
+        name: 'Moon',
+        type: 'radial' as const,
+        stops: [
+          { id: 'stop-1', offset: 0, color: '#ddd6fe', opacity: 1 },
+          { id: 'stop-2', offset: 1, color: '#818cf8', opacity: 1 }
+        ]
+      },
+      {
+        name: 'Emerald',
+        type: 'radial' as const,
+        stops: [
+          { id: 'stop-1', offset: 0, color: '#d299c2', opacity: 1 },
+          { id: 'stop-2', offset: 1, color: '#fef9d3', opacity: 1 }
+        ]
+      },
+      {
+        name: 'Rose',
+        type: 'radial' as const,
+        stops: [
+          { id: 'stop-1', offset: 0, color: '#ff9a9e', opacity: 1 },
+          { id: 'stop-2', offset: 1, color: '#fad0c4', opacity: 1 }
+        ]
+      }
+    ];
+
+    return gradientType === 'linear' ? linearPresets : radialPresets;
+  };
+
+  const applyGradientPreset = (preset: any) => {
+    let newGradient: GradientOrPattern;
+    
+    if (preset.type === 'linear') {
+      // Convert angle to x1,y1,x2,y2 coordinates
+      const angle = preset.angle || 0;
+      const radians = (angle * Math.PI) / 180;
+      const x1 = 0.5 + 0.5 * Math.cos(radians + Math.PI);
+      const y1 = 0.5 + 0.5 * Math.sin(radians + Math.PI);
+      const x2 = 0.5 + 0.5 * Math.cos(radians);
+      const y2 = 0.5 + 0.5 * Math.sin(radians);
+      
+      newGradient = createLinearGradient(x1, y1, x2, y2, preset.stops);
+    } else {
+      newGradient = createRadialGradient(0.5, 0.5, 0.5, preset.stops);
+    }
+
+    selectedPaths.forEach(path => {
+      updatePathStyle(path.id, { [applyTo]: newGradient });
+    });
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '12px' }}>
       {/* Apply To Selection */}
@@ -221,6 +341,35 @@ export const GradientControls: React.FC = () => {
           />
         )}
       </div>
+
+      {/* Gradient Presets - Show when gradient types are selected */}
+      {(gradientType === 'linear' || gradientType === 'radial') && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+            Gradient Presets:
+          </span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px' }}>
+            {getGradientPresets().map((preset, index) => (
+              <button
+                key={index}
+                onClick={() => applyGradientPreset(preset)}
+                style={{
+                  width: '30px',
+                  height: '30px',
+                  border: '1px solid #ccc',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  background: preset.type === 'linear' 
+                    ? `linear-gradient(${preset.angle || 90}deg, ${preset.stops.map(s => s.color).join(', ')})`
+                    : `radial-gradient(${preset.stops.map(s => s.color).join(', ')})`,
+                  padding: 0
+                }}
+                title={preset.name}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Pattern Presets - Show when pattern type is selected but no current pattern */}
       {!currentGradient && gradientType === 'pattern' && (

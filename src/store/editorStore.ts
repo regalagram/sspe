@@ -11,6 +11,7 @@ import { CommandActions, createCommandActions } from './commandActions';
 import { UIStateActions, createUIStateActions } from './uiStateActions';
 import { HistoryActions, createHistoryActions } from './historyActions';
 import { TransformActions, createTransformActions } from './transformActions';
+import { TextActions, createTextActions } from './textActions';
 // Combined actions interface
 interface EditorActions extends 
   ViewportActions, 
@@ -19,18 +20,22 @@ interface EditorActions extends
   CommandActions, 
   UIStateActions, 
   HistoryActions, 
-  TransformActions {}
+  TransformActions,
+  TextActions {}
 
 const loadInitialState = (): EditorState => {
   const savedState = loadEditorState();
   
   const baseState: EditorState = {
     paths: [],
+    texts: [],
     selection: {
       selectedPaths: [],
       selectedSubPaths: [],
       selectedCommands: [],
       selectedControlPoints: [],
+      selectedTexts: [],
+      selectedTextSpans: [],
     },
     viewport: {
       zoom: 1,
@@ -97,6 +102,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     ...createUIStateActions(set, get, api),
     ...createHistoryActions(set, get, api),
     ...createTransformActions(set, get, api),
+    ...createTextActions(set, get, api),
   }))
 );
 

@@ -180,6 +180,8 @@ export const createPathActions: StateCreator<
           selectedSubPaths: [],
           selectedCommands: [],
           selectedControlPoints: [],
+          selectedTexts: [],
+          selectedTextSpans: [],
         },
       };
     }),
@@ -245,6 +247,8 @@ export const createPathActions: StateCreator<
           selectedSubPaths: [],
           selectedCommands: [],
           selectedControlPoints: [],
+          selectedTexts: [],
+          selectedTextSpans: [],
         };
       } else if (selection.selectedSubPaths.length > 0) {
         let newSubPathIds: string[] = [];
@@ -266,6 +270,8 @@ export const createPathActions: StateCreator<
           selectedSubPaths: newSubPathIds,
           selectedCommands: [],
           selectedControlPoints: [],
+          selectedTexts: [],
+          selectedTextSpans: [],
         };
       } else if (selection.selectedCommands.length > 0) {
         let newCmdIds: string[] = [];
@@ -290,6 +296,8 @@ export const createPathActions: StateCreator<
           selectedSubPaths: [],
           selectedCommands: newCmdIds,
           selectedControlPoints: [],
+          selectedTexts: [],
+          selectedTextSpans: [],
         };
       }
       return {

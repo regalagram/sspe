@@ -13,6 +13,7 @@ const TransformPlugin: React.FC = () => {
   const [forceUpdate, setForceUpdate] = useState(0); // Force re-render when handles should hide/show
   const selection = useEditorStore((state) => state.selection);
   const paths = useEditorStore((state) => state.paths);
+  const texts = useEditorStore((state) => state.texts);
   const viewport = useEditorStore((state) => state.viewport);
 
   // Initialize transform manager with editor store
@@ -49,7 +50,7 @@ const TransformPlugin: React.FC = () => {
       setBounds(null);
       setHandles([]);
     }
-  }, [selection.selectedCommands, selection.selectedSubPaths, paths]);
+  }, [selection.selectedCommands, selection.selectedSubPaths, selection.selectedTexts, paths, texts]);
 
   // Update during transformation
   useEffect(() => {

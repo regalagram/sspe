@@ -10,8 +10,8 @@ function roundToPrecision(num: number, precision: number): number {
 }
 
 /**
- * Calculates a global viewBox that encompasses all paths in an SVG element
- * @param svgElement - SVG element containing paths
+ * Calculates a global viewBox that encompasses all paths and text elements in an SVG element
+ * @param svgElement - SVG element containing paths and/or text elements
  * @param precision - Number of decimal places for coordinates (default: 2)
  * @returns ViewBox data with viewBox string, width, and height
  */
@@ -30,12 +30,8 @@ export function calculateGlobalViewBox(svgElement: Element, precision: number = 
     tempSvg.style.height = '1px';
     document.body.appendChild(tempSvg);
 
+    // Process path elements
     const pathNodes = svgElement.querySelectorAll('path');
-    if (pathNodes.length === 0) {
-      document.body.removeChild(tempSvg);
-      return null;
-    }
-
     pathNodes.forEach((pathNode) => {
       const clonedPath = document.createElementNS(svgNS, 'path');
 
@@ -58,6 +54,48 @@ export function calculateGlobalViewBox(svgElement: Element, precision: number = 
 
       tempSvg.appendChild(clonedPath);
     });
+
+    // Process text elements
+    const textNodes = svgElement.querySelectorAll('text');
+    textNodes.forEach((textNode) => {
+      const clonedText = document.createElementNS(svgNS, 'text');
+
+      const textAttributesToCopy = [
+        'x', 'y', 'dx', 'dy',
+        'font-family', 'font-size', 'font-weight', 'font-style',
+        'text-anchor', 'dominant-baseline',
+        'fill', 'stroke', 'stroke-width',
+        'letter-spacing', 'word-spacing'
+      ];
+
+      textAttributesToCopy.forEach((attr) => {
+        if (textNode.hasAttribute(attr)) {
+          clonedText.setAttribute(attr, textNode.getAttribute(attr)!);
+        }
+      });
+
+      // Copy text content and tspan children
+      clonedText.textContent = textNode.textContent;
+      const tspanNodes = textNode.querySelectorAll('tspan');
+      tspanNodes.forEach((tspanNode) => {
+        const clonedTspan = document.createElementNS(svgNS, 'tspan');
+        ['x', 'y', 'dx', 'dy'].forEach((attr) => {
+          if (tspanNode.hasAttribute(attr)) {
+            clonedTspan.setAttribute(attr, tspanNode.getAttribute(attr)!);
+          }
+        });
+        clonedTspan.textContent = tspanNode.textContent;
+        clonedText.appendChild(clonedTspan);
+      });
+
+      tempSvg.appendChild(clonedText);
+    });
+
+    // Check if we have any elements to measure
+    if (pathNodes.length === 0 && textNodes.length === 0) {
+      document.body.removeChild(tempSvg);
+      return null;
+    }
 
     const bbox = tempSvg.getBBox();
     document.body.removeChild(tempSvg);

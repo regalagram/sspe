@@ -41,7 +41,8 @@ export function executeDelete(editorState?: any) {
   const hasSelection =
     state.selection.selectedPaths.length > 0 ||
     state.selection.selectedSubPaths.length > 0 ||
-    state.selection.selectedCommands.length > 0;
+    state.selection.selectedCommands.length > 0 ||
+    state.selection.selectedTexts?.length > 0;
   if (!hasSelection) return;
 
   // Save current state to history before deletion
@@ -62,6 +63,13 @@ export function executeDelete(editorState?: any) {
     state.removeCommand(commandId);
   });
 
+  // Delete selected texts
+  if (state.selection.selectedTexts) {
+    state.selection.selectedTexts.forEach((textId: string) => {
+      state.deleteText(textId);
+    });
+  }
+
   // Eliminar paths vacíos
   setTimeout(() => {
     const current = useEditorStore.getState();
@@ -81,7 +89,8 @@ export const DeleteComponent: React.FC = () => {
   const hasSelection = 
     selection.selectedPaths.length > 0 || 
     selection.selectedSubPaths.length > 0 || 
-    selection.selectedCommands.length > 0;
+    selection.selectedCommands.length > 0 ||
+    (selection.selectedTexts?.length || 0) > 0;
 
   const handleDelete = () => {
     executeDelete();
