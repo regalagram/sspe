@@ -3,13 +3,17 @@ import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { PathStyle, SVGPath } from '../../types';
 import { convertRgbToHex } from '../../utils/color-utils';
+import { isGradientOrPattern } from '../../utils/gradient-utils';
 import { StylePresets } from './StylePresets';
 import { PluginButton } from '../../components/PluginButton';
 import { Settings, Palette } from 'lucide-react';
 
 // Helper function to convert colors to hex format for color inputs
-const colorToHex = (color: string | undefined): string => {
+const colorToHex = (color: string | any): string => {
   if (!color || color === 'none') return '#000000';
+  
+  // If it's a gradient or pattern, return a default color
+  if (isGradientOrPattern(color)) return '#000000';
   
   // Use the improved color conversion function
   const converted = convertRgbToHex(color);
@@ -73,7 +77,7 @@ export const PathStyleControls: React.FC<PathStyleControlsProps> = ({
             type="color"
             value={colorToHex(pathStyle.fill)}
             onChange={(e) => onStyleChange({ fill: e.target.value })}
-            disabled={pathStyle.fill === 'none'}
+            disabled={pathStyle.fill === 'none' || isGradientOrPattern(pathStyle.fill)}
           />
           <label style={{ fontSize: '12px' }}>
             <input
@@ -100,7 +104,7 @@ export const PathStyleControls: React.FC<PathStyleControlsProps> = ({
             step="0.1"
             value={pathStyle.fillOpacity || 1}
             onChange={(e) => onStyleChange({ fillOpacity: Number(e.target.value) })}
-            disabled={pathStyle.fill === 'none'}
+            disabled={pathStyle.fill === 'none' || isGradientOrPattern(pathStyle.fill)}
             style={{ flex: 1 }}
           />
           <span style={{ fontSize: '12px', minWidth: '35px' }}>{Math.round((pathStyle.fillOpacity || 1) * 100)}%</span>
@@ -116,7 +120,7 @@ export const PathStyleControls: React.FC<PathStyleControlsProps> = ({
             type="color"
             value={colorToHex(pathStyle.stroke)}
             onChange={(e) => onStyleChange({ stroke: e.target.value })}
-            disabled={pathStyle.stroke === 'none'}
+            disabled={pathStyle.stroke === 'none' || isGradientOrPattern(pathStyle.stroke)}
           />
           <label style={{ fontSize: '12px' }}>
             <input
@@ -143,7 +147,7 @@ export const PathStyleControls: React.FC<PathStyleControlsProps> = ({
             step="0.5"
             value={pathStyle.strokeWidth || 1}
             onChange={(e) => onStyleChange({ strokeWidth: Number(e.target.value) })}
-            disabled={pathStyle.stroke === 'none'}
+            disabled={pathStyle.stroke === 'none' || isGradientOrPattern(pathStyle.stroke)}
             style={{ flex: 1 }}
           />
           <span style={{ fontSize: '12px', minWidth: '35px' }}>{pathStyle.strokeWidth || 1}px</span>
@@ -162,7 +166,7 @@ export const PathStyleControls: React.FC<PathStyleControlsProps> = ({
             step="0.1"
             value={pathStyle.strokeOpacity || 1}
             onChange={(e) => onStyleChange({ strokeOpacity: Number(e.target.value) })}
-            disabled={pathStyle.stroke === 'none'}
+            disabled={pathStyle.stroke === 'none' || isGradientOrPattern(pathStyle.stroke)}
             style={{ flex: 1 }}
           />
           <span style={{ fontSize: '12px', minWidth: '35px' }}>{Math.round((pathStyle.strokeOpacity || 1) * 100)}%</span>

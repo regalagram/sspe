@@ -25,6 +25,7 @@ import { DeletePlugin } from '../plugins/delete/Delete';
 import { FigmaHandlesPlugin } from '../plugins/figma-handles/FigmaHandles';
 import { CurvesPlugin } from '../plugins/curves/Curves';
 import { GesturesPlugin } from '../plugins/gestures/Gestures';
+import { GradientPlugin } from '../plugins/gradients';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -50,6 +51,7 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(FullscreenPlugin);
   pluginManager.registerPlugin(DeletePlugin);
   pluginManager.registerPlugin(PathStylePlugin);
+  pluginManager.registerPlugin(GradientPlugin);
   pluginManager.registerPlugin(SVGPlugin);
   pluginManager.registerPlugin(SubPathListPlugin);
   

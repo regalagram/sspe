@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PathStyle } from '../../types';
+import { getStyleValue } from '../../utils/gradient-utils';
 import { stylePresets, StylePreset, getAllCategories, getCategoryDisplayName, getPresetsByCategory } from './presetData';
 import { Trash2, Palette } from 'lucide-react';
 import { PluginButton } from '../../components/PluginButton';
@@ -52,9 +53,9 @@ const PresetPreview: React.FC<PresetPreviewProps> = ({ preset, onClick }) => {
           width="36"
           height="26"
           rx="3"
-          fill={preset.style.fill || 'none'}
+          fill={preset.style.fill ? getStyleValue(preset.style.fill) : 'none'}
           fillOpacity={preset.style.fillOpacity}
-          stroke={preset.style.stroke || 'none'}
+          stroke={preset.style.stroke ? getStyleValue(preset.style.stroke) : 'none'}
           strokeWidth={preset.style.strokeWidth || 1}
           strokeOpacity={preset.style.strokeOpacity}
           strokeDasharray={preset.style.strokeDasharray}

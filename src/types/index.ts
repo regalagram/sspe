@@ -26,10 +26,53 @@ export interface SVGPath {
   style: PathStyle;
 }
 
+export interface GradientStop {
+  id: string;
+  offset: number; // 0-1
+  color: string;
+  opacity?: number;
+}
+
+export interface LinearGradient {
+  type: 'linear';
+  id: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  stops: GradientStop[];
+  gradientUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
+}
+
+export interface RadialGradient {
+  type: 'radial';
+  id: string;
+  cx: number;
+  cy: number;
+  r: number;
+  fx?: number;
+  fy?: number;
+  stops: GradientStop[];
+  gradientUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
+}
+
+export interface Pattern {
+  type: 'pattern';
+  id: string;
+  width: number;
+  height: number;
+  patternUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
+  patternContentUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
+  patternTransform?: string;
+  content: string; // SVG content inside the pattern
+}
+
+export type GradientOrPattern = LinearGradient | RadialGradient | Pattern;
+
 export interface PathStyle {
-  fill?: string;
+  fill?: string | GradientOrPattern;
   fillOpacity?: number;
-  stroke?: string;
+  stroke?: string | GradientOrPattern;
   strokeWidth?: number;
   strokeOpacity?: number;
   strokeDasharray?: string;

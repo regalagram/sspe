@@ -4,6 +4,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { subPathToString, getContrastColor, subPathToStringInContext, findSubPathAtPoint } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
+import { getStyleValue } from '../../utils/gradient-utils';
 
 // Global path drag manager to handle pointer events from plugin system
 import { PointerEventContext } from '../../core/PluginSystem';
@@ -223,8 +224,8 @@ export const PathRenderer: React.FC = () => {
             <path
               key={`path-${path.id}`}
               d={d}
-              fill={isWireframeMode ? 'none' : (path.style.fill || 'none')}
-              stroke={isWireframeMode ? '#000000' : path.style.stroke}
+              fill={isWireframeMode ? 'none' : (path.style.fill ? getStyleValue(path.style.fill) : 'none')}
+              stroke={isWireframeMode ? '#000000' : (path.style.stroke ? getStyleValue(path.style.stroke) : undefined)}
               strokeWidth={isWireframeMode ? wireframeStrokeWidth : (path.style.strokeWidth || 1) / viewport.zoom}
               strokeDasharray={isWireframeMode ? undefined : path.style.strokeDasharray}
               strokeLinecap={path.style.strokeLinecap}
@@ -303,14 +304,20 @@ export const PathRenderer: React.FC = () => {
                 
                 // Determine the primary color of this path for contrast calculation
                 // In wireframe mode, all paths are rendered with black stroke, so use black for contrast
-                const pathStroke = path.style.stroke || '#000000';
+                const pathStroke = path.style.stroke;
                 const pathFill = path.style.fill;
                 
                 // Use stroke color if available, otherwise use fill color
                 // But in wireframe mode, always use black since that's what's actually rendered
-                const primaryColor = enabledFeatures.wireframeEnabled ? '#000000' : 
-                                    (pathStroke && pathStroke !== 'none') ? pathStroke : 
-                                    (pathFill && pathFill !== 'none') ? pathFill : '#000000';
+                // For gradients, use a default color for contrast calculation
+                let primaryColor = '#000000';
+                if (!enabledFeatures.wireframeEnabled) {
+                  if (pathStroke && pathStroke !== 'none') {
+                    primaryColor = typeof pathStroke === 'string' ? pathStroke : '#000000';
+                  } else if (pathFill && pathFill !== 'none') {
+                    primaryColor = typeof pathFill === 'string' ? pathFill : '#000000';
+                  }
+                }
                 
                 const contrastColor = getContrastColor(primaryColor);
           

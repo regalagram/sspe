@@ -932,11 +932,23 @@ export function getComputedPathStyles(
 
         const styles: PathStyle = {};
         
-        const fillValue = getStyleProp('fill', defaults.fill || '');
-        if (fillValue) styles.fill = convertRgbToHex(fillValue);
+        const fillValue = getStyleProp('fill', '');
+        if (fillValue) {
+          const converted = convertRgbToHex(fillValue);
+          styles.fill = converted || fillValue;
+        } else if (defaults.fill && typeof defaults.fill === 'string') {
+          const converted = convertRgbToHex(defaults.fill);
+          styles.fill = converted || defaults.fill;
+        }
         
-        const strokeValue = getStyleProp('stroke', defaults.stroke || '');
-        if (strokeValue) styles.stroke = convertRgbToHex(strokeValue);
+        const strokeValue = getStyleProp('stroke', '');
+        if (strokeValue) {
+          const converted = convertRgbToHex(strokeValue);
+          styles.stroke = converted || strokeValue;
+        } else if (defaults.stroke && typeof defaults.stroke === 'string') {
+          const converted = convertRgbToHex(defaults.stroke);
+          styles.stroke = converted || defaults.stroke;
+        }
         
         const strokeWidth = getNumericStyleProp('stroke-width', defaults.strokeWidth);
         if (strokeWidth !== undefined) styles.strokeWidth = strokeWidth;

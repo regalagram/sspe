@@ -12,6 +12,8 @@ import { usePointerEventHandlers } from '../hooks/usePointerEventHandlers';
 import { pluginManager } from './PluginSystem';
 import { AccordionSidebar } from '../plugins/panelmode/AccordionSidebar';
 import { AccordionToggleButton } from '../components/AccordionToggleButton';
+import { SVGDefinitions } from '../components/SVGDefinitions';
+import { extractGradientsFromPaths } from '../utils/gradient-utils';
 
 // Register plugins immediately during module loading
 
@@ -20,7 +22,7 @@ initializePlugins();
 
 export const SvgEditor: React.FC = () => {
   const editorStore = useEditorStore();
-  const { isFullscreen } = editorStore;
+  const { isFullscreen, paths } = editorStore;
   const svgRef = useRef<SVGSVGElement>(null);
   
   // Get panel mode from store
@@ -52,6 +54,9 @@ export const SvgEditor: React.FC = () => {
   // Mouse event handlers
   const { handlePointerDown, handlePointerMove, handlePointerUp, handleWheel } = usePointerEventHandlers();
 
+  // Extract gradients and patterns from paths
+  const gradients = extractGradientsFromPaths(paths);
+
   return (
     <div className="svg-editor" style={editorStyle}>
       {/* Toolbar is hidden in accordion mode */}
@@ -71,6 +76,9 @@ export const SvgEditor: React.FC = () => {
         onPointerLeave={handlePointerUp}
         onWheel={handleWheel}
       >
+        {/* SVG Definitions for gradients and patterns */}
+        <SVGDefinitions gradients={gradients} />
+        
         <g transform={getSafeTransform(editorStore.viewport)}>
           {/* Render SVG content plugins */}
           {svgContentPlugins.map(ui => (
