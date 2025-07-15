@@ -190,14 +190,13 @@ export const createTextActions: StateCreator<
       texts: state.texts.map(text => {
         if (text.id !== textId) return text;
         
-        // If text has no transform, simply move x, y coordinates
-        if (!text.transform) {
-          return { ...text, x: text.x + delta.x, y: text.y + delta.y };
-        }
-        
-        // If text has transform, prepend translation to preserve existing transformations
-        const newTransform = `translate(${delta.x}, ${delta.y}) ${text.transform}`;
-        return { ...text, transform: newTransform };
+        // Always move the x,y coordinates directly
+        // This keeps transforms (like rotation) intact relative to the new position
+        return { 
+          ...text, 
+          x: text.x + delta.x, 
+          y: text.y + delta.y
+        };
       })
     }));
   },

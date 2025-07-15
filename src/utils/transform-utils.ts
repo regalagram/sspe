@@ -119,7 +119,7 @@ export function parseTransformString(transformString: string): TransformMatrix {
 /**
  * Multiply two transformation matrices
  */
-function multiplyMatrices(m1: TransformMatrix, m2: TransformMatrix): TransformMatrix {
+export function multiplyMatrices(m1: TransformMatrix, m2: TransformMatrix): TransformMatrix {
   return {
     a: m1.a * m2.a + m1.c * m2.b,
     b: m1.b * m2.a + m1.d * m2.b,
