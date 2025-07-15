@@ -190,12 +190,35 @@ export const createTextActions: StateCreator<
       texts: state.texts.map(text => {
         if (text.id !== textId) return text;
         
-        // Always move the x,y coordinates directly
-        // This keeps transforms (like rotation) intact relative to the new position
+        const newX = text.x + delta.x;
+        const newY = text.y + delta.y;
+        
+        // Check if the transform has rotation with specific center point
+        let newTransform = text.transform;
+        if (text.transform) {
+          // Match rotate with center coordinates: rotate(angle, cx, cy)
+          const rotateWithCenterMatch = text.transform.match(/rotate\(([^,]+),\s*([^,]+),\s*([^)]+)\)/);
+          if (rotateWithCenterMatch) {
+            const angle = rotateWithCenterMatch[1];
+            const oldCx = parseFloat(rotateWithCenterMatch[2]);
+            const oldCy = parseFloat(rotateWithCenterMatch[3]);
+            
+            // Update the rotation center to match the new text position
+            const newCx = oldCx + delta.x;
+            const newCy = oldCy + delta.y;
+            
+            newTransform = text.transform.replace(
+              /rotate\([^)]+\)/,
+              `rotate(${angle}, ${newCx}, ${newCy})`
+            );
+          }
+        }
+        
         return { 
           ...text, 
-          x: text.x + delta.x, 
-          y: text.y + delta.y
+          x: newX, 
+          y: newY,
+          transform: newTransform
         };
       })
     }));

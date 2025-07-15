@@ -360,7 +360,12 @@ class PointerInteractionManager {
 
   handleWheel = (e: WheelEvent<SVGElement>, context: PointerEventContext): boolean => {
     const { setZoom, viewport } = this.editorStore;
-    e.preventDefault();
+    
+    // Only preventDefault if the event is cancelable (not in a passive listener)
+    if (e.cancelable) {
+      e.preventDefault();
+    }
+    
     // Usar clientX/clientY del WheelEvent para calcular el punto
     const point = { x: e.clientX, y: e.clientY };
     const zoomFactor = 1 - e.deltaY * 0.001;

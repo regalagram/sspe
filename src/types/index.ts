@@ -106,6 +106,7 @@ export interface SelectionState {
   selectedControlPoints: string[];
   selectedTexts: string[];
   selectedTextSpans: string[];
+  selectedGroups: string[]; // Selected group IDs
   selectionBox?: BoundingBox;
 }
 
@@ -139,6 +140,7 @@ export interface EditorState {
   shapeSize?: number;
   paths: SVGPath[];
   texts: TextElementType[];
+  groups: SVGGroup[]; // SVG group elements
   gradients: GradientOrPattern[]; // Imported gradients and patterns
   selection: SelectionState;
   viewport: ViewportState;
@@ -253,5 +255,21 @@ export interface MultilineTextElement {
 
 export type TextElementType = TextElement | MultilineTextElement;
 
-// Update existing types to include text elements
-export type ElementType = 'path' | 'text' | 'multiline-text';
+// SVG Group Types
+export interface SVGGroup {
+  id: string;
+  name?: string; // Optional name for the group
+  transform?: string; // Group-level transformations
+  style?: Partial<PathStyle>; // Inherited styles for group children
+  children: SVGGroupChild[]; // Child elements
+  locked?: boolean; // If true, group is locked and unselectable
+  visible?: boolean; // Group visibility
+}
+
+export interface SVGGroupChild {
+  type: 'path' | 'text' | 'group';
+  id: string; // Reference to the actual element ID
+}
+
+// Update existing types to include groups
+export type ElementType = 'path' | 'text' | 'multiline-text' | 'group';

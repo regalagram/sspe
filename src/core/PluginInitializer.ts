@@ -29,6 +29,8 @@ import { GradientPlugin } from '../plugins/gradients';
 import { TextRendererPlugin } from '../plugins/text-renderer';
 import { TextControlsPlugin } from '../plugins/text-controls';
 import { TextStylePlugin } from '../plugins/text-style';
+import { GroupRendererPlugin } from '../plugins/group-renderer';
+import { GroupControlsPlugin } from '../plugins/group-controls';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -46,6 +48,7 @@ export const initializePlugins = (): void => {
   // Register other core plugins
   pluginManager.registerPlugin(PathRendererPlugin);
   pluginManager.registerPlugin(TextRendererPlugin);
+  pluginManager.registerPlugin(GroupRendererPlugin);
   pluginManager.registerPlugin(VisualDebugPlugin);
   pluginManager.registerPlugin(CommandPlugin);
   pluginManager.registerPlugin(CreationPlugin);
@@ -58,6 +61,7 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(GradientPlugin);
   pluginManager.registerPlugin(TextControlsPlugin);
   pluginManager.registerPlugin(TextStylePlugin);
+  pluginManager.registerPlugin(GroupControlsPlugin);
   pluginManager.registerPlugin(SVGPlugin);
   pluginManager.registerPlugin(SubPathListPlugin);
   
