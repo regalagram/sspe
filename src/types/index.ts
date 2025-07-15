@@ -153,6 +153,8 @@ export interface EditorState {
     controlPointsEnabled: boolean;
     wireframeEnabled: boolean;
     hidePointsInSelect: boolean;
+    showGroupsFrame: boolean;
+    guidelinesEnabled: boolean;
   };
   renderVersion: number; // For forcing re-renders after coordinate conversions
   precision: number; // Nuevo campo: precisión de puntos (decimales)
@@ -260,13 +262,16 @@ export interface MultilineTextElement {
 export type TextElementType = TextElement | MultilineTextElement;
 
 // SVG Group Types
+export type GroupLockLevel = 'none' | 'selection' | 'editing' | 'movement-sync' | 'full';
+
 export interface SVGGroup {
   id: string;
   name?: string; // Optional name for the group
   transform?: string; // Group-level transformations
   style?: Partial<PathStyle>; // Inherited styles for group children
   children: SVGGroupChild[]; // Child elements
-  locked?: boolean; // If true, group is locked and unselectable
+  locked?: boolean; // Legacy: If true, group is locked and unselectable
+  lockLevel?: GroupLockLevel; // New: More granular lock control
   visible?: boolean; // Group visibility
 }
 
@@ -277,3 +282,66 @@ export interface SVGGroupChild {
 
 // Update existing types to include groups
 export type ElementType = 'path' | 'text' | 'multiline-text' | 'group';
+
+// Guidelines and Snapping Types
+export interface GuidelinePoint {
+  x: number;
+  y: number;
+  type: 'static' | 'dynamic' | 'grid';
+  elementId?: string; // Reference to source element for dynamic guides
+  elementType?: 'path' | 'text' | 'group';
+  description?: string; // For debugging/tooltips
+}
+
+export interface GuideLine {
+  id: string;
+  type: 'horizontal' | 'vertical';
+  position: number; // x for vertical, y for horizontal
+  points: GuidelinePoint[]; // Points that align with this guideline
+  color?: string;
+  visible: boolean;
+}
+
+export interface DistanceGuideLine {
+  id: string;
+  type: 'horizontal' | 'vertical';
+  startPosition: number; // Start of the distance segment
+  endPosition: number; // End of the distance segment
+  distance: number; // The actual distance value
+  elements: string[]; // IDs of elements that create this distance pattern
+  color?: string;
+  visible: boolean;
+  dashArray?: string; // For styling (continuous line for distance)
+}
+
+export interface DistanceMarker {
+  id: string;
+  x: number;
+  y: number;
+  type: 'cross' | 'measurement'; // Visual marker type
+  distance: number; // Distance value to display
+  color?: string;
+}
+
+export interface SnappingConfig {
+  enabled: boolean;
+  detectionRadius: number; // pixels
+  snapDuration: number; // milliseconds
+  guidelineColor: string;
+  showStaticGuides: boolean;
+  showDynamicGuides: boolean;
+  showGridGuides: boolean;
+  showDistanceGuides: boolean; // Enable distance snapping
+  gridSize: number; // pixels
+  distanceGuideColor: string; // Color for distance guidelines
+  distanceTolerance: number; // pixels - tolerance for distance matching
+}
+
+export interface ActiveSnap {
+  guidelines: GuideLine[];
+  distanceGuidelines: DistanceGuideLine[];
+  distanceMarkers: DistanceMarker[];
+  snapPoint: Point;
+  targetPoint: Point;
+  snapTime: number; // timestamp when snap started
+}

@@ -1486,7 +1486,7 @@ export function parseGradients(svgElement: Element): GradientOrPattern[] {
     
     const width = parseFloat(patternNode.getAttribute('width') || '10');
     const height = parseFloat(patternNode.getAttribute('height') || '10');
-    const patternUnits = patternNode.getAttribute('patternUnits') || 'objectBoundingBox';
+    const patternUnits = (patternNode.getAttribute('patternUnits') || 'objectBoundingBox') as 'userSpaceOnUse' | 'objectBoundingBox';
     const patternContentUnits = patternNode.getAttribute('patternContentUnits');
     const patternTransform = patternNode.getAttribute('patternTransform');
     
@@ -1505,7 +1505,7 @@ export function parseGradients(svgElement: Element): GradientOrPattern[] {
       width,
       height,
       patternUnits,
-      patternContentUnits: patternContentUnits || undefined,
+      patternContentUnits: (patternContentUnits || undefined) as 'userSpaceOnUse' | 'objectBoundingBox' | undefined,
       patternTransform: patternTransform || undefined,
       content: patternContent,
     };
@@ -1545,7 +1545,7 @@ export function parseGroups(svgElement: Element, allPaths: SVGPath[], allTexts: 
           const matchingPath = allPaths.find(p => {
             // Compare normalized path data
             const pathString = p.subPaths.map(sp => sp.commands.map(cmd => {
-              let cmdStr = cmd.command;
+              let cmdStr: string = cmd.command;
               if (cmd.x !== undefined && cmd.y !== undefined) {
                 cmdStr += ` ${cmd.x} ${cmd.y}`;
               }
@@ -1614,7 +1614,8 @@ export function parseGroups(svgElement: Element, allPaths: SVGPath[], allTexts: 
         transform,
         children,
         visible: true,
-        locked: false
+        locked: false,
+        lockLevel: 'movement-sync' // Set movement-sync as default for imported groups
       };
       
       return group;

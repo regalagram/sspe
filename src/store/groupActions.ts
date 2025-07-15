@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { EditorState, SVGGroup, SVGGroupChild, Point } from '../types';
+import { EditorState, SVGGroup, SVGGroupChild, Point, GroupLockLevel } from '../types';
 import { generateId } from '../utils/id-utils';
 import { TextActions } from './textActions';
 import { generateGroupSVG, downloadGroupSVG } from '../utils/group-svg-utils';
@@ -29,10 +29,16 @@ export interface GroupActions {
   getGroupChildrenDetails: (groupId: string) => { id: string; type: 'path' | 'text' | 'group'; }[];
   getParentGroup: (childId: string, childType: 'path' | 'text' | 'group') => SVGGroup | null;
   isElementInGroup: (elementId: string, elementType: 'path' | 'text' | 'group') => boolean;
+  shouldMoveSyncGroup: (elementId: string, elementType: 'path' | 'text' | 'group') => SVGGroup | null;
+  moveSyncGroupByElement: (elementId: string, elementType: 'path' | 'text' | 'group', delta: Point) => boolean;
+  hasMultipleGroupElementsSelected: (groupId: string) => boolean;
   
   // Group visibility and locking
   toggleGroupVisibility: (groupId: string) => void;
   lockGroup: (groupId: string, locked?: boolean) => void;
+  setGroupLockLevel: (groupId: string, lockLevel: GroupLockLevel) => void;
+  getGroupLockLevel: (groupId: string) => GroupLockLevel;
+  isGroupLocked: (groupId: string, action: 'selection' | 'editing' | 'movement') => boolean;
   
   // Bulk operations
   clearAllGroups: () => void;
@@ -43,7 +49,7 @@ export interface GroupActions {
 }
 
 export const createGroupActions: StateCreator<
-  EditorState & GroupActions & TextActions,
+  EditorState & GroupActions & TextActions & { moveSubPath: (subPathId: string, delta: Point, skipGroupSync?: boolean) => void; },
   [],
   [],
   GroupActions
@@ -55,7 +61,8 @@ export const createGroupActions: StateCreator<
       name: name || `Group ${get().groups.length + 1}`,
       children: [],
       visible: true,
-      locked: false
+      locked: false,
+      lockLevel: 'movement-sync'
     };
     
     // Add children if provided
@@ -113,7 +120,8 @@ export const createGroupActions: StateCreator<
       name: `Group ${state.groups.length + 1}`,
       children,
       visible: true,
-      locked: false
+      locked: false,
+      lockLevel: 'movement-sync'
     };
 
     set(state => ({
@@ -148,6 +156,12 @@ export const createGroupActions: StateCreator<
     set(state => {
       const group = state.groups.find(g => g.id === groupId);
       if (!group) return state;
+      
+      // Check if group is locked for editing
+      const lockLevel = group.lockLevel || (group.locked ? 'full' : 'none');
+      if (lockLevel === 'editing' || lockLevel === 'full') {
+        return state;
+      }
       
       let newState = {
         ...state,
@@ -207,6 +221,15 @@ export const createGroupActions: StateCreator<
 
   addChildToGroup: (groupId: string, childId: string, childType: 'path' | 'text' | 'group') => {
     set(state => {
+      const group = state.groups.find(g => g.id === groupId);
+      if (!group) return state;
+      
+      // Check if group is locked for editing
+      const lockLevel = group.lockLevel || (group.locked ? 'full' : 'none');
+      if (lockLevel === 'editing' || lockLevel === 'full') {
+        return state;
+      }
+      
       let exists = false;
       if (childType === 'path') {
         exists = state.paths.some(p => p.id === childId);
@@ -236,33 +259,57 @@ export const createGroupActions: StateCreator<
   },
 
   removeChildFromGroup: (groupId: string, childId: string) => {
-    set(state => ({
-      groups: state.groups.map(group =>
-        group.id === groupId
-          ? {
-              ...group,
-              children: group.children.filter(child => child.id !== childId)
-            }
-          : group
-      )
-    }));
+    set(state => {
+      const group = state.groups.find(g => g.id === groupId);
+      if (!group) return state;
+      
+      // Check if group is locked for editing
+      const lockLevel = group.lockLevel || (group.locked ? 'full' : 'none');
+      if (lockLevel === 'editing' || lockLevel === 'full') {
+        return state;
+      }
+      
+      return {
+        ...state,
+        groups: state.groups.map(group =>
+          group.id === groupId
+            ? {
+                ...group,
+                children: group.children.filter(child => child.id !== childId)
+              }
+            : group
+        )
+      };
+    });
   },
 
   moveChildInGroup: (groupId: string, childId: string, newIndex: number) => {
-    set(state => ({
-      groups: state.groups.map(group => {
-        if (group.id !== groupId) return group;
-        
-        const children = [...group.children];
-        const currentIndex = children.findIndex(child => child.id === childId);
-        if (currentIndex === -1) return group;
-        
-        const [child] = children.splice(currentIndex, 1);
-        children.splice(newIndex, 0, child);
-        
-        return { ...group, children };
-      })
-    }));
+    set(state => {
+      const group = state.groups.find(g => g.id === groupId);
+      if (!group) return state;
+      
+      // Check if group is locked for editing
+      const lockLevel = group.lockLevel || (group.locked ? 'full' : 'none');
+      if (lockLevel === 'editing' || lockLevel === 'full') {
+        return state;
+      }
+      
+      return {
+        ...state,
+        groups: state.groups.map(group => {
+          if (group.id !== groupId) return group;
+          
+          const children = [...group.children];
+          const currentIndex = children.findIndex(child => child.id === childId);
+          if (currentIndex === -1) return group;
+          
+          const [child] = children.splice(currentIndex, 1);
+          children.splice(newIndex, 0, child);
+          
+          return { ...group, children };
+        })
+      };
+    });
   },
 
   ungroupElements: (groupId: string) => {
@@ -297,44 +344,25 @@ export const createGroupActions: StateCreator<
     const targetGroup = storeState.groups.find(g => g.id === groupId);
     if (!targetGroup) return;
 
-    // Move path children directly
-    set(s => {
-      let updatedPaths = [...s.paths];
-      targetGroup.children.forEach(child => {
-        if (child.type === 'path') {
-          updatedPaths = updatedPaths.map(path => {
-            if (path.id === child.id) {
-              return {
-                ...path,
-                subPaths: path.subPaths.map(subPath => ({
-                  ...subPath,
-                  commands: subPath.commands.map(command => ({
-                    ...command,
-                    x: command.x !== undefined ? command.x + delta.x : command.x,
-                    y: command.y !== undefined ? command.y + delta.y : command.y,
-                    x1: command.x1 !== undefined ? command.x1 + delta.x : command.x1,
-                    y1: command.y1 !== undefined ? command.y1 + delta.y : command.y1,
-                    x2: command.x2 !== undefined ? command.x2 + delta.x : command.x2,
-                    y2: command.y2 !== undefined ? command.y2 + delta.y : command.y2,
-                  }))
-                }))
-              };
+    // Move path children by moving their subpaths with skipGroupSync
+    targetGroup.children.forEach(child => {
+      if (child.type === 'path') {
+        const path = state.paths.find(p => p.id === child.id);
+        if (path) {
+          path.subPaths.forEach(subPath => {
+            if (typeof get().moveSubPath === 'function') {
+              get().moveSubPath(subPath.id, delta, true); // Skip group sync to avoid recursion
             }
-            return path;
           });
         }
-      });
-      return {
-        ...s,
-        paths: updatedPaths
-      };
+      }
     });
 
-    // Move text children using moveText method
+    // Move text children using moveText method with skipGroupSync to avoid recursion
     targetGroup.children.forEach(child => {
       if (child.type === 'text') {
         if (typeof get().moveText === 'function') {
-          get().moveText(child.id, delta);
+          get().moveText(child.id, delta, true); // Skip group sync to avoid recursion
         }
       }
       if (child.type === 'group') {
@@ -386,6 +414,54 @@ export const createGroupActions: StateCreator<
     return get().getParentGroup(elementId, elementType) !== null;
   },
 
+  shouldMoveSyncGroup: (elementId: string, elementType: 'path' | 'text' | 'group') => {
+    const state = get();
+    const parentGroup = state.getParentGroup(elementId, elementType);
+    
+    if (!parentGroup) return null;
+    
+    const lockLevel = state.getGroupLockLevel(parentGroup.id);
+    return lockLevel === 'movement-sync' ? parentGroup : null;
+  },
+
+  moveSyncGroupByElement: (elementId: string, elementType: 'path' | 'text' | 'group', delta: Point) => {
+    const state = get();
+    const syncGroup = state.shouldMoveSyncGroup(elementId, elementType);
+    
+    if (!syncGroup) return false;
+    
+    // Move the entire group instead of just the individual element
+    state.moveGroup(syncGroup.id, delta);
+    return true;
+  },
+
+  hasMultipleGroupElementsSelected: (groupId: string) => {
+    const state = get();
+    const group = state.groups.find(g => g.id === groupId);
+    if (!group) return false;
+    
+    let selectedCount = 0;
+    
+    // Count selected texts from this group
+    const groupTextIds = group.children.filter(child => child.type === 'text').map(child => child.id);
+    selectedCount += state.selection.selectedTexts.filter(id => groupTextIds.includes(id)).length;
+    
+    // Count selected subpaths from paths in this group
+    const groupPathIds = group.children.filter(child => child.type === 'path').map(child => child.id);
+    groupPathIds.forEach(pathId => {
+      const path = state.paths.find(p => p.id === pathId);
+      if (path) {
+        path.subPaths.forEach(sp => {
+          if (state.selection.selectedSubPaths.includes(sp.id)) {
+            selectedCount++;
+          }
+        });
+      }
+    });
+    
+    return selectedCount > 1;
+  },
+
   toggleGroupVisibility: (groupId: string) => {
     set(state => ({
       groups: state.groups.map(group =>
@@ -397,9 +473,66 @@ export const createGroupActions: StateCreator<
   lockGroup: (groupId: string, locked: boolean = true) => {
     set(state => ({
       groups: state.groups.map(group =>
-        group.id === groupId ? { ...group, locked } : group
+        group.id === groupId ? { ...group, locked, lockLevel: locked ? 'full' : 'none' } : group
       )
     }));
+  },
+
+  setGroupLockLevel: (groupId: string, lockLevel: GroupLockLevel) => {
+    set(state => {
+      const targetGroup = state.groups.find(g => g.id === groupId);
+      if (!targetGroup) {
+        return state;
+      }
+      
+      const newGroups = state.groups.map(group =>
+        group.id === groupId ? { 
+          ...group, 
+          lockLevel,
+          locked: lockLevel !== 'none' // Update legacy field for compatibility
+        } : group
+      );
+      
+      return {
+        ...state,
+        groups: newGroups
+      };
+    });
+  },
+
+  getGroupLockLevel: (groupId: string) => {
+    const state = get();
+    const group = state.groups.find(g => g.id === groupId);
+    if (!group) {
+      return 'none';
+    }
+    
+    // Handle legacy groups that might not have lockLevel defined
+    let result: any = group.lockLevel;
+    if (!result) {
+      result = group.locked ? 'full' : 'none';
+    }
+    
+    return result;
+  },
+
+  isGroupLocked: (groupId: string, action: 'selection' | 'editing' | 'movement') => {
+    const lockLevel = get().getGroupLockLevel(groupId);
+    
+    switch (lockLevel) {
+      case 'none':
+        return false;
+      case 'selection':
+        return action === 'selection';
+      case 'editing':
+        return action === 'selection' || action === 'editing';
+      case 'movement-sync':
+        return action === 'selection' || action === 'editing';
+      case 'full':
+        return true;
+      default:
+        return false;
+    }
   },
 
   clearAllGroups: () => {

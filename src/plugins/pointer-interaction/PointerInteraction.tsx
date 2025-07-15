@@ -4,6 +4,7 @@ import { snapToGrid, getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
 import { figmaHandleManager } from '../figma-handles/FigmaHandleManager';
+import { guidelinesManager } from '../guidelines/GuidelinesManager';
 
 interface PointerInteractionState {
   draggingCommand: string | null;
@@ -311,14 +312,31 @@ class PointerInteractionManager {
         if (start) {
           let newX = start.x + dx;
           let newY = start.y + dy;
+          
+          // Apply grid snapping if enabled
           if (grid.snapToGrid) {
             const snapped = snapToGrid({ x: newX, y: newY }, grid.size);
             newX = snapped.x;
             newY = snapped.y;
           }
           
+          // Apply guidelines snapping if enabled
+          const { enabledFeatures, paths, texts, groups, viewport } = this.editorStore;
+          if (enabledFeatures.guidelinesEnabled) {
+            const snappedPoint = guidelinesManager.updateSnap(
+              { x: newX, y: newY },
+              paths,
+              texts,
+              groups,
+              viewport.viewBox,
+              textId,
+              'text'
+            );
+            newX = snappedPoint.x;
+            newY = snappedPoint.y;
+          }
+          
           // Calculate delta from current position to apply movement
-          const { texts } = this.editorStore;
           const currentText = texts.find((t: any) => t.id === textId);
           if (currentText) {
             const deltaX = newX - currentText.x;
@@ -348,6 +366,13 @@ class PointerInteractionManager {
     this.state.dragStartPositions = {};
     this.state.dragStartTextPositions = {};
     this.state.dragOrigin = null;
+    
+    // Clear guidelines when dragging stops
+    const { enabledFeatures } = this.editorStore;
+    if (enabledFeatures?.guidelinesEnabled) {
+      guidelinesManager.clearSnap();
+    }
+    
     if (wasDraggingCommand || wasDraggingControlPoint) {
       transformManager.setMoving(false);
     }

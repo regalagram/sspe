@@ -10,7 +10,7 @@ export interface PathActions {
   removePath: (pathId: string) => void;
   addSubPath: (pathId: string) => string;
   removeSubPath: (subPathId: string) => void;
-  moveSubPath: (subPathId: string, delta: Point) => void;
+  moveSubPath: (subPathId: string, delta: Point, skipGroupSync?: boolean) => void;
   updateSubPath: (subPathId: string, updates: Partial<SVGSubPath>) => void;
   updatePathStyle: (pathId: string, style: Partial<PathStyle>) => void;
   replacePaths: (newPaths: SVGPath[]) => void;
@@ -22,7 +22,7 @@ export interface PathActions {
 }
 
 export const createPathActions: StateCreator<
-  EditorState & PathActions,
+  EditorState & PathActions & { moveGroup: (groupId: string, delta: Point) => void; shouldMoveSyncGroup: (elementId: string, elementType: 'path' | 'text' | 'group') => any; moveSyncGroupByElement: (elementId: string, elementType: 'path' | 'text' | 'group', delta: Point) => boolean; },
   [],
   [],
   PathActions
@@ -78,13 +78,54 @@ export const createPathActions: StateCreator<
       },
     })),
 
-  moveSubPath: (subPathId, delta) => {
+  moveSubPath: (subPathId, delta, skipGroupSync = false) => {
     set((state) => {
       const isLocked = state.paths.some(path =>
         path.subPaths.some(subPath => subPath.id === subPathId && subPath.locked)
       );
       if (isLocked) {
         return {};
+      }
+      
+      // Find the parent path of this subpath
+      const parentPath = state.paths.find(path =>
+        path.subPaths.some(subPath => subPath.id === subPathId)
+      );
+      
+      // Check if the parent path is in a movement-sync group (only if not skipping)
+      if (!skipGroupSync && parentPath && typeof state.moveSyncGroupByElement === 'function') {
+        const syncGroup = state.shouldMoveSyncGroup(parentPath.id, 'path');
+        if (syncGroup) {
+          // Check if multiple subpaths of the same group are being moved
+          // Get all subpaths from paths that belong to this group
+          const groupPathIds = syncGroup.children.filter((child: any) => child.type === 'path').map((child: any) => child.id);
+          const groupSubPathIds: string[] = [];
+          
+          groupPathIds.forEach((pathId: string) => {
+            const path = state.paths.find(p => p.id === pathId);
+            if (path) {
+              path.subPaths.forEach(sp => groupSubPathIds.push(sp.id));
+            }
+          });
+          
+          const selectedGroupSubPaths = state.selection.selectedSubPaths.filter(id => groupSubPathIds.includes(id));
+          
+          if (selectedGroupSubPaths.length > 1) {
+            // Multiple subpaths of the same group are selected
+            // Only move the group if this is the first subpath being processed
+            const isFirstSubPath = selectedGroupSubPaths[0] === subPathId;
+            if (isFirstSubPath) {
+              state.moveGroup(syncGroup.id, delta);
+            }
+            return {}; // Don't move individual subpath
+          } else {
+            // Single subpath, move the whole group
+            const wasMoved = state.moveSyncGroupByElement(parentPath.id, 'path', delta);
+            if (wasMoved) {
+              return {}; // Group was moved instead
+            }
+          }
+        }
       }
       return {
         paths: state.paths.map((path) => ({
@@ -182,6 +223,7 @@ export const createPathActions: StateCreator<
           selectedControlPoints: [],
           selectedTexts: [],
           selectedTextSpans: [],
+          selectedGroups: [],
         },
       };
     }),
@@ -249,6 +291,7 @@ export const createPathActions: StateCreator<
           selectedControlPoints: [],
           selectedTexts: [],
           selectedTextSpans: [],
+          selectedGroups: [],
         };
       } else if (selection.selectedSubPaths.length > 0) {
         let newSubPathIds: string[] = [];
@@ -272,6 +315,7 @@ export const createPathActions: StateCreator<
           selectedControlPoints: [],
           selectedTexts: [],
           selectedTextSpans: [],
+          selectedGroups: [],
         };
       } else if (selection.selectedCommands.length > 0) {
         let newCmdIds: string[] = [];
@@ -298,6 +342,7 @@ export const createPathActions: StateCreator<
           selectedControlPoints: [],
           selectedTexts: [],
           selectedTextSpans: [],
+          selectedGroups: [],
         };
       }
       return {

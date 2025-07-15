@@ -5,6 +5,7 @@ import { subPathToString, getContrastColor, subPathToStringInContext, findSubPat
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
 import { getStyleValue } from '../../utils/gradient-utils';
+import { guidelinesManager } from '../guidelines/GuidelinesManager';
 
 // Global path drag manager to handle pointer events from plugin system
 import { PointerEventContext } from '../../core/PluginSystem';
@@ -37,6 +38,7 @@ export const PathRenderer: React.FC = () => {
   const { 
     paths, 
     texts,
+    groups,
     selection, 
     viewport, 
     selectSubPathByPoint, 
@@ -138,9 +140,27 @@ export const PathRenderer: React.FC = () => {
     
     if (!dragState.lastPoint) return;
     
+    // Apply snapping if guidelines are enabled
+    let snappedPoint = currentPoint;
+    if (enabledFeatures.guidelinesEnabled) {
+      // Find the element we're currently dragging to exclude it from snapping calculations
+      const draggedSubPathId = dragState.subPathId;
+      const draggedPath = paths.find(p => p.subPaths.some(sp => sp.id === draggedSubPathId));
+      
+      snappedPoint = guidelinesManager.updateSnap(
+        currentPoint,
+        paths,
+        texts,
+        groups,
+        viewport.viewBox,
+        draggedPath?.id,
+        'path'
+      );
+    }
+    
     const delta = {
-      x: currentPoint.x - dragState.lastPoint.x,
-      y: currentPoint.y - dragState.lastPoint.y,
+      x: snappedPoint.x - dragState.lastPoint.x,
+      y: snappedPoint.y - dragState.lastPoint.y,
     };
     
     // Move all selected subpaths (including the one being dragged)
@@ -159,18 +179,23 @@ export const PathRenderer: React.FC = () => {
       });
     }
     
-    // Update last point
+    // Update last point (use snapped point to maintain consistent movement)
     setDragState(prev => ({
       ...prev,
-      lastPoint: currentPoint,
+      lastPoint: snappedPoint,
     }));
-  }, [dragState, moveSubPath, moveText, selection.selectedSubPaths, selection.selectedTexts, viewport, pushToHistory]);
+  }, [dragState, moveSubPath, moveText, selection.selectedSubPaths, selection.selectedTexts, viewport, pushToHistory, enabledFeatures.guidelinesEnabled, paths, texts, groups]);
 
   // Handle pointer up to stop dragging
   const handlePointerUp = useCallback((e?: React.PointerEvent<SVGElement>) => {
     // Notify transform manager that movement ended only if actual dragging occurred
     if (dragState.isDragging && dragState.dragStarted) {
       transformManager.setMoving(false);
+    }
+    
+    // Clear guidelines when dragging stops
+    if (enabledFeatures.guidelinesEnabled) {
+      guidelinesManager.clearSnap();
     }
     
     setDragState({
@@ -181,7 +206,7 @@ export const PathRenderer: React.FC = () => {
       svgElement: null,
       dragStarted: false,
     });
-  }, [dragState.isDragging, dragState.dragStarted]);
+  }, [dragState.isDragging, dragState.dragStarted, enabledFeatures.guidelinesEnabled]);
 
   // Add global pointer event listeners for dragging
   React.useEffect(() => {

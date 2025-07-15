@@ -12,7 +12,8 @@ import {
   Trash2,
   Plus,
   Edit3,
-  Download
+  Download,
+  ChevronDown
 } from 'lucide-react';
 
 export const GroupControls: React.FC = () => {
@@ -32,8 +33,33 @@ export const GroupControls: React.FC = () => {
     addChildToGroup,
     paths,
     texts,
-    exportGroupSVG
+    exportGroupSVG,
+    setGroupLockLevel,
+    getGroupLockLevel,
+    isGroupLocked
   } = useEditorStore();
+
+  // State variables
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+  const [lockDropdownOpen, setLockDropdownOpen] = useState<string | null>(null);
+  const [forceUpdate, setForceUpdate] = useState(0);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (lockDropdownOpen) {
+        const target = event.target as HTMLElement;
+        // Check if click is outside dropdown
+        if (!target.closest('[data-dropdown-id="' + lockDropdownOpen + '"]')) {
+          setLockDropdownOpen(null);
+        }
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [lockDropdownOpen]);
 
   // Medir todos los textos de todos los grupos después de obtener texts
   const textBBoxes: Record<string, any> = {};
@@ -179,9 +205,6 @@ export const GroupControls: React.FC = () => {
   }
   // ...existing code...
   
-  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState('');
-
   // Check if there's a selection that can be grouped
   const canCreateGroup = (selection.selectedPaths ?? []).length > 0 || 
                         (selection.selectedTexts ?? []).length > 0 || 
@@ -225,6 +248,11 @@ export const GroupControls: React.FC = () => {
   };
 
   const handleSelectGroupElements = (group: any) => {
+    // Check if group is locked for selection
+    if (isGroupLocked(group.id, 'selection')) {
+      return;
+    }
+    
     // Recolectar todos los elementos del grupo
     const pathIds: string[] = [];
     const textIds: string[] = [];
@@ -280,6 +308,36 @@ export const GroupControls: React.FC = () => {
   const cancelEditingName = () => {
     setEditingGroupId(null);
     setEditingName('');
+  };
+
+  const getLockLevelLabel = (level: string) => {
+    switch (level) {
+      case 'none': return 'Sin bloqueo';
+      case 'selection': return 'Selección bloqueada';
+      case 'editing': return 'Edición bloqueada';
+      case 'movement-sync': return 'Movimiento sincronizado';
+      case 'full': return 'Completamente bloqueado';
+      default: return 'Sin bloqueo';
+    }
+  };
+
+  const getLockLevelIcon = (level: string) => {
+    switch (level) {
+      case 'none': return <Unlock size={12} />;
+      case 'selection': return <Lock size={12} color="#ff9800" />;
+      case 'editing': return <Lock size={12} color="#f44336" />;
+      case 'movement-sync': return <Lock size={12} color="#2196f3" />;
+      case 'full': return <Lock size={12} color="#9c27b0" />;
+      default: return <Unlock size={12} />;
+    }
+  };
+
+  const handleLockLevelChange = (groupId: string, level: string) => {
+    setGroupLockLevel(groupId, level as any);
+    setLockDropdownOpen(null);
+    
+    // Force re-render by updating a state variable
+    setForceUpdate(prev => prev + 1);
   };
 
   const buttonStyle = {
@@ -343,6 +401,7 @@ export const GroupControls: React.FC = () => {
               const selectedPathIds = selection.selectedPaths ?? [];
               const isSelected = selection.selectedGroups.includes(group.id);
               const childrenDetails = getGroupChildrenDetails(group.id);
+              const currentLockLevel = getGroupLockLevel(group.id);
               // Elementos seleccionados que no están en el grupo
               const selectedToAdd: { id: string, type: 'path' | 'text' | 'group' }[] = [];
               (selection.selectedPaths ?? []).forEach(id => {
@@ -377,7 +436,7 @@ export const GroupControls: React.FC = () => {
               const bbox = getGroupBBox(group);
               return (
                 <div
-                  key={group.id}
+                  key={`${group.id}-${currentLockLevel}-${forceUpdate}`}
                   style={{
                     padding: '8px',
                     borderBottom: '1px solid #f0f0f0',
@@ -444,19 +503,22 @@ export const GroupControls: React.FC = () => {
                         <div 
                           onClick={() => handleSelectGroupElements(group)}
                           style={{ 
-                            cursor: 'pointer',
+                            cursor: isGroupLocked(group.id, 'selection') ? 'not-allowed' : 'pointer',
                             flex: 1,
                             padding: '2px 4px',
                             borderRadius: '4px',
-                            transition: 'background-color 0.2s'
+                            transition: 'background-color 0.2s',
+                            opacity: isGroupLocked(group.id, 'selection') ? 0.6 : 1
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#f5f5f5';
+                            if (!isGroupLocked(group.id, 'selection')) {
+                              e.currentTarget.style.backgroundColor = '#f5f5f5';
+                            }
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.backgroundColor = 'transparent';
                           }}
-                          title="Clic para seleccionar todos los elementos del grupo"
+                          title={isGroupLocked(group.id, 'selection') ? 'Grupo bloqueado para selección' : 'Clic para seleccionar todos los elementos del grupo'}
                         >
                           <div style={{ 
                             fontSize: '13px', 
@@ -472,6 +534,18 @@ export const GroupControls: React.FC = () => {
                             fontFamily: 'monospace'
                           }}>
                             ID: {group.id}
+                          </div>
+                          <div style={{ 
+                            fontSize: '10px', 
+                            color: '#1976d2',
+                            fontFamily: 'monospace',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            marginTop: '2px'
+                          }}>
+                            {getLockLevelIcon(currentLockLevel)}
+                            <span>{getLockLevelLabel(currentLockLevel)}</span>
                           </div>
                         </div>
                         <button
@@ -616,12 +690,14 @@ export const GroupControls: React.FC = () => {
                                 border: 'none',
                                 background: '#f5f5f5',
                                 borderRadius: '2px',
-                                cursor: 'pointer',
+                                cursor: isGroupLocked(group.id, 'editing') ? 'not-allowed' : 'pointer',
                                 fontSize: '10px',
-                                color: '#d32f2f'
+                                color: '#d32f2f',
+                                opacity: isGroupLocked(group.id, 'editing') ? 0.5 : 1
                               }}
-                              title={`Remove ${child.type} from group`}
-                              onClick={() => removeChildFromGroup(group.id, child.id)}
+                              title={isGroupLocked(group.id, 'editing') ? 'Grupo bloqueado para edición' : `Remove ${child.type} from group`}
+                              onClick={() => !isGroupLocked(group.id, 'editing') && removeChildFromGroup(group.id, child.id)}
+                              disabled={isGroupLocked(group.id, 'editing')}
                             >
                               del
                             </button>
@@ -631,14 +707,14 @@ export const GroupControls: React.FC = () => {
                                 border: 'none',
                                 background: '#e3f2fd',
                                 borderRadius: '2px',
-                                cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                                cursor: (idx === 0 || isGroupLocked(group.id, 'editing')) ? 'not-allowed' : 'pointer',
                                 fontSize: '10px',
                                 color: '#1976d2',
-                                opacity: idx === 0 ? 0.5 : 1
+                                opacity: (idx === 0 || isGroupLocked(group.id, 'editing')) ? 0.5 : 1
                               }}
-                              title="Move up"
-                              disabled={idx === 0}
-                              onClick={() => moveChildInGroup(group.id, child.id, idx - 1)}
+                              title={isGroupLocked(group.id, 'editing') ? 'Grupo bloqueado para edición' : 'Move up'}
+                              disabled={idx === 0 || isGroupLocked(group.id, 'editing')}
+                              onClick={() => !isGroupLocked(group.id, 'editing') && moveChildInGroup(group.id, child.id, idx - 1)}
                             >
                               ↑
                             </button>
@@ -648,14 +724,14 @@ export const GroupControls: React.FC = () => {
                                 border: 'none',
                                 background: '#e3f2fd',
                                 borderRadius: '2px',
-                                cursor: idx === childrenDetails.length - 1 ? 'not-allowed' : 'pointer',
+                                cursor: (idx === childrenDetails.length - 1 || isGroupLocked(group.id, 'editing')) ? 'not-allowed' : 'pointer',
                                 fontSize: '10px',
                                 color: '#1976d2',
-                                opacity: idx === childrenDetails.length - 1 ? 0.5 : 1
+                                opacity: (idx === childrenDetails.length - 1 || isGroupLocked(group.id, 'editing')) ? 0.5 : 1
                               }}
-                              title="Move down"
-                              disabled={idx === childrenDetails.length - 1}
-                              onClick={() => moveChildInGroup(group.id, child.id, idx + 1)}
+                              title={isGroupLocked(group.id, 'editing') ? 'Grupo bloqueado para edición' : 'Move down'}
+                              disabled={idx === childrenDetails.length - 1 || isGroupLocked(group.id, 'editing')}
+                              onClick={() => !isGroupLocked(group.id, 'editing') && moveChildInGroup(group.id, child.id, idx + 1)}
                             >
                               ↓
                             </button>
@@ -670,6 +746,9 @@ export const GroupControls: React.FC = () => {
                         {selectedToAdd.map(sel => (
                           <button
                             key={sel.id + sel.type}
+                            title={isGroupLocked(group.id, 'editing') ? 'Grupo bloqueado para edición' : `Agregar ${sel.type} (${sel.id}) al grupo`}
+                            onClick={() => !isGroupLocked(group.id, 'editing') && addChildToGroup(group.id, sel.id, sel.type)}
+                            disabled={isGroupLocked(group.id, 'editing')}
                             style={{
                               marginLeft: '6px',
                               padding: '2px 6px',
@@ -678,10 +757,9 @@ export const GroupControls: React.FC = () => {
                               background: '#e3f2fd',
                               color: '#1976d2',
                               fontSize: '10px',
-                              cursor: 'pointer'
+                              cursor: isGroupLocked(group.id, 'editing') ? 'not-allowed' : 'pointer',
+                              opacity: isGroupLocked(group.id, 'editing') ? 0.5 : 1
                             }}
-                            title={`Agregar ${sel.type} (${sel.id}) al grupo`}
-                            onClick={() => addChildToGroup(group.id, sel.id, sel.type)}
                           >
                             {sel.type}: {sel.id}
                           </button>
@@ -693,6 +771,9 @@ export const GroupControls: React.FC = () => {
                       <div style={{ marginTop: '6px', fontSize: '11px', color: '#388e3c' }}>
                         <span>Agregar path de sub-path seleccionado:</span>
                         <button
+                          title={isGroupLocked(group.id, 'editing') ? 'Grupo bloqueado para edición' : `Agregar path (${subPathToAdd.id}) al grupo`}
+                          onClick={() => !isGroupLocked(group.id, 'editing') && addChildToGroup(group.id, subPathToAdd.id, 'path')}
+                          disabled={isGroupLocked(group.id, 'editing')}
                           style={{
                             marginLeft: '6px',
                             padding: '2px 6px',
@@ -701,10 +782,9 @@ export const GroupControls: React.FC = () => {
                             background: '#e8f5e9',
                             color: '#388e3c',
                             fontSize: '10px',
-                            cursor: 'pointer'
+                            cursor: isGroupLocked(group.id, 'editing') ? 'not-allowed' : 'pointer',
+                            opacity: isGroupLocked(group.id, 'editing') ? 0.5 : 1
                           }}
-                          title={`Agregar path (${subPathToAdd.id}) al grupo`}
-                          onClick={() => addChildToGroup(group.id, subPathToAdd.id, 'path')}
                         >
                           path: {subPathToAdd.id}
                         </button>
@@ -727,31 +807,89 @@ export const GroupControls: React.FC = () => {
                     >
                       {group.visible !== false ? <Eye size={12} /> : <EyeOff size={12} />}
                     </button>
+                    <div style={{ position: 'relative' }} data-dropdown-id={group.id}>
+                      <button
+                        onClick={() => {
+                          setLockDropdownOpen(lockDropdownOpen === group.id ? null : group.id);
+                        }}
+                        style={{
+                          padding: '4px',
+                          border: 'none',
+                          background: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '2px'
+                        }}
+                        title={`Lock level: ${getLockLevelLabel(currentLockLevel)}`}
+                      >
+                        {getLockLevelIcon(currentLockLevel)}
+                        <ChevronDown size={8} />
+                      </button>
+                      {lockDropdownOpen === group.id && (
+                        <div 
+                          style={{
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            background: 'white',
+                            border: '1px solid #ddd',
+                            borderRadius: '4px',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                            zIndex: 1000,
+                            minWidth: '180px'
+                          }}>
+                          {['none', 'selection', 'editing', 'movement-sync', 'full'].map(level => (
+                            <button
+                              key={level}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleLockLevelChange(group.id, level);
+                              }}
+                              style={{
+                                width: '100%',
+                                padding: '8px 12px',
+                                border: 'none',
+                                background: currentLockLevel === level ? '#e3f2fd' : 'white',
+                                textAlign: 'left',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                fontSize: '12px',
+                                color: currentLockLevel === level ? '#1976d2' : '#333'
+                              }}
+                              onMouseEnter={(e) => {
+                                if (currentLockLevel !== level) {
+                                  e.currentTarget.style.backgroundColor = '#f5f5f5';
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (currentLockLevel !== level) {
+                                  e.currentTarget.style.backgroundColor = 'white';
+                                }
+                              }}
+                            >
+                              {getLockLevelIcon(level)}
+                              {getLockLevelLabel(level)}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <button
-                      onClick={() => lockGroup(group.id, !group.locked)}
+                      onClick={() => !isGroupLocked(group.id, 'editing') && ungroupElements(group.id)}
                       style={{
                         padding: '4px',
                         border: 'none',
                         background: 'none',
-                        cursor: 'pointer',
+                        cursor: isGroupLocked(group.id, 'editing') ? 'not-allowed' : 'pointer',
                         display: 'flex',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        opacity: isGroupLocked(group.id, 'editing') ? 0.5 : 1
                       }}
-                      title={group.locked ? 'Desbloquear grupo' : 'Bloquear grupo'}
-                    >
-                      {group.locked ? <Lock size={12} /> : <Unlock size={12} />}
-                    </button>
-                    <button
-                      onClick={() => ungroupElements(group.id)}
-                      style={{
-                        padding: '4px',
-                        border: 'none',
-                        background: 'none',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                      title="Desagrupar elementos"
+                      title={isGroupLocked(group.id, 'editing') ? 'Grupo bloqueado para edición' : 'Desagrupar elementos'}
+                      disabled={isGroupLocked(group.id, 'editing')}
                     >
                       <Ungroup size={12} />
                     </button>

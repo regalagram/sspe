@@ -18,7 +18,7 @@ export interface TextActions {
   // Text operations
   duplicateText: (textId: string) => string | null;
   deleteText: (textId: string) => void;
-  moveText: (textId: string, delta: Point) => void;
+  moveText: (textId: string, delta: Point, skipGroupSync?: boolean) => void;
   
   // Multi-line text specific
   addTextSpan: (textId: string, content: string, index?: number) => string | null;
@@ -37,7 +37,7 @@ export interface TextActions {
 }
 
 export const createTextActions: StateCreator<
-  EditorState & TextActions,
+  EditorState & TextActions & { moveGroup: (groupId: string, delta: Point) => void; shouldMoveSyncGroup: (elementId: string, elementType: 'path' | 'text' | 'group') => any; moveSyncGroupByElement: (elementId: string, elementType: 'path' | 'text' | 'group', delta: Point) => boolean; },
   [],
   [],
   TextActions
@@ -185,10 +185,38 @@ export const createTextActions: StateCreator<
     }));
   },
 
-  moveText: (textId: string, delta: Point) => {
-    set(state => ({
-      texts: state.texts.map(text => {
-        if (text.id !== textId) return text;
+  moveText: (textId: string, delta: Point, skipGroupSync = false) => {
+    set(state => {
+      // Check if the text is in a movement-sync group (only if not skipping)
+      if (!skipGroupSync && typeof state.moveSyncGroupByElement === 'function') {
+        const syncGroup = state.shouldMoveSyncGroup(textId, 'text');
+        if (syncGroup) {
+          // Check if multiple elements of the same group are being moved
+          // If so, only move the group once (when processing the first element)
+          const groupElements = syncGroup.children.filter((child: any) => child.type === 'text').map((child: any) => child.id);
+          const selectedGroupElements = state.selection.selectedTexts.filter(id => groupElements.includes(id));
+          
+          if (selectedGroupElements.length > 1) {
+            // Multiple elements of the same group are selected
+            // Only move the group if this is the first element being processed
+            const isFirstElement = selectedGroupElements[0] === textId;
+            if (isFirstElement) {
+              state.moveGroup(syncGroup.id, delta);
+            }
+            return {}; // Don't move individual element
+          } else {
+            // Single element, move the whole group
+            const wasMoved = state.moveSyncGroupByElement(textId, 'text', delta);
+            if (wasMoved) {
+              return {}; // Group was moved instead
+            }
+          }
+        }
+      }
+      
+      return {
+        texts: state.texts.map(text => {
+          if (text.id !== textId) return text;
         
         const newX = text.x + delta.x;
         const newY = text.y + delta.y;
@@ -221,7 +249,8 @@ export const createTextActions: StateCreator<
           transform: newTransform
         };
       })
-    }));
+      };
+    });
   },
 
   addTextSpan: (textId: string, content: string, index?: number) => {

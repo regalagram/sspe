@@ -31,8 +31,60 @@ const loadInitialState = (): EditorState => {
   const savedState = loadEditorState();
   
   const baseState: EditorState = {
-    paths: [],
-    texts: [],
+    paths: [
+      {
+        id: 'test-path-1',
+        subPaths: [
+          {
+            id: 'test-subpath-1',
+            commands: [
+              { id: 'cmd-1', command: 'M', x: 100, y: 100 },
+              { id: 'cmd-2', command: 'L', x: 200, y: 100 },
+              { id: 'cmd-3', command: 'L', x: 200, y: 200 },
+              { id: 'cmd-4', command: 'L', x: 100, y: 200 },
+              { id: 'cmd-5', command: 'Z' }
+            ]
+          }
+        ],
+        style: {
+          fill: 'none',
+          stroke: '#0000ff',
+          strokeWidth: 2
+        }
+      },
+      {
+        id: 'test-path-2',
+        subPaths: [
+          {
+            id: 'test-subpath-2',
+            commands: [
+              { id: 'cmd-6', command: 'M', x: 300, y: 150 },
+              { id: 'cmd-7', command: 'L', x: 400, y: 150 },
+              { id: 'cmd-8', command: 'L', x: 350, y: 250 },
+              { id: 'cmd-9', command: 'Z' }
+            ]
+          }
+        ],
+        style: {
+          fill: 'none',
+          stroke: '#ff0000',
+          strokeWidth: 2
+        }
+      }
+    ],
+    texts: [
+      {
+        id: 'test-text-1',
+        type: 'text',
+        x: 100,
+        y: 50,
+        content: 'Test Text',
+        style: {
+          fontSize: 16,
+          fill: '#000000'
+        }
+      }
+    ],
     groups: [],
     gradients: [],
     selection: {
@@ -72,7 +124,9 @@ const loadInitialState = (): EditorState => {
       commandPointsEnabled: false, 
       controlPointsEnabled: false, 
       wireframeEnabled: false,
-      hidePointsInSelect: false
+      hidePointsInSelect: false,
+      showGroupsFrame: false,
+      guidelinesEnabled: true
     },
     renderVersion: 0,
     precision: 2,

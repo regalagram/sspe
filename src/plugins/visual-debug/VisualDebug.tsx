@@ -8,10 +8,12 @@ interface VisualDebugControlsProps {
   controlPointsEnabled: boolean;
   wireframeEnabled: boolean;
   hidePointsInSelect: boolean;
+  showGroupsFrame: boolean;
   onToggleCommandPoints: () => void;
   onToggleControlPoints: () => void;
   onToggleWireframe: () => void;
   onToggleHidePointsInSelect: () => void;
+  onToggleShowGroupsFrame: () => void;
 }
 
 // Size Controls Component
@@ -157,10 +159,12 @@ export const VisualDebugControls: React.FC<VisualDebugControlsProps> = ({
   controlPointsEnabled,
   wireframeEnabled,
   hidePointsInSelect,
+  showGroupsFrame,
   onToggleCommandPoints,
   onToggleControlPoints,
   onToggleWireframe,
   onToggleHidePointsInSelect,
+  onToggleShowGroupsFrame,
 }) => {
   const checkboxStyle = {
     cursor: 'pointer',
@@ -213,6 +217,15 @@ export const VisualDebugControls: React.FC<VisualDebugControlsProps> = ({
           style={checkboxStyle}
         />
         Hide Points In Select
+      </label>
+      <label style={labelStyle}>
+        <input
+          type="checkbox"
+          checked={showGroupsFrame}
+          onChange={onToggleShowGroupsFrame}
+          style={checkboxStyle}
+        />
+        Show Groups Frame
       </label>
     </div>
   );
@@ -309,10 +322,12 @@ export const VisualDebugComponent: React.FC = () => {
         controlPointsEnabled={enabledFeatures.controlPointsEnabled}
         wireframeEnabled={enabledFeatures.wireframeEnabled}
         hidePointsInSelect={enabledFeatures.hidePointsInSelect ?? false}
+        showGroupsFrame={enabledFeatures.showGroupsFrame ?? false}
         onToggleCommandPoints={() => toggleFeature('commandPointsEnabled')}
         onToggleControlPoints={() => toggleFeature('controlPointsEnabled')}
         onToggleWireframe={() => toggleFeature('wireframeEnabled')}
         onToggleHidePointsInSelect={() => toggleFeature('hidePointsInSelect')}
+        onToggleShowGroupsFrame={() => toggleFeature('showGroupsFrame')}
       />
       <SizeControls
         globalFactor={visualDebugSizes.globalFactor}

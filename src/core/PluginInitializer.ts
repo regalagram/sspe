@@ -31,6 +31,7 @@ import { TextControlsPlugin } from '../plugins/text-controls';
 import { TextStylePlugin } from '../plugins/text-style';
 import { GroupRendererPlugin } from '../plugins/group-renderer';
 import { GroupControlsPlugin } from '../plugins/group-controls';
+import { GuidelinesPlugin } from '../plugins/guidelines';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -49,6 +50,7 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(PathRendererPlugin);
   pluginManager.registerPlugin(TextRendererPlugin);
   pluginManager.registerPlugin(GroupRendererPlugin);
+  pluginManager.registerPlugin(GuidelinesPlugin);
   pluginManager.registerPlugin(VisualDebugPlugin);
   pluginManager.registerPlugin(CommandPlugin);
   pluginManager.registerPlugin(CreationPlugin);

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { SVGGroup, SVGGroupChild } from '../../types';
+import { SVGGroup, SVGGroupChild, GroupLockLevel } from '../../types';
 
 interface GroupRendererProps {
   group: SVGGroup;
@@ -9,9 +9,14 @@ interface GroupRendererProps {
 }
 
 const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false, isParentSelected = false }) => {
-  const { paths, texts, groups, selection, viewport } = useEditorStore();
+  const { paths, texts, groups, selection, viewport, getGroupLockLevel, isGroupLocked, enabledFeatures } = useEditorStore();
 
   const handleSelectGroupElements = () => {
+    // Check if group is locked for selection
+    if (isGroupLocked(group.id, 'selection')) {
+      return;
+    }
+    
     // Recolectar todos los elementos del grupo
     const pathIds: string[] = [];
     const textIds: string[] = [];
@@ -163,12 +168,19 @@ const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false,
   } : null;
 
   // Calculate group selection visual indicators
-  const showGroupBounds = isSelected && !isParentSelected;
+  // Show bounds if:
+  // 1. Group is selected and not a child of another selected group (original behavior)
+  // 2. OR the showGroupsFrame debug feature is enabled (force show all group frames)
+  const showGroupBounds = (isSelected && !isParentSelected) || enabledFeatures.showGroupsFrame;
   let groupBounds = null;
   
   if (showGroupBounds && bounds) {
     const margin = 10 / viewport.zoom;
     const strokeWidth = 2 / viewport.zoom;
+    
+    // Different colors for selection vs debug mode
+    const isSelectedState = isSelected && !isParentSelected;
+    const strokeColor = isSelectedState ? "#2196F3" : "#FF9800"; // Blue for selected, orange for debug
     
     groupBounds = (
       <rect
@@ -177,7 +189,7 @@ const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false,
         width={bounds.width + margin * 2}
         height={bounds.height + margin * 2}
         fill="none"
-        stroke="#2196F3"
+        stroke={strokeColor}
         strokeWidth={strokeWidth}
         strokeDasharray={`${4 / viewport.zoom} ${4 / viewport.zoom}`}
         style={{
@@ -194,8 +206,8 @@ const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false,
       id={`group-${group.id}`}
       transform={group.transform}
       style={{
-        opacity: group.locked ? 0.6 : 1,
-        pointerEvents: group.locked ? 'none' : 'all'
+        opacity: isGroupLocked(group.id, 'selection') ? 0.6 : 1,
+        pointerEvents: isGroupLocked(group.id, 'movement') ? 'none' : 'all'
       }}
       data-element-type="group"
       data-element-id={group.id}
@@ -206,11 +218,11 @@ const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false,
       {/* Group selection indicators */}
       {groupBounds}
       
-      {/* Group name label when selected */}
-      {isSelected && group.name && bounds && (
+      {/* Group name label when selected or debug feature enabled */}
+      {(isSelected || enabledFeatures.showGroupsFrame) && group.name && bounds && (
         <g 
           onClick={handleSelectGroupElements}
-          style={{ cursor: 'pointer' }}
+          style={{ cursor: isGroupLocked(group.id, 'selection') ? 'not-allowed' : 'pointer' }}
           data-element-type="group-name"
           data-element-id={group.id}
         >
@@ -221,17 +233,31 @@ const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false,
             width={(group.name.length * 7 + 4) / viewport.zoom}
             height={14 / viewport.zoom}
             fill="white"
-            stroke="#2196F3"
+            stroke={isGroupLocked(group.id, 'selection') ? '#ff5722' : (isSelected && !isParentSelected ? '#2196F3' : '#FF9800')}
             strokeWidth={1 / viewport.zoom}
             rx={2 / viewport.zoom}
             style={{ pointerEvents: 'all' }}
           />
+          {/* Lock indicator */}
+          {isGroupLocked(group.id, 'selection') && (
+            <text
+              x={bounds.x + (group.name.length * 7 + 6) / viewport.zoom}
+              y={bounds.y - 5 / viewport.zoom}
+              fontSize={10 / viewport.zoom}
+              fill="#ff5722"
+              fontFamily="Arial, sans-serif"
+              textAnchor="start"
+              style={{ pointerEvents: 'all' }}
+            >
+              🔒
+            </text>
+          )}
           {/* Text label */}
           <text
             x={bounds.x}
             y={bounds.y - 5 / viewport.zoom}
             fontSize={12 / viewport.zoom}
-            fill="#2196F3"
+            fill={isGroupLocked(group.id, 'selection') ? '#ff5722' : (isSelected && !isParentSelected ? '#2196F3' : '#FF9800')}
             fontFamily="Arial, sans-serif"
             textAnchor="start"
             style={{ pointerEvents: 'all' }}
