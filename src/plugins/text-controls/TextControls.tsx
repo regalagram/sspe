@@ -124,7 +124,7 @@ export const TextControls: React.FC = () => {
   const commonTextAnchor = getCommonStyleValue('textAnchor');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '12px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {/* Text Creation */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
@@ -144,7 +144,7 @@ export const TextControls: React.FC = () => {
           }}
         />
         
-        <div style={{ display: 'flex', gap: '6px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <PluginButton
             icon={<Type size={12} />}
             text="Single Line"
@@ -167,7 +167,7 @@ export const TextControls: React.FC = () => {
             Operations:
           </span>
           
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column',gap: '6px' }}>
             <PluginButton
               icon={<Copy size={12} />}
               text="Duplicate"
@@ -274,7 +274,7 @@ export const TextControls: React.FC = () => {
           </div>
 
           {/* Font Style Buttons */}
-          <div style={{ display: 'flex', gap: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <PluginButton
               icon={<Bold size={10} />}
               text="Bold"
@@ -294,7 +294,7 @@ export const TextControls: React.FC = () => {
           {/* Text Alignment */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <label style={{ fontSize: '10px', color: '#666' }}>Alignment:</label>
-            <div style={{ display: 'flex', gap: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <PluginButton
                 icon={<AlignLeft size={10} />}
                 text="Left"

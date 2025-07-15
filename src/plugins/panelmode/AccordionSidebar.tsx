@@ -188,8 +188,8 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
             {(priorityPlugins.length > 0 || otherPlugins.length > 0) && (
               <div style={{ 
                 height: '1px',
-                background: '#e0e0e0',
-                margin: '4px 0'
+                background: '#999',
+                padding: '4px 0'
               }} />
             )}
           </>
@@ -215,8 +215,8 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
         {priorityPlugins.length > 0 && otherPlugins.length > 0 && (
           <div style={{ 
             height: '1px',
-            background: '#e0e0e0',
-            margin: '4px 0'
+            background: '#999',
+            padding: '4px 0'
           }} />
         )}
 
@@ -258,7 +258,7 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
   const isPanelMode = plugin.id === 'panel-mode-ui';
   
   const headerStyle: React.CSSProperties = {
-    padding: '12px 16px',
+    padding: '8px 8px',
     borderBottom: '1px solid #e0e0e0',
     cursor: 'pointer',
     background: isExpanded ? '#f0f8ff' : (isPanelMode ? '#f8f9fa' : '#fafafa'),

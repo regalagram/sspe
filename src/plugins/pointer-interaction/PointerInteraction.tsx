@@ -12,6 +12,7 @@ interface PointerInteractionState {
   isSpacePressed: boolean;
   lastPointerPosition: { x: number; y: number };
   dragStartPositions: { [id: string]: { x: number; y: number } };
+  dragStartTextPositions: { [id: string]: { x: number; y: number } };
   dragOrigin: { x: number; y: number } | null;
 }
 
@@ -23,6 +24,7 @@ class PointerInteractionManager {
     isSpacePressed: false,
     lastPointerPosition: { x: 0, y: 0 },
     dragStartPositions: {},
+    dragStartTextPositions: {},
     dragOrigin: null,
   };
 
@@ -86,7 +88,8 @@ class PointerInteractionManager {
     const { selection } = this.editorStore;
     return selection.selectedCommands.length > 0 || 
            selection.selectedSubPaths.length > 0 || 
-           selection.selectedPaths.length > 0;
+           selection.selectedPaths.length > 0 ||
+           selection.selectedTexts.length > 0;
   }
 
   getSVGPoint(e: PointerEvent<SVGElement>, svgRef: React.RefObject<SVGSVGElement | null>): { x: number; y: number } {
@@ -95,7 +98,7 @@ class PointerInteractionManager {
 
   handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     const { commandId, controlPoint } = context;
-    const { selection, viewport, grid, mode, paths, selectCommand, selectMultiple, clearSelection, pushToHistory } = this.editorStore;
+    const { selection, viewport, grid, mode, paths, texts, selectCommand, selectMultiple, clearSelection, pushToHistory } = this.editorStore;
     e.stopPropagation();
     const isEmptySpaceClick = !commandId && !controlPoint && !this.state.isSpacePressed && e.button === 0;
     if (this.state.draggingControlPoint && !controlPoint && !this.state.isSpacePressed) {
@@ -128,6 +131,21 @@ class PointerInteractionManager {
       pushToHistory();
       return true;
     } else if (commandId && !this.state.isSpacePressed) {
+      // Check if this command belongs to a selected sub-path
+      let belongsToSelectedSubPath = false;
+      let parentSubPathId: string | null = null;
+      
+      paths.forEach((path: any) => {
+        path.subPaths.forEach((subPath: any) => {
+          if (selection.selectedSubPaths.includes(subPath.id)) {
+            if (subPath.commands.some((cmd: any) => cmd.id === commandId)) {
+              belongsToSelectedSubPath = true;
+              parentSubPathId = subPath.id;
+            }
+          }
+        });
+      });
+      
       let finalSelectedIds: string[] = [];
       if (e.shiftKey) {
         if (selection.selectedCommands.includes(commandId)) {
@@ -139,16 +157,66 @@ class PointerInteractionManager {
           figmaHandleManager.onSelectionChanged();
         }
       } else {
-        if (selection.selectedCommands.includes(commandId)) {
-          finalSelectedIds = selection.selectedCommands;
-          selectMultiple(finalSelectedIds, 'commands');
+        if (belongsToSelectedSubPath) {
+          // Command belongs to selected sub-path - treat as sub-path drag
+          const hasMixedSelection = selection.selectedTexts.length > 0 || 
+                                  selection.selectedPaths.length > 0 ||
+                                  selection.selectedCommands.length > 0;
+          
+          if (hasMixedSelection) {
+            // Don't change selection, use all selected commands (including from sub-paths)
+            finalSelectedIds = [...selection.selectedCommands];
+            // Add all commands from selected sub-paths if not already included
+            selection.selectedSubPaths.forEach((subPathId: string) => {
+              paths.forEach((path: any) => {
+                const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
+                if (subPath) {
+                  subPath.commands.forEach((cmd: any) => {
+                    if (!finalSelectedIds.includes(cmd.id)) {
+                      finalSelectedIds.push(cmd.id);
+                    }
+                  });
+                }
+              });
+            });
+          } else {
+            // Just sub-path selection - include all commands from selected sub-paths
+            finalSelectedIds = [];
+            selection.selectedSubPaths.forEach((subPathId: string) => {
+              paths.forEach((path: any) => {
+                const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
+                if (subPath) {
+                  subPath.commands.forEach((cmd: any) => {
+                    finalSelectedIds.push(cmd.id);
+                  });
+                }
+              });
+            });
+          }
+        } else if (selection.selectedCommands.includes(commandId)) {
+          // Already selected command - check if we have mixed selection
+          const hasMixedSelection = selection.selectedTexts.length > 0 || 
+                                  selection.selectedSubPaths.length > 0 || 
+                                  selection.selectedPaths.length > 0;
+          
+          if (hasMixedSelection) {
+            // Don't change selection, just prepare for dragging
+            finalSelectedIds = selection.selectedCommands;
+          } else {
+            // Single command selection
+            finalSelectedIds = selection.selectedCommands;
+            selectMultiple(finalSelectedIds, 'commands');
+          }
         } else {
+          // New command selection
           finalSelectedIds = [commandId];
           selectCommand(commandId);
         }
       }
       figmaHandleManager.onSelectionChanged();
       this.state.draggingCommand = commandId;
+      
+      // Capture positions of selected commands
       const positions: { [id: string]: { x: number; y: number } } = {};
       paths.forEach((path: any) => {
         path.subPaths.forEach((subPath: any) => {
@@ -160,7 +228,35 @@ class PointerInteractionManager {
           });
         });
       });
+      
+      // Also capture positions of commands in selected sub-paths (avoid duplicates)
+      selection.selectedSubPaths.forEach((subPathId: string) => {
+        paths.forEach((path: any) => {
+          const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
+          if (subPath) {
+            subPath.commands.forEach((cmd: any) => {
+              // Only add if not already captured from selectedCommands
+              if (!positions[cmd.id]) {
+                const pos = getCommandPosition(cmd);
+                if (pos) positions[cmd.id] = { x: pos.x, y: pos.y };
+              }
+            });
+          }
+        });
+      });
+      
       this.state.dragStartPositions = positions;
+      
+      // Capture positions of selected texts
+      const textPositions: { [id: string]: { x: number; y: number } } = {};
+      selection.selectedTexts.forEach((textId: string) => {
+        const text = texts.find((t: any) => t.id === textId);
+        if (text) {
+          textPositions[textId] = { x: text.x, y: text.y };
+        }
+      });
+      this.state.dragStartTextPositions = textPositions;
+      
       this.state.dragOrigin = this.getSVGPoint(e, context.svgRef);
       transformManager.setMoving(true);
       pushToHistory();
@@ -176,7 +272,7 @@ class PointerInteractionManager {
   };
 
   handlePointerMove = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
-    const { grid, selection, pan, updateCommand, moveCommand } = this.editorStore;
+    const { grid, selection, pan, updateCommand, moveCommand, moveText } = this.editorStore;
     if (this.state.isPanning) {
       const dx = e.clientX - this.state.lastPointerPosition.x;
       const dy = e.clientY - this.state.lastPointerPosition.y;
@@ -193,6 +289,8 @@ class PointerInteractionManager {
       const point = this.getSVGPoint(e, context.svgRef);
       const dx = point.x - this.state.dragOrigin.x;
       const dy = point.y - this.state.dragOrigin.y;
+      
+      // Move selected commands
       Object.keys(this.state.dragStartPositions).forEach((cmdId: string) => {
         const start = this.state.dragStartPositions[cmdId];
         if (start) {
@@ -206,6 +304,32 @@ class PointerInteractionManager {
           moveCommand(cmdId, { x: newX, y: newY });
         }
       });
+      
+      // Move selected texts
+      Object.keys(this.state.dragStartTextPositions).forEach((textId: string) => {
+        const start = this.state.dragStartTextPositions[textId];
+        if (start) {
+          let newX = start.x + dx;
+          let newY = start.y + dy;
+          if (grid.snapToGrid) {
+            const snapped = snapToGrid({ x: newX, y: newY }, grid.size);
+            newX = snapped.x;
+            newY = snapped.y;
+          }
+          
+          // Calculate delta from current position to apply movement
+          const { texts } = this.editorStore;
+          const currentText = texts.find((t: any) => t.id === textId);
+          if (currentText) {
+            const deltaX = newX - currentText.x;
+            const deltaY = newY - currentText.y;
+            if (Math.abs(deltaX) > 0.001 || Math.abs(deltaY) > 0.001) {
+              moveText(textId, { x: deltaX, y: deltaY });
+            }
+          }
+        }
+      });
+      
       return true;
     }
     return false;
@@ -222,6 +346,7 @@ class PointerInteractionManager {
     this.state.draggingControlPoint = null;
     this.state.isPanning = false;
     this.state.dragStartPositions = {};
+    this.state.dragStartTextPositions = {};
     this.state.dragOrigin = null;
     if (wasDraggingCommand || wasDraggingControlPoint) {
       transformManager.setMoving(false);

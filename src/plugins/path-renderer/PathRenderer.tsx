@@ -36,11 +36,13 @@ const pathDragManager = new PathDragManager();
 export const PathRenderer: React.FC = () => {
   const { 
     paths, 
+    texts,
     selection, 
     viewport, 
     selectSubPathByPoint, 
     selectSubPathMultiple,
     moveSubPath, 
+    moveText,
     pushToHistory, 
     renderVersion, 
     enabledFeatures 
@@ -150,12 +152,19 @@ export const PathRenderer: React.FC = () => {
       moveSubPath(subPathId, delta);
     });
     
+    // Also move selected texts if there's a mixed selection
+    if (selection.selectedTexts.length > 0) {
+      selection.selectedTexts.forEach(textId => {
+        moveText(textId, delta);
+      });
+    }
+    
     // Update last point
     setDragState(prev => ({
       ...prev,
       lastPoint: currentPoint,
     }));
-  }, [dragState, moveSubPath, selection.selectedSubPaths, viewport, pushToHistory]);
+  }, [dragState, moveSubPath, moveText, selection.selectedSubPaths, selection.selectedTexts, viewport, pushToHistory]);
 
   // Handle pointer up to stop dragging
   const handlePointerUp = useCallback((e?: React.PointerEvent<SVGElement>) => {

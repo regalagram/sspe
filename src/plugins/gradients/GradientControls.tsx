@@ -270,13 +270,13 @@ export const GradientControls: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '12px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {/* Apply To Selection */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
           Apply To:
         </span>
-        <div style={{ display: 'flex', gap: '6px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <PluginButton
             icon={<Paintbrush size={12} />}
             text="Fill"
@@ -299,7 +299,7 @@ export const GradientControls: React.FC = () => {
         <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
           Type:
         </span>
-        <div style={{ display: 'flex', gap: '6px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <PluginButton
             icon=""
             text="Linear"
@@ -325,7 +325,10 @@ export const GradientControls: React.FC = () => {
       </div>
 
       {/* Create/Remove Buttons */}
-      <div style={{ display: 'flex', gap: '6px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+          Operations:
+        </span>
         <PluginButton
           icon={<Plus size={12} />}
           text={currentGradient ? 'Update' : 'Create'}
@@ -520,7 +523,7 @@ export const GradientControls: React.FC = () => {
             <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
               Pattern:
             </span>
-            <div style={{ display: 'flex', gap: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <PluginButton
                 icon={<Palette size={10} />}
                 text="Presets"

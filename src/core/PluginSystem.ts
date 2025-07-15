@@ -134,11 +134,26 @@ export class PluginManager {
         pluginsToProcess = [transformPlugin, ...otherPlugins];
       }
     } else if (commandId && eventType === 'pointerDown') {
-      // When clicking on a command, process PointerInteraction first, then others
-      const pointerInteractionPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'pointer-interaction');
-      const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'pointer-interaction');
-      if (pointerInteractionPlugin) {
-        pluginsToProcess = [pointerInteractionPlugin, ...otherPlugins];
+      // Check if this is a text element
+      const target = e.target as SVGElement;
+      const elementType = target && typeof target.getAttribute === 'function'
+        ? target.getAttribute('data-element-type')
+        : null;
+      
+      if (elementType === 'text' || elementType === 'multiline-text') {
+        // When clicking on text, prioritize text-renderer plugin
+        const textRendererPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'text-renderer');
+        const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'text-renderer');
+        if (textRendererPlugin) {
+          pluginsToProcess = [textRendererPlugin, ...otherPlugins];
+        }
+      } else {
+        // When clicking on a command, process PointerInteraction first, then others
+        const pointerInteractionPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'pointer-interaction');
+        const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'pointer-interaction');
+        if (pointerInteractionPlugin) {
+          pluginsToProcess = [pointerInteractionPlugin, ...otherPlugins];
+        }
       }
     } else if (!commandId && eventType === 'pointerDown') {
       // When clicking on empty canvas, prioritize shapes plugin if it's in creation mode

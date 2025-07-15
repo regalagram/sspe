@@ -87,7 +87,7 @@ export const TextStyleControls: React.FC<TextStyleControlsProps> = ({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '8px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px'}}>
       {/* Header */}
       <div style={{ 
         fontSize: '14px', 
