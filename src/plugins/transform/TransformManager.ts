@@ -246,6 +246,11 @@ export class TransformManager {
             textElement.setAttribute('font-family', text.style.fontFamily);
           }
           
+          // Apply transform if present
+          if (text.transform) {
+            textElement.setAttribute('transform', text.transform);
+          }
+          
           if (text.type === 'text') {
             textElement.textContent = text.content;
           } else if (text.type === 'multiline-text') {

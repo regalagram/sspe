@@ -1,7 +1,7 @@
 import { StateCreator } from 'zustand';
 import { EditorState, Point } from '../types';
 import { findSubPathAtPoint } from '../utils/path-utils';
-import { calculateTextBounds } from '../utils/text-utils';
+import { calculateTextBounds, calculateTextBoundsDOM } from '../utils/text-utils';
 
 export interface SelectionActions {
   selectPath: (pathId: string, addToSelection?: boolean) => void;
@@ -289,8 +289,10 @@ export const createSelectionActions: StateCreator<
     const textAtPoint = state.texts.find(text => {
       if (text.locked) return false;
       
-      // Use consistent bounds calculation
-      const bounds = calculateTextBounds(text);
+      // Use DOM-based bounds calculation to account for transforms
+      const bounds = calculateTextBoundsDOM(text);
+      if (!bounds) return false;
+      
       const margin = 10;
       
       return point.x >= bounds.x - margin && 
@@ -383,8 +385,9 @@ export const createSelectionActions: StateCreator<
     state.texts.forEach(text => {
       if (text.locked) return;
       
-      // Use consistent text bounds calculation
-      const textBounds = calculateTextBounds(text);
+      // Use DOM-based bounds calculation to account for transforms
+      const textBounds = calculateTextBoundsDOM(text);
+      if (!textBounds) return;
       
       if (textBounds.x < box.x + box.width &&
           textBounds.x + textBounds.width > box.x &&

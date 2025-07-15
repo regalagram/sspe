@@ -102,16 +102,46 @@ export function calculateTextBoundsDOM(text: TextElementType): {
     
     tempSvg.appendChild(textElement);
     
-    // Get bounding box after transforms are applied
-    const bbox = textElement.getBBox();
-    document.body.removeChild(tempSvg);
-    
-    return {
-      x: bbox.x,
-      y: bbox.y,
-      width: bbox.width,
-      height: bbox.height
-    };
+    // Get bounding box in screen coordinates, then convert to SVG coordinates
+    try {
+      // getBoundingClientRect gives us the actual screen position after transforms
+      const screenRect = textElement.getBoundingClientRect();
+      const svgRect = tempSvg.getBoundingClientRect();
+      
+      // Convert screen coordinates to SVG coordinates
+      const svgX = screenRect.left - svgRect.left;
+      const svgY = screenRect.top - svgRect.top;
+      
+      // Get the viewBox to transform coordinates properly
+      const viewBox = tempSvg.viewBox.baseVal;
+      const scaleX = viewBox.width / tempSvg.clientWidth;
+      const scaleY = viewBox.height / tempSvg.clientHeight;
+      
+      const finalX = (svgX * scaleX) + viewBox.x;
+      const finalY = (svgY * scaleY) + viewBox.y;
+      const finalWidth = screenRect.width * scaleX;
+      const finalHeight = screenRect.height * scaleY;
+      
+      document.body.removeChild(tempSvg);
+      
+      return {
+        x: finalX,
+        y: finalY,
+        width: finalWidth,
+        height: finalHeight
+      };
+    } catch (transformError) {
+      // Fallback: use getBBox if the transform calculation fails
+      const bbox = textElement.getBBox();
+      document.body.removeChild(tempSvg);
+      
+      return {
+        x: bbox.x,
+        y: bbox.y,
+        width: bbox.width,
+        height: bbox.height
+      };
+    }
   } catch (error) {
     console.error('Error calculating text bounds with DOM:', error);
     return calculateTextBounds(text); // Fallback

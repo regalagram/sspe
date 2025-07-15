@@ -65,7 +65,8 @@ export function calculateGlobalViewBox(svgElement: Element, precision: number = 
         'font-family', 'font-size', 'font-weight', 'font-style',
         'text-anchor', 'dominant-baseline',
         'fill', 'stroke', 'stroke-width',
-        'letter-spacing', 'word-spacing'
+        'letter-spacing', 'word-spacing',
+        'transform'
       ];
 
       textAttributesToCopy.forEach((attr) => {
