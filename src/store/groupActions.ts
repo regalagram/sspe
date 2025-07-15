@@ -2,6 +2,7 @@ import { StateCreator } from 'zustand';
 import { EditorState, SVGGroup, SVGGroupChild, Point } from '../types';
 import { generateId } from '../utils/id-utils';
 import { TextActions } from './textActions';
+import { generateGroupSVG, downloadGroupSVG } from '../utils/group-svg-utils';
 
 export interface GroupActions {
   // Group creation and management
@@ -25,6 +26,7 @@ export interface GroupActions {
   getGroupById: (groupId: string) => SVGGroup | null;
   getAllGroups: () => SVGGroup[];
   getGroupChildren: (groupId: string) => SVGGroupChild[];
+  getGroupChildrenDetails: (groupId: string) => { id: string; type: 'path' | 'text' | 'group'; }[];
   getParentGroup: (childId: string, childType: 'path' | 'text' | 'group') => SVGGroup | null;
   isElementInGroup: (elementId: string, elementType: 'path' | 'text' | 'group') => boolean;
   
@@ -35,6 +37,9 @@ export interface GroupActions {
   // Bulk operations
   clearAllGroups: () => void;
   replaceGroups: (groups: SVGGroup[]) => void;
+  
+  // SVG export
+  exportGroupSVG: (groupId: string, autoDownload?: boolean) => string | null;
 }
 
 export const createGroupActions: StateCreator<
@@ -76,10 +81,25 @@ export const createGroupActions: StateCreator<
     const selectedPaths = selection.selectedPaths ?? [];
     const selectedTexts = selection.selectedTexts ?? [];
     const selectedGroups = selection.selectedGroups ?? [];
+    const selectedSubPaths = selection.selectedSubPaths ?? [];
+
+    // Find paths that contain selected sub-paths
+    const pathsFromSubPaths = new Set<string>();
+    selectedSubPaths.forEach(subPathId => {
+      const parentPath = state.paths.find(path => 
+        path.subPaths.some(subPath => subPath.id === subPathId)
+      );
+      if (parentPath) {
+        pathsFromSubPaths.add(parentPath.id);
+      }
+    });
+
+    // Combine all path IDs (directly selected + from sub-paths)
+    const allPathIds = new Set([...selectedPaths, ...pathsFromSubPaths]);
 
     // Collect all selected elements
     const children: SVGGroupChild[] = [
-      ...selectedPaths.map(id => ({ type: 'path' as const, id })),
+      ...Array.from(allPathIds).map(id => ({ type: 'path' as const, id })),
       ...selectedTexts.map(id => ({ type: 'text' as const, id })),
       ...selectedGroups.map(id => ({ type: 'group' as const, id }))
     ];
@@ -102,7 +122,8 @@ export const createGroupActions: StateCreator<
         ...state.selection,
         selectedPaths: [],
         selectedTexts: [],
-        selectedGroups: [newGroup.id]
+        selectedGroups: [newGroup.id],
+        selectedSubPaths: []
       }
     }));
 
@@ -185,16 +206,33 @@ export const createGroupActions: StateCreator<
   },
 
   addChildToGroup: (groupId: string, childId: string, childType: 'path' | 'text' | 'group') => {
-    set(state => ({
-      groups: state.groups.map(group =>
-        group.id === groupId
-          ? {
-              ...group,
-              children: [...group.children, { type: childType, id: childId }]
-            }
-          : group
-      )
-    }));
+    set(state => {
+      let exists = false;
+      if (childType === 'path') {
+        exists = state.paths.some(p => p.id === childId);
+      } else if (childType === 'text') {
+        exists = state.texts.some(t => t.id === childId);
+      } else if (childType === 'group') {
+        exists = state.groups.some(g => g.id === childId);
+      }
+      if (!exists) {
+        if (typeof window !== 'undefined') {
+          alert(`No se puede agregar: el ${childType} con id ${childId} no existe.`);
+        }
+        return state;
+      }
+      return {
+        ...state,
+        groups: state.groups.map(group =>
+          group.id === groupId
+            ? {
+                ...group,
+                children: [...group.children, { type: childType, id: childId }]
+              }
+            : group
+        )
+      };
+    });
   },
 
   removeChildFromGroup: (groupId: string, childId: string) => {
@@ -330,6 +368,13 @@ export const createGroupActions: StateCreator<
     return group ? group.children : [];
   },
 
+  getGroupChildrenDetails: (groupId: string) => {
+    const group = get().getGroupById(groupId);
+    if (!group) return [];
+    // Devuelve los hijos con su id y tipo
+    return group.children.map(child => ({ id: child.id, type: child.type }));
+  },
+
   getParentGroup: (childId: string, childType: 'path' | 'text' | 'group') => {
     const state = get();
     return state.groups.find(group => 
@@ -375,5 +420,44 @@ export const createGroupActions: StateCreator<
         selectedGroups: []
       }
     }));
+  },
+
+  exportGroupSVG: (groupId: string, autoDownload: boolean = false) => {
+    const state = get();
+    const group = state.groups.find(g => g.id === groupId);
+    
+    if (!group) {
+      console.error(`Group with id ${groupId} not found`);
+      return null;
+    }
+
+    try {
+      // Get all gradients (including imported ones)
+      const allGradients = [...state.gradients];
+      
+      // Generate SVG content for the group
+      const svgContent = generateGroupSVG(
+        group,
+        state.paths,
+        state.texts,
+        state.groups,
+        allGradients,
+        state.precision || 2
+      );
+
+      // Auto-download if requested
+      if (autoDownload && typeof window !== 'undefined') {
+        const filename = `${(group.name || 'group').replace(/[^a-zA-Z0-9-_]/g, '_')}_${new Date().getTime()}.svg`;
+        downloadGroupSVG(svgContent, filename);
+        
+        // Show notification
+        console.log(`✅ Group "${group.name || group.id}" exported as ${filename}`);
+      }
+
+      return svgContent;
+    } catch (error) {
+      console.error('Error generating group SVG:', error);
+      return null;
+    }
   }
 });

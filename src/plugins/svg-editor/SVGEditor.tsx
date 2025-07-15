@@ -171,7 +171,7 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
 };
 
 export const SVGComponent: React.FC = () => {
-  const { paths, texts, gradients, viewport, replacePaths, replaceTexts, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients } = useEditorStore();
+  const { paths, texts, groups, gradients, viewport, replacePaths, replaceTexts, replaceGroups, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients } = useEditorStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Generate SVG string from current paths and texts
@@ -186,9 +186,9 @@ export const SVGComponent: React.FC = () => {
       return 'none';
     };
 
-    // Generate path elements
-    const pathElements = paths.map((path) => {
-      const pathData = path.subPaths.map(subPath => subPathToString(subPath)).join(' ');
+    // Helper function to render a single element (without grouping)
+    const renderPath = (path: any) => {
+      const pathData = path.subPaths.map((subPath: any) => subPathToString(subPath)).join(' ');
       const style = path.style;
       
       const fillValue = convertStyleValue(style.fill);
@@ -206,11 +206,10 @@ export const SVGComponent: React.FC = () => {
         style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${style.strokeOpacity}"` : '',
       ].filter(Boolean).join(' ');
       
-      return `  <path ${attributes} />`;
-    }).join('\n');
+      return `<path ${attributes} />`;
+    };
 
-    // Generate text elements
-    const textElements = texts.map((text) => {
+    const renderText = (text: any) => {
       const style = text.style || {};
       
       const textFillValue = convertStyleValue(style.fill);
@@ -232,8 +231,8 @@ export const SVGComponent: React.FC = () => {
         style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${style.strokeOpacity}"` : '',
       ].filter(Boolean).join(' ');
 
-      if (text.type === 'multiline') {
-        const spans = text.spans.map((span, index) => {
+      if (text.type === 'multiline-text') {
+        const spans = text.spans.map((span: any, index: number) => {
           const spanFillValue = span.style?.fill ? convertStyleValue(span.style.fill) : '';
           
           const spanAttributes = [
@@ -246,66 +245,140 @@ export const SVGComponent: React.FC = () => {
           return `    <tspan ${spanAttributes}>${span.content}</tspan>`;
         }).join('\n');
         
-        return `  <text ${attributes}>\n${spans}\n  </text>`;
+        return `<text ${attributes}>\n${spans}\n  </text>`;
       } else {
-        return `  <text ${attributes}>${text.content}</text>`;
+        return `<text ${attributes}>${text.content}</text>`;
       }
-    }).join('\n');
+    };
 
-    // Extract gradients and patterns from paths and text elements
-    const pathGradients = extractGradientsFromPaths(paths);
-    const textGradients = texts.flatMap(text => {
-      const gradients = [];
-      if (text.style?.fill && typeof text.style.fill === 'string' && text.style.fill.startsWith('url(#')) {
-        // This would need to be extracted from the actual gradient definitions
-        // For now, we'll include the predefined gradients
-      }
-      if (text.style?.stroke && typeof text.style.stroke === 'string' && text.style.stroke.startsWith('url(#')) {
-        // Similar for stroke gradients
-      }
-      return gradients;
+    // Collect elements that are NOT in any group
+    const elementsInGroups = new Set<string>();
+    groups.forEach(group => {
+      group.children.forEach((child: any) => {
+        elementsInGroups.add(child.id);
+      });
     });
 
-    // Add predefined gradients for text styling
-    const predefinedGradients = [
-      {
-        id: 'text-gradient-1',
-        type: 'linear' as const,
-        x1: 0, y1: 0, x2: 100, y2: 0,
-        stops: [
-          { id: 'stop-1', offset: 0, color: '#ff6b6b', opacity: 1 },
-          { id: 'stop-2', offset: 1, color: '#4ecdc4', opacity: 1 }
-        ]
-      },
-      {
-        id: 'text-gradient-2',
-        type: 'linear' as const,
-        x1: 0, y1: 0, x2: 100, y2: 100,
-        stops: [
-          { id: 'stop-3', offset: 0, color: '#667eea', opacity: 1 },
-          { id: 'stop-4', offset: 1, color: '#764ba2', opacity: 1 }
-        ]
-      },
-      {
-        id: 'text-gradient-3',
-        type: 'radial' as const,
-        cx: 50, cy: 50, r: 50,
-        stops: [
-          { id: 'stop-5', offset: 0, color: '#ffeaa7', opacity: 1 },
-          { id: 'stop-6', offset: 1, color: '#fab1a0', opacity: 1 }
-        ]
-      }
-    ];
+    // Filter standalone elements (not in any group)
+    const standalonePaths = paths.filter(path => !elementsInGroups.has(path.id));
+    const standaloneTexts = texts.filter(text => !elementsInGroups.has(text.id));
 
-    // Only include predefined gradients if there are actually texts or paths that might use them
-    const shouldIncludePredefined = paths.length > 0 || texts.length > 0;
-    const gradientsToInclude = shouldIncludePredefined ? predefinedGradients : [];
-    
-    // Deduplicate gradients by id to avoid duplicates
-    const allGradientsArray = [...pathGradients, ...textGradients, ...gradientsToInclude, ...gradients];
-    const allGradients = allGradientsArray.filter((gradient, index, array) => 
-      array.findIndex(g => g.id === gradient.id) === index
-    );
+    // Generate standalone path elements
+    const standalonePathElements = standalonePaths.map((path) => {
+      return `  ${renderPath(path)}`;
+    }).join('\n');
+
+    // Generate standalone text elements
+    const textElements = standaloneTexts.map((text) => {
+      return `  ${renderText(text)}`;
+    }).join('\n');
+
+    // Helper function to recursively render group contents
+    const renderGroupContents = (group: any): string => {
+      const groupElements: string[] = [];
+      
+      group.children.forEach((child: any) => {
+        if (child.type === 'path') {
+          const path = paths.find(p => p.id === child.id);
+          if (path) {
+            groupElements.push(`    ${renderPath(path)}`);
+          }
+        } else if (child.type === 'text') {
+          const text = texts.find(t => t.id === child.id);
+          if (text) {
+            groupElements.push(`    ${renderText(text)}`);
+          }
+        } else if (child.type === 'group') {
+          const nestedGroup = groups.find(g => g.id === child.id);
+          if (nestedGroup) {
+            const nestedContent = renderGroupContents(nestedGroup);
+            const nestedAttrs = [];
+            if (nestedGroup.transform) nestedAttrs.push(`transform="${nestedGroup.transform}"`);
+            const nestedAttrStr = nestedAttrs.length > 0 ? ` ${nestedAttrs.join(' ')}` : '';
+            groupElements.push(`    <g${nestedAttrStr}>\n${nestedContent}\n    </g>`);
+          }
+        }
+      });
+      
+      return groupElements.join('\n');
+    };
+
+    // Generate group elements
+    const groupElements = groups.map((group) => {
+      const groupContent = renderGroupContents(group);
+      if (!groupContent.trim()) return '';
+      
+      const groupAttrs = [];
+      if (group.transform) groupAttrs.push(`transform="${group.transform}"`);
+      if (group.name) groupAttrs.push(`data-name="${group.name}"`);
+      
+      const groupAttrStr = groupAttrs.length > 0 ? ` ${groupAttrs.join(' ')}` : '';
+      
+      return `  <g${groupAttrStr}>\n${groupContent}\n  </g>`;
+    }).filter(Boolean).join('\n');
+
+    // Helper function to extract gradient IDs from style values
+    const extractGradientIds = (value: any): string[] => {
+      if (!value) return [];
+      if (typeof value === 'string' && value.startsWith('url(#')) {
+        const match = value.match(/url\(#([^)]+)\)/);
+        return match ? [match[1]] : [];
+      }
+      if (typeof value === 'object' && value.id) {
+        return [value.id];
+      }
+      return [];
+    };
+
+    // Collect all gradient IDs that are actually used
+    const usedGradientIds = new Set<string>();
+
+    // Check standalone paths
+    standalonePaths.forEach(path => {
+      extractGradientIds(path.style.fill).forEach(id => usedGradientIds.add(id));
+      extractGradientIds(path.style.stroke).forEach(id => usedGradientIds.add(id));
+    });
+
+    // Check standalone texts
+    standaloneTexts.forEach(text => {
+      extractGradientIds(text.style?.fill).forEach(id => usedGradientIds.add(id));
+      extractGradientIds(text.style?.stroke).forEach(id => usedGradientIds.add(id));
+      // Check multiline text spans
+      if (text.type === 'multiline-text') {
+        text.spans.forEach(span => {
+          extractGradientIds(span.style?.fill).forEach(id => usedGradientIds.add(id));
+          extractGradientIds(span.style?.stroke).forEach(id => usedGradientIds.add(id));
+        });
+      }
+    });
+
+    // Check elements in groups
+    groups.forEach(group => {
+      group.children.forEach(child => {
+        if (child.type === 'path') {
+          const path = paths.find(p => p.id === child.id);
+          if (path) {
+            extractGradientIds(path.style.fill).forEach(id => usedGradientIds.add(id));
+            extractGradientIds(path.style.stroke).forEach(id => usedGradientIds.add(id));
+          }
+        } else if (child.type === 'text') {
+          const text = texts.find(t => t.id === child.id);
+          if (text) {
+            extractGradientIds(text.style?.fill).forEach(id => usedGradientIds.add(id));
+            extractGradientIds(text.style?.stroke).forEach(id => usedGradientIds.add(id));
+            if (text.type === 'multiline-text') {
+              text.spans.forEach(span => {
+                extractGradientIds(span.style?.fill).forEach(id => usedGradientIds.add(id));
+                extractGradientIds(span.style?.stroke).forEach(id => usedGradientIds.add(id));
+              });
+            }
+          }
+        }
+      });
+    });
+
+    // Only include gradients that are actually used
+    const allGradients = gradients.filter(gradient => usedGradientIds.has(gradient.id));
 
     // Generate gradient and pattern definitions
     const generateDefinitions = () => {
@@ -342,7 +415,7 @@ export const SVGComponent: React.FC = () => {
     const definitions = generateDefinitions();
 
     // Combine all elements for viewBox calculation
-    const allElements = [pathElements, textElements].filter(Boolean).join('\n');
+    const allElements = [standalonePathElements, textElements, groupElements].filter(Boolean).join('\n');
 
     // Create a temporary SVG with default viewBox to calculate proper bounds
     const tempSvgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
@@ -362,13 +435,13 @@ ${definitions}${allElements}
 
   const handleSVGChange = (svgCode: string) => {
     try {
-      // Parse the complete SVG including paths, texts, gradients, and patterns
-      const { paths: newPaths, texts: newTexts, gradients } = parseCompleteSVG(svgCode);
+      // Parse the complete SVG including paths, texts, gradients, patterns, and groups
+      const { paths: newPaths, texts: newTexts, gradients, groups: newGroups } = parseCompleteSVG(svgCode);
       
-      const totalElements = newPaths.length + newTexts.length + gradients.length;
+      const totalElements = newPaths.length + newTexts.length + gradients.length + newGroups.length;
       
       if (totalElements === 0) {
-        alert('No valid elements found in the SVG code. Make sure your SVG contains paths, text, gradients, or patterns.');
+        alert('No valid elements found in the SVG code. Make sure your SVG contains paths, text, gradients, patterns, or groups.');
         return;
       }
       
@@ -376,7 +449,8 @@ ${definitions}${allElements}
       const elementsInfo = [
         newPaths.length > 0 ? `${newPaths.length} path(s)` : '',
         newTexts.length > 0 ? `${newTexts.length} text element(s)` : '',
-        gradients.length > 0 ? `${gradients.length} gradient(s)/pattern(s)` : ''
+        gradients.length > 0 ? `${gradients.length} gradient(s)/pattern(s)` : '',
+        newGroups.length > 0 ? `${newGroups.length} group(s)` : ''
       ].filter(Boolean).join(', ');
       
       const confirmMessage = `This will replace all current content with: ${elementsInfo}. Continue?`;
@@ -388,8 +462,9 @@ ${definitions}${allElements}
       replacePaths(newPaths);
       replaceTexts(newTexts);
       setGradients(gradients);
+      replaceGroups(newGroups);
       
-      console.log(`Imported: ${newPaths.length} paths, ${newTexts.length} texts, ${gradients.length} gradients/patterns`);
+      console.log(`Imported: ${newPaths.length} paths, ${newTexts.length} texts, ${gradients.length} gradients/patterns, ${newGroups.length} groups`);
       
     } catch (error) {
       console.error('Error parsing SVG:', error);
@@ -400,7 +475,8 @@ ${definitions}${allElements}
   const handleClearAll = () => {
     const pathCount = paths.length;
     const textCount = texts.length;
-    const totalElements = pathCount + textCount;
+    const groupCount = groups.length;
+    const totalElements = pathCount + textCount + groupCount;
     
     if (totalElements === 0) {
       alert('No content to clear.');
@@ -411,6 +487,7 @@ ${definitions}${allElements}
     replacePaths([]);
     clearAllTexts();
     clearGradients();
+    replaceGroups([]);
     
     // Reset viewport completely to default state (zoom 1, pan 0,0, and default viewBox)
     resetViewportCompletely();
@@ -482,10 +559,10 @@ ${definitions}${allElements}
           type="button"
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '8px', fontSize: '13px', fontWeight: 500,
-            background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: (paths.length === 0 && texts.length === 0) ? 'not-allowed' : 'pointer', width: '100%', opacity: (paths.length === 0 && texts.length === 0) ? 0.6 : 1
+            background: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: (paths.length === 0 && texts.length === 0 && groups.length === 0) ? 'not-allowed' : 'pointer', width: '100%', opacity: (paths.length === 0 && texts.length === 0 && groups.length === 0) ? 0.6 : 1
           }}
           onClick={handleDownloadSVG}
-          disabled={paths.length === 0 && texts.length === 0}
+          disabled={paths.length === 0 && texts.length === 0 && groups.length === 0}
         >
           <Download size={16} style={{ verticalAlign: 'middle' }} /> Download
         </button>

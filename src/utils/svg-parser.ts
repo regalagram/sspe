@@ -1,4 +1,4 @@
-import { SVGCommand, PathStyle, SVGCommandType, SVGPath, TextElement, MultilineTextElement, TextElementType } from '../types';
+import { SVGCommand, PathStyle, SVGCommandType, SVGPath, TextElement, MultilineTextElement, TextElementType, SVGGroup, SVGGroupChild } from '../types';
 import { parsePath, absolutize, normalize, serialize } from 'path-data-parser';
 import { generateId } from './id-utils';
 import { decomposeIntoSubPaths } from './subpath-utils';
@@ -1517,12 +1517,143 @@ export function parseGradients(svgElement: Element): GradientOrPattern[] {
 }
 
 /**
- * Enhanced SVG parser that handles paths, texts, gradients, and patterns
+ * Parse SVG group elements (<g>) from SVG
+ */
+export function parseGroups(svgElement: Element, allPaths: SVGPath[], allTexts: TextElementType[]): SVGGroup[] {
+  const groups: SVGGroup[] = [];
+  const groupElements = svgElement.querySelectorAll('g');
+  
+  // Create maps for quick lookup
+  const pathMap = new Map(allPaths.map(p => [p.id, p]));
+  const textMap = new Map(allTexts.map(t => [t.id, t]));
+  
+  // Helper function to recursively parse group hierarchy
+  const parseGroupRecursive = (groupElement: Element, allGroupElements: Element[]): SVGGroup | null => {
+    const name = groupElement.getAttribute('data-name') || undefined;
+    const transform = groupElement.getAttribute('transform') || undefined;
+    
+    const children: SVGGroupChild[] = [];
+    
+    // Parse direct children of this group
+    Array.from(groupElement.children).forEach(child => {
+      const tagName = child.tagName.toLowerCase();
+      
+      if (tagName === 'path') {
+        // Find matching path by d attribute (since we don't have original IDs)
+        const pathData = child.getAttribute('d');
+        if (pathData) {
+          const matchingPath = allPaths.find(p => {
+            // Compare normalized path data
+            const pathString = p.subPaths.map(sp => sp.commands.map(cmd => {
+              let cmdStr = cmd.command;
+              if (cmd.x !== undefined && cmd.y !== undefined) {
+                cmdStr += ` ${cmd.x} ${cmd.y}`;
+              }
+              if (cmd.x1 !== undefined && cmd.y1 !== undefined) {
+                cmdStr = `${cmd.command} ${cmd.x1} ${cmd.y1}`;
+                if (cmd.x2 !== undefined && cmd.y2 !== undefined) {
+                  cmdStr += ` ${cmd.x2} ${cmd.y2}`;
+                  if (cmd.x !== undefined && cmd.y !== undefined) {
+                    cmdStr += ` ${cmd.x} ${cmd.y}`;
+                  }
+                }
+              }
+              return cmdStr;
+            }).join(' ')).join(' ');
+            
+            // Simple comparison - could be improved with better normalization
+            return pathString.replace(/\s+/g, ' ').trim() === pathData.replace(/\s+/g, ' ').trim();
+          });
+          
+          if (matchingPath) {
+            children.push({
+              type: 'path',
+              id: matchingPath.id
+            });
+          }
+        }
+      } else if (tagName === 'text') {
+        // Find matching text by content and position
+        const textContent = child.textContent || '';
+        const x = parseFloat(child.getAttribute('x') || '0');
+        const y = parseFloat(child.getAttribute('y') || '0');
+        
+        const matchingText = allTexts.find(t => {
+          const contentMatches = (t.type === 'text' && t.content === textContent) ||
+                                (t.type === 'multiline-text' && t.spans.map(s => s.content).join(' ') === textContent);
+          const positionMatches = Math.abs(t.x - x) < 0.1 && Math.abs(t.y - y) < 0.1;
+          return contentMatches && positionMatches;
+        });
+        
+        if (matchingText) {
+          children.push({
+            type: 'text',
+            id: matchingText.id
+          });
+        }
+      } else if (tagName === 'g') {
+        // Recursive group parsing
+        const nestedGroup = parseGroupRecursive(child, allGroupElements);
+        if (nestedGroup) {
+          // Add nested group to groups array first
+          groups.push(nestedGroup);
+          // Then reference it in children
+          children.push({
+            type: 'group',
+            id: nestedGroup.id
+          });
+        }
+      }
+    });
+    
+    // Only create group if it has children
+    if (children.length > 0) {
+      const group: SVGGroup = {
+        id: generateId(),
+        name,
+        transform,
+        children,
+        visible: true,
+        locked: false
+      };
+      
+      return group;
+    }
+    
+    return null;
+  };
+  
+  // Parse only top-level groups (not nested ones, as they'll be handled recursively)
+  const topLevelGroups = Array.from(groupElements).filter(g => {
+    // Check if this group is not inside another group
+    let parent = g.parentElement;
+    while (parent && parent !== svgElement) {
+      if (parent.tagName.toLowerCase() === 'g') {
+        return false; // This is a nested group
+      }
+      parent = parent.parentElement;
+    }
+    return true; // This is a top-level group
+  });
+  
+  topLevelGroups.forEach(groupElement => {
+    const group = parseGroupRecursive(groupElement, Array.from(groupElements));
+    if (group) {
+      groups.push(group);
+    }
+  });
+  
+  return groups;
+}
+
+/**
+ * Enhanced SVG parser that handles paths, texts, gradients, patterns, and groups
  */
 export function parseCompleteSVG(svgString: string): {
   paths: SVGPath[];
   texts: TextElementType[];
   gradients: GradientOrPattern[];
+  groups: SVGGroup[];
 } {
   try {
     const { svgElement } = processSvgContent(svgString);
@@ -1536,10 +1667,14 @@ export function parseCompleteSVG(svgString: string): {
     // Parse gradients and patterns
     const gradients = parseGradients(svgElement);
     
+    // Parse groups
+    const groups = parseGroups(svgElement, paths, texts);
+    
     return {
       paths,
       texts,
-      gradients
+      gradients,
+      groups
     };
   } catch (error) {
     console.error('Failed to parse complete SVG:', error);

@@ -11,6 +11,46 @@ interface GroupRendererProps {
 const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false, isParentSelected = false }) => {
   const { paths, texts, groups, selection, viewport } = useEditorStore();
 
+  const handleSelectGroupElements = () => {
+    // Recolectar todos los elementos del grupo
+    const pathIds: string[] = [];
+    const textIds: string[] = [];
+    const groupIds: string[] = [];
+    const subPathIds: string[] = [];
+    
+    group.children.forEach(child => {
+      if (child.type === 'path') {
+        pathIds.push(child.id);
+        // Encontrar todos los subpaths del path
+        const path = paths.find(p => p.id === child.id);
+        if (path && path.subPaths) {
+          path.subPaths.forEach(subPath => {
+            subPathIds.push(subPath.id);
+          });
+        }
+      } else if (child.type === 'text') {
+        textIds.push(child.id);
+      } else if (child.type === 'group') {
+        groupIds.push(child.id);
+      }
+    });
+    
+    // Actualizar la selección directamente en el store
+    useEditorStore.setState(state => ({
+      ...state,
+      selection: {
+        ...state.selection,
+        selectedPaths: pathIds,
+        selectedTexts: textIds,
+        selectedGroups: groupIds,
+        selectedSubPaths: subPathIds,
+        selectedCommands: [],
+        selectedControlPoints: [],
+        selectedTextSpans: []
+      }
+    }));
+  };
+
   // Don't render if group is not visible
   if (group.visible === false) {
     return null;
@@ -54,23 +94,81 @@ const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false,
     }
   };
 
+  // Calculate bounding box of all children (for both selection indicators and name positioning)
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let foundValidBounds = false;
+  
+  group.children.forEach(child => {
+    if (child.type === 'path') {
+      const path = paths.find(p => p.id === child.id);
+      if (path && path.subPaths) {
+        path.subPaths.forEach(sp => {
+          sp.commands.forEach(cmd => {
+            if (typeof cmd.x === 'number' && typeof cmd.y === 'number') {
+              minX = Math.min(minX, cmd.x);
+              minY = Math.min(minY, cmd.y);
+              maxX = Math.max(maxX, cmd.x);
+              maxY = Math.max(maxY, cmd.y);
+              foundValidBounds = true;
+            }
+            if (typeof cmd.x1 === 'number' && typeof cmd.y1 === 'number') {
+              minX = Math.min(minX, cmd.x1);
+              minY = Math.min(minY, cmd.y1);
+              maxX = Math.max(maxX, cmd.x1);
+              maxY = Math.max(maxY, cmd.y1);
+              foundValidBounds = true;
+            }
+            if (typeof cmd.x2 === 'number' && typeof cmd.y2 === 'number') {
+              minX = Math.min(minX, cmd.x2);
+              minY = Math.min(minY, cmd.y2);
+              maxX = Math.max(maxX, cmd.x2);
+              maxY = Math.max(maxY, cmd.y2);
+              foundValidBounds = true;
+            }
+          });
+        });
+      }
+    } else if (child.type === 'text') {
+      const text = texts.find(t => t.id === child.id);
+      if (text) {
+        const fontSize = text.style?.fontSize || 16;
+        let textWidth = 0;
+        let textHeight = fontSize;
+        
+        if (text.type === 'text') {
+          textWidth = (text.content?.length || 0) * fontSize * 0.6;
+        } else if (text.type === 'multiline-text') {
+          const maxLineLength = Math.max(...text.spans.map(span => span.content?.length || 0));
+          textWidth = maxLineLength * fontSize * 0.6;
+          textHeight = text.spans.length * fontSize * 1.2;
+        }
+        
+        minX = Math.min(minX, text.x);
+        minY = Math.min(minY, text.y);
+        maxX = Math.max(maxX, text.x + textWidth);
+        maxY = Math.max(maxY, text.y + textHeight);
+        foundValidBounds = true;
+      }
+    } else if (child.type === 'group') {
+      // For nested groups, we would need to recursively calculate bounds
+      // For now, skip nested groups to avoid complexity
+    }
+  });
+  
+  const bounds = foundValidBounds ? {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY
+  } : null;
+
   // Calculate group selection visual indicators
   const showGroupBounds = isSelected && !isParentSelected;
   let groupBounds = null;
   
-  if (showGroupBounds) {
-    // Calculate bounding box of all children
-    // This is a simplified version - real implementation would calculate actual bounds
+  if (showGroupBounds && bounds) {
     const margin = 10 / viewport.zoom;
     const strokeWidth = 2 / viewport.zoom;
-    
-    // Placeholder bounds - should be calculated from actual child elements
-    const bounds = {
-      x: 0,
-      y: 0,
-      width: 100,
-      height: 100
-    };
     
     groupBounds = (
       <rect
@@ -109,18 +207,38 @@ const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false,
       {groupBounds}
       
       {/* Group name label when selected */}
-      {isSelected && group.name && (
-        <text
-          x={0}
-          y={-5 / viewport.zoom}
-          fontSize={12 / viewport.zoom}
-          fill="#2196F3"
-          fontFamily="Arial, sans-serif"
-          textAnchor="start"
-          style={{ pointerEvents: 'none' }}
+      {isSelected && group.name && bounds && (
+        <g 
+          onClick={handleSelectGroupElements}
+          style={{ cursor: 'pointer' }}
+          data-element-type="group-name"
+          data-element-id={group.id}
         >
-          {group.name}
-        </text>
+          {/* Background rectangle for text */}
+          <rect
+            x={bounds.x - 2 / viewport.zoom}
+            y={bounds.y - 17 / viewport.zoom}
+            width={(group.name.length * 7 + 4) / viewport.zoom}
+            height={14 / viewport.zoom}
+            fill="white"
+            stroke="#2196F3"
+            strokeWidth={1 / viewport.zoom}
+            rx={2 / viewport.zoom}
+            style={{ pointerEvents: 'all' }}
+          />
+          {/* Text label */}
+          <text
+            x={bounds.x}
+            y={bounds.y - 5 / viewport.zoom}
+            fontSize={12 / viewport.zoom}
+            fill="#2196F3"
+            fontFamily="Arial, sans-serif"
+            textAnchor="start"
+            style={{ pointerEvents: 'all' }}
+          >
+            {group.name}
+          </text>
+        </g>
       )}
     </g>
   );

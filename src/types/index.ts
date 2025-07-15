@@ -224,6 +224,8 @@ export interface TextElement {
   content: string;
   x: number;
   y: number;
+  fontSize?: number;
+  fontFamily?: string;
   rotation?: number;
   transform?: string;
   style: TextStyle;
@@ -246,6 +248,8 @@ export interface MultilineTextElement {
   type: 'multiline-text';
   x: number;
   y: number;
+  fontSize?: number;
+  fontFamily?: string;
   rotation?: number;
   transform?: string;
   spans: TextSpan[];
