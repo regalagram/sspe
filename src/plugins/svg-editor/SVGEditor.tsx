@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { subPathToString } from '../../utils/path-utils';
-import { parseSVGToSubPaths } from '../../utils/svg-parser';
+import { parseSVGToSubPaths, parseCompleteSVG } from '../../utils/svg-parser';
 import { calculateViewBoxFromSVGString } from '../../utils/viewbox-utils';
 import { extractGradientsFromPaths } from '../../utils/gradient-utils';
 import { PluginButton } from '../../components/PluginButton';
@@ -171,7 +171,7 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
 };
 
 export const SVGComponent: React.FC = () => {
-  const { paths, texts, viewport, replacePaths, resetViewportCompletely, precision, setPrecision } = useEditorStore();
+  const { paths, texts, gradients, viewport, replacePaths, replaceTexts, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients } = useEditorStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Generate SVG string from current paths and texts
@@ -297,7 +297,15 @@ export const SVGComponent: React.FC = () => {
       }
     ];
 
-    const allGradients = [...pathGradients, ...textGradients, ...predefinedGradients];
+    // Only include predefined gradients if there are actually texts or paths that might use them
+    const shouldIncludePredefined = paths.length > 0 || texts.length > 0;
+    const gradientsToInclude = shouldIncludePredefined ? predefinedGradients : [];
+    
+    // Deduplicate gradients by id to avoid duplicates
+    const allGradientsArray = [...pathGradients, ...textGradients, ...gradientsToInclude, ...gradients];
+    const allGradients = allGradientsArray.filter((gradient, index, array) => 
+      array.findIndex(g => g.id === gradient.id) === index
+    );
 
     // Generate gradient and pattern definitions
     const generateDefinitions = () => {
@@ -307,15 +315,18 @@ export const SVGComponent: React.FC = () => {
         switch (gradient.type) {
           case 'linear':
             const linearStops = gradient.stops.map(stop => 
-              `    <stop offset="${stop.offset * 100}%" stop-color="${stop.color}" stop-opacity="${stop.opacity}" />`
+              `    <stop offset="${stop.offset}%" stop-color="${stop.color}" stop-opacity="${stop.opacity}" />`
             ).join('\n');
             return `  <linearGradient id="${gradient.id}" x1="${gradient.x1}" y1="${gradient.y1}" x2="${gradient.x2}" y2="${gradient.y2}" gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">\n${linearStops}\n  </linearGradient>`;
           
           case 'radial':
             const radialStops = gradient.stops.map(stop => 
-              `    <stop offset="${stop.offset * 100}%" stop-color="${stop.color}" stop-opacity="${stop.opacity}" />`
+              `    <stop offset="${stop.offset}%" stop-color="${stop.color}" stop-opacity="${stop.opacity}" />`
             ).join('\n');
-            return `  <radialGradient id="${gradient.id}" cx="${gradient.cx}" cy="${gradient.cy}" r="${gradient.r}"${gradient.fx ? ` fx="${gradient.fx}"` : ''}${gradient.fy ? ` fy="${gradient.fy}"` : ''} gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">\n${radialStops}\n  </radialGradient>`;
+            // Only include fx/fy if they exist and are different from cx/cy
+            const fxAttr = (gradient.fx !== undefined && gradient.fx !== gradient.cx) ? ` fx="${gradient.fx}"` : '';
+            const fyAttr = (gradient.fy !== undefined && gradient.fy !== gradient.cy) ? ` fy="${gradient.fy}"` : '';
+            return `  <radialGradient id="${gradient.id}" cx="${gradient.cx}" cy="${gradient.cy}" r="${gradient.r}"${fxAttr}${fyAttr} gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">\n${radialStops}\n  </radialGradient>`;
           
           case 'pattern':
             return `  <pattern id="${gradient.id}" width="${gradient.width}" height="${gradient.height}" patternUnits="${gradient.patternUnits || 'userSpaceOnUse'}"${gradient.patternContentUnits ? ` patternContentUnits="${gradient.patternContentUnits}"` : ''}${gradient.patternTransform ? ` patternTransform="${gradient.patternTransform}"` : ''}>\n    ${gradient.content}\n  </pattern>`;
@@ -351,23 +362,34 @@ ${definitions}${allElements}
 
   const handleSVGChange = (svgCode: string) => {
     try {
-      // Parse the SVG string into SVGPath array
-      const newPaths = parseSVGToSubPaths(svgCode);
+      // Parse the complete SVG including paths, texts, gradients, and patterns
+      const { paths: newPaths, texts: newTexts, gradients } = parseCompleteSVG(svgCode);
       
-      if (newPaths.length === 0) {
-        alert('No valid paths found in the SVG code. Make sure your SVG contains <path> elements.');
+      const totalElements = newPaths.length + newTexts.length + gradients.length;
+      
+      if (totalElements === 0) {
+        alert('No valid elements found in the SVG code. Make sure your SVG contains paths, text, gradients, or patterns.');
         return;
       }
       
       // Show confirmation for destructive action
-      const confirmMessage = `This will replace all current paths with ${newPaths.length} new path(s). Continue?`;
+      const elementsInfo = [
+        newPaths.length > 0 ? `${newPaths.length} path(s)` : '',
+        newTexts.length > 0 ? `${newTexts.length} text element(s)` : '',
+        gradients.length > 0 ? `${gradients.length} gradient(s)/pattern(s)` : ''
+      ].filter(Boolean).join(', ');
+      
+      const confirmMessage = `This will replace all current content with: ${elementsInfo}. Continue?`;
       if (!confirm(confirmMessage)) {
         return;
       }
       
-      // Update the store with the new paths
+      // Update the store with the new content
       replacePaths(newPaths);
+      replaceTexts(newTexts);
+      setGradients(gradients);
       
+      console.log(`Imported: ${newPaths.length} paths, ${newTexts.length} texts, ${gradients.length} gradients/patterns`);
       
     } catch (error) {
       console.error('Error parsing SVG:', error);
@@ -377,14 +399,18 @@ ${definitions}${allElements}
 
   const handleClearAll = () => {
     const pathCount = paths.length;
+    const textCount = texts.length;
+    const totalElements = pathCount + textCount;
     
-    if (pathCount === 0) {
-      alert('No paths to clear.');
+    if (totalElements === 0) {
+      alert('No content to clear.');
       return;
     }
     
-    // Clear all paths by replacing with empty array (no confirmation needed)
+    // Clear all content by replacing with empty arrays (no confirmation needed)
     replacePaths([]);
+    clearAllTexts();
+    clearGradients();
     
     // Reset viewport completely to default state (zoom 1, pan 0,0, and default viewBox)
     resetViewportCompletely();

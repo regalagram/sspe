@@ -22,7 +22,7 @@ initializePlugins();
 
 export const SvgEditor: React.FC = () => {
   const editorStore = useEditorStore();
-  const { isFullscreen, paths } = editorStore;
+  const { isFullscreen, paths, gradients: storeGradients } = editorStore;
   const svgRef = useRef<SVGSVGElement>(null);
   
   // Get panel mode from store
@@ -88,7 +88,11 @@ export const SvgEditor: React.FC = () => {
     }
   ];
   
-  const gradients = [...pathGradients, ...predefinedGradients];
+  // Deduplicate gradients by id to avoid React key conflicts
+  const allGradientsArray = [...pathGradients, ...predefinedGradients, ...storeGradients];
+  const gradients = allGradientsArray.filter((gradient, index, array) => 
+    array.findIndex(g => g.id === gradient.id) === index
+  );
 
   return (
     <div className="svg-editor" style={editorStyle}>

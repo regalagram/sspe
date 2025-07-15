@@ -12,6 +12,7 @@ import { UIStateActions, createUIStateActions } from './uiStateActions';
 import { HistoryActions, createHistoryActions } from './historyActions';
 import { TransformActions, createTransformActions } from './transformActions';
 import { TextActions, createTextActions } from './textActions';
+import { GradientActions, createGradientActions } from './gradientActions';
 // Combined actions interface
 interface EditorActions extends 
   ViewportActions, 
@@ -21,7 +22,8 @@ interface EditorActions extends
   UIStateActions, 
   HistoryActions, 
   TransformActions,
-  TextActions {}
+  TextActions,
+  GradientActions {}
 
 const loadInitialState = (): EditorState => {
   const savedState = loadEditorState();
@@ -29,6 +31,7 @@ const loadInitialState = (): EditorState => {
   const baseState: EditorState = {
     paths: [],
     texts: [],
+    gradients: [],
     selection: {
       selectedPaths: [],
       selectedSubPaths: [],
@@ -103,6 +106,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     ...createHistoryActions(set, get, api),
     ...createTransformActions(set, get, api),
     ...createTextActions(set, get, api),
+    ...createGradientActions(set, get, api),
   }))
 );
 

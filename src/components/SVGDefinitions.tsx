@@ -17,7 +17,7 @@ const LinearGradientElement: React.FC<{ gradient: LinearGradient }> = ({ gradien
     {gradient.stops.map(stop => (
       <stop
         key={stop.id}
-        offset={`${stop.offset * 100}%`}
+        offset={`${stop.offset}%`}
         stopColor={stop.color}
         stopOpacity={stop.opacity}
       />
@@ -31,14 +31,14 @@ const RadialGradientElement: React.FC<{ gradient: RadialGradient }> = ({ gradien
     cx={gradient.cx}
     cy={gradient.cy}
     r={gradient.r}
-    fx={gradient.fx}
-    fy={gradient.fy}
+    fx={gradient.fx !== undefined && gradient.fx !== gradient.cx ? gradient.fx : undefined}
+    fy={gradient.fy !== undefined && gradient.fy !== gradient.cy ? gradient.fy : undefined}
     gradientUnits={gradient.gradientUnits || 'objectBoundingBox'}
   >
     {gradient.stops.map(stop => (
       <stop
         key={stop.id}
-        offset={`${stop.offset * 100}%`}
+        offset={`${stop.offset}%`}
         stopColor={stop.color}
         stopOpacity={stop.opacity}
       />

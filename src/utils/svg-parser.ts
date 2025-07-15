@@ -1,9 +1,10 @@
-import { SVGCommand, PathStyle, SVGCommandType, SVGPath } from '../types';
+import { SVGCommand, PathStyle, SVGCommandType, SVGPath, TextElement, MultilineTextElement, TextElementType } from '../types';
 import { parsePath, absolutize, normalize, serialize } from 'path-data-parser';
 import { generateId } from './id-utils';
 import { decomposeIntoSubPaths } from './subpath-utils';
 import { convertRgbToHex, parseColorWithOpacity } from './color-utils';
 import { parseTransformString, transformPoint } from './transform-utils';
+import { LinearGradient, RadialGradient, Pattern, GradientOrPattern } from '../types';
 
 /**
  * List of attributes to copy when converting shapes to paths
@@ -116,7 +117,140 @@ function polygonToPathD(pointsStr: string): string {
 }
 
 /**
- * Converts all SVG shapes to path elements
+ * Converts all SVG shapes to path elements, but excludes shapes inside defs
+ */
+function convertShapesToPathsExcludingDefs(svgElement: Element, debugMode = false): void {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const shapesSelector = 'circle, rect, ellipse, line, polygon, polyline';
+  
+  // Get all shapes but exclude those inside defs
+  const allShapes = Array.from(svgElement.querySelectorAll(shapesSelector));
+  const shapes = allShapes.filter(shape => {
+    // Check if this shape is inside a defs element
+    let parent = shape.parentElement;
+    while (parent && parent !== svgElement) {
+      if (parent.tagName.toLowerCase() === 'defs') {
+        return false; // Skip shapes inside defs
+      }
+      parent = parent.parentElement;
+    }
+    return true;
+  });
+
+  if (debugMode) {
+    console.log(`🔄 Converting ${shapes.length} shapes to paths (excluding ${allShapes.length - shapes.length} shapes in defs)`);
+  }
+
+  shapes.forEach((shape, index) => {
+    let d = '';
+    const tagName = shape.tagName.toLowerCase();
+
+    if (debugMode) {
+      console.log(`  Processing ${tagName} #${index}:`, {
+        stroke: shape.getAttribute('stroke'),
+        strokeWidth: shape.getAttribute('stroke-width'),
+        style: shape.getAttribute('style')
+      });
+    }
+
+    try {
+      switch (tagName) {
+        case 'circle': {
+          const cx = parseFloat(shape.getAttribute('cx') || '0');
+          const cy = parseFloat(shape.getAttribute('cy') || '0');
+          const r = parseFloat(shape.getAttribute('r') || '0');
+          d = circleToPathD(cx, cy, r);
+          break;
+        }
+        case 'ellipse': {
+          const cx = parseFloat(shape.getAttribute('cx') || '0');
+          const cy = parseFloat(shape.getAttribute('cy') || '0');
+          const rx = parseFloat(shape.getAttribute('rx') || '0');
+          const ry = parseFloat(shape.getAttribute('ry') || '0');
+          d = ellipseToPathD(cx, cy, rx, ry);
+          break;
+        }
+        case 'rect': {
+          const x = parseFloat(shape.getAttribute('x') || '0');
+          const y = parseFloat(shape.getAttribute('y') || '0');
+          const width = parseFloat(shape.getAttribute('width') || '0');
+          const height = parseFloat(shape.getAttribute('height') || '0');
+          const rx = parseFloat(shape.getAttribute('rx') || '0');
+          const ry = parseFloat(shape.getAttribute('ry') || '0');
+          d = rectToPathD(x, y, width, height, rx, ry);
+          break;
+        }
+        case 'line': {
+          const x1 = parseFloat(shape.getAttribute('x1') || '0');
+          const y1 = parseFloat(shape.getAttribute('y1') || '0');
+          const x2 = parseFloat(shape.getAttribute('x2') || '0');
+          const y2 = parseFloat(shape.getAttribute('y2') || '0');
+          d = lineToPathD(x1, y1, x2, y2);
+          break;
+        }
+        case 'polyline': {
+          const points = shape.getAttribute('points') || '';
+          d = polylineToPathD(points);
+          break;
+        }
+        case 'polygon': {
+          const points = shape.getAttribute('points') || '';
+          d = polygonToPathD(points);
+          break;
+        }
+        default:
+          break;
+      }
+
+      if (d && shape.parentNode) {
+        const newPath = document.createElementNS(svgNS, 'path');
+        newPath.setAttribute('d', d);
+
+        // Copy all relevant attributes
+        const copiedAttributes: string[] = [];
+        ATTRIBUTES_TO_COPY.forEach((attrName) => {
+          if (shape.hasAttribute(attrName)) {
+            const attrValue = shape.getAttribute(attrName)!;
+            newPath.setAttribute(attrName, attrValue);
+            copiedAttributes.push(`${attrName}="${attrValue}"`);
+          }
+        });
+
+        if (debugMode) {
+          console.log(`    ✅ Converted to path:`, {
+            pathData: d.substring(0, 50) + (d.length > 50 ? '...' : ''),
+            copiedAttributes: copiedAttributes.length,
+            stroke: newPath.getAttribute('stroke'),
+            strokeWidth: newPath.getAttribute('stroke-width'),
+            style: newPath.getAttribute('style')
+          });
+        }
+
+        shape.parentNode.replaceChild(newPath, shape);
+      } else if (!d) {
+        if (debugMode) {
+          console.warn(`    ❌ Could not generate path data for ${tagName}:`, shape);
+        } else {
+          console.warn(`Could not generate path data for ${tagName}:`, shape);
+        }
+      }
+    } catch (convertError) {
+      const errorMsg = `Error converting ${tagName} to path: ${convertError}`;
+      if (debugMode) {
+        console.error(`    ❌ ${errorMsg}`, shape);
+      } else {
+        console.error(errorMsg, convertError, shape);
+      }
+    }
+  });
+
+  if (debugMode) {
+    console.log(`🔄 Shape conversion complete`);
+  }
+}
+
+/**
+ * Converts all SVG shapes to path elements (original function for backward compatibility)
  */
 function convertShapesToPaths(svgElement: Element, debugMode = false): void {
   const svgNS = 'http://www.w3.org/2000/svg';
@@ -626,6 +760,7 @@ export function testStrokeParsingInBrowser(): void {
 
 /**
  * Process and normalize SVG content, converting shapes to paths and normalizing path data
+ * But preserve defs section with gradients and patterns
  */
 export function processSvgContent(svgString: string, debugMode = false): { svgElement: Element; normalizedSvgContent: string } {
   // Normalize whitespace - remove leading/trailing whitespace and blank lines
@@ -647,8 +782,15 @@ export function processSvgContent(svgString: string, debugMode = false): { svgEl
     console.log('🎨 Processing SVG content...');
   }
 
-  // Convert shapes to paths
-  convertShapesToPaths(svgElement, debugMode);
+  // Preserve defs section before converting shapes
+  const defsElement = svgElement.querySelector('defs');
+  let preservedDefs: Element | null = null;
+  if (defsElement) {
+    preservedDefs = defsElement.cloneNode(true) as Element;
+  }
+
+  // Convert shapes to paths (but not inside defs)
+  convertShapesToPathsExcludingDefs(svgElement, debugMode);
 
   // Normalize and round path values
   const pathNodes = svgElement.querySelectorAll('path');
@@ -685,6 +827,21 @@ export function processSvgContent(svgString: string, debugMode = false): { svgEl
       });
     }
   });
+
+  // Restore preserved defs if they existed
+  if (preservedDefs) {
+    // Remove the current defs (if any) and replace with preserved one
+    const currentDefs = svgElement.querySelector('defs');
+    if (currentDefs) {
+      svgElement.removeChild(currentDefs);
+    }
+    // Insert preserved defs as first child
+    svgElement.insertBefore(preservedDefs, svgElement.firstChild);
+    
+    if (debugMode) {
+      console.log('🔧 Restored preserved defs section');
+    }
+  }
 
   // Serialize normalized SVG
   const serializer = new XMLSerializer();
@@ -1082,3 +1239,310 @@ export const SVGParser = {
     testXmlDeclarationHandling,
   }
 };
+
+/**
+ * Parse text elements from SVG
+ */
+export function parseTextElements(svgElement: Element): TextElementType[] {
+  const textElements: TextElementType[] = [];
+  const textNodes = svgElement.querySelectorAll('text');
+  
+  textNodes.forEach((textNode) => {
+    const x = parseFloat(textNode.getAttribute('x') || '0');
+    const y = parseFloat(textNode.getAttribute('y') || '0');
+    const transform = textNode.getAttribute('transform') || undefined;
+    
+    // Parse text style
+    const style: any = {};
+    
+    // Font properties
+    if (textNode.getAttribute('font-family')) {
+      style.fontFamily = textNode.getAttribute('font-family');
+    }
+    if (textNode.getAttribute('font-size')) {
+      style.fontSize = parseFloat(textNode.getAttribute('font-size')!);
+    }
+    if (textNode.getAttribute('font-weight')) {
+      style.fontWeight = textNode.getAttribute('font-weight');
+    }
+    if (textNode.getAttribute('font-style')) {
+      style.fontStyle = textNode.getAttribute('font-style');
+    }
+    if (textNode.getAttribute('text-anchor')) {
+      style.textAnchor = textNode.getAttribute('text-anchor');
+    }
+    if (textNode.getAttribute('dominant-baseline')) {
+      style.dominantBaseline = textNode.getAttribute('dominant-baseline');
+    }
+    
+    // Color and opacity
+    const fill = textNode.getAttribute('fill');
+    if (fill) {
+      if (fill.startsWith('url(#')) {
+        // Handle gradient/pattern references
+        style.fill = fill;
+      } else {
+        style.fill = convertRgbToHex(fill) || fill;
+      }
+    }
+    
+    const stroke = textNode.getAttribute('stroke');
+    if (stroke) {
+      if (stroke.startsWith('url(#')) {
+        style.stroke = stroke;
+      } else {
+        style.stroke = convertRgbToHex(stroke) || stroke;
+      }
+    }
+    
+    if (textNode.getAttribute('stroke-width')) {
+      style.strokeWidth = parseFloat(textNode.getAttribute('stroke-width')!);
+    }
+    if (textNode.getAttribute('fill-opacity')) {
+      style.fillOpacity = parseFloat(textNode.getAttribute('fill-opacity')!);
+    }
+    if (textNode.getAttribute('stroke-opacity')) {
+      style.strokeOpacity = parseFloat(textNode.getAttribute('stroke-opacity')!);
+    }
+    
+    // Parse inline styles
+    const styleAttr = textNode.getAttribute('style');
+    if (styleAttr) {
+      const styleRules = styleAttr.split(';');
+      for (const rule of styleRules) {
+        const colonIndex = rule.indexOf(':');
+        if (colonIndex === -1) continue;
+        
+        const property = rule.substring(0, colonIndex).trim();
+        const value = rule.substring(colonIndex + 1).trim();
+        
+        switch (property) {
+          case 'font-family':
+            style.fontFamily = value;
+            break;
+          case 'font-size':
+            style.fontSize = parseFloat(value);
+            break;
+          case 'font-weight':
+            style.fontWeight = value;
+            break;
+          case 'font-style':
+            style.fontStyle = value;
+            break;
+          case 'text-anchor':
+            style.textAnchor = value;
+            break;
+          case 'fill':
+            if (value.startsWith('url(#')) {
+              style.fill = value;
+            } else {
+              style.fill = convertRgbToHex(value) || value;
+            }
+            break;
+          case 'stroke':
+            if (value.startsWith('url(#')) {
+              style.stroke = value;
+            } else {
+              style.stroke = convertRgbToHex(value) || value;
+            }
+            break;
+          case 'stroke-width':
+            style.strokeWidth = parseFloat(value);
+            break;
+          case 'fill-opacity':
+            style.fillOpacity = parseFloat(value);
+            break;
+          case 'stroke-opacity':
+            style.strokeOpacity = parseFloat(value);
+            break;
+        }
+      }
+    }
+    
+    // Check if it has tspan children (multiline text)
+    const tspanNodes = textNode.querySelectorAll('tspan');
+    
+    if (tspanNodes.length > 0) {
+      // Multiline text
+      const spans = Array.from(tspanNodes).map((tspanNode) => ({
+        id: generateId(),
+        content: tspanNode.textContent || '',
+        x: tspanNode.getAttribute('x') ? parseFloat(tspanNode.getAttribute('x')!) : undefined,
+        y: tspanNode.getAttribute('y') ? parseFloat(tspanNode.getAttribute('y')!) : undefined,
+        dx: tspanNode.getAttribute('dx') ? parseFloat(tspanNode.getAttribute('dx')!) : undefined,
+        dy: tspanNode.getAttribute('dy') ? parseFloat(tspanNode.getAttribute('dy')!) : undefined,
+      }));
+      
+      const multilineText: MultilineTextElement = {
+        id: generateId(),
+        type: 'multiline-text',
+        x,
+        y,
+        spans,
+        style,
+        transform,
+      };
+      
+      textElements.push(multilineText);
+    } else {
+      // Single line text
+      const content = textNode.textContent || '';
+      
+      const singleText: TextElement = {
+        id: generateId(),
+        type: 'text',
+        content,
+        x,
+        y,
+        style,
+        transform,
+      };
+      
+      textElements.push(singleText);
+    }
+  });
+  
+  return textElements;
+}
+
+/**
+ * Parse gradient definitions from SVG
+ */
+export function parseGradients(svgElement: Element): GradientOrPattern[] {
+  const gradients: GradientOrPattern[] = [];
+  const defsElement = svgElement.querySelector('defs');
+  
+  if (!defsElement) return gradients;
+  
+  // Parse linear gradients
+  const linearGradients = defsElement.querySelectorAll('linearGradient');
+  linearGradients.forEach((gradientNode) => {
+    const id = gradientNode.getAttribute('id');
+    if (!id) return;
+    
+    const x1 = parseFloat(gradientNode.getAttribute('x1') || '0');
+    const y1 = parseFloat(gradientNode.getAttribute('y1') || '0');
+    const x2 = parseFloat(gradientNode.getAttribute('x2') || '100');
+    const y2 = parseFloat(gradientNode.getAttribute('y2') || '0');
+    
+    const stops = Array.from(gradientNode.querySelectorAll('stop')).map((stopNode) => ({
+      id: generateId(),
+      offset: parseFloat(stopNode.getAttribute('offset') || '0'),
+      color: convertRgbToHex(stopNode.getAttribute('stop-color') || '#000000') || '#000000',
+      opacity: parseFloat(stopNode.getAttribute('stop-opacity') || '1'),
+    }));
+    
+    const linearGradient: LinearGradient = {
+      id,
+      type: 'linear',
+      x1,
+      y1,
+      x2,
+      y2,
+      stops,
+    };
+    
+    gradients.push(linearGradient);
+  });
+  
+  // Parse radial gradients
+  const radialGradients = defsElement.querySelectorAll('radialGradient');
+  radialGradients.forEach((gradientNode) => {
+    const id = gradientNode.getAttribute('id');
+    if (!id) return;
+    
+    const cx = parseFloat(gradientNode.getAttribute('cx') || '50');
+    const cy = parseFloat(gradientNode.getAttribute('cy') || '50');
+    const r = parseFloat(gradientNode.getAttribute('r') || '50');
+    const fx = parseFloat(gradientNode.getAttribute('fx') || cx.toString());
+    const fy = parseFloat(gradientNode.getAttribute('fy') || cy.toString());
+    
+    const stops = Array.from(gradientNode.querySelectorAll('stop')).map((stopNode) => ({
+      id: generateId(),
+      offset: parseFloat(stopNode.getAttribute('offset') || '0'),
+      color: convertRgbToHex(stopNode.getAttribute('stop-color') || '#000000') || '#000000',
+      opacity: parseFloat(stopNode.getAttribute('stop-opacity') || '1'),
+    }));
+    
+    const radialGradient: RadialGradient = {
+      id,
+      type: 'radial',
+      cx,
+      cy,
+      r,
+      fx,
+      fy,
+      stops,
+    };
+    
+    gradients.push(radialGradient);
+  });
+  
+  // Parse patterns
+  const patterns = defsElement.querySelectorAll('pattern');
+  patterns.forEach((patternNode) => {
+    const id = patternNode.getAttribute('id');
+    if (!id) return;
+    
+    const width = parseFloat(patternNode.getAttribute('width') || '10');
+    const height = parseFloat(patternNode.getAttribute('height') || '10');
+    const patternUnits = patternNode.getAttribute('patternUnits') || 'objectBoundingBox';
+    const patternContentUnits = patternNode.getAttribute('patternContentUnits');
+    const patternTransform = patternNode.getAttribute('patternTransform');
+    
+    // Extract pattern content as SVG string, removing xmlns attributes
+    const patternContent = Array.from(patternNode.children)
+      .map(child => {
+        const serialized = new XMLSerializer().serializeToString(child);
+        // Remove xmlns attribute from the serialized string
+        return serialized.replace(/\s*xmlns="[^"]*"/g, '');
+      })
+      .join('');
+    
+    const pattern: Pattern = {
+      id,
+      type: 'pattern',
+      width,
+      height,
+      patternUnits,
+      patternContentUnits: patternContentUnits || undefined,
+      patternTransform: patternTransform || undefined,
+      content: patternContent,
+    };
+    
+    gradients.push(pattern);
+  });
+  
+  return gradients;
+}
+
+/**
+ * Enhanced SVG parser that handles paths, texts, gradients, and patterns
+ */
+export function parseCompleteSVG(svgString: string): {
+  paths: SVGPath[];
+  texts: TextElementType[];
+  gradients: GradientOrPattern[];
+} {
+  try {
+    const { svgElement } = processSvgContent(svgString);
+    
+    // Parse paths
+    const paths = parseSVGToSubPaths(svgString);
+    
+    // Parse texts
+    const texts = parseTextElements(svgElement);
+    
+    // Parse gradients and patterns
+    const gradients = parseGradients(svgElement);
+    
+    return {
+      paths,
+      texts,
+      gradients
+    };
+  } catch (error) {
+    console.error('Failed to parse complete SVG:', error);
+    throw error;
+  }
+}

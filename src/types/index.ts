@@ -139,6 +139,7 @@ export interface EditorState {
   shapeSize?: number;
   paths: SVGPath[];
   texts: TextElementType[];
+  gradients: GradientOrPattern[]; // Imported gradients and patterns
   selection: SelectionState;
   viewport: ViewportState;
   grid: GridState;

@@ -33,6 +33,7 @@ export interface TextActions {
   // Utility
   lockText: (textId: string, locked?: boolean) => void;
   clearAllTexts: () => void;
+  replaceTexts: (texts: TextElementType[]) => void;
 }
 
 export const createTextActions: StateCreator<
@@ -186,11 +187,18 @@ export const createTextActions: StateCreator<
 
   moveText: (textId: string, delta: Point) => {
     set(state => ({
-      texts: state.texts.map(text => 
-        text.id === textId
-          ? { ...text, x: text.x + delta.x, y: text.y + delta.y }
-          : text
-      )
+      texts: state.texts.map(text => {
+        if (text.id !== textId) return text;
+        
+        // If text has no transform, simply move x, y coordinates
+        if (!text.transform) {
+          return { ...text, x: text.x + delta.x, y: text.y + delta.y };
+        }
+        
+        // If text has transform, prepend translation to preserve existing transformations
+        const newTransform = `translate(${delta.x}, ${delta.y}) ${text.transform}`;
+        return { ...text, transform: newTransform };
+      })
     }));
   },
 
@@ -282,6 +290,17 @@ export const createTextActions: StateCreator<
   clearAllTexts: () => {
     set(state => ({
       texts: [],
+      selection: {
+        ...state.selection,
+        selectedTexts: [],
+        selectedTextSpans: []
+      }
+    }));
+  },
+
+  replaceTexts: (texts: TextElementType[]) => {
+    set(state => ({
+      texts: texts,
       selection: {
         ...state.selection,
         selectedTexts: [],
