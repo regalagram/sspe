@@ -39,7 +39,7 @@ export const MarkerRenderer: React.FC = () => {
         const stroke = markerStyle?.stroke 
           ? (markerStyle.stroke !== 'none' ? getStyleValue(markerStyle.stroke) : 'none')
           : (path.style.stroke ? getStyleValue(path.style.stroke) : 'none');
-        const strokeWidth = markerStyle?.strokeWidth ? (markerStyle.strokeWidth / viewport.zoom) : (path.style.strokeWidth || 0) / viewport.zoom;
+        const strokeWidth = markerStyle?.strokeWidth || path.style.strokeWidth || 0;
         const fillOpacity = markerStyle?.fillOpacity ?? path.style.fillOpacity ?? 1;
         const strokeOpacity = markerStyle?.strokeOpacity ?? path.style.strokeOpacity ?? 1;
 
@@ -71,20 +71,19 @@ export const MarkerRenderer: React.FC = () => {
   };
 
   // Create default arrow path if marker has no children
-  const createDefaultArrowPath = (zoomScale: number = 1, markerStyle?: any) => {
-    // Scale the path coordinates inversely with zoom to maintain visual size
-    const scale = 1 / zoomScale;
+  const createDefaultArrowPath = (markerStyle?: any) => {
+    // Use fixed coordinates for the arrow path - scaling will be handled by marker dimensions
     
     // Apply marker styles or use defaults, using getStyleValue to handle gradients/patterns
     const fill = markerStyle?.fill ? getStyleValue(markerStyle.fill) : '#000000';
     const stroke = markerStyle?.stroke && markerStyle.stroke !== 'none' ? getStyleValue(markerStyle.stroke) : 'none';
-    const strokeWidth = markerStyle?.strokeWidth ? (markerStyle.strokeWidth / zoomScale) : 0;
+    const strokeWidth = markerStyle?.strokeWidth || 0;
     const fillOpacity = markerStyle?.fillOpacity ?? 1;
     const strokeOpacity = markerStyle?.strokeOpacity ?? 1;
     
     return (
       <path
-        d={`M 0 0 L ${10 * scale} ${2.5 * scale} L 0 ${5 * scale} z`}
+        d="M 0 0 L 10 2.5 L 0 5 z"
         fill={fill}
         stroke={stroke}
         strokeWidth={strokeWidth}
@@ -97,34 +96,28 @@ export const MarkerRenderer: React.FC = () => {
   return (
     <defs>
       {markers.map((marker) => {
-        // Calculate zoom-independent dimensions
-        const baseMarkerWidth = marker.markerWidth || 8;
-        const baseMarkerHeight = marker.markerHeight || 8;
-        const baseRefX = marker.refX || 0;
-        const baseRefY = marker.refY || 2.5;
-        
-        // Scale inversely with zoom to maintain constant visual size
-        const scaledMarkerWidth = baseMarkerWidth / viewport.zoom;
-        const scaledMarkerHeight = baseMarkerHeight / viewport.zoom;
-        const scaledRefX = baseRefX / viewport.zoom;
-        const scaledRefY = baseRefY / viewport.zoom;
+        // Use fixed dimensions - SVG will handle the scaling automatically with strokeWidth units
+        const markerWidth = marker.markerWidth || 8;
+        const markerHeight = marker.markerHeight || 8;
+        const refX = marker.refX || 0;
+        const refY = marker.refY || 2.5;
         
         return (
           <marker
             key={marker.id}
             id={marker.id}
-            markerUnits="userSpaceOnUse"
-            refX={scaledRefX}
-            refY={scaledRefY}
-            markerWidth={scaledMarkerWidth}
-            markerHeight={scaledMarkerHeight}
+            markerUnits="strokeWidth"
+            refX={refX}
+            refY={refY}
+            markerWidth={markerWidth}
+            markerHeight={markerHeight}
             orient={marker.orient || 'auto'}
             viewBox={marker.viewBox || '0 0 10 5'}
             preserveAspectRatio={marker.preserveAspectRatio}
           >
             {marker.children.length > 0 
-              ? marker.children.map(child => renderChildContent(child.id, child.type))
-              : createDefaultArrowPath(viewport.zoom, marker.style)
+              ? marker.children.map(child => renderChildContent(child.id, child.type, marker.style))
+              : createDefaultArrowPath(marker.style)
             }
           </marker>
         );

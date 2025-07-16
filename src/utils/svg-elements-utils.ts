@@ -124,7 +124,7 @@ export const createGrayscaleFilter = (): Omit<SVGFilter, 'id'> => ({
 // Marker utilities
 export const createDefaultMarker = (): Omit<SVGMarker, 'id'> => ({
   type: 'marker',
-  markerUnits: 'userSpaceOnUse',
+  markerUnits: 'strokeWidth',
   refX: 0,
   refY: 2.5,
   markerWidth: 8,
@@ -137,14 +137,14 @@ export const createDefaultMarker = (): Omit<SVGMarker, 'id'> => ({
     stroke: 'none',
     fillOpacity: 1,
     strokeOpacity: 1,
-    strokeWidth: 1,
+    strokeWidth: 0,
   },
   locked: false,
 });
 
 export const createArrowMarker = (): Omit<SVGMarker, 'id'> => ({
   type: 'marker',
-  markerUnits: 'userSpaceOnUse',
+  markerUnits: 'strokeWidth',
   refX: 0,
   refY: 2.5,
   markerWidth: 8,
@@ -157,7 +157,7 @@ export const createArrowMarker = (): Omit<SVGMarker, 'id'> => ({
     stroke: 'none',
     fillOpacity: 1,
     strokeOpacity: 1,
-    strokeWidth: 1,
+    strokeWidth: 0,
   },
   locked: false,
 });
