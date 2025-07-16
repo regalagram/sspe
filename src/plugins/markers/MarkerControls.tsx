@@ -301,11 +301,12 @@ export const MarkerControls: React.FC = () => {
                       <label style={{ fontSize: '10px', color: '#666' }}>Width</label>
                       <input
                         type="number"
-                        min="1"
-                        max="50"
+                        min="0.5"
+                        max="10"
+                        step="0.5"
                         value={marker.markerWidth}
                         onChange={(e) => handleUpdateMarker(marker.id, { 
-                          markerWidth: Number(e.target.value) || 10 
+                          markerWidth: Number(e.target.value) || 3 
                         })}
                         style={{
                           width: '100%',
@@ -320,11 +321,12 @@ export const MarkerControls: React.FC = () => {
                       <label style={{ fontSize: '10px', color: '#666' }}>Height</label>
                       <input
                         type="number"
-                        min="1"
-                        max="50"
+                        min="0.5"
+                        max="10"
+                        step="0.5"
                         value={marker.markerHeight}
                         onChange={(e) => handleUpdateMarker(marker.id, { 
-                          markerHeight: Number(e.target.value) || 10 
+                          markerHeight: Number(e.target.value) || 3 
                         })}
                         style={{
                           width: '100%',
@@ -342,6 +344,9 @@ export const MarkerControls: React.FC = () => {
                       <label style={{ fontSize: '10px', color: '#666' }}>Ref X</label>
                       <input
                         type="number"
+                        min="-5"
+                        max="15"
+                        step="0.5"
                         value={marker.refX || 0}
                         onChange={(e) => handleUpdateMarker(marker.id, { 
                           refX: Number(e.target.value) || 0 
@@ -359,6 +364,9 @@ export const MarkerControls: React.FC = () => {
                       <label style={{ fontSize: '10px', color: '#666' }}>Ref Y</label>
                       <input
                         type="number"
+                        min="-2.5"
+                        max="7.5"
+                        step="0.5"
                         value={marker.refY || 0}
                         onChange={(e) => handleUpdateMarker(marker.id, { 
                           refY: Number(e.target.value) || 0 
@@ -409,7 +417,7 @@ export const MarkerControls: React.FC = () => {
                         <label style={{ fontSize: '10px', color: '#666' }}>Fill</label>
                         <input
                           type="color"
-                          value={marker.style?.fill || '#000000'}
+                          value={typeof marker.style?.fill === 'string' ? marker.style.fill : '#000000'}
                           onChange={(e) => handleUpdateMarker(marker.id, { 
                             style: { ...marker.style, fill: e.target.value }
                           })}
@@ -449,7 +457,11 @@ export const MarkerControls: React.FC = () => {
                         <label style={{ fontSize: '10px', color: '#666' }}>Stroke</label>
                         <input
                           type="color"
-                          value={marker.style?.stroke === 'none' ? '#000000' : (marker.style?.stroke || '#000000')}
+                          value={
+                            typeof marker.style?.stroke === 'string'
+                              ? (marker.style?.stroke === 'none' ? '#000000' : marker.style?.stroke)
+                              : '#000000'
+                          }
                           onChange={(e) => handleUpdateMarker(marker.id, { 
                             style: { ...marker.style, stroke: e.target.value }
                           })}
@@ -667,7 +679,7 @@ export const MarkerControls: React.FC = () => {
         <div>• Markers automatically orient to path direction</div>
         <div>• Edit marker dimensions, orientation, and colors in the marker list</div>
         <div>• Use solid colors or gradients for marker styling</div>
-        <div>• Markers maintain consistent size at all zoom levels</div>
+        <div>• Markers automatically scale with zoom for consistent visual size</div>
       </div>
     </div>
   );
