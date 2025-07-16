@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { createDefaultMarker, createArrowMarker, formatSVGReference } from '../../utils/svg-elements-utils';
-import { AccordionToggleButton } from '../../components/AccordionPanel';
 
 export const MarkerControls: React.FC = () => {
   const { 
@@ -13,8 +12,6 @@ export const MarkerControls: React.FC = () => {
     removeMarker,
     updatePathStyle
   } = useEditorStore();
-  
-  const [isExpanded, setIsExpanded] = useState(false);
 
   const selectedPath = selection.selectedPaths.length === 1 
     ? paths.find(path => path.id === selection.selectedPaths[0])
@@ -129,15 +126,18 @@ export const MarkerControls: React.FC = () => {
 
   return (
     <div className="border-b border-gray-200 last:border-b-0" data-plugin="markers">
-      <AccordionToggleButton
-        isExpanded={isExpanded}
-        onClick={() => setIsExpanded(!isExpanded)}
-        title="Markers"
-        badge={markers.length > 0 ? markers.length : undefined}
-      />
+      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium text-gray-900">Markers</h3>
+          {markers.length > 0 && (
+            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+              {markers.length}
+            </span>
+          )}
+        </div>
+      </div>
       
-      {isExpanded && (
-        <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4">
           {/* Quick Apply - Most Common Use Case */}
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-gray-700">Quick Apply</h4>
@@ -429,7 +429,6 @@ export const MarkerControls: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
     </div>
   );
 };

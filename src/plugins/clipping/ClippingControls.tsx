@@ -662,7 +662,6 @@ export const ClippingControls: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 };
