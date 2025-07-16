@@ -137,12 +137,30 @@ export const ClippingControls: React.FC = () => {
     }
   };
 
+  const handleApplyClipToSubPaths = (clipId: string) => {
+    const parentPaths = getParentPathsOfSelectedSubPaths();
+    parentPaths.forEach(pathId => {
+      updatePathStyle(pathId, {
+        clipPath: formatSVGReference(clipId)
+      });
+    });
+  };
+
   const handleApplyMaskToPath = (maskId: string) => {
     if (selectedPath) {
       updatePathStyle(selectedPath.id, {
         mask: formatSVGReference(maskId)
       });
     }
+  };
+
+  const handleApplyMaskToSubPaths = (maskId: string) => {
+    const parentPaths = getParentPathsOfSelectedSubPaths();
+    parentPaths.forEach(pathId => {
+      updatePathStyle(pathId, {
+        mask: formatSVGReference(maskId)
+      });
+    });
   };
 
   // Apply clipping to text elements
@@ -295,17 +313,6 @@ export const ClippingControls: React.FC = () => {
 
   return (
     <div className="border-b border-gray-200 last:border-b-0" data-plugin="clipping">
-      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-gray-900">Clipping & Masks</h3>
-          {totalElements > 0 && (
-            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-              {totalElements}
-            </span>
-          )}
-        </div>
-      </div>
-      
       <div className="p-4 space-y-4">
           {/* Tab Navigation */}
           <div className="flex border border-gray-200 rounded overflow-hidden">
@@ -387,6 +394,15 @@ export const ClippingControls: React.FC = () => {
                                 title="Apply to selected path"
                               >
                                 Apply to Path
+                              </button>
+                            )}
+                            {selectedSubPaths.length > 0 && (
+                              <button
+                                onClick={() => handleApplyClipToSubPaths(clipPath.id)}
+                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
+                                title="Apply to parent paths of selected sub-paths"
+                              >
+                                Apply to Sub-paths
                               </button>
                             )}
                             {selection.selectedTexts.length > 0 && (
@@ -510,6 +526,15 @@ export const ClippingControls: React.FC = () => {
                                 title="Apply to selected path"
                               >
                                 Apply to Path
+                              </button>
+                            )}
+                            {selectedSubPaths.length > 0 && (
+                              <button
+                                onClick={() => handleApplyMaskToSubPaths(mask.id)}
+                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
+                                title="Apply to parent paths of selected sub-paths"
+                              >
+                                Apply to Sub-paths
                               </button>
                             )}
                             {selection.selectedTexts.length > 0 && (

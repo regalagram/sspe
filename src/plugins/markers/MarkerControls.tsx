@@ -126,17 +126,6 @@ export const MarkerControls: React.FC = () => {
 
   return (
     <div className="border-b border-gray-200 last:border-b-0" data-plugin="markers">
-      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-gray-900">Markers</h3>
-          {markers.length > 0 && (
-            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-              {markers.length}
-            </span>
-          )}
-        </div>
-      </div>
-      
       <div className="p-4 space-y-4">
           {/* Quick Apply - Most Common Use Case */}
           <div className="space-y-2">
