@@ -240,6 +240,9 @@ export interface TextStyle {
   letterSpacing?: number;
   wordSpacing?: number;
   lineHeight?: number;
+  filter?: string;
+  clipPath?: string;
+  mask?: string;
 }
 
 export interface TextElement {

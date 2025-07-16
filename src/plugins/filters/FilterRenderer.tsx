@@ -9,7 +9,6 @@ export const FilterRenderer: React.FC = () => {
 
   const renderFilterPrimitive = (primitive: FilterPrimitiveType, index: number) => {
     const commonProps = {
-      key: index,
       result: 'result' in primitive ? primitive.result || `effect${index}` : `effect${index}`,
       in: 'in' in primitive ? primitive.in || (index === 0 ? 'SourceGraphic' : `effect${index - 1}`) : (index === 0 ? 'SourceGraphic' : `effect${index - 1}`),
     };
@@ -18,6 +17,7 @@ export const FilterRenderer: React.FC = () => {
       case 'feGaussianBlur':
         return (
           <feGaussianBlur
+            key={index}
             {...commonProps}
             stdDeviation={primitive.stdDeviation}
           />
@@ -26,6 +26,7 @@ export const FilterRenderer: React.FC = () => {
       case 'feOffset':
         return (
           <feOffset
+            key={index}
             {...commonProps}
             dx={primitive.dx}
             dy={primitive.dy}
@@ -35,6 +36,7 @@ export const FilterRenderer: React.FC = () => {
       case 'feFlood':
         return (
           <feFlood
+            key={index}
             {...commonProps}
             floodColor={primitive.floodColor}
             floodOpacity={primitive.floodOpacity}
@@ -44,6 +46,7 @@ export const FilterRenderer: React.FC = () => {
       case 'feComposite':
         return (
           <feComposite
+            key={index}
             {...commonProps}
             operator={primitive.operator}
             in2={'in2' in primitive ? primitive.in2 || 'SourceGraphic' : 'SourceGraphic'}
@@ -53,6 +56,7 @@ export const FilterRenderer: React.FC = () => {
       case 'feColorMatrix':
         return (
           <feColorMatrix
+            key={index}
             {...commonProps}
             values={primitive.values}
           />
@@ -61,6 +65,7 @@ export const FilterRenderer: React.FC = () => {
       case 'feDropShadow':
         return (
           <feDropShadow
+            key={index}
             {...commonProps}
             dx={primitive.dx}
             dy={primitive.dy}
@@ -73,6 +78,7 @@ export const FilterRenderer: React.FC = () => {
       case 'feBlend':
         return (
           <feBlend
+            key={index}
             {...commonProps}
             mode={primitive.mode}
             in2={'in2' in primitive ? primitive.in2 || 'SourceGraphic' : 'SourceGraphic'}
@@ -82,6 +88,7 @@ export const FilterRenderer: React.FC = () => {
       case 'feMorphology':
         return (
           <feMorphology
+            key={index}
             {...commonProps}
             operator={primitive.operator}
             radius={primitive.radius}

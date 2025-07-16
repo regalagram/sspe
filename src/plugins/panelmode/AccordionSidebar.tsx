@@ -54,6 +54,14 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
     'zoom-controls',
   ];
 
+    // Grupo prioritario de plugins por id
+  const sandboxedIds = [
+    'clipping-controls',
+    'filter-controls',
+    'marker-controls',
+    'symbol-controls',
+  ];
+
   // Filtrar plugins visibles
   const visiblePlugins = plugins.filter(plugin => 
     visiblePanels.some(panel => panel.id === plugin.id)
@@ -66,10 +74,16 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
   const priorityPlugins: UIComponentDefinition[] = priorityIds
     .map(id => visiblePlugins.find(p => p.id === id))
     .filter((p): p is UIComponentDefinition => !!p);
+  
+    // Plugins prioritarios en el orden definido, tipados correctamente
+  const sandboxedPlugins: UIComponentDefinition[] = sandboxedIds
+    .map(id => visiblePlugins.find(p => p.id === id))
+    .filter((p): p is UIComponentDefinition => !!p);
+
 
   // Plugins restantes (excluyendo panelModePlugin y prioritarios), ordenados alfabéticamente
   const otherPlugins = visiblePlugins
-    .filter(p => p.id !== 'panel-mode-ui' && !priorityIds.includes(p.id))
+    .filter(p => p.id !== 'panel-mode-ui' && !priorityIds.includes(p.id) && !sandboxedIds.includes(p.id))
     .sort((a, b) => {
       const panelA = visiblePanels.find(pan => pan.id === a.id);
       const panelB = visiblePanels.find(pan => pan.id === b.id);
@@ -235,6 +249,31 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
             />
           );
         })}
+
+                {/* Divider after Panel Mode: entre prioritarios y otros si ambos existen */}
+        {sandboxedPlugins.length > 0 && (
+          <div style={{ 
+            height: '1px',
+            background: '#999',
+            padding: '4px 0'
+          }} />
+        )}
+
+        {/* Plugins restantes en orden alfabético */}
+        {sandboxedPlugins.map((plugin) => {
+          const panel = visiblePanels.find(p => p.id === plugin.id);
+          const isExpanded = accordionExpandedPanel === plugin.id;
+          return (
+            <AccordionPanel
+              key={plugin.id}
+              plugin={plugin}
+              panel={panel}
+              isExpanded={isExpanded}
+              onToggle={() => handlePanelToggle(plugin.id)}
+              panelId={plugin.id}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -258,7 +297,7 @@ const AccordionPanel: React.FC<AccordionPanelProps> = ({
   const isPanelMode = plugin.id === 'panel-mode-ui';
   
   const headerStyle: React.CSSProperties = {
-    padding: '8px 8px',
+    padding: '2px 8px',
     borderBottom: '1px solid #e0e0e0',
     cursor: 'pointer',
     background: isExpanded ? '#f0f8ff' : (isPanelMode ? '#f8f9fa' : '#fafafa'),

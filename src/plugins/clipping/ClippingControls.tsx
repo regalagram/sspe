@@ -16,6 +16,9 @@ export const ClippingControls: React.FC = () => {
     updateMask,
     removeMask,
     updatePathStyle,
+    updateTextStyle,
+    updateGroup,
+    updateImage,
     removePath,
     removeSubPath
   } = useEditorStore();
@@ -144,6 +147,65 @@ export const ClippingControls: React.FC = () => {
     }
   };
 
+  // Apply clipping to text elements
+  const handleApplyClipToText = (clipId: string) => {
+    selection.selectedTexts.forEach(textId => {
+      updateTextStyle(textId, {
+        clipPath: formatSVGReference(clipId)
+      });
+    });
+  };
+
+  const handleApplyMaskToText = (maskId: string) => {
+    selection.selectedTexts.forEach(textId => {
+      updateTextStyle(textId, {
+        mask: formatSVGReference(maskId)
+      });
+    });
+  };
+
+  // Apply clipping to group elements
+  const handleApplyClipToGroup = (clipId: string) => {
+    selection.selectedGroups.forEach(groupId => {
+      updateGroup(groupId, {
+        style: {
+          clipPath: formatSVGReference(clipId)
+        }
+      });
+    });
+  };
+
+  const handleApplyMaskToGroup = (maskId: string) => {
+    selection.selectedGroups.forEach(groupId => {
+      updateGroup(groupId, {
+        style: {
+          mask: formatSVGReference(maskId)
+        }
+      });
+    });
+  };
+
+  // Apply clipping to image elements
+  const handleApplyClipToImage = (clipId: string) => {
+    selection.selectedImages.forEach(imageId => {
+      updateImage(imageId, {
+        style: {
+          clipPath: formatSVGReference(clipId)
+        }
+      });
+    });
+  };
+
+  const handleApplyMaskToImage = (maskId: string) => {
+    selection.selectedImages.forEach(imageId => {
+      updateImage(imageId, {
+        style: {
+          mask: formatSVGReference(maskId)
+        }
+      });
+    });
+  };
+
   const handleRemoveClipFromPath = () => {
     if (selectedPath) {
       updatePathStyle(selectedPath.id, {
@@ -158,6 +220,65 @@ export const ClippingControls: React.FC = () => {
         mask: undefined
       });
     }
+  };
+
+  // Remove clipping from text elements
+  const handleRemoveClipFromText = () => {
+    selection.selectedTexts.forEach(textId => {
+      updateTextStyle(textId, {
+        clipPath: undefined
+      });
+    });
+  };
+
+  const handleRemoveMaskFromText = () => {
+    selection.selectedTexts.forEach(textId => {
+      updateTextStyle(textId, {
+        mask: undefined
+      });
+    });
+  };
+
+  // Remove clipping from group elements
+  const handleRemoveClipFromGroup = () => {
+    selection.selectedGroups.forEach(groupId => {
+      updateGroup(groupId, {
+        style: {
+          clipPath: undefined
+        }
+      });
+    });
+  };
+
+  const handleRemoveMaskFromGroup = () => {
+    selection.selectedGroups.forEach(groupId => {
+      updateGroup(groupId, {
+        style: {
+          mask: undefined
+        }
+      });
+    });
+  };
+
+  // Remove clipping from image elements
+  const handleRemoveClipFromImage = () => {
+    selection.selectedImages.forEach(imageId => {
+      updateImage(imageId, {
+        style: {
+          clipPath: undefined
+        }
+      });
+    });
+  };
+
+  const handleRemoveMaskFromImage = () => {
+    selection.selectedImages.forEach(imageId => {
+      updateImage(imageId, {
+        style: {
+          mask: undefined
+        }
+      });
+    });
   };
 
   const handleRemoveClipPath = (id: string) => {
@@ -264,7 +385,34 @@ export const ClippingControls: React.FC = () => {
                                 className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
                                 title="Apply to selected path"
                               >
-                                Apply
+                                Apply to Path
+                              </button>
+                            )}
+                            {selection.selectedTexts.length > 0 && (
+                              <button
+                                onClick={() => handleApplyClipToText(clipPath.id)}
+                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
+                                title="Apply to selected text"
+                              >
+                                Apply to Text
+                              </button>
+                            )}
+                            {selection.selectedGroups.length > 0 && (
+                              <button
+                                onClick={() => handleApplyClipToGroup(clipPath.id)}
+                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
+                                title="Apply to selected group"
+                              >
+                                Apply to Group
+                              </button>
+                            )}
+                            {selection.selectedImages.length > 0 && (
+                              <button
+                                onClick={() => handleApplyClipToImage(clipPath.id)}
+                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
+                                title="Apply to selected image"
+                              >
+                                Apply to Image
                               </button>
                             )}
                             <button
@@ -360,7 +508,34 @@ export const ClippingControls: React.FC = () => {
                                 className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
                                 title="Apply to selected path"
                               >
-                                Apply
+                                Apply to Path
+                              </button>
+                            )}
+                            {selection.selectedTexts.length > 0 && (
+                              <button
+                                onClick={() => handleApplyMaskToText(mask.id)}
+                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
+                                title="Apply to selected text"
+                              >
+                                Apply to Text
+                              </button>
+                            )}
+                            {selection.selectedGroups.length > 0 && (
+                              <button
+                                onClick={() => handleApplyMaskToGroup(mask.id)}
+                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
+                                title="Apply to selected group"
+                              >
+                                Apply to Group
+                              </button>
+                            )}
+                            {selection.selectedImages.length > 0 && (
+                              <button
+                                onClick={() => handleApplyMaskToImage(mask.id)}
+                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
+                                title="Apply to selected image"
+                              >
+                                Apply to Image
                               </button>
                             )}
                             <button
@@ -398,6 +573,91 @@ export const ClippingControls: React.FC = () => {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Apply/Remove Section for Selected Elements */}
+          {(selection.selectedTexts.length > 0 || selection.selectedGroups.length > 0 || selection.selectedImages.length > 0 || selectedPath) && (
+            <div className="space-y-2 pt-2 border-t border-gray-200">
+              <h4 className="text-sm font-medium text-gray-700">Selected Elements</h4>
+              
+              {/* Remove Clipping Buttons */}
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600">Remove Clipping:</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {selectedPath && selectedPath.style.clipPath && (
+                    <button
+                      onClick={handleRemoveClipFromPath}
+                      className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
+                    >
+                      Remove from Path
+                    </button>
+                  )}
+                  {selection.selectedTexts.length > 0 && (
+                    <button
+                      onClick={handleRemoveClipFromText}
+                      className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
+                    >
+                      Remove from Text
+                    </button>
+                  )}
+                  {selection.selectedGroups.length > 0 && (
+                    <button
+                      onClick={handleRemoveClipFromGroup}
+                      className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
+                    >
+                      Remove from Group
+                    </button>
+                  )}
+                  {selection.selectedImages.length > 0 && (
+                    <button
+                      onClick={handleRemoveClipFromImage}
+                      className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
+                    >
+                      Remove from Image
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Remove Mask Buttons */}
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600">Remove Mask:</div>
+                <div className="grid grid-cols-2 gap-2">
+                  {selectedPath && selectedPath.style.mask && (
+                    <button
+                      onClick={handleRemoveMaskFromPath}
+                      className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
+                    >
+                      Remove from Path
+                    </button>
+                  )}
+                  {selection.selectedTexts.length > 0 && (
+                    <button
+                      onClick={handleRemoveMaskFromText}
+                      className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
+                    >
+                      Remove from Text
+                    </button>
+                  )}
+                  {selection.selectedGroups.length > 0 && (
+                    <button
+                      onClick={handleRemoveMaskFromGroup}
+                      className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
+                    >
+                      Remove from Group
+                    </button>
+                  )}
+                  {selection.selectedImages.length > 0 && (
+                    <button
+                      onClick={handleRemoveMaskFromImage}
+                      className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
+                    >
+                      Remove from Image
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>

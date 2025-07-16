@@ -205,6 +205,9 @@ const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false,
     <g
       id={`group-${group.id}`}
       transform={group.transform}
+      filter={group.style?.filter}
+      clipPath={group.style?.clipPath}
+      mask={group.style?.mask}
       style={{
         opacity: isGroupLocked(group.id, 'selection') ? 0.6 : 1,
         pointerEvents: isGroupLocked(group.id, 'movement') ? 'none' : 'all'

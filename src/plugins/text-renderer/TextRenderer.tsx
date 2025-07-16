@@ -40,6 +40,9 @@ export const TextRenderer: React.FC = () => {
           letterSpacing={text.style.letterSpacing}
           wordSpacing={text.style.wordSpacing}
           transform={text.transform}
+          filter={text.style.filter}
+          clipPath={text.style.clipPath}
+          mask={text.style.mask}
           style={{
             cursor: text.locked ? 'default' : 'grab',
             pointerEvents: text.locked ? 'none' : 'all',

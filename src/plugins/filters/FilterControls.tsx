@@ -16,11 +16,17 @@ export const FilterControls: React.FC = () => {
     filters, 
     selection, 
     paths,
+    texts,
+    groups,
+    images,
     addFilter, 
     updateFilter, 
     removeFilter, 
     duplicateFilter,
-    updatePathStyle
+    updatePathStyle,
+    updateTextStyle,
+    updateGroup,
+    updateImage
   } = useEditorStore();
   
   const [isExpanded, setIsExpanded] = useState(false);
@@ -112,12 +118,96 @@ export const FilterControls: React.FC = () => {
     }
   };
 
+  const handleApplyFilterToText = (filterId: string) => {
+    const selectedTexts = texts.filter(text => 
+      selection.selectedTexts.includes(text.id)
+    );
+    
+    selectedTexts.forEach(text => {
+      updateTextStyle(text.id, {
+        filter: formatSVGReference(filterId)
+      });
+    });
+  };
+
+  const handleApplyFilterToGroup = (filterId: string) => {
+    const selectedGroups = groups.filter(group => 
+      selection.selectedGroups.includes(group.id)
+    );
+    
+    selectedGroups.forEach(group => {
+      updateGroup(group.id, {
+        style: {
+          ...group.style,
+          filter: formatSVGReference(filterId)
+        }
+      });
+    });
+  };
+
+  const handleApplyFilterToImage = (filterId: string) => {
+    const selectedImages = images.filter(image => 
+      selection.selectedImages.includes(image.id)
+    );
+    
+    selectedImages.forEach(image => {
+      updateImage(image.id, {
+        style: {
+          ...image.style,
+          filter: formatSVGReference(filterId)
+        }
+      });
+    });
+  };
+
   const handleRemoveFilterFromPath = () => {
     if (selectedPath) {
       updatePathStyle(selectedPath.id, {
         filter: undefined
       });
     }
+  };
+
+  const handleRemoveFilterFromText = () => {
+    const selectedTexts = texts.filter(text => 
+      selection.selectedTexts.includes(text.id)
+    );
+    
+    selectedTexts.forEach(text => {
+      updateTextStyle(text.id, {
+        filter: undefined
+      });
+    });
+  };
+
+  const handleRemoveFilterFromGroup = () => {
+    const selectedGroups = groups.filter(group => 
+      selection.selectedGroups.includes(group.id)
+    );
+    
+    selectedGroups.forEach(group => {
+      updateGroup(group.id, {
+        style: {
+          ...group.style,
+          filter: undefined
+        }
+      });
+    });
+  };
+
+  const handleRemoveFilterFromImage = () => {
+    const selectedImages = images.filter(image => 
+      selection.selectedImages.includes(image.id)
+    );
+    
+    selectedImages.forEach(image => {
+      updateImage(image.id, {
+        style: {
+          ...image.style,
+          filter: undefined
+        }
+      });
+    });
   };
 
   const handleAddPrimitive = (filterId: string, type: FilterPrimitiveType['type']) => {
@@ -392,33 +482,91 @@ export const FilterControls: React.FC = () => {
             </div>
           </div>
 
-          {/* Apply to Selected Path */}
-          {selectedPath && (
+          {/* Apply to Selected Elements */}
+          {(selectedPath || selection.selectedTexts.length > 0 || selection.selectedGroups.length > 0 || selection.selectedImages.length > 0) && (
             <div className="space-y-2 pt-2 border-t border-gray-200">
-              <h4 className="text-sm font-medium text-gray-700">Apply to Selected Path</h4>
+              <h4 className="text-sm font-medium text-gray-700">Apply to Selected Elements</h4>
               {filters.length > 0 ? (
-                <div className="space-y-1">
+                <div className="space-y-3">
                   {filters.map((filter) => (
-                    <div key={filter.id} className="flex items-center justify-between">
-                      <span className="text-xs text-gray-600 truncate">
+                    <div key={filter.id} className="space-y-2">
+                      <span className="text-xs font-medium text-gray-600">
                         Filter ({filter.primitives.length} effects)
                       </span>
-                      <button
-                        onClick={() => handleApplyFilterToPath(filter.id)}
-                        className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                      >
-                        Apply
-                      </button>
+                      <div className="grid grid-cols-2 gap-2">
+                        {selectedPath && (
+                          <button
+                            onClick={() => handleApplyFilterToPath(filter.id)}
+                            className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
+                          >
+                            Apply to Path
+                          </button>
+                        )}
+                        {selection.selectedTexts.length > 0 && (
+                          <button
+                            onClick={() => handleApplyFilterToText(filter.id)}
+                            className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
+                          >
+                            Apply to Text ({selection.selectedTexts.length})
+                          </button>
+                        )}
+                        {selection.selectedGroups.length > 0 && (
+                          <button
+                            onClick={() => handleApplyFilterToGroup(filter.id)}
+                            className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
+                          >
+                            Apply to Group ({selection.selectedGroups.length})
+                          </button>
+                        )}
+                        {selection.selectedImages.length > 0 && (
+                          <button
+                            onClick={() => handleApplyFilterToImage(filter.id)}
+                            className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
+                          >
+                            Apply to Image ({selection.selectedImages.length})
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
-                  {selectedPath.style.filter && (
-                    <button
-                      onClick={handleRemoveFilterFromPath}
-                      className="w-full px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                    >
-                      Remove Filter
-                    </button>
-                  )}
+                  
+                  {/* Remove Filter Buttons */}
+                  <div className="pt-2 border-t border-gray-100">
+                    <div className="grid grid-cols-2 gap-2">
+                      {selectedPath && selectedPath.style.filter && (
+                        <button
+                          onClick={handleRemoveFilterFromPath}
+                          className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
+                        >
+                          Remove from Path
+                        </button>
+                      )}
+                      {selection.selectedTexts.length > 0 && (
+                        <button
+                          onClick={handleRemoveFilterFromText}
+                          className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
+                        >
+                          Remove from Text
+                        </button>
+                      )}
+                      {selection.selectedGroups.length > 0 && (
+                        <button
+                          onClick={handleRemoveFilterFromGroup}
+                          className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
+                        >
+                          Remove from Group
+                        </button>
+                      )}
+                      {selection.selectedImages.length > 0 && (
+                        <button
+                          onClick={handleRemoveFilterFromImage}
+                          className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
+                        >
+                          Remove from Image
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="text-xs text-gray-500">No filters available</div>
