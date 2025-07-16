@@ -131,7 +131,7 @@ export const createDefaultMarker = (): Omit<SVGMarker, 'id'> => ({
   markerHeight: 6,
   orient: 'auto',
   viewBox: '0 0 10 6',
-  children: [],
+  children: [], // Empty children so MarkerRenderer will use default arrow path
   locked: false,
 });
 
@@ -144,9 +144,7 @@ export const createArrowMarker = (): Omit<SVGMarker, 'id'> => ({
   markerHeight: 6,
   orient: 'auto',
   viewBox: '0 0 10 6',
-  children: [
-    { type: 'path', id: 'arrow-path' } // This would reference a path with arrow shape
-  ],
+  children: [], // Empty children so MarkerRenderer will use default arrow path
   locked: false,
 });
 
