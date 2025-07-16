@@ -9,7 +9,6 @@ import {
   formatSVGReference 
 } from '../../utils/svg-elements-utils';
 import { FilterPrimitiveType } from '../../types';
-import { AccordionToggleButton } from '../../components/AccordionPanel';
 
 export const FilterControls: React.FC = () => {
   const { 
@@ -29,7 +28,6 @@ export const FilterControls: React.FC = () => {
     updateImage
   } = useEditorStore();
   
-  const [isExpanded, setIsExpanded] = useState(false);
   const [editingFilter, setEditingFilter] = useState<string | null>(null);
 
   const selectedFilter = selection.selectedFilters.length === 1 

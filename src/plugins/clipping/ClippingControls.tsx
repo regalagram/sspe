@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { createDefaultClipPath, createDefaultMask, formatSVGReference } from '../../utils/svg-elements-utils';
-import { AccordionToggleButton } from '../../components/AccordionPanel';
 
 export const ClippingControls: React.FC = () => {
   const { 
@@ -23,7 +22,6 @@ export const ClippingControls: React.FC = () => {
     removeSubPath
   } = useEditorStore();
   
-  const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'clips' | 'masks'>('clips');
 
   const selectedSubPaths = selection.selectedSubPaths;
@@ -297,15 +295,18 @@ export const ClippingControls: React.FC = () => {
 
   return (
     <div className="border-b border-gray-200 last:border-b-0" data-plugin="clipping">
-      <AccordionToggleButton
-        isExpanded={isExpanded}
-        onClick={() => setIsExpanded(!isExpanded)}
-        title="Clipping & Masks"
-        badge={totalElements > 0 ? totalElements : undefined}
-      />
+      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-medium text-gray-900">Clipping & Masks</h3>
+          {totalElements > 0 && (
+            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+              {totalElements}
+            </span>
+          )}
+        </div>
+      </div>
       
-      {isExpanded && (
-        <div className="p-4 space-y-4">
+      <div className="p-4 space-y-4">
           {/* Tab Navigation */}
           <div className="flex border border-gray-200 rounded overflow-hidden">
             <button
@@ -661,7 +662,7 @@ export const ClippingControls: React.FC = () => {
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
