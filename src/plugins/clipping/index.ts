@@ -29,7 +29,13 @@ export const ClippingPlugin: Plugin = {
       modifiers: ['ctrl', 'shift'],
       description: 'Create clip path from selection',
       action: () => {
-        console.log('Create clip path from selection');
+        const clippingControls = document.querySelector('[data-plugin="clipping"]');
+        if (clippingControls) {
+          const createClipBtn = clippingControls.querySelector('[data-action="create-clip-from-selection"]');
+          if (createClipBtn) {
+            (createClipBtn as HTMLButtonElement).click();
+          }
+        }
       }
     },
     {
@@ -37,7 +43,13 @@ export const ClippingPlugin: Plugin = {
       modifiers: ['ctrl', 'shift'],
       description: 'Create mask from selection',
       action: () => {
-        console.log('Create mask from selection');
+        const clippingControls = document.querySelector('[data-plugin="clipping"]');
+        if (clippingControls) {
+          const createMaskBtn = clippingControls.querySelector('[data-action="create-mask-from-selection"]');
+          if (createMaskBtn) {
+            (createMaskBtn as HTMLButtonElement).click();
+          }
+        }
       }
     }
   ]

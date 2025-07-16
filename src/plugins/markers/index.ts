@@ -29,7 +29,13 @@ export const MarkerPlugin: Plugin = {
       modifiers: ['ctrl', 'shift'],
       description: 'Add arrow markers to selected path',
       action: () => {
-        console.log('Add arrow markers to selected path');
+        const markersControls = document.querySelector('[data-plugin="markers"]');
+        if (markersControls) {
+          const endArrowBtn = markersControls.querySelector('[data-action="quick-end-arrow"]');
+          if (endArrowBtn) {
+            (endArrowBtn as HTMLButtonElement).click();
+          }
+        }
       }
     }
   ]

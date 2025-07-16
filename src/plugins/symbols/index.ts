@@ -30,7 +30,13 @@ export const SymbolPlugin: Plugin = {
       modifiers: ['ctrl', 'shift'],
       description: 'Create symbol from selection',
       action: () => {
-        console.log('Create symbol from selection');
+        const symbolsControls = document.querySelector('[data-plugin="symbols"]');
+        if (symbolsControls) {
+          const createFromSelectionBtn = symbolsControls.querySelector('[data-action="create-from-selection"]');
+          if (createFromSelectionBtn) {
+            (createFromSelectionBtn as HTMLButtonElement).click();
+          }
+        }
       }
     },
     {
@@ -38,7 +44,13 @@ export const SymbolPlugin: Plugin = {
       modifiers: ['ctrl'],
       description: 'Instance selected symbol',
       action: () => {
-        console.log('Instance selected symbol');
+        const symbolsControls = document.querySelector('[data-plugin="symbols"]');
+        if (symbolsControls) {
+          const firstUseBtn = symbolsControls.querySelector('[data-action="create-instance"]');
+          if (firstUseBtn) {
+            (firstUseBtn as HTMLButtonElement).click();
+          }
+        }
       }
     }
   ],

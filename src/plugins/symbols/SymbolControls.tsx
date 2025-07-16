@@ -8,13 +8,16 @@ export const SymbolControls: React.FC = () => {
     symbols,
     uses,
     selection, 
+    paths,
     addSymbol, 
     updateSymbol, 
     removeSymbol,
     addUse,
     updateUse,
     removeUse,
-    duplicateUse
+    duplicateUse,
+    removePath,
+    removeSubPath
   } = useEditorStore();
   
   const [isExpanded, setIsExpanded] = useState(false);
@@ -28,8 +31,54 @@ export const SymbolControls: React.FC = () => {
     ? uses.find(use => use.id === selection.selectedUses[0])
     : null;
 
+  const selectedSubPaths = selection.selectedSubPaths;
+  const hasSelection = selectedSubPaths.length > 0;
+
   const handleCreateSymbol = () => {
     addSymbol(createDefaultSymbol());
+  };
+
+  const handleCreateSymbolFromSelection = () => {
+    if (selectedSubPaths.length === 0) {
+      alert('Please select one or more sub-paths to create a symbol');
+      return;
+    }
+
+    // Get selected sub-paths data from all paths
+    const selectedSubPathsData: any[] = [];
+    paths.forEach(path => {
+      path.subPaths.forEach(subPath => {
+        if (selectedSubPaths.includes(subPath.id)) {
+          selectedSubPathsData.push({
+            type: 'path' as const,
+            id: `symbol-${subPath.id}`,
+            subPaths: [subPath], // Each selected sub-path becomes a separate path in the symbol
+            style: path.style
+          });
+        }
+      });
+    });
+
+    if (selectedSubPathsData.length === 0) return;
+
+    // Calculate bounding box for viewBox (simplified approximation)
+    let minX = 0, minY = 0, maxX = 100, maxY = 100;
+
+    const symbolData = {
+      ...createDefaultSymbol(),
+      viewBox: `${minX} ${minY} ${maxX - minX} ${maxY - minY}`,
+      children: selectedSubPathsData
+    };
+
+    addSymbol(symbolData);
+    
+    // Optionally remove original sub-paths
+    if (confirm('Remove original sub-paths from document? (they will be preserved in the symbol)')) {
+      // Remove sub-paths directly
+      selectedSubPaths.forEach(subPathId => {
+        removeSubPath(subPathId);
+      });
+    }
   };
 
   const handleCreateInstance = (symbolId: string) => {
@@ -58,7 +107,7 @@ export const SymbolControls: React.FC = () => {
   const totalElements = symbols.length + uses.length;
 
   return (
-    <div className="border-b border-gray-200 last:border-b-0">
+    <div className="border-b border-gray-200 last:border-b-0" data-plugin="symbols">
       <AccordionToggleButton
         isExpanded={isExpanded}
         onClick={() => setIsExpanded(!isExpanded)}
@@ -97,13 +146,31 @@ export const SymbolControls: React.FC = () => {
             <div className="space-y-4">
               {/* Create Symbol */}
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-gray-700">Symbol Library</h4>
-                <button
-                  onClick={handleCreateSymbol}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
-                >
-                  Create Symbol
-                </button>
+                <h4 className="text-sm font-medium text-gray-700">Create Symbol</h4>
+                <div className="space-y-2">
+                  <button
+                    onClick={handleCreateSymbolFromSelection}
+                    disabled={!hasSelection}
+                    data-action="create-from-selection"
+                    className={`w-full px-3 py-2 text-sm border rounded-md ${
+                      hasSelection 
+                        ? 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100' 
+                        : 'border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed'
+                    }`}
+                    title={hasSelection ? 'Create symbol from selected sub-paths' : 'Select sub-paths first'}
+                  >
+                    {hasSelection 
+                      ? `Create Symbol from Selection (${selectedSubPaths.length} sub-path${selectedSubPaths.length > 1 ? 's' : ''})`
+                      : 'Create Symbol from Selection (no sub-paths selected)'
+                    }
+                  </button>
+                  <button
+                    onClick={handleCreateSymbol}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
+                  >
+                    Create Empty Symbol
+                  </button>
+                </div>
               </div>
 
               {/* Symbol List */}
@@ -132,6 +199,7 @@ export const SymbolControls: React.FC = () => {
                           <div className="flex gap-1">
                             <button
                               onClick={() => handleCreateInstance(symbol.id)}
+                              data-action="create-instance"
                               className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
                               title="Create instance"
                             >

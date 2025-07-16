@@ -16,33 +16,18 @@ export const ClippingControls: React.FC = () => {
     updateMask,
     removeMask,
     updatePathStyle,
-    removePath,
-    removeSubPath
+    removePath
   } = useEditorStore();
   
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<'clips' | 'masks'>('clips');
 
-  const selectedSubPaths = selection.selectedSubPaths;
-  const hasPathSelection = selectedSubPaths.length > 0;
+  const selectedPaths = selection.selectedPaths;
+  const hasPathSelection = selectedPaths.length > 0;
 
   const selectedPath = selection.selectedPaths.length === 1 
     ? paths.find(path => path.id === selection.selectedPaths[0])
     : null;
-
-  // Find the parent paths of selected sub-paths
-  const getParentPathsOfSelectedSubPaths = () => {
-    const parentPaths: string[] = [];
-    selectedSubPaths.forEach(subPathId => {
-      const parentPath = paths.find(path => 
-        path.subPaths.some(subPath => subPath.id === subPathId)
-      );
-      if (parentPath && !parentPaths.includes(parentPath.id)) {
-        parentPaths.push(parentPath.id);
-      }
-    });
-    return parentPaths;
-  };
 
   const handleCreateClipPath = () => {
     addClipPath(createDefaultClipPath());
@@ -53,77 +38,63 @@ export const ClippingControls: React.FC = () => {
   };
 
   const handleCreateClipFromSelection = () => {
-    if (selectedSubPaths.length === 0) {
-      alert('Please select one or more sub-paths to create a clipping path');
+    if (selectedPaths.length === 0) {
+      alert('Please select one or more paths to create a clipping path');
       return;
     }
 
-    // Get selected sub-paths data from all paths
-    const selectedSubPathsData: any[] = [];
-    paths.forEach(path => {
-      path.subPaths.forEach(subPath => {
-        if (selectedSubPaths.includes(subPath.id)) {
-          selectedSubPathsData.push({
-            type: 'path' as const,
-            id: `clip-${subPath.id}`,
-            subPaths: [subPath], // Each selected sub-path becomes a separate path in the clip
-            style: { ...path.style, fill: 'black' } // Clipping paths should be black
-          });
-        }
-      });
-    });
-
-    if (selectedSubPathsData.length === 0) return;
+    // Get selected paths data
+    const selectedPathsData = paths.filter(path => selectedPaths.includes(path.id));
+    
+    if (selectedPathsData.length === 0) return;
 
     const clipPathData = {
       ...createDefaultClipPath(),
-      children: selectedSubPathsData
+      children: selectedPathsData.map(path => ({
+        type: 'path' as const,
+        id: `clip-${path.id}`,
+        subPaths: path.subPaths,
+        style: { ...path.style, fill: 'black' } // Clipping paths should be black
+      }))
     };
 
     addClipPath(clipPathData);
     
-    // Optionally remove original sub-paths
-    if (confirm('Remove original sub-paths from document? (they will be preserved in the clipping path)')) {
-      selectedSubPaths.forEach(subPathId => {
-        removeSubPath(subPathId);
+    // Optionally remove original paths
+    if (confirm('Remove original paths from document? (they will be preserved in the clipping path)')) {
+      selectedPaths.forEach(pathId => {
+        removePath(pathId);
       });
     }
   };
 
   const handleCreateMaskFromSelection = () => {
-    if (selectedSubPaths.length === 0) {
-      alert('Please select one or more sub-paths to create a mask');
+    if (selectedPaths.length === 0) {
+      alert('Please select one or more paths to create a mask');
       return;
     }
 
-    // Get selected sub-paths data from all paths
-    const selectedSubPathsData: any[] = [];
-    paths.forEach(path => {
-      path.subPaths.forEach(subPath => {
-        if (selectedSubPaths.includes(subPath.id)) {
-          selectedSubPathsData.push({
-            type: 'path' as const,
-            id: `mask-${subPath.id}`,
-            subPaths: [subPath], // Each selected sub-path becomes a separate path in the mask
-            style: { ...path.style, fill: 'white' } // Masks should be white for visible areas
-          });
-        }
-      });
-    });
-
-    if (selectedSubPathsData.length === 0) return;
+    // Get selected paths data
+    const selectedPathsData = paths.filter(path => selectedPaths.includes(path.id));
+    
+    if (selectedPathsData.length === 0) return;
 
     const maskData = {
       ...createDefaultMask(),
-      children: selectedSubPathsData
+      children: selectedPathsData.map(path => ({
+        type: 'path' as const,
+        id: `mask-${path.id}`,
+        subPaths: path.subPaths,
+        style: { ...path.style, fill: 'white' } // Masks should be white for visible areas
+      }))
     };
 
     addMask(maskData);
     
-    // Optionally remove original sub-paths
-    if (confirm('Remove original sub-paths from document? (they will be preserved in the mask)')) {
-      selectedSubPaths.forEach(subPathId => {
-        removeSubPath(subPathId);
+    // Optionally remove original paths
+    if (confirm('Remove original paths from document? (they will be preserved in the mask)')) {
+      selectedPaths.forEach(pathId => {
+        removePath(pathId);
       });
     }
   };
@@ -175,7 +146,7 @@ export const ClippingControls: React.FC = () => {
   const totalElements = clipPaths.length + masks.length;
 
   return (
-    <div className="border-b border-gray-200 last:border-b-0" data-plugin="clipping">
+    <div className="border-b border-gray-200 last:border-b-0">
       <AccordionToggleButton
         isExpanded={isExpanded}
         onClick={() => setIsExpanded(!isExpanded)}
@@ -219,17 +190,16 @@ export const ClippingControls: React.FC = () => {
                   <button
                     onClick={handleCreateClipFromSelection}
                     disabled={!hasPathSelection}
-                    data-action="create-clip-from-selection"
                     className={`w-full px-3 py-2 text-sm border rounded-md ${
                       hasPathSelection 
                         ? 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100' 
                         : 'border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed'
                     }`}
-                    title={hasPathSelection ? 'Create clipping path from selected sub-paths' : 'Select sub-paths first'}
+                    title={hasPathSelection ? 'Create clipping path from selected paths' : 'Select paths first'}
                   >
                     {hasPathSelection 
-                      ? `Create from Selection (${selectedSubPaths.length} sub-path${selectedSubPaths.length > 1 ? 's' : ''})`
-                      : 'Create from Selection (no sub-paths selected)'
+                      ? `Create from Selection (${selectedPaths.length} path${selectedPaths.length > 1 ? 's' : ''})`
+                      : 'Create from Selection (no paths selected)'
                     }
                   </button>
                   <button
@@ -315,17 +285,16 @@ export const ClippingControls: React.FC = () => {
                   <button
                     onClick={handleCreateMaskFromSelection}
                     disabled={!hasPathSelection}
-                    data-action="create-mask-from-selection"
                     className={`w-full px-3 py-2 text-sm border rounded-md ${
                       hasPathSelection 
                         ? 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100' 
                         : 'border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed'
                     }`}
-                    title={hasPathSelection ? 'Create mask from selected sub-paths' : 'Select sub-paths first'}
+                    title={hasPathSelection ? 'Create mask from selected paths' : 'Select paths first'}
                   >
                     {hasPathSelection 
-                      ? `Create from Selection (${selectedSubPaths.length} sub-path${selectedSubPaths.length > 1 ? 's' : ''})`
-                      : 'Create from Selection (no sub-paths selected)'
+                      ? `Create from Selection (${selectedPaths.length} path${selectedPaths.length > 1 ? 's' : ''})`
+                      : 'Create from Selection (no paths selected)'
                     }
                   </button>
                   <button

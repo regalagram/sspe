@@ -30,9 +30,26 @@ export const FilterControls: React.FC = () => {
     ? filters.find(filter => filter.id === selection.selectedFilters[0])
     : null;
 
+  const selectedSubPaths = selection.selectedSubPaths;
+  const hasPathSelection = selectedSubPaths.length > 0;
+
   const selectedPath = selection.selectedPaths.length === 1 
     ? paths.find(path => path.id === selection.selectedPaths[0])
     : null;
+
+  // Find the parent paths of selected sub-paths
+  const getParentPathsOfSelectedSubPaths = () => {
+    const parentPaths: string[] = [];
+    selectedSubPaths.forEach(subPathId => {
+      const parentPath = paths.find(path => 
+        path.subPaths.some(subPath => subPath.id === subPathId)
+      );
+      if (parentPath && !parentPaths.includes(parentPath.id)) {
+        parentPaths.push(parentPath.id);
+      }
+    });
+    return parentPaths;
+  };
 
   const handleCreateFilter = (type: 'custom' | 'drop-shadow' | 'blur' | 'grayscale') => {
     let filterData;
@@ -50,6 +67,41 @@ export const FilterControls: React.FC = () => {
         filterData = createDefaultFilter();
     }
     addFilter(filterData);
+  };
+
+  const handleQuickApplyFilter = (type: 'drop-shadow' | 'blur' | 'grayscale') => {
+    if (selectedSubPaths.length === 0) {
+      alert('Please select one or more sub-paths first');
+      return;
+    }
+
+    // Create or find existing filter of this type
+    let existingFilter = filters.find(f => {
+      if (type === 'drop-shadow') {
+        return f.primitives.some(p => p.type === 'feDropShadow');
+      } else if (type === 'blur') {
+        return f.primitives.some(p => p.type === 'feGaussianBlur');
+      } else if (type === 'grayscale') {
+        return f.primitives.some(p => p.type === 'feColorMatrix' && p.values === '0.33 0.33 0.33 0 0 0.33 0.33 0.33 0 0 0.33 0.33 0.33 0 0 0 0 0 1 0');
+      }
+      return false;
+    });
+
+    if (!existingFilter) {
+      const filterData = type === 'drop-shadow' ? createDropShadowFilter() :
+                         type === 'blur' ? createBlurFilter() : 
+                         createGrayscaleFilter();
+      addFilter(filterData);
+      existingFilter = filterData as any;
+    }
+
+    // Apply to parent paths of selected sub-paths
+    const parentPaths = getParentPathsOfSelectedSubPaths();
+    parentPaths.forEach(pathId => {
+      updatePathStyle(pathId, {
+        filter: formatSVGReference(existingFilter!.id)
+      });
+    });
   };
 
   const handleApplyFilterToPath = (filterId: string) => {
@@ -247,7 +299,7 @@ export const FilterControls: React.FC = () => {
   };
 
   return (
-    <div className="border-b border-gray-200 last:border-b-0">
+    <div className="border-b border-gray-200 last:border-b-0" data-plugin="filters">
       <AccordionToggleButton
         isExpanded={isExpanded}
         onClick={() => setIsExpanded(!isExpanded)}
@@ -257,9 +309,61 @@ export const FilterControls: React.FC = () => {
       
       {isExpanded && (
         <div className="p-4 space-y-4">
-          {/* Quick Filter Creation */}
+          {/* Quick Apply - Most Common Use Case */}
           <div className="space-y-2">
-            <h4 className="text-sm font-medium text-gray-700">Create Filter</h4>
+            <h4 className="text-sm font-medium text-gray-700">Quick Apply</h4>
+            <div className="text-xs text-gray-500 mb-2">
+              {hasPathSelection 
+                ? `Apply to ${selectedSubPaths.length} selected sub-path${selectedSubPaths.length > 1 ? 's' : ''}`
+                : 'Select sub-paths first to apply filters'
+              }
+            </div>
+            <div className="grid grid-cols-1 gap-2">
+              <button
+                onClick={() => handleQuickApplyFilter('drop-shadow')}
+                disabled={!hasPathSelection}
+                className={`px-3 py-2 text-sm border rounded-md ${
+                  hasPathSelection 
+                    ? 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100' 
+                    : 'border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed'
+                }`}
+                title="Add drop shadow effect"
+              >
+                Drop Shadow
+              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => handleQuickApplyFilter('blur')}
+                  disabled={!hasPathSelection}
+                  data-action="quick-blur"
+                  className={`px-3 py-2 text-sm border rounded-md ${
+                    hasPathSelection 
+                      ? 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100' 
+                      : 'border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed'
+                  }`}
+                  title="Add blur effect"
+                >
+                  Blur
+                </button>
+                <button
+                  onClick={() => handleQuickApplyFilter('grayscale')}
+                  disabled={!hasPathSelection}
+                  className={`px-3 py-2 text-sm border rounded-md ${
+                    hasPathSelection 
+                      ? 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100' 
+                      : 'border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed'
+                  }`}
+                  title="Add grayscale effect"
+                >
+                  Grayscale
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Create Custom Filters */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-700">Create Custom Filter</h4>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleCreateFilter('drop-shadow')}

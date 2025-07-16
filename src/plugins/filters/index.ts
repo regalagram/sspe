@@ -29,8 +29,27 @@ export const FilterPlugin: Plugin = {
       modifiers: ['ctrl', 'shift'],
       description: 'Toggle filters panel',
       action: () => {
-        // This would toggle the filters panel if implemented
-        console.log('Toggle filters panel');
+        const filtersControls = document.querySelector('[data-plugin="filters"]');
+        if (filtersControls) {
+          const toggleButton = filtersControls.querySelector('button');
+          if (toggleButton) {
+            toggleButton.click();
+          }
+        }
+      }
+    },
+    {
+      key: 'b',
+      modifiers: ['ctrl', 'shift'],
+      description: 'Quick apply blur filter',
+      action: () => {
+        const filtersControls = document.querySelector('[data-plugin="filters"]');
+        if (filtersControls) {
+          const blurBtn = filtersControls.querySelector('[data-action="quick-blur"]');
+          if (blurBtn) {
+            (blurBtn as HTMLButtonElement).click();
+          }
+        }
       }
     }
   ]
