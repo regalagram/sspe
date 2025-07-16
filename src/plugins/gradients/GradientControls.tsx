@@ -158,7 +158,7 @@ export const GradientControls: React.FC = () => {
         angle: 90,
         stops: [
           { id: 'stop-1', offset: 0, color: '#ff7b7b', opacity: 1 },
-          { id: 'stop-2', offset: 1, color: '#ff6b35', opacity: 1 }
+          { id: 'stop-2', offset: 100, color: '#ff6b35', opacity: 1 }
         ]
       },
       {
@@ -167,7 +167,7 @@ export const GradientControls: React.FC = () => {
         angle: 135,
         stops: [
           { id: 'stop-1', offset: 0, color: '#667eea', opacity: 1 },
-          { id: 'stop-2', offset: 1, color: '#764ba2', opacity: 1 }
+          { id: 'stop-2', offset: 100, color: '#764ba2', opacity: 1 }
         ]
       },
       {
@@ -176,7 +176,7 @@ export const GradientControls: React.FC = () => {
         angle: 45,
         stops: [
           { id: 'stop-1', offset: 0, color: '#11998e', opacity: 1 },
-          { id: 'stop-2', offset: 1, color: '#38ef7d', opacity: 1 }
+          { id: 'stop-2', offset: 100, color: '#38ef7d', opacity: 1 }
         ]
       },
       {
@@ -185,7 +185,7 @@ export const GradientControls: React.FC = () => {
         angle: 180,
         stops: [
           { id: 'stop-1', offset: 0, color: '#c471ed', opacity: 1 },
-          { id: 'stop-2', offset: 1, color: '#f64f59', opacity: 1 }
+          { id: 'stop-2', offset: 100, color: '#f64f59', opacity: 1 }
         ]
       },
       {
@@ -194,7 +194,7 @@ export const GradientControls: React.FC = () => {
         angle: 0,
         stops: [
           { id: 'stop-1', offset: 0, color: '#2193b0', opacity: 1 },
-          { id: 'stop-2', offset: 1, color: '#6dd5ed', opacity: 1 }
+          { id: 'stop-2', offset: 100, color: '#6dd5ed', opacity: 1 }
         ]
       },
       {
@@ -203,8 +203,8 @@ export const GradientControls: React.FC = () => {
         angle: 45,
         stops: [
           { id: 'stop-1', offset: 0, color: '#ff9a9e', opacity: 1 },
-          { id: 'stop-2', offset: 0.5, color: '#fecfef', opacity: 1 },
-          { id: 'stop-3', offset: 1, color: '#fecfef', opacity: 1 }
+          { id: 'stop-2', offset: 50, color: '#fecfef', opacity: 1 },
+          { id: 'stop-3', offset: 100, color: '#fecfef', opacity: 1 }
         ]
       }
     ];
@@ -215,7 +215,7 @@ export const GradientControls: React.FC = () => {
         type: 'radial' as const,
         stops: [
           { id: 'stop-1', offset: 0, color: '#ffeaa7', opacity: 1 },
-          { id: 'stop-2', offset: 1, color: '#fab1a0', opacity: 1 }
+          { id: 'stop-2', offset: 100, color: '#fab1a0', opacity: 1 }
         ]
       },
       {
@@ -223,7 +223,7 @@ export const GradientControls: React.FC = () => {
         type: 'radial' as const,
         stops: [
           { id: 'stop-1', offset: 0, color: '#ddd6fe', opacity: 1 },
-          { id: 'stop-2', offset: 1, color: '#818cf8', opacity: 1 }
+          { id: 'stop-2', offset: 100, color: '#818cf8', opacity: 1 }
         ]
       },
       {
@@ -231,7 +231,7 @@ export const GradientControls: React.FC = () => {
         type: 'radial' as const,
         stops: [
           { id: 'stop-1', offset: 0, color: '#d299c2', opacity: 1 },
-          { id: 'stop-2', offset: 1, color: '#fef9d3', opacity: 1 }
+          { id: 'stop-2', offset: 100, color: '#fef9d3', opacity: 1 }
         ]
       },
       {
@@ -239,7 +239,7 @@ export const GradientControls: React.FC = () => {
         type: 'radial' as const,
         stops: [
           { id: 'stop-1', offset: 0, color: '#ff9a9e', opacity: 1 },
-          { id: 'stop-2', offset: 1, color: '#fad0c4', opacity: 1 }
+          { id: 'stop-2', offset: 100, color: '#fad0c4', opacity: 1 }
         ]
       }
     ];

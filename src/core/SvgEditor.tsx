@@ -65,7 +65,7 @@ export const SvgEditor: React.FC = () => {
       x1: 0, y1: 0, x2: 100, y2: 0,
       stops: [
         { id: 'stop-1', offset: 0, color: '#ff6b6b', opacity: 1 },
-        { id: 'stop-2', offset: 1, color: '#4ecdc4', opacity: 1 }
+        { id: 'stop-2', offset: 100, color: '#4ecdc4', opacity: 1 }
       ]
     },
     {
@@ -74,7 +74,7 @@ export const SvgEditor: React.FC = () => {
       x1: 0, y1: 0, x2: 100, y2: 100,
       stops: [
         { id: 'stop-3', offset: 0, color: '#667eea', opacity: 1 },
-        { id: 'stop-4', offset: 1, color: '#764ba2', opacity: 1 }
+        { id: 'stop-4', offset: 100, color: '#764ba2', opacity: 1 }
       ]
     },
     {
@@ -83,7 +83,7 @@ export const SvgEditor: React.FC = () => {
       cx: 50, cy: 50, r: 50,
       stops: [
         { id: 'stop-5', offset: 0, color: '#ffeaa7', opacity: 1 },
-        { id: 'stop-6', offset: 1, color: '#fab1a0', opacity: 1 }
+        { id: 'stop-6', offset: 100, color: '#fab1a0', opacity: 1 }
       ]
     }
   ];

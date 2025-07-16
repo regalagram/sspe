@@ -22,39 +22,8 @@ export const TextStyleControls: React.FC<TextStyleControlsProps> = ({
   const gradients = allGradients.filter(g => g.type === 'linear' || g.type === 'radial') as (LinearGradient | RadialGradient)[];
   const patterns = allGradients.filter(g => g.type === 'pattern') as Pattern[];
 
-  // Common predefined gradients for quick access
-  const predefinedGradients: (LinearGradient | RadialGradient)[] = [
-    {
-      id: 'text-gradient-1',
-      type: 'linear',
-      x1: 0, y1: 0, x2: 100, y2: 0,
-      stops: [
-        { id: 'stop-1', offset: 0, color: '#ff6b6b', opacity: 1 },
-        { id: 'stop-2', offset: 1, color: '#4ecdc4', opacity: 1 }
-      ]
-    },
-    {
-      id: 'text-gradient-2',
-      type: 'linear',
-      x1: 0, y1: 0, x2: 100, y2: 100,
-      stops: [
-        { id: 'stop-3', offset: 0, color: '#667eea', opacity: 1 },
-        { id: 'stop-4', offset: 1, color: '#764ba2', opacity: 1 }
-      ]
-    },
-    {
-      id: 'text-gradient-3',
-      type: 'radial',
-      cx: 50, cy: 50, r: 50,
-      stops: [
-        { id: 'stop-5', offset: 0, color: '#ffeaa7', opacity: 1 },
-        { id: 'stop-6', offset: 1, color: '#fab1a0', opacity: 1 }
-      ]
-    }
-  ];
-
-  // Combine existing gradients with predefined ones
-  const allAvailableGradients = [...gradients, ...predefinedGradients];
+  // Use only gradients extracted from existing paths
+  const allAvailableGradients = gradients;
 
   // Get common style values from selected texts
   const getCommonValue = <T,>(getValue: (text: TextElementType) => T | undefined): T | undefined => {

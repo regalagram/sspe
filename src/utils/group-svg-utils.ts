@@ -165,17 +165,17 @@ export function generateGroupSVG(
     switch (gradient.type) {
       case 'linear':
         const linearStops = gradient.stops.map(stop => 
-          `    <stop offset="${stop.offset}%" stop-color="${stop.color}" stop-opacity="${stop.opacity}" />`
+          `    <stop offset="${stop.offset}%" stop-color="${stop.color}" stop-opacity="${stop.opacity ?? 1}" />`
         ).join('\n');
-        return `  <linearGradient id="${gradient.id}" x1="${gradient.x1}" y1="${gradient.y1}" x2="${gradient.x2}" y2="${gradient.y2}" gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">\n${linearStops}\n  </linearGradient>`;
+        return `  <linearGradient id="${gradient.id}" x1="${gradient.x1}%" y1="${gradient.y1}%" x2="${gradient.x2}%" y2="${gradient.y2}%" gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">\n${linearStops}\n  </linearGradient>`;
       
       case 'radial':
         const radialStops = gradient.stops.map(stop => 
-          `    <stop offset="${stop.offset}%" stop-color="${stop.color}" stop-opacity="${stop.opacity}" />`
+          `    <stop offset="${stop.offset}%" stop-color="${stop.color}" stop-opacity="${stop.opacity ?? 1}" />`
         ).join('\n');
-        const fxAttr = (gradient.fx !== undefined && gradient.fx !== gradient.cx) ? ` fx="${gradient.fx}"` : '';
-        const fyAttr = (gradient.fy !== undefined && gradient.fy !== gradient.cy) ? ` fy="${gradient.fy}"` : '';
-        return `  <radialGradient id="${gradient.id}" cx="${gradient.cx}" cy="${gradient.cy}" r="${gradient.r}"${fxAttr}${fyAttr} gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">\n${radialStops}\n  </radialGradient>`;
+        const fxAttr = (gradient.fx !== undefined && gradient.fx !== gradient.cx) ? ` fx="${gradient.fx}%"` : '';
+        const fyAttr = (gradient.fy !== undefined && gradient.fy !== gradient.cy) ? ` fy="${gradient.fy}%"` : '';
+        return `  <radialGradient id="${gradient.id}" cx="${gradient.cx}%" cy="${gradient.cy}%" r="${gradient.r}%"${fxAttr}${fyAttr} gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">\n${radialStops}\n  </radialGradient>`;
       
       case 'pattern':
         return `  <pattern id="${gradient.id}" width="${gradient.width}" height="${gradient.height}" patternUnits="${gradient.patternUnits || 'userSpaceOnUse'}"${gradient.patternContentUnits ? ` patternContentUnits="${gradient.patternContentUnits}"` : ''}${gradient.patternTransform ? ` patternTransform="${gradient.patternTransform}"` : ''}>\n    ${gradient.content}\n  </pattern>`;

@@ -187,13 +187,74 @@ export const createPathActions: StateCreator<
     })),
 
   updatePathStyle: (pathId, styleUpdates) =>
-    set((state) => ({
-      paths: state.paths.map((path) =>
-        path.id === pathId
-          ? { ...path, style: { ...path.style, ...styleUpdates } }
-          : path
-      ),
-    })),
+    set((state) => {
+      // Auto-register gradients/patterns when they're applied to path styles
+      const newGradients = [...state.gradients];
+      
+      Object.values(styleUpdates).forEach(value => {
+        if (typeof value === 'object' && value?.id && value?.type) {
+          // Check if this gradient/pattern is already in the store
+          const exists = newGradients.some(g => g.id === value.id);
+          if (!exists) {
+            newGradients.push(value);
+          }
+        } else if (typeof value === 'string' && value.startsWith('url(#')) {
+          // Handle url(#id) format - extract ID and look for predefined gradients
+          const match = value.match(/url\(#([^)]+)\)/);
+          if (match) {
+            const gradientId = match[1];
+            const exists = newGradients.some(g => g.id === gradientId);
+            
+            if (!exists) {
+              // Look for predefined gradients that match this ID
+              const predefinedGradients = [
+                {
+                  id: 'text-gradient-1',
+                  type: 'linear' as const,
+                  x1: 0, y1: 0, x2: 100, y2: 0,
+                  stops: [
+                    { id: 'stop-1', offset: 0, color: '#ff6b6b', opacity: 1 },
+                    { id: 'stop-2', offset: 100, color: '#4ecdc4', opacity: 1 }
+                  ]
+                },
+                {
+                  id: 'text-gradient-2',
+                  type: 'linear' as const,
+                  x1: 0, y1: 0, x2: 100, y2: 100,
+                  stops: [
+                    { id: 'stop-3', offset: 0, color: '#667eea', opacity: 1 },
+                    { id: 'stop-4', offset: 100, color: '#764ba2', opacity: 1 }
+                  ]
+                },
+                {
+                  id: 'text-gradient-3',
+                  type: 'radial' as const,
+                  cx: 50, cy: 50, r: 50,
+                  stops: [
+                    { id: 'stop-5', offset: 0, color: '#ffeaa7', opacity: 1 },
+                    { id: 'stop-6', offset: 100, color: '#fab1a0', opacity: 1 }
+                  ]
+                }
+              ];
+              
+              const predefinedGradient = predefinedGradients.find(g => g.id === gradientId);
+              if (predefinedGradient) {
+                newGradients.push(predefinedGradient);
+              }
+            }
+          }
+        }
+      });
+
+      return {
+        paths: state.paths.map((path) =>
+          path.id === pathId
+            ? { ...path, style: { ...path.style, ...styleUpdates } }
+            : path
+        ),
+        gradients: newGradients,
+      };
+    }),
 
   replacePaths: (newPaths) =>
     set((state) => {

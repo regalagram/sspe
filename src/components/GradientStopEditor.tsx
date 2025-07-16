@@ -24,8 +24,8 @@ export const GradientStopEditor: React.FC<GradientStopEditorProps> = ({
   disabled = false
 }) => {
   const addStop = () => {
-    const newOffset = stops.length > 0 ? Math.max(...stops.map(s => s.offset)) + 0.1 : 0.5;
-    const clampedOffset = Math.min(newOffset, 1);
+    const newOffset = stops.length > 0 ? Math.max(...stops.map(s => s.offset)) + 10 : 50;
+    const clampedOffset = Math.min(newOffset, 100);
     
     const newStop: GradientStop = {
       id: `stop-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -96,13 +96,13 @@ export const GradientStopEditor: React.FC<GradientStopEditorProps> = ({
           
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
             <label style={{ fontSize: '10px', color: '#666' }}>
-              Position: {Math.round(stop.offset * 100)}%
+              Position: {Math.round(stop.offset)}%
             </label>
             <input
               type="range"
               min="0"
-              max="1"
-              step="0.01"
+              max="100"
+              step="1"
               value={stop.offset}
               onChange={(e) => updateStop(stop.id, { offset: Number(e.target.value) })}
               disabled={disabled}
