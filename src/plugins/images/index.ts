@@ -1,7 +1,6 @@
 import { Plugin } from '../../core/PluginSystem';
 import { ImageControls } from './ImageControls';
 import { ImageRenderer } from './ImageRenderer';
-import { useEditorStore } from '../../store/editorStore';
 
 export const ImagePlugin: Plugin = {
   id: 'images',
@@ -33,9 +32,15 @@ export const ImagePlugin: Plugin = {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
+        input.onchange = (event) => {
+          const file = (event.target as HTMLInputElement).files?.[0];
+          if (file) {
+            // This will be handled by the ImageControls component
+            console.log('Image file selected via shortcut:', file.name);
+          }
+        };
         input.click();
       }
     }
   ],
-
 };

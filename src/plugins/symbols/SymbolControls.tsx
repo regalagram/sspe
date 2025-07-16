@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { createDefaultSymbol, createDefaultUse } from '../../utils/svg-elements-utils';
+import { PluginButton } from '../../components/PluginButton';
+import { Plus, Copy, Trash2, Box, Users } from 'lucide-react';
 
 export const SymbolControls: React.FC = () => {
   const { 
@@ -94,316 +96,433 @@ export const SymbolControls: React.FC = () => {
     removeUse(id);
   };
 
-  const handleSymbolPropertyChange = (id: string, property: string, value: any) => {
-    updateSymbol(id, { [property]: value });
+  const handleUpdateSymbol = (symbolId: string, updates: any) => {
+    updateSymbol(symbolId, updates);
   };
 
-  const handleUsePropertyChange = (id: string, property: string, value: any) => {
-    updateUse(id, { [property]: value });
+  const handleUpdateUse = (useId: string, updates: any) => {
+    updateUse(useId, updates);
   };
 
   const totalElements = symbols.length + uses.length;
 
   return (
-    <div className="border-b border-gray-200 last:border-b-0" data-plugin="symbols">
-      <div className="p-4 space-y-4">
-          {/* Tab Navigation */}
-          <div className="flex border border-gray-200 rounded overflow-hidden">
-            <button
-              onClick={() => setActiveTab('symbols')}
-              className={`flex-1 px-3 py-2 text-sm ${
-                activeTab === 'symbols'
-                  ? 'bg-blue-50 text-blue-700 border-r border-gray-200'
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Symbols ({symbols.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('instances')}
-              className={`flex-1 px-3 py-2 text-sm ${
-                activeTab === 'instances'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Instances ({uses.length})
-            </button>
-          </div>
-
-          {/* Symbols Tab */}
-          {activeTab === 'symbols' && (
-            <div className="space-y-4">
-              {/* Create Symbol */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-gray-700">Create Symbol</h4>
-                <div className="space-y-2">
-                  <button
-                    onClick={handleCreateSymbolFromSelection}
-                    disabled={!hasSelection}
-                    data-action="create-from-selection"
-                    className={`w-full px-3 py-2 text-sm border rounded-md ${
-                      hasSelection 
-                        ? 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100' 
-                        : 'border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed'
-                    }`}
-                    title={hasSelection ? 'Create symbol from selected sub-paths' : 'Select sub-paths first'}
-                  >
-                    {hasSelection 
-                      ? `Create Symbol from Selection (${selectedSubPaths.length} sub-path${selectedSubPaths.length > 1 ? 's' : ''})`
-                      : 'Create Symbol from Selection (no sub-paths selected)'
-                    }
-                  </button>
-                  <button
-                    onClick={handleCreateSymbol}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Create Empty Symbol
-                  </button>
-                </div>
-              </div>
-
-              {/* Symbol List */}
-              {symbols.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-gray-700">Symbols ({symbols.length})</h4>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {symbols.map((symbol) => (
-                      <div
-                        key={symbol.id}
-                        className={`border border-gray-200 rounded p-2 ${
-                          selection.selectedSymbols.includes(symbol.id)
-                            ? 'border-blue-300 bg-blue-50'
-                            : ''
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs text-gray-600">
-                              {symbol.children.length} elements
-                            </div>
-                            <div className="text-xs text-gray-500 truncate">
-                              ViewBox: {symbol.viewBox || 'none'}
-                            </div>
-                          </div>
-                          <div className="flex gap-1">
-                            <button
-                              onClick={() => handleCreateInstance(symbol.id)}
-                              data-action="create-instance"
-                              className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
-                              title="Create instance"
-                            >
-                              Use
-                            </button>
-                            <button
-                              onClick={() => handleRemoveSymbol(symbol.id)}
-                              className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Selected Symbol Properties */}
-              {selectedSymbol && (
-                <div className="space-y-3 pt-3 border-t border-gray-200">
-                  <h4 className="text-sm font-medium text-gray-700">Symbol Properties</h4>
-                  
-                  {/* ViewBox */}
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">ViewBox</label>
-                    <input
-                      type="text"
-                      value={selectedSymbol.viewBox || ''}
-                      onChange={(e) => handleSymbolPropertyChange(selectedSymbol.id, 'viewBox', e.target.value)}
-                      placeholder="0 0 100 100"
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                    />
-                  </div>
-
-                  {/* Preserve Aspect Ratio */}
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Preserve Aspect Ratio</label>
-                    <select
-                      value={selectedSymbol.preserveAspectRatio || 'xMidYMid meet'}
-                      onChange={(e) => handleSymbolPropertyChange(selectedSymbol.id, 'preserveAspectRatio', e.target.value)}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                    >
-                      <option value="none">None</option>
-                      <option value="xMinYMin meet">Top Left (meet)</option>
-                      <option value="xMidYMin meet">Top Center (meet)</option>
-                      <option value="xMaxYMin meet">Top Right (meet)</option>
-                      <option value="xMinYMid meet">Center Left (meet)</option>
-                      <option value="xMidYMid meet">Center (meet)</option>
-                      <option value="xMaxYMid meet">Center Right (meet)</option>
-                      <option value="xMinYMax meet">Bottom Left (meet)</option>
-                      <option value="xMidYMax meet">Bottom Center (meet)</option>
-                      <option value="xMaxYMax meet">Bottom Right (meet)</option>
-                      <option value="xMidYMid slice">Center (slice)</option>
-                    </select>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Instances Tab */}
-          {activeTab === 'instances' && (
-            <div className="space-y-4">
-              {/* Instances Info */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-gray-700">Symbol Instances</h4>
-                <div className="text-xs text-gray-500">
-                  Instances reference symbols and can be positioned independently
-                </div>
-              </div>
-
-              {/* Instance List */}
-              {uses.length > 0 ? (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-gray-700">Instances ({uses.length})</h4>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {uses.map((use) => (
-                      <div
-                        key={use.id}
-                        className={`border border-gray-200 rounded p-2 ${
-                          selection.selectedUses.includes(use.id)
-                            ? 'border-blue-300 bg-blue-50'
-                            : ''
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs text-gray-600">
-                              Ref: {use.href}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Position: ({use.x || 0}, {use.y || 0})
-                            </div>
-                          </div>
-                          <div className="flex gap-1">
-                            <button
-                              onClick={() => duplicateUse(use.id)}
-                              className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                              title="Duplicate"
-                            >
-                              ⧉
-                            </button>
-                            <button
-                              onClick={() => handleRemoveUse(use.id)}
-                              className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-gray-500 text-center py-4">
-                  No instances created yet. Create a symbol first, then use the "Use" button to create instances.
-                </div>
-              )}
-
-              {/* Selected Use Properties */}
-              {selectedUse && (
-                <div className="space-y-3 pt-3 border-t border-gray-200">
-                  <h4 className="text-sm font-medium text-gray-700">Instance Properties</h4>
-                  
-                  {/* Position */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">X</label>
-                      <input
-                        type="number"
-                        value={selectedUse.x || 0}
-                        onChange={(e) => handleUsePropertyChange(selectedUse.id, 'x', parseFloat(e.target.value) || 0)}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">Y</label>
-                      <input
-                        type="number"
-                        value={selectedUse.y || 0}
-                        onChange={(e) => handleUsePropertyChange(selectedUse.id, 'y', parseFloat(e.target.value) || 0)}
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Dimensions (optional override) */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">Width</label>
-                      <input
-                        type="number"
-                        value={selectedUse.width || ''}
-                        onChange={(e) => handleUsePropertyChange(selectedUse.id, 'width', e.target.value ? parseFloat(e.target.value) : undefined)}
-                        placeholder="Auto"
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">Height</label>
-                      <input
-                        type="number"
-                        value={selectedUse.height || ''}
-                        onChange={(e) => handleUsePropertyChange(selectedUse.id, 'height', e.target.value ? parseFloat(e.target.value) : undefined)}
-                        placeholder="Auto"
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Transform */}
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Transform</label>
-                    <input
-                      type="text"
-                      value={selectedUse.transform || ''}
-                      onChange={(e) => handleUsePropertyChange(selectedUse.id, 'transform', e.target.value)}
-                      placeholder="rotate(45) scale(2)"
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                    />
-                  </div>
-
-                  {/* Reference */}
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Reference</label>
-                    <select
-                      value={selectedUse.href}
-                      onChange={(e) => handleUsePropertyChange(selectedUse.id, 'href', e.target.value)}
-                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                    >
-                      {symbols.map((symbol) => (
-                        <option key={symbol.id} value={`#${symbol.id}`}>
-                          Symbol ({symbol.children.length} elements)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Usage Instructions */}
-          <div className="pt-2 border-t border-gray-200">
-            <div className="text-xs text-gray-500 space-y-1">
-              <div>• Create symbols to reuse complex graphics efficiently</div>
-              <div>• Use instances to place symbols multiple times</div>
-              <div>• Modify symbol content to update all instances</div>
-            </div>
-          </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* Tab Navigation */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+          Type:
+        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <PluginButton
+            icon={<Box size={12} />}
+            text="Symbols"
+            color="#28a745"
+            active={activeTab === 'symbols'}
+            onPointerDown={() => setActiveTab('symbols')}
+          />
+          <PluginButton
+            icon={<Users size={12} />}
+            text="Instances"
+            color="#28a745"
+            active={activeTab === 'instances'}
+            onPointerDown={() => setActiveTab('instances')}
+          />
         </div>
+      </div>
+
+      {/* Symbols Tab */}
+      {activeTab === 'symbols' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* Create Symbol */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+              Create Symbol:
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <PluginButton
+                icon={<Plus size={12} />}
+                text={hasSelection 
+                  ? `From Selection (${selectedSubPaths.length})`
+                  : 'From Selection (none)'
+                }
+                color={hasSelection ? '#17a2b8' : '#6c757d'}
+                disabled={!hasSelection}
+                onPointerDown={handleCreateSymbolFromSelection}
+              />
+              <PluginButton
+                icon={<Plus size={12} />}
+                text="Empty Symbol"
+                color="#17a2b8"
+                onPointerDown={handleCreateSymbol}
+              />
+            </div>
+          </div>
+
+          {/* Symbol List */}
+          {symbols.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+                Symbols ({symbols.length}):
+              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflow: 'auto' }}>
+                {symbols.map((symbol) => (
+                  <div
+                    key={symbol.id}
+                    style={{
+                      padding: '8px',
+                      backgroundColor: selection.selectedSymbols.includes(symbol.id) ? '#e3f2fd' : '#f8f9fa',
+                      borderRadius: '4px',
+                      border: selection.selectedSymbols.includes(symbol.id) ? '1px solid #1976d2' : '1px solid #e9ecef'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '11px', color: '#666' }}>
+                          {symbol.children.length} elements
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#999' }}>
+                          ViewBox: {symbol.viewBox || 'none'}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          onClick={() => handleCreateInstance(symbol.id)}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '10px',
+                            border: '1px solid #007bff',
+                            backgroundColor: '#fff',
+                            color: '#007bff',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                          title="Create instance"
+                        >
+                          Use
+                        </button>
+                        <button
+                          onClick={() => handleRemoveSymbol(symbol.id)}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '10px',
+                            border: '1px solid #dc3545',
+                            backgroundColor: '#fff',
+                            color: '#dc3545',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Symbol Properties Editor */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div>
+                        <label style={{ fontSize: '10px', color: '#666' }}>ViewBox</label>
+                        <input
+                          type="text"
+                          value={symbol.viewBox || ''}
+                          onChange={(e) => handleUpdateSymbol(symbol.id, { 
+                            viewBox: e.target.value 
+                          })}
+                          placeholder="0 0 100 100"
+                          style={{
+                            width: '100%',
+                            padding: '4px',
+                            fontSize: '11px',
+                            border: '1px solid #ddd',
+                            borderRadius: '3px'
+                          }}
+                        />
+                      </div>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#666' }}>X Position</label>
+                          <input
+                            type="number"
+                            value={symbol.x || 0}
+                            onChange={(e) => handleUpdateSymbol(symbol.id, { 
+                              x: Number(e.target.value) || 0 
+                            })}
+                            style={{
+                              width: '100%',
+                              padding: '4px',
+                              fontSize: '11px',
+                              border: '1px solid #ddd',
+                              borderRadius: '3px'
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#666' }}>Y Position</label>
+                          <input
+                            type="number"
+                            value={symbol.y || 0}
+                            onChange={(e) => handleUpdateSymbol(symbol.id, { 
+                              y: Number(e.target.value) || 0 
+                            })}
+                            style={{
+                              width: '100%',
+                              padding: '4px',
+                              fontSize: '11px',
+                              border: '1px solid #ddd',
+                              borderRadius: '3px'
+                            }}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#666' }}>Width</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={symbol.width || 100}
+                            onChange={(e) => handleUpdateSymbol(symbol.id, { 
+                              width: Number(e.target.value) || 100 
+                            })}
+                            style={{
+                              width: '100%',
+                              padding: '4px',
+                              fontSize: '11px',
+                              border: '1px solid #ddd',
+                              borderRadius: '3px'
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#666' }}>Height</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={symbol.height || 100}
+                            onChange={(e) => handleUpdateSymbol(symbol.id, { 
+                              height: Number(e.target.value) || 100 
+                            })}
+                            style={{
+                              width: '100%',
+                              padding: '4px',
+                              fontSize: '11px',
+                              border: '1px solid #ddd',
+                              borderRadius: '3px'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Instances Tab */}
+      {activeTab === 'instances' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* Instances Info */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+              Symbol Instances:
+            </span>
+            <div style={{ fontSize: '11px', color: '#999' }}>
+              Instances reference symbols and can be positioned independently
+            </div>
+          </div>
+
+          {/* Instance List */}
+          {uses.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+                Instances ({uses.length}):
+              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflow: 'auto' }}>
+                {uses.map((use) => (
+                  <div
+                    key={use.id}
+                    style={{
+                      padding: '8px',
+                      backgroundColor: selection.selectedUses.includes(use.id) ? '#e3f2fd' : '#f8f9fa',
+                      borderRadius: '4px',
+                      border: selection.selectedUses.includes(use.id) ? '1px solid #1976d2' : '1px solid #e9ecef'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '11px', color: '#666' }}>
+                          Ref: {use.href}
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#999' }}>
+                          Position: ({use.x || 0}, {use.y || 0})
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <button
+                          onClick={() => duplicateUse(use.id)}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '10px',
+                            border: '1px solid #6c757d',
+                            backgroundColor: '#fff',
+                            color: '#6c757d',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                          title="Duplicate"
+                        >
+                          ⧉
+                        </button>
+                        <button
+                          onClick={() => handleRemoveUse(use.id)}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '10px',
+                            border: '1px solid #dc3545',
+                            backgroundColor: '#fff',
+                            color: '#dc3545',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Instance Properties Editor */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#666' }}>X Position</label>
+                          <input
+                            type="number"
+                            value={use.x || 0}
+                            onChange={(e) => handleUpdateUse(use.id, { 
+                              x: Number(e.target.value) || 0 
+                            })}
+                            style={{
+                              width: '100%',
+                              padding: '4px',
+                              fontSize: '11px',
+                              border: '1px solid #ddd',
+                              borderRadius: '3px'
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#666' }}>Y Position</label>
+                          <input
+                            type="number"
+                            value={use.y || 0}
+                            onChange={(e) => handleUpdateUse(use.id, { 
+                              y: Number(e.target.value) || 0 
+                            })}
+                            style={{
+                              width: '100%',
+                              padding: '4px',
+                              fontSize: '11px',
+                              border: '1px solid #ddd',
+                              borderRadius: '3px'
+                            }}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#666' }}>Width</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={use.width || 100}
+                            onChange={(e) => handleUpdateUse(use.id, { 
+                              width: Number(e.target.value) || 100 
+                            })}
+                            style={{
+                              width: '100%',
+                              padding: '4px',
+                              fontSize: '11px',
+                              border: '1px solid #ddd',
+                              borderRadius: '3px'
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '10px', color: '#666' }}>Height</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={use.height || 100}
+                            onChange={(e) => handleUpdateUse(use.id, { 
+                              height: Number(e.target.value) || 100 
+                            })}
+                            style={{
+                              width: '100%',
+                              padding: '4px',
+                              fontSize: '11px',
+                              border: '1px solid #ddd',
+                              borderRadius: '3px'
+                            }}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label style={{ fontSize: '10px', color: '#666' }}>Transform</label>
+                        <input
+                          type="text"
+                          value={use.transform || ''}
+                          onChange={(e) => handleUpdateUse(use.id, { 
+                            transform: e.target.value 
+                          })}
+                          placeholder="rotate(45) scale(1.5)"
+                          style={{
+                            width: '100%',
+                            padding: '4px',
+                            fontSize: '11px',
+                            border: '1px solid #ddd',
+                            borderRadius: '3px'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div style={{ 
+              fontSize: '11px', 
+              color: '#999', 
+              textAlign: 'center', 
+              padding: '16px' 
+            }}>
+              No instances created yet. Create a symbol first, then use the "Use" button to create instances.
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Usage Instructions */}
+      <div style={{ 
+        padding: '8px', 
+        backgroundColor: '#f8f9fa', 
+        borderRadius: '4px',
+        fontSize: '11px',
+        color: '#666'
+      }}>
+        <div>• Create symbols to reuse complex graphics efficiently</div>
+        <div>• Use instances to place symbols multiple times</div>
+        <div>• Modify symbol content to update all instances</div>
+        <div>• Edit symbol viewBox and dimensions for proper scaling</div>
+        <div>• Transform instances with position, size, and rotation</div>
+      </div>
     </div>
   );
 };

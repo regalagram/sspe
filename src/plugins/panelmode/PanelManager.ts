@@ -9,7 +9,7 @@ export interface PanelConfig {
   enabled: boolean;
   order: number;
   pluginId: string;
-  originalPosition?: 'sidebar' | 'toolbar'; // Track original position
+  originalPosition?: 'sidebar' | 'toolbar' | 'accordion'; // Track original position
 }
 
 interface PanelModeState {

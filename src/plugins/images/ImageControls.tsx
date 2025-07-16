@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { readFileAsDataURL, validateImageFile, createDefaultImage, calculateImageAspectRatio } from '../../utils/svg-elements-utils';
-import { AccordionToggleButton } from '../../components/AccordionPanel';
+import { PluginButton } from '../../components/PluginButton';
+import { Upload, Copy, Trash2, Image as ImageIcon } from 'lucide-react';
 
 export const ImageControls: React.FC = () => {
   const { 
@@ -10,16 +11,15 @@ export const ImageControls: React.FC = () => {
     addImage, 
     updateImage, 
     removeImage, 
-    duplicateImage 
+    duplicateImage,
+    selectImage 
   } = useEditorStore();
   
-  const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedImage = selection.selectedImages.length === 1 
-    ? images.find(img => img.id === selection.selectedImages[0])
-    : null;
+  const selectedImages = images.filter(img => selection.selectedImages.includes(img.id));
+  const selectedImage = selectedImages.length === 1 ? selectedImages[0] : null;
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -44,11 +44,18 @@ export const ImageControls: React.FC = () => {
           300
         );
         
-        addImage({
+        const newImage = {
           ...createDefaultImage(100, 100, dataURL),
           width,
           height
-        });
+        };
+        
+        addImage(newImage);
+        // Always select the last image from the latest store state
+        const latestImages = useEditorStore.getState().images;
+        if (latestImages.length > 0) {
+          selectImage(latestImages[latestImages.length - 1].id);
+        }
         setLoading(false);
       };
       img.onerror = () => {
@@ -67,15 +74,22 @@ export const ImageControls: React.FC = () => {
     fileInputRef.current?.click();
   };
 
-  const handleDuplicateImage = () => {
-    if (selectedImage) {
-      duplicateImage(selectedImage.id);
+  const handleDuplicateSelected = () => {
+    if (selectedImages.length > 0) {
+      selectedImages.forEach(image => {
+        duplicateImage(image.id);
+      });
+      // Select the duplicated images
+      // Optionally, you could refresh selection here if needed
     }
   };
 
-  const handleRemoveImage = () => {
-    if (selectedImage && confirm('Are you sure you want to remove this image?')) {
-      removeImage(selectedImage.id);
+  const handleRemoveSelected = () => {
+    if (selectedImages.length > 0 && 
+        confirm(`Are you sure you want to remove ${selectedImages.length} image${selectedImages.length > 1 ? 's' : ''}?`)) {
+      selectedImages.forEach(image => {
+        removeImage(image.id);
+      });
     }
   };
 
@@ -85,175 +99,266 @@ export const ImageControls: React.FC = () => {
     }
   };
 
+  const handleSelectImage = (imageId: string) => {
+    selectImage(imageId);
+  };
+
+  const hasSelection = selectedImages.length > 0;
+
   return (
-    <div className="border-b border-gray-200 last:border-b-0">
-      <AccordionToggleButton
-        isExpanded={isExpanded}
-        onClick={() => setIsExpanded(!isExpanded)}
-        title="Images"
-        badge={images.length > 0 ? images.length : undefined}
-      />
-      
-      {isExpanded && (
-        <div className="p-4 space-y-4">
-          {/* Add Image Section */}
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-gray-700">Add Image</h4>
-            <div className="flex gap-2">
-              <button
-                onClick={handleAddImage}
-                disabled={loading}
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
-              >
-                {loading ? 'Loading...' : 'Browse File'}
-              </button>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* Add Image Section */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+          Add Image:
+        </span>
+        
+        <PluginButton
+          icon={<Upload size={12} />}
+          text={loading ? 'Loading...' : 'Browse File'}
+          color="#28a745"
+          disabled={loading}
+          onPointerDown={handleAddImage}
+        />
+        
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          style={{ display: 'none' }}
+        />
+      </div>
+
+      {/* Image Operations */}
+      {hasSelection && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+            Operations:
+          </span>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <PluginButton
+              icon={<Copy size={12} />}
+              text="Duplicate"
+              color="#ffc107"
+              onPointerDown={handleDuplicateSelected}
+            />
+            <PluginButton
+              icon={<Trash2 size={12} />}
+              text="Remove"
+              color="#dc3545"
+              onPointerDown={handleRemoveSelected}
             />
           </div>
+        </div>
+      )}
 
-          {/* Image List */}
-          {images.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium text-gray-700">Images ({images.length})</h4>
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                {images.map((image) => (
-                  <div
-                    key={image.id}
-                    className={`p-2 rounded border cursor-pointer ${
-                      selection.selectedImages.includes(image.id)
-                        ? 'border-blue-300 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    onClick={() => {
-                      // Handle selection logic here if needed
-                    }}
-                  >
-                    <div className="text-xs text-gray-600">
+      {/* Selection Info */}
+      {hasSelection && (
+        <div style={{ 
+          padding: '8px', 
+          backgroundColor: '#f8f9fa', 
+          borderRadius: '4px',
+          fontSize: '11px',
+          color: '#666'
+        }}>
+          Editing {selectedImages.length} image{selectedImages.length !== 1 ? 's' : ''}
+        </div>
+      )}
+
+      {/* Image List */}
+      {images.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+            Images ({images.length}):
+          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflow: 'auto' }}>
+            {images.map((image) => (
+              <div
+                key={image.id}
+                style={{
+                  padding: '8px',
+                  backgroundColor: selection.selectedImages.includes(image.id) ? '#e3f2fd' : '#f8f9fa',
+                  borderRadius: '4px',
+                  border: selection.selectedImages.includes(image.id) ? '1px solid #1976d2' : '1px solid #e9ecef',
+                  cursor: 'pointer'
+                }}
+                onClick={() => handleSelectImage(image.id)}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ImageIcon size={16} style={{ color: '#666' }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '11px', color: '#666' }}>
                       {image.width} × {image.height}
                     </div>
-                    <div className="text-xs text-gray-500 truncate">
+                    <div style={{ fontSize: '10px', color: '#999', wordBreak: 'break-all' }}>
                       {image.href.startsWith('data:') ? 'Embedded image' : image.href}
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Selected Image Properties */}
-          {selectedImage && (
-            <div className="space-y-3 pt-3 border-t border-gray-200">
-              <h4 className="text-sm font-medium text-gray-700">Image Properties</h4>
-              
-              {/* Position */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">X</label>
-                  <input
-                    type="number"
-                    value={selectedImage.x}
-                    onChange={(e) => handlePropertyChange('x', parseFloat(e.target.value) || 0)}
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Y</label>
-                  <input
-                    type="number"
-                    value={selectedImage.y}
-                    onChange={(e) => handlePropertyChange('y', parseFloat(e.target.value) || 0)}
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                  />
                 </div>
               </div>
-
-              {/* Dimensions */}
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Width</label>
-                  <input
-                    type="number"
-                    value={selectedImage.width}
-                    onChange={(e) => handlePropertyChange('width', parseFloat(e.target.value) || 0)}
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Height</label>
-                  <input
-                    type="number"
-                    value={selectedImage.height}
-                    onChange={(e) => handlePropertyChange('height', parseFloat(e.target.value) || 0)}
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                  />
-                </div>
-              </div>
-
-              {/* Preserve Aspect Ratio */}
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Preserve Aspect Ratio</label>
-                <select
-                  value={selectedImage.preserveAspectRatio || 'xMidYMid'}
-                  onChange={(e) => handlePropertyChange('preserveAspectRatio', e.target.value)}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                >
-                  <option value="none">None</option>
-                  <option value="xMinYMin">Top Left</option>
-                  <option value="xMidYMin">Top Center</option>
-                  <option value="xMaxYMin">Top Right</option>
-                  <option value="xMinYMid">Center Left</option>
-                  <option value="xMidYMid">Center</option>
-                  <option value="xMaxYMid">Center Right</option>
-                  <option value="xMinYMax">Bottom Left</option>
-                  <option value="xMidYMax">Bottom Center</option>
-                  <option value="xMaxYMax">Bottom Right</option>
-                </select>
-              </div>
-
-              {/* Opacity */}
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">
-                  Opacity ({Math.round(((selectedImage.style?.opacity ?? 1) * 100))}%)
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={selectedImage.style?.opacity ?? 1}
-                  onChange={(e) => handlePropertyChange('style', { 
-                    ...selectedImage.style, 
-                    opacity: parseFloat(e.target.value) 
-                  })}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-2 pt-2">
-                <button
-                  onClick={handleDuplicateImage}
-                  className="flex-1 px-3 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                >
-                  Duplicate
-                </button>
-                <button
-                  onClick={handleRemoveImage}
-                  className="flex-1 px-3 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                >
-                  Remove
-                </button>
-              </div>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       )}
+
+      {/* Selected Image Properties */}
+      {selectedImage && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px', borderTop: '1px solid #e9ecef' }}>
+          <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+            Image Properties:
+          </span>
+          
+          {/* Position */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            <div>
+              <label style={{ fontSize: '10px', color: '#666' }}>X Position</label>
+              <input
+                type="number"
+                value={selectedImage.x}
+                onChange={(e) => handlePropertyChange('x', parseFloat(e.target.value) || 0)}
+                style={{
+                  width: '100%',
+                  padding: '4px',
+                  fontSize: '11px',
+                  border: '1px solid #ddd',
+                  borderRadius: '3px'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '10px', color: '#666' }}>Y Position</label>
+              <input
+                type="number"
+                value={selectedImage.y}
+                onChange={(e) => handlePropertyChange('y', parseFloat(e.target.value) || 0)}
+                style={{
+                  width: '100%',
+                  padding: '4px',
+                  fontSize: '11px',
+                  border: '1px solid #ddd',
+                  borderRadius: '3px'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Dimensions */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            <div>
+              <label style={{ fontSize: '10px', color: '#666' }}>Width</label>
+              <input
+                type="number"
+                min="1"
+                value={selectedImage.width}
+                onChange={(e) => handlePropertyChange('width', parseFloat(e.target.value) || 1)}
+                style={{
+                  width: '100%',
+                  padding: '4px',
+                  fontSize: '11px',
+                  border: '1px solid #ddd',
+                  borderRadius: '3px'
+                }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '10px', color: '#666' }}>Height</label>
+              <input
+                type="number"
+                min="1"
+                value={selectedImage.height}
+                onChange={(e) => handlePropertyChange('height', parseFloat(e.target.value) || 1)}
+                style={{
+                  width: '100%',
+                  padding: '4px',
+                  fontSize: '11px',
+                  border: '1px solid #ddd',
+                  borderRadius: '3px'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Preserve Aspect Ratio */}
+          <div>
+            <label style={{ fontSize: '10px', color: '#666' }}>Preserve Aspect Ratio</label>
+            <select
+              value={selectedImage.preserveAspectRatio || 'xMidYMid'}
+              onChange={(e) => handlePropertyChange('preserveAspectRatio', e.target.value)}
+              style={{
+                width: '100%',
+                padding: '4px',
+                fontSize: '11px',
+                border: '1px solid #ddd',
+                borderRadius: '3px'
+              }}
+            >
+              <option value="none">None</option>
+              <option value="xMinYMin">Top Left</option>
+              <option value="xMidYMin">Top Center</option>
+              <option value="xMaxYMin">Top Right</option>
+              <option value="xMinYMid">Center Left</option>
+              <option value="xMidYMid">Center</option>
+              <option value="xMaxYMid">Center Right</option>
+              <option value="xMinYMax">Bottom Left</option>
+              <option value="xMidYMax">Bottom Center</option>
+              <option value="xMaxYMax">Bottom Right</option>
+            </select>
+          </div>
+
+          {/* Opacity */}
+          <div>
+            <label style={{ fontSize: '10px', color: '#666' }}>
+              Opacity ({Math.round(((selectedImage.style?.opacity ?? 1) * 100))}%)
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={selectedImage.style?.opacity ?? 1}
+              onChange={(e) => handlePropertyChange('style', { 
+                ...selectedImage.style, 
+                opacity: parseFloat(e.target.value) 
+              })}
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          {/* Transform */}
+          <div>
+            <label style={{ fontSize: '10px', color: '#666' }}>Transform</label>
+            <input
+              type="text"
+              value={selectedImage.transform || ''}
+              onChange={(e) => handlePropertyChange('transform', e.target.value)}
+              placeholder="rotate(45) scale(1.5)"
+              style={{
+                width: '100%',
+                padding: '4px',
+                fontSize: '11px',
+                border: '1px solid #ddd',
+                borderRadius: '3px'
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Usage Instructions */}
+      <div style={{ 
+        padding: '8px', 
+        backgroundColor: '#f8f9fa', 
+        borderRadius: '4px',
+        fontSize: '11px',
+        color: '#666'
+      }}>
+        <div>• Click "Browse File" to add images from your computer</div>
+        <div>• Click on an image in the list to select and edit it</div>
+        <div>• Use duplicate and remove buttons for batch operations</div>
+        <div>• Adjust position, size, opacity, and aspect ratio</div>
+      </div>
     </div>
   );
 };

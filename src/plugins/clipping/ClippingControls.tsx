@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { createDefaultClipPath, createDefaultMask, formatSVGReference } from '../../utils/svg-elements-utils';
+import { PluginButton } from '../../components/PluginButton';
+import { Plus, Trash2, Scissors, Eye } from 'lucide-react';
 
 export const ClippingControls: React.FC = () => {
   const { 
@@ -312,381 +314,580 @@ export const ClippingControls: React.FC = () => {
   const totalElements = clipPaths.length + masks.length;
 
   return (
-    <div className="border-b border-gray-200 last:border-b-0" data-plugin="clipping">
-      <div className="p-4 space-y-4">
-          {/* Tab Navigation */}
-          <div className="flex border border-gray-200 rounded overflow-hidden">
-            <button
-              onClick={() => setActiveTab('clips')}
-              className={`flex-1 px-3 py-2 text-sm ${
-                activeTab === 'clips'
-                  ? 'bg-blue-50 text-blue-700 border-r border-gray-200'
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Clips ({clipPaths.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('masks')}
-              className={`flex-1 px-3 py-2 text-sm ${
-                activeTab === 'masks'
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Masks ({masks.length})
-            </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* Tab Navigation */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+          Type:
+        </span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <PluginButton
+            icon={<Scissors size={12} />}
+            text="Clips"
+            color="#28a745"
+            active={activeTab === 'clips'}
+            onPointerDown={() => setActiveTab('clips')}
+          />
+          <PluginButton
+            icon={<Eye size={12} />}
+            text="Masks"
+            color="#28a745"
+            active={activeTab === 'masks'}
+            onPointerDown={() => setActiveTab('masks')}
+          />
+        </div>
+      </div>
+
+      {/* Clip Paths Tab */}
+      {activeTab === 'clips' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* Create Clip Path */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+              Create Clip Path:
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <PluginButton
+                icon={<Plus size={12} />}
+                text={hasPathSelection 
+                  ? `From Selection (${selectedSubPaths.length})`
+                  : 'From Selection (none)'
+                }
+                color={hasPathSelection ? '#17a2b8' : '#6c757d'}
+                disabled={!hasPathSelection}
+                onPointerDown={handleCreateClipFromSelection}
+              />
+              <PluginButton
+                icon={<Plus size={12} />}
+                text="Empty Clip Path"
+                color="#17a2b8"
+                onPointerDown={handleCreateClipPath}
+              />
+            </div>
           </div>
 
-          {/* Clip Paths Tab */}
-          {activeTab === 'clips' && (
-            <div className="space-y-4">
-              {/* Create Clip Path */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-gray-700">Create Clip Path</h4>
-                <div className="space-y-2">
-                  <button
-                    onClick={handleCreateClipFromSelection}
-                    disabled={!hasPathSelection}
-                    data-action="create-clip-from-selection"
-                    className={`w-full px-3 py-2 text-sm border rounded-md ${
-                      hasPathSelection 
-                        ? 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100' 
-                        : 'border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed'
-                    }`}
-                    title={hasPathSelection ? 'Create clipping path from selected sub-paths' : 'Select sub-paths first'}
+          {/* Clip Path List */}
+          {clipPaths.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+                Clip Paths ({clipPaths.length}):
+              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflow: 'auto' }}>
+                {clipPaths.map((clipPath) => (
+                  <div
+                    key={clipPath.id}
+                    style={{
+                      padding: '8px',
+                      backgroundColor: '#f8f9fa',
+                      borderRadius: '4px',
+                      border: '1px solid #e9ecef'
+                    }}
                   >
-                    {hasPathSelection 
-                      ? `Create from Selection (${selectedSubPaths.length} sub-path${selectedSubPaths.length > 1 ? 's' : ''})`
-                      : 'Create from Selection (no sub-paths selected)'
-                    }
-                  </button>
-                  <button
-                    onClick={handleCreateClipPath}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Create Empty Clip Path
-                  </button>
-                </div>
-              </div>
-
-              {/* Clip Path List */}
-              {clipPaths.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-gray-700">Clip Paths ({clipPaths.length})</h4>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {clipPaths.map((clipPath) => (
-                      <div
-                        key={clipPath.id}
-                        className="border border-gray-200 rounded p-2"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs text-gray-600">
-                              {clipPath.children.length} elements
-                            </div>
-                          </div>
-                          <div className="flex gap-1">
-                            {selectedPath && (
-                              <button
-                                onClick={() => handleApplyClipToPath(clipPath.id)}
-                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
-                                title="Apply to selected path"
-                              >
-                                Apply to Path
-                              </button>
-                            )}
-                            {selectedSubPaths.length > 0 && (
-                              <button
-                                onClick={() => handleApplyClipToSubPaths(clipPath.id)}
-                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
-                                title="Apply to parent paths of selected sub-paths"
-                              >
-                                Apply to Sub-paths
-                              </button>
-                            )}
-                            {selection.selectedTexts.length > 0 && (
-                              <button
-                                onClick={() => handleApplyClipToText(clipPath.id)}
-                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
-                                title="Apply to selected text"
-                              >
-                                Apply to Text
-                              </button>
-                            )}
-                            {selection.selectedGroups.length > 0 && (
-                              <button
-                                onClick={() => handleApplyClipToGroup(clipPath.id)}
-                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
-                                title="Apply to selected group"
-                              >
-                                Apply to Group
-                              </button>
-                            )}
-                            {selection.selectedImages.length > 0 && (
-                              <button
-                                onClick={() => handleApplyClipToImage(clipPath.id)}
-                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
-                                title="Apply to selected image"
-                              >
-                                Apply to Image
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleRemoveClipPath(clipPath.id)}
-                              className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Selected Path Clip Control */}
-              {selectedPath && (
-                <div className="space-y-2 pt-2 border-t border-gray-200">
-                  <h4 className="text-sm font-medium text-gray-700">Selected Path</h4>
-                  {selectedPath.style.clipPath ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-600">
-                        Clipped: {selectedPath.style.clipPath}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '11px', color: '#666' }}>
+                        {clipPath.children.length} elements
                       </span>
-                      <button
-                        onClick={handleRemoveClipFromPath}
-                        className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                      >
-                        Remove
-                      </button>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {selectedPath && (
+                          <button
+                            onClick={() => handleApplyClipToPath(clipPath.id)}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '10px',
+                              border: '1px solid #007bff',
+                              backgroundColor: '#fff',
+                              color: '#007bff',
+                              borderRadius: '3px',
+                              cursor: 'pointer'
+                            }}
+                            title="Apply to selected path"
+                          >
+                            Apply to Path
+                          </button>
+                        )}
+                        {selectedSubPaths.length > 0 && (
+                          <button
+                            onClick={() => handleApplyClipToSubPaths(clipPath.id)}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '10px',
+                              border: '1px solid #007bff',
+                              backgroundColor: '#fff',
+                              color: '#007bff',
+                              borderRadius: '3px',
+                              cursor: 'pointer'
+                            }}
+                            title="Apply to parent paths of selected sub-paths"
+                          >
+                            Apply to Sub-paths
+                          </button>
+                        )}
+                        {selection.selectedTexts.length > 0 && (
+                          <button
+                            onClick={() => handleApplyClipToText(clipPath.id)}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '10px',
+                              border: '1px solid #007bff',
+                              backgroundColor: '#fff',
+                              color: '#007bff',
+                              borderRadius: '3px',
+                              cursor: 'pointer'
+                            }}
+                            title="Apply to selected text"
+                          >
+                            Apply to Text
+                          </button>
+                        )}
+                        {selection.selectedGroups.length > 0 && (
+                          <button
+                            onClick={() => handleApplyClipToGroup(clipPath.id)}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '10px',
+                              border: '1px solid #007bff',
+                              backgroundColor: '#fff',
+                              color: '#007bff',
+                              borderRadius: '3px',
+                              cursor: 'pointer'
+                            }}
+                            title="Apply to selected group"
+                          >
+                            Apply to Group
+                          </button>
+                        )}
+                        {selection.selectedImages.length > 0 && (
+                          <button
+                            onClick={() => handleApplyClipToImage(clipPath.id)}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '10px',
+                              border: '1px solid #007bff',
+                              backgroundColor: '#fff',
+                              color: '#007bff',
+                              borderRadius: '3px',
+                              cursor: 'pointer'
+                            }}
+                            title="Apply to selected image"
+                          >
+                            Apply to Image
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleRemoveClipPath(clipPath.id)}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '10px',
+                            border: '1px solid #dc3545',
+                            backgroundColor: '#fff',
+                            color: '#dc3545',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="text-xs text-gray-500">No clipping applied</div>
-                  )}
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
-          {/* Masks Tab */}
-          {activeTab === 'masks' && (
-            <div className="space-y-4">
-              {/* Create Mask */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium text-gray-700">Create Mask</h4>
-                <div className="space-y-2">
+          {/* Selected Path Clip Control */}
+          {selectedPath && (
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '6px', 
+              paddingTop: '8px', 
+              borderTop: '1px solid #e9ecef' 
+            }}>
+              <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+                Selected Path:
+              </span>
+              {selectedPath.style.clipPath ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '11px', color: '#666' }}>
+                    Clipped: {selectedPath.style.clipPath}
+                  </span>
                   <button
-                    onClick={handleCreateMaskFromSelection}
-                    disabled={!hasPathSelection}
-                    data-action="create-mask-from-selection"
-                    className={`w-full px-3 py-2 text-sm border rounded-md ${
-                      hasPathSelection 
-                        ? 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100' 
-                        : 'border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed'
-                    }`}
-                    title={hasPathSelection ? 'Create mask from selected sub-paths' : 'Select sub-paths first'}
+                    onClick={handleRemoveClipFromPath}
+                    style={{
+                      padding: '4px 8px',
+                      fontSize: '10px',
+                      border: '1px solid #dc3545',
+                      backgroundColor: '#fff',
+                      color: '#dc3545',
+                      borderRadius: '3px',
+                      cursor: 'pointer'
+                    }}
                   >
-                    {hasPathSelection 
-                      ? `Create from Selection (${selectedSubPaths.length} sub-path${selectedSubPaths.length > 1 ? 's' : ''})`
-                      : 'Create from Selection (no sub-paths selected)'
-                    }
-                  </button>
-                  <button
-                    onClick={handleCreateMask}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50"
-                  >
-                    Create Empty Mask
+                    Remove
                   </button>
                 </div>
-              </div>
-
-              {/* Mask List */}
-              {masks.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium text-gray-700">Masks ({masks.length})</h4>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {masks.map((mask) => (
-                      <div
-                        key={mask.id}
-                        className="border border-gray-200 rounded p-2"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs text-gray-600">
-                              {mask.children.length} elements
-                            </div>
-                          </div>
-                          <div className="flex gap-1">
-                            {selectedPath && (
-                              <button
-                                onClick={() => handleApplyMaskToPath(mask.id)}
-                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
-                                title="Apply to selected path"
-                              >
-                                Apply to Path
-                              </button>
-                            )}
-                            {selectedSubPaths.length > 0 && (
-                              <button
-                                onClick={() => handleApplyMaskToSubPaths(mask.id)}
-                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
-                                title="Apply to parent paths of selected sub-paths"
-                              >
-                                Apply to Sub-paths
-                              </button>
-                            )}
-                            {selection.selectedTexts.length > 0 && (
-                              <button
-                                onClick={() => handleApplyMaskToText(mask.id)}
-                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
-                                title="Apply to selected text"
-                              >
-                                Apply to Text
-                              </button>
-                            )}
-                            {selection.selectedGroups.length > 0 && (
-                              <button
-                                onClick={() => handleApplyMaskToGroup(mask.id)}
-                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
-                                title="Apply to selected group"
-                              >
-                                Apply to Group
-                              </button>
-                            )}
-                            {selection.selectedImages.length > 0 && (
-                              <button
-                                onClick={() => handleApplyMaskToImage(mask.id)}
-                                className="px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded hover:bg-blue-50"
-                                title="Apply to selected image"
-                              >
-                                Apply to Image
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleRemoveMask(mask.id)}
-                              className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              ) : (
+                <div style={{ fontSize: '11px', color: '#999' }}>No clipping applied</div>
               )}
-
-              {/* Selected Path Mask Control */}
-              {selectedPath && (
-                <div className="space-y-2 pt-2 border-t border-gray-200">
-                  <h4 className="text-sm font-medium text-gray-700">Selected Path</h4>
-                  {selectedPath.style.mask ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-600">
-                        Masked: {selectedPath.style.mask}
-                      </span>
-                      <button
-                        onClick={handleRemoveMaskFromPath}
-                        className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-500">No mask applied</div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Apply/Remove Section for Selected Elements */}
-          {(selection.selectedTexts.length > 0 || selection.selectedGroups.length > 0 || selection.selectedImages.length > 0 || selectedPath) && (
-            <div className="space-y-2 pt-2 border-t border-gray-200">
-              <h4 className="text-sm font-medium text-gray-700">Selected Elements</h4>
-              
-              {/* Remove Clipping Buttons */}
-              <div className="space-y-1">
-                <div className="text-xs text-gray-600">Remove Clipping:</div>
-                <div className="grid grid-cols-2 gap-2">
-                  {selectedPath && selectedPath.style.clipPath && (
-                    <button
-                      onClick={handleRemoveClipFromPath}
-                      className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                    >
-                      Remove from Path
-                    </button>
-                  )}
-                  {selection.selectedTexts.length > 0 && (
-                    <button
-                      onClick={handleRemoveClipFromText}
-                      className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                    >
-                      Remove from Text
-                    </button>
-                  )}
-                  {selection.selectedGroups.length > 0 && (
-                    <button
-                      onClick={handleRemoveClipFromGroup}
-                      className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                    >
-                      Remove from Group
-                    </button>
-                  )}
-                  {selection.selectedImages.length > 0 && (
-                    <button
-                      onClick={handleRemoveClipFromImage}
-                      className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                    >
-                      Remove from Image
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Remove Mask Buttons */}
-              <div className="space-y-1">
-                <div className="text-xs text-gray-600">Remove Mask:</div>
-                <div className="grid grid-cols-2 gap-2">
-                  {selectedPath && selectedPath.style.mask && (
-                    <button
-                      onClick={handleRemoveMaskFromPath}
-                      className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                    >
-                      Remove from Path
-                    </button>
-                  )}
-                  {selection.selectedTexts.length > 0 && (
-                    <button
-                      onClick={handleRemoveMaskFromText}
-                      className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                    >
-                      Remove from Text
-                    </button>
-                  )}
-                  {selection.selectedGroups.length > 0 && (
-                    <button
-                      onClick={handleRemoveMaskFromGroup}
-                      className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                    >
-                      Remove from Group
-                    </button>
-                  )}
-                  {selection.selectedImages.length > 0 && (
-                    <button
-                      onClick={handleRemoveMaskFromImage}
-                      className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                    >
-                      Remove from Image
-                    </button>
-                  )}
-                </div>
-              </div>
             </div>
           )}
         </div>
+      )}
+
+      {/* Masks Tab */}
+      {activeTab === 'masks' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* Create Mask */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+              Create Mask:
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <PluginButton
+                icon={<Plus size={12} />}
+                text={hasPathSelection 
+                  ? `From Selection (${selectedSubPaths.length})`
+                  : 'From Selection (none)'
+                }
+                color={hasPathSelection ? '#17a2b8' : '#6c757d'}
+                disabled={!hasPathSelection}
+                onPointerDown={handleCreateMaskFromSelection}
+              />
+              <PluginButton
+                icon={<Plus size={12} />}
+                text="Empty Mask"
+                color="#17a2b8"
+                onPointerDown={handleCreateMask}
+              />
+            </div>
+          </div>
+
+          {/* Mask List */}
+          {masks.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+                Masks ({masks.length}):
+              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflow: 'auto' }}>
+                {masks.map((mask) => (
+                  <div
+                    key={mask.id}
+                    style={{
+                      padding: '8px',
+                      backgroundColor: '#f8f9fa',
+                      borderRadius: '4px',
+                      border: '1px solid #e9ecef'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '11px', color: '#666' }}>
+                        {mask.children.length} elements
+                      </span>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {selectedPath && (
+                          <button
+                            onClick={() => handleApplyMaskToPath(mask.id)}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '10px',
+                              border: '1px solid #007bff',
+                              backgroundColor: '#fff',
+                              color: '#007bff',
+                              borderRadius: '3px',
+                              cursor: 'pointer'
+                            }}
+                            title="Apply to selected path"
+                          >
+                            Apply to Path
+                          </button>
+                        )}
+                        {selectedSubPaths.length > 0 && (
+                          <button
+                            onClick={() => handleApplyMaskToSubPaths(mask.id)}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '10px',
+                              border: '1px solid #007bff',
+                              backgroundColor: '#fff',
+                              color: '#007bff',
+                              borderRadius: '3px',
+                              cursor: 'pointer'
+                            }}
+                            title="Apply to parent paths of selected sub-paths"
+                          >
+                            Apply to Sub-paths
+                          </button>
+                        )}
+                        {selection.selectedTexts.length > 0 && (
+                          <button
+                            onClick={() => handleApplyMaskToText(mask.id)}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '10px',
+                              border: '1px solid #007bff',
+                              backgroundColor: '#fff',
+                              color: '#007bff',
+                              borderRadius: '3px',
+                              cursor: 'pointer'
+                            }}
+                            title="Apply to selected text"
+                          >
+                            Apply to Text
+                          </button>
+                        )}
+                        {selection.selectedGroups.length > 0 && (
+                          <button
+                            onClick={() => handleApplyMaskToGroup(mask.id)}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '10px',
+                              border: '1px solid #007bff',
+                              backgroundColor: '#fff',
+                              color: '#007bff',
+                              borderRadius: '3px',
+                              cursor: 'pointer'
+                            }}
+                            title="Apply to selected group"
+                          >
+                            Apply to Group
+                          </button>
+                        )}
+                        {selection.selectedImages.length > 0 && (
+                          <button
+                            onClick={() => handleApplyMaskToImage(mask.id)}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '10px',
+                              border: '1px solid #007bff',
+                              backgroundColor: '#fff',
+                              color: '#007bff',
+                              borderRadius: '3px',
+                              cursor: 'pointer'
+                            }}
+                            title="Apply to selected image"
+                          >
+                            Apply to Image
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleRemoveMask(mask.id)}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '10px',
+                            border: '1px solid #dc3545',
+                            backgroundColor: '#fff',
+                            color: '#dc3545',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Selected Path Mask Control */}
+          {selectedPath && (
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '6px', 
+              paddingTop: '8px', 
+              borderTop: '1px solid #e9ecef' 
+            }}>
+              <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+                Selected Path:
+              </span>
+              {selectedPath.style.mask ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '11px', color: '#666' }}>
+                    Masked: {selectedPath.style.mask}
+                  </span>
+                  <button
+                    onClick={handleRemoveMaskFromPath}
+                    style={{
+                      padding: '4px 8px',
+                      fontSize: '10px',
+                      border: '1px solid #dc3545',
+                      backgroundColor: '#fff',
+                      color: '#dc3545',
+                      borderRadius: '3px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div style={{ fontSize: '11px', color: '#999' }}>No mask applied</div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Apply/Remove Section for Selected Elements */}
+      {(selection.selectedTexts.length > 0 || selection.selectedGroups.length > 0 || selection.selectedImages.length > 0 || selectedPath) && (
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '8px', 
+          paddingTop: '8px', 
+          borderTop: '1px solid #e9ecef' 
+        }}>
+          <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+            Selected Elements:
+          </span>
+          
+          {/* Remove Clipping Buttons */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ fontSize: '11px', color: '#666' }}>Remove Clipping:</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+              {selectedPath && selectedPath.style.clipPath && (
+                <button
+                  onClick={handleRemoveClipFromPath}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '10px',
+                    border: '1px solid #dc3545',
+                    backgroundColor: '#fff',
+                    color: '#dc3545',
+                    borderRadius: '3px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Remove from Path
+                </button>
+              )}
+              {selection.selectedTexts.length > 0 && (
+                <button
+                  onClick={handleRemoveClipFromText}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '10px',
+                    border: '1px solid #dc3545',
+                    backgroundColor: '#fff',
+                    color: '#dc3545',
+                    borderRadius: '3px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Remove from Text
+                </button>
+              )}
+              {selection.selectedGroups.length > 0 && (
+                <button
+                  onClick={handleRemoveClipFromGroup}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '10px',
+                    border: '1px solid #dc3545',
+                    backgroundColor: '#fff',
+                    color: '#dc3545',
+                    borderRadius: '3px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Remove from Group
+                </button>
+              )}
+              {selection.selectedImages.length > 0 && (
+                <button
+                  onClick={handleRemoveClipFromImage}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '10px',
+                    border: '1px solid #dc3545',
+                    backgroundColor: '#fff',
+                    color: '#dc3545',
+                    borderRadius: '3px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Remove from Image
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Remove Mask Buttons */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ fontSize: '11px', color: '#666' }}>Remove Mask:</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+              {selectedPath && selectedPath.style.mask && (
+                <button
+                  onClick={handleRemoveMaskFromPath}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '10px',
+                    border: '1px solid #dc3545',
+                    backgroundColor: '#fff',
+                    color: '#dc3545',
+                    borderRadius: '3px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Remove from Path
+                </button>
+              )}
+              {selection.selectedTexts.length > 0 && (
+                <button
+                  onClick={handleRemoveMaskFromText}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '10px',
+                    border: '1px solid #dc3545',
+                    backgroundColor: '#fff',
+                    color: '#dc3545',
+                    borderRadius: '3px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Remove from Text
+                </button>
+              )}
+              {selection.selectedGroups.length > 0 && (
+                <button
+                  onClick={handleRemoveMaskFromGroup}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '10px',
+                    border: '1px solid #dc3545',
+                    backgroundColor: '#fff',
+                    color: '#dc3545',
+                    borderRadius: '3px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Remove from Group
+                </button>
+              )}
+              {selection.selectedImages.length > 0 && (
+                <button
+                  onClick={handleRemoveMaskFromImage}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '10px',
+                    border: '1px solid #dc3545',
+                    backgroundColor: '#fff',
+                    color: '#dc3545',
+                    borderRadius: '3px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Remove from Image
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

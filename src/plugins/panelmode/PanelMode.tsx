@@ -8,14 +8,14 @@ import { pluginManager } from '../../core/PluginSystem';
 const extractPanelInfo = () => {
   const panels = pluginManager.getEnabledPlugins()
     .flatMap(plugin => plugin.ui || [])
-    .filter(ui => ui.position === 'sidebar' || ui.position === 'toolbar') // Include both sidebar and toolbar
+    .filter(ui => ui.position === 'sidebar' || ui.position === 'toolbar' || ui.position === 'accordion') // Include sidebar, toolbar and accordion
     .map(ui => ({
       id: ui.id,
       name: formatPanelName(ui.id),
       enabled: true, // Default to enabled
       order: ui.order || 0,
       pluginId: extractPluginId(ui.id),
-      originalPosition: ui.position as 'sidebar' | 'toolbar', // Type assertion for filtered positions
+      originalPosition: ui.position as 'sidebar' | 'toolbar' | 'accordion', // Type assertion for filtered positions
     }));
 
   return panels;
@@ -47,6 +47,11 @@ const formatPanelName = (id: string): string => {
     'subpath-transform-controls': 'Sub-Path Transform',
     'delete-control': 'Delete',
     'curves-ui': 'Curves',
+    'clipping-controls': 'Clipping',
+    'filter-controls': 'Filters',
+    'marker-controls': 'Markers',
+    'symbol-controls': 'Symbols',
+    'image-controls': 'Images',
   };
 
   // Return mapped name if available

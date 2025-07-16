@@ -9,6 +9,8 @@ import {
   formatSVGReference 
 } from '../../utils/svg-elements-utils';
 import { FilterPrimitiveType } from '../../types';
+import { PluginButton } from '../../components/PluginButton';
+import { Plus, Trash2, Eye, Zap, Droplets, Palette, Edit, Copy } from 'lucide-react';
 
 export const FilterControls: React.FC = () => {
   const { 
@@ -253,38 +255,56 @@ export const FilterControls: React.FC = () => {
     switch (primitive.type) {
       case 'feGaussianBlur':
         return (
-          <div className="space-y-2">
-            <label className="block text-xs text-gray-600">Blur Amount</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <label style={{ fontSize: '11px', color: '#666' }}>Blur Amount</label>
             <input
               type="number"
               min="0"
               step="0.1"
               value={primitive.stdDeviation}
               onChange={(e) => updatePrimitive({ stdDeviation: parseFloat(e.target.value) || 0 })}
-              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+              style={{ 
+                width: '100%', 
+                padding: '4px', 
+                fontSize: '11px',
+                border: '1px solid #ddd',
+                borderRadius: '3px'
+              }}
             />
           </div>
         );
 
       case 'feOffset':
         return (
-          <div className="grid grid-cols-2 gap-2">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
             <div>
-              <label className="block text-xs text-gray-600">X Offset</label>
+              <label style={{ fontSize: '11px', color: '#666' }}>X Offset</label>
               <input
                 type="number"
                 value={primitive.dx}
                 onChange={(e) => updatePrimitive({ dx: parseFloat(e.target.value) || 0 })}
-                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                style={{ 
+                  width: '100%', 
+                  padding: '4px', 
+                  fontSize: '11px',
+                  border: '1px solid #ddd',
+                  borderRadius: '3px'
+                }}
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-600">Y Offset</label>
+              <label style={{ fontSize: '11px', color: '#666' }}>Y Offset</label>
               <input
                 type="number"
                 value={primitive.dy}
                 onChange={(e) => updatePrimitive({ dy: parseFloat(e.target.value) || 0 })}
-                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                style={{ 
+                  width: '100%', 
+                  padding: '4px', 
+                  fontSize: '11px',
+                  border: '1px solid #ddd',
+                  borderRadius: '3px'
+                }}
               />
             </div>
           </div>
@@ -292,18 +312,23 @@ export const FilterControls: React.FC = () => {
 
       case 'feFlood':
         return (
-          <div className="grid grid-cols-2 gap-2">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
             <div>
-              <label className="block text-xs text-gray-600">Color</label>
+              <label style={{ fontSize: '11px', color: '#666' }}>Color</label>
               <input
                 type="color"
                 value={primitive.floodColor}
                 onChange={(e) => updatePrimitive({ floodColor: e.target.value })}
-                className="w-full px-1 py-1 border border-gray-300 rounded"
+                style={{ 
+                  width: '100%', 
+                  padding: '2px', 
+                  border: '1px solid #ddd',
+                  borderRadius: '3px'
+                }}
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-600">Opacity</label>
+              <label style={{ fontSize: '11px', color: '#666' }}>Opacity</label>
               <input
                 type="number"
                 min="0"
@@ -311,7 +336,13 @@ export const FilterControls: React.FC = () => {
                 step="0.1"
                 value={primitive.floodOpacity || 1}
                 onChange={(e) => updatePrimitive({ floodOpacity: parseFloat(e.target.value) || 1 })}
-                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                style={{ 
+                  width: '100%', 
+                  padding: '4px', 
+                  fontSize: '11px',
+                  border: '1px solid #ddd',
+                  borderRadius: '3px'
+                }}
               />
             </div>
           </div>
@@ -319,50 +350,73 @@ export const FilterControls: React.FC = () => {
 
       case 'feDropShadow':
         return (
-          <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-2">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
               <div>
-                <label className="block text-xs text-gray-600">X Offset</label>
+                <label style={{ fontSize: '11px', color: '#666' }}>X Offset</label>
                 <input
                   type="number"
                   value={primitive.dx}
                   onChange={(e) => updatePrimitive({ dx: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                  style={{ 
+                    width: '100%', 
+                    padding: '4px', 
+                    fontSize: '11px',
+                    border: '1px solid #ddd',
+                    borderRadius: '3px'
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-600">Y Offset</label>
+                <label style={{ fontSize: '11px', color: '#666' }}>Y Offset</label>
                 <input
                   type="number"
                   value={primitive.dy}
                   onChange={(e) => updatePrimitive({ dy: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                  style={{ 
+                    width: '100%', 
+                    padding: '4px', 
+                    fontSize: '11px',
+                    border: '1px solid #ddd',
+                    borderRadius: '3px'
+                  }}
                 />
               </div>
             </div>
             <div>
-              <label className="block text-xs text-gray-600">Blur</label>
+              <label style={{ fontSize: '11px', color: '#666' }}>Blur</label>
               <input
                 type="number"
                 min="0"
                 step="0.1"
                 value={primitive.stdDeviation}
                 onChange={(e) => updatePrimitive({ stdDeviation: parseFloat(e.target.value) || 0 })}
-                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                style={{ 
+                  width: '100%', 
+                  padding: '4px', 
+                  fontSize: '11px',
+                  border: '1px solid #ddd',
+                  borderRadius: '3px'
+                }}
               />
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
               <div>
-                <label className="block text-xs text-gray-600">Color</label>
+                <label style={{ fontSize: '11px', color: '#666' }}>Color</label>
                 <input
                   type="color"
                   value={primitive.floodColor}
                   onChange={(e) => updatePrimitive({ floodColor: e.target.value })}
-                  className="w-full px-1 py-1 border border-gray-300 rounded"
+                  style={{ 
+                    width: '100%', 
+                    padding: '2px', 
+                    border: '1px solid #ddd',
+                    borderRadius: '3px'
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-600">Opacity</label>
+                <label style={{ fontSize: '11px', color: '#666' }}>Opacity</label>
                 <input
                   type="number"
                   min="0"
@@ -370,7 +424,13 @@ export const FilterControls: React.FC = () => {
                   step="0.1"
                   value={primitive.floodOpacity || 1}
                   onChange={(e) => updatePrimitive({ floodOpacity: parseFloat(e.target.value) || 1 })}
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                  style={{ 
+                    width: '100%', 
+                    padding: '4px', 
+                    fontSize: '11px',
+                    border: '1px solid #ddd',
+                    borderRadius: '3px'
+                  }}
                 />
               </div>
             </div>
@@ -379,7 +439,7 @@ export const FilterControls: React.FC = () => {
 
       default:
         return (
-          <div className="text-xs text-gray-500">
+          <div style={{ fontSize: '11px', color: '#999' }}>
             {primitive.type} (Advanced editing not implemented)
           </div>
         );
@@ -387,266 +447,368 @@ export const FilterControls: React.FC = () => {
   };
 
   return (
-    <div className="border-b border-gray-200 last:border-b-0" data-plugin="filters">
-      <div className="p-4 space-y-4">
-          {/* Quick Apply - Most Common Use Case */}
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-gray-700">Quick Apply</h4>
-            <div className="text-xs text-gray-500 mb-2">
-              {hasPathSelection 
-                ? `Apply to ${selectedSubPaths.length} selected sub-path${selectedSubPaths.length > 1 ? 's' : ''}`
-                : 'Select sub-paths first to apply filters'
-              }
-            </div>
-            <div className="grid grid-cols-1 gap-2">
-              <button
-                onClick={() => handleQuickApplyFilter('drop-shadow')}
-                disabled={!hasPathSelection}
-                className={`px-3 py-2 text-sm border rounded-md ${
-                  hasPathSelection 
-                    ? 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100' 
-                    : 'border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed'
-                }`}
-                title="Add drop shadow effect"
-              >
-                Drop Shadow
-              </button>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => handleQuickApplyFilter('blur')}
-                  disabled={!hasPathSelection}
-                  data-action="quick-blur"
-                  className={`px-3 py-2 text-sm border rounded-md ${
-                    hasPathSelection 
-                      ? 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100' 
-                      : 'border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed'
-                  }`}
-                  title="Add blur effect"
-                >
-                  Blur
-                </button>
-                <button
-                  onClick={() => handleQuickApplyFilter('grayscale')}
-                  disabled={!hasPathSelection}
-                  className={`px-3 py-2 text-sm border rounded-md ${
-                    hasPathSelection 
-                      ? 'border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100' 
-                      : 'border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed'
-                  }`}
-                  title="Add grayscale effect"
-                >
-                  Grayscale
-                </button>
-              </div>
-            </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* Quick Apply */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+          Quick Apply:
+        </span>
+        <div style={{ fontSize: '11px', color: '#999', marginBottom: '6px' }}>
+          {hasPathSelection 
+            ? `Apply to ${selectedSubPaths.length} selected sub-path${selectedSubPaths.length > 1 ? 's' : ''}`
+            : 'Select sub-paths first to apply filters'
+          }
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <PluginButton
+            icon={<Droplets size={12} />}
+            text="Drop Shadow"
+            color={hasPathSelection ? '#17a2b8' : '#6c757d'}
+            disabled={!hasPathSelection}
+            onPointerDown={() => handleQuickApplyFilter('drop-shadow')}
+          />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            <PluginButton
+              icon={<Zap size={12} />}
+              text="Blur"
+              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
+              disabled={!hasPathSelection}
+              onPointerDown={() => handleQuickApplyFilter('blur')}
+            />
+            <PluginButton
+              icon={<Eye size={12} />}
+              text="Grayscale"
+              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
+              disabled={!hasPathSelection}
+              onPointerDown={() => handleQuickApplyFilter('grayscale')}
+            />
           </div>
+        </div>
+      </div>
 
-          {/* Create Custom Filters */}
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium text-gray-700">Create Custom Filter</h4>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => handleCreateFilter('drop-shadow')}
-                className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-              >
-                Drop Shadow
-              </button>
-              <button
-                onClick={() => handleCreateFilter('blur')}
-                className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-              >
-                Blur
-              </button>
-              <button
-                onClick={() => handleCreateFilter('grayscale')}
-                className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-              >
-                Grayscale
-              </button>
-              <button
-                onClick={() => handleCreateFilter('custom')}
-                className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-              >
-                Custom
-              </button>
-            </div>
-          </div>
+      {/* Create Custom Filters */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+          Create Custom Filter:
+        </span>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+          <PluginButton
+            icon={<Droplets size={12} />}
+            text="Drop Shadow"
+            color="#28a745"
+            onPointerDown={() => handleCreateFilter('drop-shadow')}
+          />
+          <PluginButton
+            icon={<Zap size={12} />}
+            text="Blur"
+            color="#28a745"
+            onPointerDown={() => handleCreateFilter('blur')}
+          />
+          <PluginButton
+            icon={<Eye size={12} />}
+            text="Grayscale"
+            color="#28a745"
+            onPointerDown={() => handleCreateFilter('grayscale')}
+          />
+          <PluginButton
+            icon={<Palette size={12} />}
+            text="Custom"
+            color="#28a745"
+            onPointerDown={() => handleCreateFilter('custom')}
+          />
+        </div>
+      </div>
 
-          {/* Apply to Selected Elements */}
-          {(selectedPath || selection.selectedTexts.length > 0 || selection.selectedGroups.length > 0 || selection.selectedImages.length > 0) && (
-            <div className="space-y-2 pt-2 border-t border-gray-200">
-              <h4 className="text-sm font-medium text-gray-700">Apply to Selected Elements</h4>
-              {filters.length > 0 ? (
-                <div className="space-y-3">
-                  {filters.map((filter) => (
-                    <div key={filter.id} className="space-y-2">
-                      <span className="text-xs font-medium text-gray-600">
-                        Filter ({filter.primitives.length} effects)
-                      </span>
-                      <div className="grid grid-cols-2 gap-2">
-                        {selectedPath && (
-                          <button
-                            onClick={() => handleApplyFilterToPath(filter.id)}
-                            className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                          >
-                            Apply to Path
-                          </button>
-                        )}
-                        {selection.selectedTexts.length > 0 && (
-                          <button
-                            onClick={() => handleApplyFilterToText(filter.id)}
-                            className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                          >
-                            Apply to Text ({selection.selectedTexts.length})
-                          </button>
-                        )}
-                        {selection.selectedGroups.length > 0 && (
-                          <button
-                            onClick={() => handleApplyFilterToGroup(filter.id)}
-                            className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                          >
-                            Apply to Group ({selection.selectedGroups.length})
-                          </button>
-                        )}
-                        {selection.selectedImages.length > 0 && (
-                          <button
-                            onClick={() => handleApplyFilterToImage(filter.id)}
-                            className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                          >
-                            Apply to Image ({selection.selectedImages.length})
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {/* Remove Filter Buttons */}
-                  <div className="pt-2 border-t border-gray-100">
-                    <div className="grid grid-cols-2 gap-2">
-                      {selectedPath && selectedPath.style.filter && (
-                        <button
-                          onClick={handleRemoveFilterFromPath}
-                          className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                        >
-                          Remove from Path
-                        </button>
-                      )}
-                      {selection.selectedTexts.length > 0 && (
-                        <button
-                          onClick={handleRemoveFilterFromText}
-                          className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                        >
-                          Remove from Text
-                        </button>
-                      )}
-                      {selection.selectedGroups.length > 0 && (
-                        <button
-                          onClick={handleRemoveFilterFromGroup}
-                          className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                        >
-                          Remove from Group
-                        </button>
-                      )}
-                      {selection.selectedImages.length > 0 && (
-                        <button
-                          onClick={handleRemoveFilterFromImage}
-                          className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                        >
-                          Remove from Image
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-xs text-gray-500">No filters available</div>
-              )}
-            </div>
-          )}
-
-          {/* Filter List */}
-          {filters.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium text-gray-700">Filters ({filters.length})</h4>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {filters.map((filter) => (
-                  <div
-                    key={filter.id}
-                    className="border border-gray-200 rounded p-2"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium">
-                        Filter ({filter.primitives.length} effects)
-                      </span>
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => setEditingFilter(editingFilter === filter.id ? null : filter.id)}
-                          className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                        >
-                          {editingFilter === filter.id ? 'Done' : 'Edit'}
-                        </button>
-                        <button
-                          onClick={() => duplicateFilter(filter.id)}
-                          className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-50"
-                        >
-                          Copy
-                        </button>
-                        <button
-                          onClick={() => handleRemoveFilter(filter.id)}
-                          className="px-2 py-1 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    </div>
-
-                    {editingFilter === filter.id && (
-                      <div className="space-y-3">
-                        {/* Add Primitive */}
-                        <div>
-                          <label className="block text-xs text-gray-600 mb-1">Add Effect</label>
-                          <select
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                handleAddPrimitive(filter.id, e.target.value as FilterPrimitiveType['type']);
-                                e.target.value = '';
-                              }
-                            }}
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                          >
-                            <option value="">Select effect...</option>
-                            <option value="feGaussianBlur">Blur</option>
-                            <option value="feOffset">Offset</option>
-                            <option value="feFlood">Flood</option>
-                            <option value="feDropShadow">Drop Shadow</option>
-                            <option value="feColorMatrix">Color Matrix</option>
-                            <option value="feComposite">Composite</option>
-                          </select>
-                        </div>
-
-                        {/* Primitive List */}
-                        {filter.primitives.map((primitive, index) => (
-                          <div key={index} className="border border-gray-100 rounded p-2">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-medium">{primitive.type}</span>
-                              <button
-                                onClick={() => handleRemovePrimitive(filter.id, index)}
-                                className="px-1 py-0.5 text-xs border border-red-300 text-red-600 rounded hover:bg-red-50"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                            {renderPrimitiveEditor(primitive, filter.id, index)}
-                          </div>
-                        ))}
-                      </div>
+      {/* Apply to Selected Elements */}
+      {(selectedPath || selection.selectedTexts.length > 0 || selection.selectedGroups.length > 0 || selection.selectedImages.length > 0) && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px', borderTop: '1px solid #e9ecef' }}>
+          <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+            Apply to Selected Elements:
+          </span>
+          {filters.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {filters.map((filter) => (
+                <div key={filter.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span style={{ fontSize: '11px', color: '#666', fontWeight: '500' }}>
+                    Filter ({filter.primitives.length} effects)
+                  </span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                    {selectedPath && (
+                      <button
+                        onClick={() => handleApplyFilterToPath(filter.id)}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '10px',
+                          border: '1px solid #007bff',
+                          backgroundColor: '#fff',
+                          color: '#007bff',
+                          borderRadius: '3px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Apply to Path
+                      </button>
+                    )}
+                    {selection.selectedTexts.length > 0 && (
+                      <button
+                        onClick={() => handleApplyFilterToText(filter.id)}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '10px',
+                          border: '1px solid #007bff',
+                          backgroundColor: '#fff',
+                          color: '#007bff',
+                          borderRadius: '3px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Apply to Text ({selection.selectedTexts.length})
+                      </button>
+                    )}
+                    {selection.selectedGroups.length > 0 && (
+                      <button
+                        onClick={() => handleApplyFilterToGroup(filter.id)}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '10px',
+                          border: '1px solid #007bff',
+                          backgroundColor: '#fff',
+                          color: '#007bff',
+                          borderRadius: '3px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Apply to Group ({selection.selectedGroups.length})
+                      </button>
+                    )}
+                    {selection.selectedImages.length > 0 && (
+                      <button
+                        onClick={() => handleApplyFilterToImage(filter.id)}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '10px',
+                          border: '1px solid #007bff',
+                          backgroundColor: '#fff',
+                          color: '#007bff',
+                          borderRadius: '3px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Apply to Image ({selection.selectedImages.length})
+                      </button>
                     )}
                   </div>
-                ))}
+                </div>
+              ))}
+              
+              {/* Remove Filter Buttons */}
+              <div style={{ paddingTop: '8px', borderTop: '1px solid #e9ecef' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                  {selectedPath && selectedPath.style.filter && (
+                    <button
+                      onClick={handleRemoveFilterFromPath}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        border: '1px solid #dc3545',
+                        backgroundColor: '#fff',
+                        color: '#dc3545',
+                        borderRadius: '3px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Remove from Path
+                    </button>
+                  )}
+                  {selection.selectedTexts.length > 0 && (
+                    <button
+                      onClick={handleRemoveFilterFromText}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        border: '1px solid #dc3545',
+                        backgroundColor: '#fff',
+                        color: '#dc3545',
+                        borderRadius: '3px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Remove from Text
+                    </button>
+                  )}
+                  {selection.selectedGroups.length > 0 && (
+                    <button
+                      onClick={handleRemoveFilterFromGroup}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        border: '1px solid #dc3545',
+                        backgroundColor: '#fff',
+                        color: '#dc3545',
+                        borderRadius: '3px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Remove from Group
+                    </button>
+                  )}
+                  {selection.selectedImages.length > 0 && (
+                    <button
+                      onClick={handleRemoveFilterFromImage}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        border: '1px solid #dc3545',
+                        backgroundColor: '#fff',
+                        color: '#dc3545',
+                        borderRadius: '3px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Remove from Image
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
+          ) : (
+            <div style={{ fontSize: '11px', color: '#999' }}>No filters available</div>
           )}
         </div>
+      )}
+
+      {/* Filter List */}
+      {filters.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+            Filters ({filters.length}):
+          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '250px', overflow: 'auto' }}>
+            {filters.map((filter) => (
+              <div
+                key={filter.id}
+                style={{
+                  padding: '8px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '4px',
+                  border: '1px solid #e9ecef'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '11px', color: '#666', fontWeight: '500' }}>
+                    Filter ({filter.primitives.length} effects)
+                  </span>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button
+                      onClick={() => setEditingFilter(editingFilter === filter.id ? null : filter.id)}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        border: '1px solid #6c757d',
+                        backgroundColor: '#fff',
+                        color: '#6c757d',
+                        borderRadius: '3px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {editingFilter === filter.id ? 'Done' : 'Edit'}
+                    </button>
+                    <button
+                      onClick={() => duplicateFilter(filter.id)}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        border: '1px solid #6c757d',
+                        backgroundColor: '#fff',
+                        color: '#6c757d',
+                        borderRadius: '3px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Copy
+                    </button>
+                    <button
+                      onClick={() => handleRemoveFilter(filter.id)}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        border: '1px solid #dc3545',
+                        backgroundColor: '#fff',
+                        color: '#dc3545',
+                        borderRadius: '3px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+                
+                {editingFilter === filter.id && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {/* Add Primitive */}
+                    <div>
+                      <label style={{ fontSize: '11px', color: '#666', marginBottom: '4px', display: 'block' }}>Add Effect</label>
+                      <select
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            handleAddPrimitive(filter.id, e.target.value as FilterPrimitiveType['type']);
+                            e.target.value = '';
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '4px',
+                          fontSize: '11px',
+                          border: '1px solid #ddd',
+                          borderRadius: '3px'
+                        }}
+                      >
+                        <option value="">Select effect...</option>
+                        <option value="feGaussianBlur">Blur</option>
+                        <option value="feOffset">Offset</option>
+                        <option value="feFlood">Flood</option>
+                        <option value="feDropShadow">Drop Shadow</option>
+                        <option value="feColorMatrix">Color Matrix</option>
+                        <option value="feComposite">Composite</option>
+                      </select>
+                    </div>
+
+                    {/* Primitive List */}
+                    {filter.primitives.map((primitive, index) => (
+                      <div key={index} style={{ 
+                        padding: '6px', 
+                        backgroundColor: '#ffffff', 
+                        borderRadius: '4px',
+                        border: '1px solid #e9ecef'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '500' }}>{primitive.type}</span>
+                          <button
+                            onClick={() => handleRemovePrimitive(filter.id, index)}
+                            style={{
+                              padding: '2px 6px',
+                              fontSize: '10px',
+                              border: '1px solid #dc3545',
+                              backgroundColor: '#fff',
+                              color: '#dc3545',
+                              borderRadius: '3px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        {renderPrimitiveEditor(primitive, filter.id, index)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
