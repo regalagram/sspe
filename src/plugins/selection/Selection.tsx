@@ -63,7 +63,24 @@ class RectSelectionManager {
       return false;
     }
 
-    if (mode.current === 'select' && !commandId && !controlPoint && e.button === 0 && !e.shiftKey) {
+    // Check if we're clicking on an element that should be handled by other plugins
+    const elementType = target.getAttribute('data-element-type');
+    const isSpecificElement = elementType && (elementType === 'image' || elementType === 'use' || elementType === 'text');
+    
+    // Allow rectangle selection to start if:
+    // - We're in select mode
+    // - No control point interaction
+    // - Left mouse button
+    // - No shift key (shift is for adding to selection)
+    // - No specific element interaction (commandId only exists for paths/commands, not for empty space)
+    // - AND clicking on empty space (no commandId and no specific element type)
+    const shouldStartRectSelection = mode.current === 'select' && 
+                                   !controlPoint && 
+                                   e.button === 0 && 
+                                   !e.shiftKey && 
+                                   (!commandId && !isSpecificElement);
+
+    if (shouldStartRectSelection) {
       const svgPoint = this.getSVGPoint(e, context.svgRef);
       this.state.isSelecting = true;
       this.state.selectionStart = svgPoint;
@@ -91,8 +108,10 @@ class RectSelectionManager {
   };
 
   handlePointerUp = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
+    const { clearSelection } = this.editorStore;
+    
     if (this.state.isSelecting && this.state.selectionRect) {
-      const { paths, texts, selectMultiple, clearSelection, selectInBox } = this.editorStore;
+      const { paths, texts, selectMultiple, selectInBox } = this.editorStore;
       
       const hasSignificantArea = this.state.selectionRect.width > 5 || this.state.selectionRect.height > 5;
       
@@ -109,6 +128,15 @@ class RectSelectionManager {
     }
 
     if (this.state.isSelecting) {
+      // Single click on empty space - clear selection
+      const target = e.target as SVGElement;
+      const elementType = target.getAttribute('data-element-type');
+      const isEmptySpaceClick = !context.commandId && !context.controlPoint && !elementType && !e.shiftKey;
+      
+      if (isEmptySpaceClick) {
+        clearSelection();
+      }
+      
       this.state.isSelecting = false;
       this.state.selectionStart = null;
       this.state.selectionRect = null;
@@ -238,7 +266,10 @@ export const SelectionToolsComponent: React.FC = () => {
     selection.selectedPaths.length + 
     selection.selectedSubPaths.length + 
     selection.selectedCommands.length +
-    (selection.selectedTexts?.length || 0);
+    (selection.selectedTexts?.length || 0) +
+    (selection.selectedImages?.length || 0) +
+    (selection.selectedUses?.length || 0) +
+    (selection.selectedGroups?.length || 0);
   
   return (
     <div>

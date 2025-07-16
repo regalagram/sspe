@@ -42,7 +42,10 @@ export function executeDelete(editorState?: any) {
     state.selection.selectedPaths.length > 0 ||
     state.selection.selectedSubPaths.length > 0 ||
     state.selection.selectedCommands.length > 0 ||
-    state.selection.selectedTexts?.length > 0;
+    state.selection.selectedTexts?.length > 0 ||
+    state.selection.selectedGroups?.length > 0 ||
+    state.selection.selectedImages?.length > 0 ||
+    state.selection.selectedUses?.length > 0;
   if (!hasSelection) return;
 
   // Save current state to history before deletion
@@ -70,6 +73,27 @@ export function executeDelete(editorState?: any) {
     });
   }
 
+  // Delete selected groups
+  if (state.selection.selectedGroups) {
+    state.selection.selectedGroups.forEach((groupId: string) => {
+      state.removeGroup(groupId);
+    });
+  }
+
+  // Delete selected images
+  if (state.selection.selectedImages) {
+    state.selection.selectedImages.forEach((imageId: string) => {
+      state.removeImage(imageId);
+    });
+  }
+
+  // Delete selected use elements
+  if (state.selection.selectedUses) {
+    state.selection.selectedUses.forEach((useId: string) => {
+      state.removeUse(useId);
+    });
+  }
+
   // Eliminar paths vacíos
   setTimeout(() => {
     const current = useEditorStore.getState();
@@ -90,7 +114,10 @@ export const DeleteComponent: React.FC = () => {
     selection.selectedPaths.length > 0 || 
     selection.selectedSubPaths.length > 0 || 
     selection.selectedCommands.length > 0 ||
-    (selection.selectedTexts?.length || 0) > 0;
+    (selection.selectedTexts?.length || 0) > 0 ||
+    (selection.selectedGroups?.length || 0) > 0 ||
+    (selection.selectedImages?.length || 0) > 0 ||
+    (selection.selectedUses?.length || 0) > 0;
 
   const handleDelete = () => {
     executeDelete();

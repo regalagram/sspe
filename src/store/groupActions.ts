@@ -2,6 +2,7 @@ import { StateCreator } from 'zustand';
 import { EditorState, SVGGroup, SVGGroupChild, Point, GroupLockLevel } from '../types';
 import { generateId } from '../utils/id-utils';
 import { TextActions } from './textActions';
+import { SVGElementActions } from './svgElementActions';
 import { generateGroupSVG, downloadGroupSVG } from '../utils/group-svg-utils';
 
 export interface GroupActions {
@@ -49,7 +50,7 @@ export interface GroupActions {
 }
 
 export const createGroupActions: StateCreator<
-  EditorState & GroupActions & TextActions & { moveSubPath: (subPathId: string, delta: Point, skipGroupSync?: boolean) => void; },
+  EditorState & GroupActions & TextActions & SVGElementActions & { moveSubPath: (subPathId: string, delta: Point, skipGroupSync?: boolean) => void; },
   [],
   [],
   GroupActions
@@ -89,6 +90,8 @@ export const createGroupActions: StateCreator<
     const selectedTexts = selection.selectedTexts ?? [];
     const selectedGroups = selection.selectedGroups ?? [];
     const selectedSubPaths = selection.selectedSubPaths ?? [];
+    const selectedImages = selection.selectedImages ?? [];
+    const selectedUses = selection.selectedUses ?? [];
 
     // Find paths that contain selected sub-paths
     const pathsFromSubPaths = new Set<string>();
@@ -108,7 +111,9 @@ export const createGroupActions: StateCreator<
     const children: SVGGroupChild[] = [
       ...Array.from(allPathIds).map(id => ({ type: 'path' as const, id })),
       ...selectedTexts.map(id => ({ type: 'text' as const, id })),
-      ...selectedGroups.map(id => ({ type: 'group' as const, id }))
+      ...selectedGroups.map(id => ({ type: 'group' as const, id })),
+      ...selectedImages.map(id => ({ type: 'image' as const, id })),
+      ...selectedUses.map(id => ({ type: 'use' as const, id }))
     ];
 
     if (children.length === 0) {
@@ -131,7 +136,9 @@ export const createGroupActions: StateCreator<
         selectedPaths: [],
         selectedTexts: [],
         selectedGroups: [newGroup.id],
-        selectedSubPaths: []
+        selectedSubPaths: [],
+        selectedImages: [],
+        selectedUses: []
       }
     }));
 
@@ -175,8 +182,8 @@ export const createGroupActions: StateCreator<
       // If deleteChildren is true, also delete all child elements
       if (deleteChildren) {
         // Helper function to recursively collect all child elements
-        const collectAllChildren = (group: any, allGroups: any[]): { paths: string[], texts: string[], groups: string[] } => {
-          const result = { paths: [] as string[], texts: [] as string[], groups: [] as string[] };
+        const collectAllChildren = (group: any, allGroups: any[]): { paths: string[], texts: string[], groups: string[], images: string[], uses: string[] } => {
+          const result = { paths: [] as string[], texts: [] as string[], groups: [] as string[], images: [] as string[], uses: [] as string[] };
           
           group.children.forEach((child: any) => {
             switch (child.type) {
@@ -194,7 +201,15 @@ export const createGroupActions: StateCreator<
                   result.paths.push(...nestedChildren.paths);
                   result.texts.push(...nestedChildren.texts);
                   result.groups.push(...nestedChildren.groups);
+                  result.images.push(...nestedChildren.images);
+                  result.uses.push(...nestedChildren.uses);
                 }
+                break;
+              case 'image':
+                result.images.push(child.id);
+                break;
+              case 'use':
+                result.uses.push(child.id);
                 break;
             }
           });
@@ -208,11 +223,15 @@ export const createGroupActions: StateCreator<
         newState.paths = newState.paths.filter(p => !allChildren.paths.includes(p.id));
         newState.texts = newState.texts.filter(t => !allChildren.texts.includes(t.id));
         newState.groups = newState.groups.filter(g => !allChildren.groups.includes(g.id));
+        newState.images = newState.images.filter(img => !allChildren.images.includes(img.id));
+        newState.uses = newState.uses.filter(u => !allChildren.uses.includes(u.id));
         
         // Remove from selection
         newState.selection.selectedPaths = newState.selection.selectedPaths.filter(id => !allChildren.paths.includes(id));
         newState.selection.selectedTexts = newState.selection.selectedTexts.filter(id => !allChildren.texts.includes(id));
         newState.selection.selectedGroups = newState.selection.selectedGroups.filter(id => !allChildren.groups.includes(id));
+        newState.selection.selectedImages = newState.selection.selectedImages.filter(id => !allChildren.images.includes(id));
+        newState.selection.selectedUses = newState.selection.selectedUses.filter(id => !allChildren.uses.includes(id));
       }
       
       return newState;
@@ -237,6 +256,10 @@ export const createGroupActions: StateCreator<
         exists = state.texts.some(t => t.id === childId);
       } else if (childType === 'group') {
         exists = state.groups.some(g => g.id === childId);
+      } else if (childType === 'image') {
+        exists = state.images.some(img => img.id === childId);
+      } else if (childType === 'use') {
+        exists = state.uses.some(u => u.id === childId);
       }
       if (!exists) {
         if (typeof window !== 'undefined') {
@@ -328,6 +351,14 @@ export const createGroupActions: StateCreator<
         selectedTexts: [
           ...state.selection.selectedTexts,
           ...group.children.filter(c => c.type === 'text').map(c => c.id)
+        ],
+        selectedImages: [
+          ...state.selection.selectedImages,
+          ...group.children.filter(c => c.type === 'image').map(c => c.id)
+        ],
+        selectedUses: [
+          ...state.selection.selectedUses,
+          ...group.children.filter(c => c.type === 'use').map(c => c.id)
         ]
       }
     }));
@@ -368,6 +399,16 @@ export const createGroupActions: StateCreator<
       if (child.type === 'group') {
         if (typeof get().moveGroup === 'function') {
           get().moveGroup(child.id, delta);
+        }
+      }
+      if (child.type === 'image') {
+        if (typeof get().moveImage === 'function') {
+          get().moveImage(child.id, delta);
+        }
+      }
+      if (child.type === 'use') {
+        if (typeof get().moveUse === 'function') {
+          get().moveUse(child.id, delta);
         }
       }
     });

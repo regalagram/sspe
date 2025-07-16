@@ -28,7 +28,7 @@ export class GuidelinesManager {
       distanceGuideColor: '#00aa00', // Green for distance guidelines
       distanceTolerance: 5 // pixels - tolerance for distance matching
     };
-    console.log('GuidelinesManager initialized with config:', this.config);
+    //console.log('GuidelinesManager initialized with config:', this.config);
   }
 
   public static getInstance(): GuidelinesManager {

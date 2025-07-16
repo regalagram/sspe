@@ -14,6 +14,9 @@ const TransformPlugin: React.FC = () => {
   const selection = useEditorStore((state) => state.selection);
   const paths = useEditorStore((state) => state.paths);
   const texts = useEditorStore((state) => state.texts);
+  const images = useEditorStore((state) => state.images);
+  const uses = useEditorStore((state) => state.uses);
+  const groups = useEditorStore((state) => state.groups);
   const viewport = useEditorStore((state) => state.viewport);
 
   // Initialize transform manager with editor store
@@ -50,15 +53,18 @@ const TransformPlugin: React.FC = () => {
       setBounds(null);
       setHandles([]);
     }
-  }, [selection.selectedCommands, selection.selectedSubPaths, selection.selectedTexts, paths, texts]);
+  }, [selection.selectedCommands, selection.selectedSubPaths, selection.selectedTexts, selection.selectedImages, selection.selectedUses, selection.selectedGroups, paths, texts, images, uses, groups]);
 
-  // Update during transformation
+  // Update during transformation and movement
   useEffect(() => {
     const interval = setInterval(() => {
       const isCurrentlyTransforming = transformManager.isTransforming();
+      const isCurrentlyMoving = transformManager.isMoving();
       
-      if (isCurrentlyTransforming) {
-        // Only update bounds/handles during transformation for live feedback
+      if (isCurrentlyTransforming || isCurrentlyMoving) {
+        // Update bounds/handles during transformation or movement for live feedback
+        transformManager.setEditorStore(useEditorStore.getState()); // Ensure latest state
+        transformManager.updateTransformState();
         setBounds(transformManager.getBounds());
         setHandles(transformManager.getHandles());
       }

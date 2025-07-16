@@ -7,12 +7,12 @@ export const GuidelinesRenderer: React.FC = () => {
   const { enabledFeatures, viewport } = useEditorStore();
   const [activeSnap, setActiveSnap] = useState<ActiveSnap | null>(null);
   
-  console.log('GuidelinesRenderer render - guidelinesEnabled:', enabledFeatures.guidelinesEnabled, 'activeSnap:', activeSnap);
+  //console.log('GuidelinesRenderer render - guidelinesEnabled:', enabledFeatures.guidelinesEnabled, 'activeSnap:', activeSnap);
 
   useEffect(() => {
     // Subscribe to guideline manager updates
     const unsubscribe = guidelinesManager.subscribe((snap) => {
-      console.log('GuidelinesRenderer received snap update:', snap);
+      //console.log('GuidelinesRenderer received snap update:', snap);
       setActiveSnap(snap);
     });
 

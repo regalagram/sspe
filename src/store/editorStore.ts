@@ -14,6 +14,7 @@ import { TransformActions, createTransformActions } from './transformActions';
 import { TextActions, createTextActions } from './textActions';
 import { GradientActions, createGradientActions } from './gradientActions';
 import { GroupActions, createGroupActions } from './groupActions';
+import { SVGElementActions, createSVGElementActions } from './svgElementActions';
 // Combined actions interface
 interface EditorActions extends 
   ViewportActions, 
@@ -25,7 +26,8 @@ interface EditorActions extends
   TransformActions,
   TextActions,
   GradientActions,
-  GroupActions {}
+  GroupActions,
+  SVGElementActions {}
 
 const loadInitialState = (): EditorState => {
   const savedState = loadEditorState();
@@ -180,6 +182,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     ...createTextActions(set, get, api),
     ...createGradientActions(set, get, api),
     ...createGroupActions(set, get, api),
+    ...createSVGElementActions(set, get, api),
   }))
 );
 

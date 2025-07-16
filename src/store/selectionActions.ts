@@ -11,12 +11,18 @@ export interface SelectionActions {
   selectText: (textId: string, addToSelection?: boolean) => void;
   selectTextMultiple: (textId: string, isShiftPressed?: boolean) => void;
   selectTextSpan: (textId: string, spanId: string, addToSelection?: boolean) => void;
-  selectMultiple: (ids: string[], type: 'paths' | 'subpaths' | 'commands' | 'texts' | 'textspans') => void;
-  addToSelection: (id: string, type: 'path' | 'subpath' | 'command' | 'text' | 'textspan') => void;
-  removeFromSelection: (id: string, type: 'path' | 'subpath' | 'command' | 'text' | 'textspan') => void;
+  selectGroup: (groupId: string, addToSelection?: boolean) => void;
+  selectImage: (imageId: string, addToSelection?: boolean) => void;
+  selectUse: (useId: string, addToSelection?: boolean) => void;
+  selectMultiple: (ids: string[], type: 'paths' | 'subpaths' | 'commands' | 'texts' | 'textspans' | 'groups' | 'images' | 'uses') => void;
+  addToSelection: (id: string, type: 'path' | 'subpath' | 'command' | 'text' | 'textspan' | 'group' | 'image' | 'use') => void;
+  removeFromSelection: (id: string, type: 'path' | 'subpath' | 'command' | 'text' | 'textspan' | 'group' | 'image' | 'use') => void;
   clearSelection: () => void;
   selectSubPathByPoint: (pathId: string, point: Point, isShiftPressed?: boolean) => void;
   selectTextByPoint: (point: Point, isShiftPressed?: boolean) => void;
+  selectImageByPoint: (point: Point, isShiftPressed?: boolean) => void;
+  selectUseByPoint: (point: Point, isShiftPressed?: boolean) => void;
+  selectElementByPoint: (point: Point, isShiftPressed?: boolean) => void;
   selectInBox: (box: { x: number; y: number; width: number; height: number }) => void;
 }
 
@@ -40,6 +46,14 @@ export const createSelectionActions: StateCreator<
         selectedCommands: [],
         selectedTexts: [],
         selectedTextSpans: [],
+        selectedGroups: [],
+        selectedImages: [],
+        selectedClipPaths: [],
+        selectedMasks: [],
+        selectedFilters: [],
+        selectedMarkers: [],
+        selectedSymbols: [],
+        selectedUses: [],
       },
     })),
 
@@ -340,6 +354,21 @@ export const createSelectionActions: StateCreator<
             selection.selectedTextSpans = [...selection.selectedTextSpans, id];
           }
           break;
+        case 'group':
+          if (!selection.selectedGroups.includes(id)) {
+            selection.selectedGroups = [...selection.selectedGroups, id];
+          }
+          break;
+        case 'image':
+          if (!selection.selectedImages.includes(id)) {
+            selection.selectedImages = [...selection.selectedImages, id];
+          }
+          break;
+        case 'use':
+          if (!selection.selectedUses.includes(id)) {
+            selection.selectedUses = [...selection.selectedUses, id];
+          }
+          break;
       }
       
       return { selection };
@@ -365,6 +394,15 @@ export const createSelectionActions: StateCreator<
         case 'textspan':
           selection.selectedTextSpans = selection.selectedTextSpans.filter(spanId => spanId !== id);
           break;
+        case 'group':
+          selection.selectedGroups = selection.selectedGroups.filter(groupId => groupId !== id);
+          break;
+        case 'image':
+          selection.selectedImages = selection.selectedImages.filter(imageId => imageId !== id);
+          break;
+        case 'use':
+          selection.selectedUses = selection.selectedUses.filter(useId => useId !== id);
+          break;
       }
       
       return { selection };
@@ -379,6 +417,14 @@ export const createSelectionActions: StateCreator<
       selectedControlPoints: [] as string[],
       selectedTexts: [] as string[],
       selectedTextSpans: [] as string[],
+      selectedGroups: [] as string[],
+      selectedImages: [] as string[],
+      selectedClipPaths: [] as string[],
+      selectedMasks: [] as string[],
+      selectedFilters: [] as string[],
+      selectedMarkers: [] as string[],
+      selectedSymbols: [] as string[],
+      selectedUses: [] as string[],
     };
 
     // Check texts in box
@@ -419,11 +465,189 @@ export const createSelectionActions: StateCreator<
       });
     });
 
+    // Check images in box
+    state.images.forEach(image => {
+      if (image.locked) return;
+      
+      if (image.x < box.x + box.width &&
+          image.x + image.width > box.x &&
+          image.y < box.y + box.height &&
+          image.y + image.height > box.y) {
+        newSelection.selectedImages.push(image.id);
+      }
+    });
+
+    // Check use elements in box
+    state.uses.forEach(use => {
+      if (use.locked) return;
+      
+      const x = use.x || 0;
+      const y = use.y || 0;
+      const width = use.width || 100;
+      const height = use.height || 100;
+      
+      if (x < box.x + box.width &&
+          x + width > box.x &&
+          y < box.y + box.height &&
+          y + height > box.y) {
+        newSelection.selectedUses.push(use.id);
+      }
+    });
+
     set(state => ({
       selection: {
         ...state.selection,
         ...newSelection
       }
     }));
+  },
+
+  // New selection functions for SVG elements
+  selectGroup: (groupId, addToSelection = false) =>
+    set((state) => ({
+      selection: addToSelection ? {
+        ...state.selection,
+        selectedGroups: state.selection.selectedGroups.includes(groupId) 
+          ? state.selection.selectedGroups 
+          : [...state.selection.selectedGroups, groupId],
+      } : {
+        ...state.selection,
+        selectedPaths: [],
+        selectedSubPaths: [],
+        selectedCommands: [],
+        selectedTexts: [],
+        selectedTextSpans: [],
+        selectedGroups: [groupId],
+        selectedImages: [],
+        selectedClipPaths: [],
+        selectedMasks: [],
+        selectedFilters: [],
+        selectedMarkers: [],
+        selectedSymbols: [],
+        selectedUses: [],
+      },
+    })),
+
+  selectImage: (imageId, addToSelection = false) =>
+    set((state) => {
+      const image = state.images.find(img => img.id === imageId);
+      if (image?.locked) return state;
+
+      return {
+        selection: addToSelection ? {
+          ...state.selection,
+          selectedImages: state.selection.selectedImages.includes(imageId) 
+            ? state.selection.selectedImages 
+            : [...state.selection.selectedImages, imageId],
+        } : {
+          ...state.selection,
+          selectedPaths: [],
+          selectedSubPaths: [],
+          selectedCommands: [],
+          selectedTexts: [],
+          selectedTextSpans: [],
+          selectedGroups: [],
+          selectedImages: [imageId],
+          selectedClipPaths: [],
+          selectedMasks: [],
+          selectedFilters: [],
+          selectedMarkers: [],
+          selectedSymbols: [],
+          selectedUses: [],
+        },
+      };
+    }),
+
+  selectUse: (useId, addToSelection = false) =>
+    set((state) => {
+      const use = state.uses.find(u => u.id === useId);
+      if (use?.locked) return state;
+
+      return {
+        selection: addToSelection ? {
+          ...state.selection,
+          selectedUses: state.selection.selectedUses.includes(useId) 
+            ? state.selection.selectedUses 
+            : [...state.selection.selectedUses, useId],
+        } : {
+          ...state.selection,
+          selectedPaths: [],
+          selectedSubPaths: [],
+          selectedCommands: [],
+          selectedTexts: [],
+          selectedTextSpans: [],
+          selectedGroups: [],
+          selectedImages: [],
+          selectedClipPaths: [],
+          selectedMasks: [],
+          selectedFilters: [],
+          selectedMarkers: [],
+          selectedSymbols: [],
+          selectedUses: [useId],
+        },
+      };
+    }),
+
+  selectImageByPoint: (point, isShiftPressed = false) => {
+    const state = get();
+    
+    // Find image at point
+    const imageAtPoint = state.images.find(image => {
+      if (image.locked) return false;
+      
+      return point.x >= image.x && 
+             point.x <= image.x + image.width &&
+             point.y >= image.y && 
+             point.y <= image.y + image.height;
+    });
+    
+    if (imageAtPoint) {
+      state.selectImage(imageAtPoint.id, isShiftPressed);
+    }
+  },
+
+  selectUseByPoint: (point, isShiftPressed = false) => {
+    const state = get();
+    
+    // Find use element at point
+    const useAtPoint = state.uses.find(use => {
+      if (use.locked) return false;
+      
+      const x = use.x || 0;
+      const y = use.y || 0;
+      const width = use.width || 100; // Default width
+      const height = use.height || 100; // Default height
+      
+      return point.x >= x && 
+             point.x <= x + width &&
+             point.y >= y && 
+             point.y <= y + height;
+    });
+    
+    if (useAtPoint) {
+      state.selectUse(useAtPoint.id, isShiftPressed);
+    }
+  },
+
+  selectElementByPoint: (point, isShiftPressed = false) => {
+    const state = get();
+    
+    // Try to select in order of priority: images, use elements, then existing logic
+    state.selectImageByPoint(point, isShiftPressed);
+    if (state.selection.selectedImages.length > 0) return;
+    
+    state.selectUseByPoint(point, isShiftPressed);
+    if (state.selection.selectedUses.length > 0) return;
+    
+    // Fall back to existing selection logic
+    state.selectTextByPoint(point, isShiftPressed);
+    if (state.selection.selectedTexts.length > 0) return;
+    
+    // Try subpath selection for remaining elements
+    const pathsToCheck = state.paths.filter(path => !path.subPaths.every(sp => sp.locked));
+    for (const path of pathsToCheck) {
+      state.selectSubPathByPoint(path.id, point, isShiftPressed);
+      if (state.selection.selectedSubPaths.length > 0) break;
+    }
   },
 });

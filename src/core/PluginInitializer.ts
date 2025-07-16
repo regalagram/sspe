@@ -32,6 +32,11 @@ import { TextStylePlugin } from '../plugins/text-style';
 import { GroupRendererPlugin } from '../plugins/group-renderer';
 import { GroupControlsPlugin } from '../plugins/group-controls';
 import { GuidelinesPlugin } from '../plugins/guidelines';
+import { ImagePlugin } from '../plugins/images';
+import { FilterPlugin } from '../plugins/filters';
+import { ClippingPlugin } from '../plugins/clipping';
+import { MarkerPlugin } from '../plugins/markers';
+import { SymbolPlugin } from '../plugins/symbols';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -50,6 +55,11 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(PathRendererPlugin);
   pluginManager.registerPlugin(TextRendererPlugin);
   pluginManager.registerPlugin(GroupRendererPlugin);
+  pluginManager.registerPlugin(ImagePlugin); // Image rendering and controls
+  pluginManager.registerPlugin(FilterPlugin); // Filter definitions (must be before paths use them)
+  pluginManager.registerPlugin(ClippingPlugin); // Clip path and mask definitions
+  pluginManager.registerPlugin(MarkerPlugin); // Marker definitions
+  pluginManager.registerPlugin(SymbolPlugin); // Symbol definitions and use instances
   pluginManager.registerPlugin(GuidelinesPlugin);
   pluginManager.registerPlugin(VisualDebugPlugin);
   pluginManager.registerPlugin(CommandPlugin);

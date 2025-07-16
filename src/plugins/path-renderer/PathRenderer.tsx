@@ -6,6 +6,8 @@ import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
 import { getStyleValue } from '../../utils/gradient-utils';
 import { guidelinesManager } from '../guidelines/GuidelinesManager';
+import { Point } from '../../types';
+import { captureAllSelectedElementsPositions, moveAllCapturedElements, DraggedElementsData } from '../../utils/drag-utils';
 
 // Global path drag manager to handle pointer events from plugin system
 import { PointerEventContext } from '../../core/PluginSystem';
@@ -39,12 +41,17 @@ export const PathRenderer: React.FC = () => {
     paths, 
     texts,
     groups,
+    images,
+    uses,
     selection, 
     viewport, 
     selectSubPathByPoint, 
     selectSubPathMultiple,
     moveSubPath, 
     moveText,
+    moveImage,
+    moveGroup,
+    moveUse,
     pushToHistory, 
     renderVersion, 
     enabledFeatures 
@@ -59,6 +66,7 @@ export const PathRenderer: React.FC = () => {
     lastPoint: { x: number; y: number } | null;
     svgElement: SVGSVGElement | null;
     dragStarted: boolean; // Track if actual dragging has begun
+    capturedElements: DraggedElementsData | null;
   }>({
     isDragging: false,
     subPathId: null,
@@ -66,6 +74,7 @@ export const PathRenderer: React.FC = () => {
     lastPoint: null,
     svgElement: null,
     dragStarted: false,
+    capturedElements: null,
   });
 
   const getTransformedPoint = (e: React.PointerEvent<SVGElement>, svgElement: SVGSVGElement) => {
@@ -88,6 +97,8 @@ export const PathRenderer: React.FC = () => {
       }
       
       const point = getTransformedPoint(e, svgElement);
+      const capturedElements = captureAllSelectedElementsPositions();
+      
       setDragState({
         isDragging: true,
         subPathId,
@@ -95,6 +106,7 @@ export const PathRenderer: React.FC = () => {
         lastPoint: point,
         svgElement: svgElement,
         dragStarted: false, // Will be set to true when actual movement begins
+        capturedElements,
       });
       
       // Note: We don't call pushToHistory() or transformManager.setMoving(true) here
@@ -172,19 +184,35 @@ export const PathRenderer: React.FC = () => {
       moveSubPath(subPathId, delta);
     });
     
-    // Also move selected texts if there's a mixed selection
-    if (selection.selectedTexts.length > 0) {
-      selection.selectedTexts.forEach(textId => {
-        moveText(textId, delta);
-      });
+    // Use the centralized utility to move all other selected elements
+    if (dragState.capturedElements) {
+      const totalOffset = {
+        x: snappedPoint.x - dragState.startPoint!.x,
+        y: snappedPoint.y - dragState.startPoint!.y,
+      };
+      
+      moveAllCapturedElements(
+        dragState.capturedElements,
+        totalOffset,
+        false, // Grid snapping disabled for now
+        10     // Grid size (not used since snapping is disabled)
+      );
     }
+    
+    console.log('handlePointerMove - Moving subpaths with other elements:', {
+      subpaths: subPathsToMove.length,
+      texts: dragState.capturedElements ? Object.keys(dragState.capturedElements.texts).length : 0,
+      images: dragState.capturedElements ? Object.keys(dragState.capturedElements.images).length : 0,
+      uses: dragState.capturedElements ? Object.keys(dragState.capturedElements.uses).length : 0,
+      groups: dragState.capturedElements ? Object.keys(dragState.capturedElements.groups).length : 0
+    });
     
     // Update last point (use snapped point to maintain consistent movement)
     setDragState(prev => ({
       ...prev,
       lastPoint: snappedPoint,
     }));
-  }, [dragState, moveSubPath, moveText, selection.selectedSubPaths, selection.selectedTexts, viewport, pushToHistory, enabledFeatures.guidelinesEnabled, paths, texts, groups]);
+  }, [dragState, moveSubPath, selection.selectedSubPaths, viewport, pushToHistory, enabledFeatures.guidelinesEnabled, paths, texts, groups]);
 
   // Handle pointer up to stop dragging
   const handlePointerUp = useCallback((e?: React.PointerEvent<SVGElement>) => {
@@ -205,6 +233,7 @@ export const PathRenderer: React.FC = () => {
       lastPoint: null,
       svgElement: null,
       dragStarted: false,
+      capturedElements: null,
     });
   }, [dragState.isDragging, dragState.dragStarted, enabledFeatures.guidelinesEnabled]);
 

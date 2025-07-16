@@ -5,15 +5,14 @@ import { useEditorStore } from '../../store/editorStore';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { getCommandPosition } from '../../utils/path-utils';
 import { transformManager } from '../transform/TransformManager';
+import { captureAllSelectedElementsPositions, moveAllCapturedElements, DraggedElementsData } from '../../utils/drag-utils';
 
 // Global state for text dragging
 let textDragState = {
   isDragging: false,
   textId: null as string | null,
   startPoint: null as { x: number; y: number } | null,
-  initialTextPositions: {} as { [id: string]: { x: number; y: number } },
-  initialCommandPositions: {} as { [id: string]: { x: number; y: number } },
-  initialSubPathCommands: {} as { [subPathId: string]: string[] }, // Track which commands belong to each subpath
+  capturedElements: null as DraggedElementsData | null,
   dragStarted: false,
 };
 
@@ -24,7 +23,7 @@ const handleTextPointerDown = (e: React.PointerEvent<SVGElement>, context: Point
   
   if ((elementType === 'text' || elementType === 'multiline-text') && textId) {
     const store = useEditorStore.getState();
-    const { selection, texts, paths, addToSelection, selectText } = store;
+    const { selection, addToSelection, selectText } = store;
     
     // Handle selection logic
     if (e.shiftKey) {
@@ -48,67 +47,15 @@ const handleTextPointerDown = (e: React.PointerEvent<SVGElement>, context: Point
     
     // Get updated selection after any changes made above
     const updatedStore = useEditorStore.getState();
-    const updatedSelection = updatedStore.selection;
-    const updatedTexts = updatedStore.texts;
-    const updatedPaths = updatedStore.paths;
     
-    // Capture initial positions of all selected texts
-    const initialTextPositions: { [id: string]: { x: number; y: number } } = {};
-    updatedSelection.selectedTexts.forEach(selectedTextId => {
-      const text = updatedTexts.find(t => t.id === selectedTextId);
-      if (text) {
-        initialTextPositions[selectedTextId] = { x: text.x, y: text.y };
-      }
-    });
-    
-    // Capture initial positions of all selected commands
-    const initialCommandPositions: { [id: string]: { x: number; y: number } } = {};
-    updatedSelection.selectedCommands.forEach(commandId => {
-      updatedPaths.forEach(path => {
-        path.subPaths.forEach(subPath => {
-          const command = subPath.commands.find(cmd => cmd.id === commandId);
-          if (command) {
-            const pos = getCommandPosition(command);
-            if (pos) {
-              initialCommandPositions[commandId] = { x: pos.x, y: pos.y };
-            }
-          }
-        });
-      });
-    });
-    
-    // Capture initial positions of all commands in selected sub-paths (avoid duplicates)
-    const initialSubPathCommands: { [subPathId: string]: string[] } = {};
-    updatedSelection.selectedSubPaths.forEach(subPathId => {
-      updatedPaths.forEach(path => {
-        const subPath = path.subPaths.find(sp => sp.id === subPathId);
-        if (subPath) {
-          const commandIds: string[] = [];
-          subPath.commands.forEach(command => {
-            // Only add if not already captured from selectedCommands
-            if (!initialCommandPositions[command.id]) {
-              const pos = getCommandPosition(command);
-              if (pos) {
-                initialCommandPositions[command.id] = { x: pos.x, y: pos.y };
-                commandIds.push(command.id);
-              }
-            } else {
-              // Still track the command ID for this subpath even if position already captured
-              commandIds.push(command.id);
-            }
-          });
-          initialSubPathCommands[subPathId] = commandIds;
-        }
-      });
-    });
+    // Capture initial positions of all selected elements using the centralized utility
+    const capturedElements = captureAllSelectedElementsPositions();
     
     textDragState = {
       isDragging: true,
       textId,
       startPoint: point,
-      initialTextPositions,
-      initialCommandPositions,
-      initialSubPathCommands,
+      capturedElements,
       dragStarted: false,
     };
     
@@ -124,7 +71,7 @@ const handleTextPointerMove = (e: React.PointerEvent<SVGElement>, context: Point
   }
   
   const store = useEditorStore.getState();
-  const { moveText, moveCommand, texts } = store;
+  const { moveSubPath, selection } = store;
   const currentPoint = getSVGPoint(e, context.svgRef, store.viewport);
   
   // Check drag threshold
@@ -147,34 +94,33 @@ const handleTextPointerMove = (e: React.PointerEvent<SVGElement>, context: Point
     y: currentPoint.y - textDragState.startPoint.y,
   };
   
-  // Move all selected texts
-  Object.keys(textDragState.initialTextPositions).forEach(textId => {
-    const initialPos = textDragState.initialTextPositions[textId];
-    const newPosition = {
-      x: initialPos.x + totalOffset.x,
-      y: initialPos.y + totalOffset.y,
+  // Move selected subpaths manually first (since they need special handling)
+  const subPathsToMove = selection.selectedSubPaths.length > 0 ? selection.selectedSubPaths : [];
+  subPathsToMove.forEach((subPathId: string) => {
+    const delta = {
+      x: totalOffset.x,
+      y: totalOffset.y,
     };
-    
-    const currentText = texts.find(t => t.id === textId);
-    if (currentText) {
-      const deltaFromCurrent = {
-        x: newPosition.x - currentText.x,
-        y: newPosition.y - currentText.y,
-      };
-      if (Math.abs(deltaFromCurrent.x) > 0.001 || Math.abs(deltaFromCurrent.y) > 0.001) {
-        moveText(textId, deltaFromCurrent);
-      }
-    }
+    moveSubPath(subPathId, delta);
   });
   
-  // Move all selected commands
-  Object.keys(textDragState.initialCommandPositions).forEach(commandId => {
-    const initialPos = textDragState.initialCommandPositions[commandId];
-    const newPosition = {
-      x: initialPos.x + totalOffset.x,
-      y: initialPos.y + totalOffset.y,
-    };
-    moveCommand(commandId, newPosition);
+  // Use the centralized utility to move all selected elements
+  if (textDragState.capturedElements) {
+    moveAllCapturedElements(
+      textDragState.capturedElements,
+      totalOffset,
+      false, // Grid snapping disabled for now
+      10     // Grid size (not used since snapping is disabled)
+    );
+  }
+  
+  console.log('handleTextPointerMove - Moving texts with other elements:', {
+    texts: textDragState.capturedElements ? Object.keys(textDragState.capturedElements.texts).length : 0,
+    subpaths: subPathsToMove.length,
+    commands: textDragState.capturedElements ? Object.keys(textDragState.capturedElements.commands).length : 0,
+    images: textDragState.capturedElements ? Object.keys(textDragState.capturedElements.images).length : 0,
+    uses: textDragState.capturedElements ? Object.keys(textDragState.capturedElements.uses).length : 0,
+    groups: textDragState.capturedElements ? Object.keys(textDragState.capturedElements.groups).length : 0
   });
   
   return true;
@@ -183,7 +129,7 @@ const handleTextPointerMove = (e: React.PointerEvent<SVGElement>, context: Point
 const handleTextPointerUp = (e: React.PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
   if (!textDragState.isDragging) return false;
   
-  // Show transform handles again when text dragging ends
+  // Show transform handles again
   if (textDragState.dragStarted) {
     transformManager.setMoving(false);
   }
@@ -192,31 +138,32 @@ const handleTextPointerUp = (e: React.PointerEvent<SVGElement>, context: Pointer
     isDragging: false,
     textId: null,
     startPoint: null,
-    initialTextPositions: {},
-    initialCommandPositions: {},
-    initialSubPathCommands: {},
+    capturedElements: null,
     dragStarted: false,
   };
   
   return true;
 };
 
-export const TextRendererPlugin: Plugin = {
+const textRendererPlugin: Plugin = {
   id: 'text-renderer',
   name: 'Text Renderer',
   version: '1.0.0',
   enabled: true,
-  ui: [
-    {
-      id: 'text-renderer',
-      component: TextRenderer,
-      position: 'svg-content',
-      order: 15, // Render after paths
-    },
-  ],
   pointerHandlers: {
     onPointerDown: handleTextPointerDown,
     onPointerMove: handleTextPointerMove,
     onPointerUp: handleTextPointerUp,
   },
+  ui: [
+    {
+      id: 'text-renderer-ui',
+      component: TextRenderer,
+      position: 'svg-content',
+      order: 10
+    }
+  ]
 };
+
+export const TextRendererPlugin = textRendererPlugin;
+export default textRendererPlugin;

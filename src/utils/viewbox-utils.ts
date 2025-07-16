@@ -92,8 +92,47 @@ export function calculateGlobalViewBox(svgElement: Element, precision: number = 
       tempSvg.appendChild(clonedText);
     });
 
+    // Process image elements
+    const imageNodes = svgElement.querySelectorAll('image');
+    imageNodes.forEach((imageNode) => {
+      const clonedImage = document.createElementNS(svgNS, 'image');
+
+      const imageAttributesToCopy = [
+        'x', 'y', 'width', 'height',
+        'href', 'preserveAspectRatio',
+        'transform', 'opacity'
+      ];
+
+      imageAttributesToCopy.forEach((attr) => {
+        if (imageNode.hasAttribute(attr)) {
+          clonedImage.setAttribute(attr, imageNode.getAttribute(attr)!);
+        }
+      });
+
+      tempSvg.appendChild(clonedImage);
+    });
+
+    // Process use elements
+    const useNodes = svgElement.querySelectorAll('use');
+    useNodes.forEach((useNode) => {
+      const clonedUse = document.createElementNS(svgNS, 'use');
+
+      const useAttributesToCopy = [
+        'x', 'y', 'width', 'height',
+        'href', 'transform'
+      ];
+
+      useAttributesToCopy.forEach((attr) => {
+        if (useNode.hasAttribute(attr)) {
+          clonedUse.setAttribute(attr, useNode.getAttribute(attr)!);
+        }
+      });
+
+      tempSvg.appendChild(clonedUse);
+    });
+
     // Check if we have any elements to measure
-    if (pathNodes.length === 0 && textNodes.length === 0) {
+    if (pathNodes.length === 0 && textNodes.length === 0 && imageNodes.length === 0 && useNodes.length === 0) {
       document.body.removeChild(tempSvg);
       return null;
     }

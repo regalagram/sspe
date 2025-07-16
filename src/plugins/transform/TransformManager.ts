@@ -34,6 +34,8 @@ interface TransformState {
   initialBounds: TransformBounds | null;
   initialCommands: { [commandId: string]: SVGCommand };
   initialTexts: { [textId: string]: any }; // Store initial text positions and properties
+  initialImages: { [imageId: string]: any }; // Store initial image positions and properties
+  initialUses: { [useId: string]: any }; // Store initial use element positions and properties
   onStateChange?: () => void; // Callback for state changes
   isMoving: boolean; // Track if selection is being moved (drag & drop)
 }
@@ -50,6 +52,8 @@ export class TransformManager {
     initialBounds: null,
     initialCommands: {},
     initialTexts: {},
+    initialImages: {},
+    initialUses: {},
     onStateChange: undefined,
     isMoving: false
   };
@@ -87,10 +91,10 @@ export class TransformManager {
   // Calculate bounds from selected commands or subpaths using DOM-based calculation
   calculateBounds(): TransformBounds | null {
     const store = this.editorStore || useEditorStore.getState();
-    const { selection, paths, texts } = store;
+    const { selection, paths, texts, images, uses } = store;
     
     // Create a temporary SVG element to calculate bounds using DOM
-    const tempSvg = this.createTempSVGForSelection(paths, selection, texts);
+    const tempSvg = this.createTempSVGForSelection(paths, selection, texts, images, uses);
     if (!tempSvg) {
       return null;
     }
@@ -133,7 +137,7 @@ export class TransformManager {
   }
 
   // Create a temporary SVG element containing only the selected elements
-  private createTempSVGForSelection(paths: any[], selection: any, texts?: any[]): SVGSVGElement | null {
+  private createTempSVGForSelection(paths: any[], selection: any, texts?: any[], images?: any[], uses?: any[]): SVGSVGElement | null {
     if (typeof document === 'undefined') return null;
 
     const svgNS = 'http://www.w3.org/2000/svg';
@@ -271,6 +275,46 @@ export class TransformManager {
       }
     }
 
+    // For selected images
+    if (selection.selectedImages?.length > 0 && images) {
+      for (const imageId of selection.selectedImages) {
+        const image = images.find((img: any) => img.id === imageId);
+        if (image) {
+          const imageElement = document.createElementNS(svgNS, 'image');
+          imageElement.setAttribute('x', image.x.toString());
+          imageElement.setAttribute('y', image.y.toString());
+          imageElement.setAttribute('width', image.width.toString());
+          imageElement.setAttribute('height', image.height.toString());
+          imageElement.setAttribute('href', image.href);
+          
+          if (image.opacity !== undefined) {
+            imageElement.setAttribute('opacity', image.opacity.toString());
+          }
+          
+          tempSvg.appendChild(imageElement);
+          hasContent = true;
+        }
+      }
+    }
+
+    // For selected use elements
+    if (selection.selectedUses?.length > 0 && uses) {
+      for (const useId of selection.selectedUses) {
+        const use = uses.find((u: any) => u.id === useId);
+        if (use) {
+          const useElement = document.createElementNS(svgNS, 'use');
+          useElement.setAttribute('href', use.href);
+          if (use.x !== undefined) useElement.setAttribute('x', use.x.toString());
+          if (use.y !== undefined) useElement.setAttribute('y', use.y.toString());
+          if (use.width !== undefined) useElement.setAttribute('width', use.width.toString());
+          if (use.height !== undefined) useElement.setAttribute('height', use.height.toString());
+          
+          tempSvg.appendChild(useElement);
+          hasContent = true;
+        }
+      }
+    }
+
     if (!hasContent) {
       document.body.removeChild(tempSvg);
       return null;
@@ -387,9 +431,15 @@ export class TransformManager {
       selection.selectedSubPaths.length > 0 || 
       selection.selectedCommands.length > 1 ||
       selection.selectedTexts?.length > 0 ||
+      selection.selectedImages?.length > 0 ||
+      selection.selectedUses?.length > 0 ||
       // Mixed selections are also valid
       (selection.selectedSubPaths.length > 0 && selection.selectedTexts?.length > 0) ||
-      (selection.selectedCommands.length > 0 && selection.selectedTexts?.length > 0)
+      (selection.selectedCommands.length > 0 && selection.selectedTexts?.length > 0) ||
+      (selection.selectedImages?.length > 0 && selection.selectedTexts?.length > 0) ||
+      (selection.selectedUses?.length > 0 && selection.selectedTexts?.length > 0) ||
+      (selection.selectedImages?.length > 0 && selection.selectedSubPaths.length > 0) ||
+      (selection.selectedUses?.length > 0 && selection.selectedSubPaths.length > 0)
     );
     
     return hasValidSelection;
@@ -758,7 +808,7 @@ export class TransformManager {
 
   private applyTransformToCommands(transform: (x: number, y: number) => Point) {
     const store = this.editorStore || useEditorStore.getState();
-    const { updateCommand, updateText } = store;
+    const { updateCommand, updateText, updateImage, updateUse } = store;
 
     // Transform selected commands
     for (const commandId of Object.keys(this.state.initialCommands)) {
@@ -811,6 +861,79 @@ export class TransformManager {
       // Apply the transform
       const { updateTextTransform } = store;
       updateTextTransform(textId, transformString);
+    }
+
+    // Transform selected images
+    for (const imageId of Object.keys(this.state.initialImages)) {
+      const initialImage = this.state.initialImages[imageId];
+      
+      if (this.state.mode === 'scale') {
+        // For scaling, transform all corners of the image
+        const { scaleX, scaleY, originX, originY } = this.getScaleParams();
+        
+        const topLeft = transform(initialImage.x, initialImage.y);
+        const bottomRight = transform(initialImage.x + initialImage.width, initialImage.y + initialImage.height);
+        
+        const newX = Math.min(topLeft.x, bottomRight.x);
+        const newY = Math.min(topLeft.y, bottomRight.y);
+        const newWidth = Math.abs(bottomRight.x - topLeft.x);
+        const newHeight = Math.abs(bottomRight.y - topLeft.y);
+        
+        updateImage(imageId, {
+          x: newX,
+          y: newY,
+          width: newWidth,
+          height: newHeight
+        });
+      } else if (this.state.mode === 'rotate') {
+        // For rotation, transform the center and maintain size
+        const centerX = initialImage.x + initialImage.width / 2;
+        const centerY = initialImage.y + initialImage.height / 2;
+        const transformedCenter = transform(centerX, centerY);
+        
+        updateImage(imageId, {
+          x: transformedCenter.x - initialImage.width / 2,
+          y: transformedCenter.y - initialImage.height / 2
+        });
+      }
+    }
+
+    // Transform selected use elements
+    for (const useId of Object.keys(this.state.initialUses)) {
+      const initialUse = this.state.initialUses[useId];
+      
+      if (this.state.mode === 'scale') {
+        // For scaling, transform all corners if use has dimensions
+        const width = initialUse.width || 100;
+        const height = initialUse.height || 100;
+        const x = initialUse.x || 0;
+        const y = initialUse.y || 0;
+        
+        const topLeft = transform(x, y);
+        const bottomRight = transform(x + width, y + height);
+        
+        const newX = Math.min(topLeft.x, bottomRight.x);
+        const newY = Math.min(topLeft.y, bottomRight.y);
+        const newWidth = Math.abs(bottomRight.x - topLeft.x);
+        const newHeight = Math.abs(bottomRight.y - topLeft.y);
+        
+        updateUse(useId, {
+          x: newX,
+          y: newY,
+          width: newWidth,
+          height: newHeight
+        });
+      } else if (this.state.mode === 'rotate') {
+        // For rotation, transform the position
+        const x = initialUse.x || 0;
+        const y = initialUse.y || 0;
+        const transformedPos = transform(x, y);
+        
+        updateUse(useId, {
+          x: transformedPos.x,
+          y: transformedPos.y
+        });
+      }
     }
   }
 
@@ -873,6 +996,8 @@ export class TransformManager {
     this.state.initialBounds = null;
     this.state.initialCommands = {};
     this.state.initialTexts = {};
+    this.state.initialImages = {};
+    this.state.initialUses = {};
 
     // Trigger state change to show handles again
     this.triggerStateChange();
@@ -880,7 +1005,7 @@ export class TransformManager {
 
   private storeInitialCommands() {
     const store = this.editorStore || useEditorStore.getState();
-    const { selection, paths, texts } = store;
+    const { selection, paths, texts, images, uses } = store;
 
     // Store selected commands
     for (const commandId of selection.selectedCommands) {
@@ -910,6 +1035,26 @@ export class TransformManager {
             // Deep copy spans for multiline text
             spans: text.spans ? text.spans.map((span: any) => ({ ...span })) : undefined
           };
+        }
+      }
+    }
+
+    // Store selected images
+    if (selection.selectedImages && images) {
+      for (const imageId of selection.selectedImages) {
+        const image = images.find((img: any) => img.id === imageId);
+        if (image) {
+          this.state.initialImages[imageId] = { ...image };
+        }
+      }
+    }
+
+    // Store selected use elements
+    if (selection.selectedUses && uses) {
+      for (const useId of selection.selectedUses) {
+        const use = uses.find((u: any) => u.id === useId);
+        if (use) {
+          this.state.initialUses[useId] = { ...use };
         }
       }
     }
