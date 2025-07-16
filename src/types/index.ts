@@ -79,6 +79,14 @@ export interface PathStyle {
   strokeLinecap?: 'butt' | 'round' | 'square';
   strokeLinejoin?: 'miter' | 'round' | 'bevel';
   fillRule?: 'nonzero' | 'evenodd';
+  // Referencias a elementos SVG adicionales
+  clipPath?: string; // Referencia a SVGClipPath.id (e.g., "url(#clip1)")
+  mask?: string; // Referencia a SVGMask.id (e.g., "url(#mask1)")
+  filter?: string; // Referencia a SVGFilter.id (e.g., "url(#filter1)")
+  markerStart?: string; // Referencia a SVGMarker.id (e.g., "url(#arrowStart)")
+  markerMid?: string; // Para vértices intermedios
+  markerEnd?: string; // Referencia a SVGMarker.id (e.g., "url(#arrowEnd)")
+  opacity?: number; // Opacidad general del elemento
 }
 
 export interface Point {
@@ -107,6 +115,13 @@ export interface SelectionState {
   selectedTexts: string[];
   selectedTextSpans: string[];
   selectedGroups: string[]; // Selected group IDs
+  selectedImages: string[]; // Selected image IDs
+  selectedClipPaths: string[]; // Selected clip path IDs
+  selectedMasks: string[]; // Selected mask IDs
+  selectedFilters: string[]; // Selected filter IDs
+  selectedMarkers: string[]; // Selected marker IDs
+  selectedSymbols: string[]; // Selected symbol IDs
+  selectedUses: string[]; // Selected use element IDs
   selectionBox?: BoundingBox;
 }
 
@@ -142,6 +157,13 @@ export interface EditorState {
   texts: TextElementType[];
   groups: SVGGroup[]; // SVG group elements
   gradients: GradientOrPattern[]; // Imported gradients and patterns
+  images: SVGImage[]; // Imágenes embebidas
+  clipPaths: SVGClipPath[]; // Clip paths
+  masks: SVGMask[]; // Masks
+  filters: SVGFilter[]; // Filtros y efectos
+  markers: SVGMarker[]; // Marcadores para paths
+  symbols: SVGSymbol[]; // Símbolos reutilizables
+  uses: SVGUse[]; // Instancias de use
   selection: SelectionState;
   viewport: ViewportState;
   grid: GridState;
@@ -276,12 +298,12 @@ export interface SVGGroup {
 }
 
 export interface SVGGroupChild {
-  type: 'path' | 'text' | 'group';
+  type: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use';
   id: string; // Reference to the actual element ID
 }
 
-// Update existing types to include groups
-export type ElementType = 'path' | 'text' | 'multiline-text' | 'group';
+// Update existing types to include all new elements
+export type ElementType = 'path' | 'text' | 'multiline-text' | 'group' | 'image' | 'clipPath' | 'mask' | 'filter' | 'marker' | 'symbol' | 'use';
 
 // Guidelines and Snapping Types
 export interface GuidelinePoint {
@@ -345,3 +367,119 @@ export interface ActiveSnap {
   targetPoint: Point;
   snapTime: number; // timestamp when snap started
 }
+
+// ============================================
+// Nuevos tipos para elementos SVG adicionales
+// ============================================
+
+// Imágenes embebidas (SVG <image>)
+export interface SVGImage {
+  id: string;
+  type: 'image';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  href: string; // URL o data URI (e.g., "image.png" o "data:image/png;base64,...")
+  preserveAspectRatio?: 'none' | 'xMinYMin' | 'xMidYMid' | 'xMaxYMax' | string;
+  transform?: string; // Transformaciones (rotate, scale, etc.)
+  style?: Partial<PathStyle>; // Estilos como opacity, filter, etc.
+  locked?: boolean; // Si está bloqueado para edición
+}
+
+// Clip paths (SVG <clipPath>)
+export interface SVGClipPath {
+  id: string;
+  type: 'clipPath';
+  clipPathUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
+  transform?: string; // Transformaciones en el clipPath
+  children: SVGGroupChild[]; // Referencias a paths, groups, etc., que forman el clip
+  style?: Partial<PathStyle>; // Estilos heredados, aunque clipPath ignora la mayoría
+  locked?: boolean;
+}
+
+// Masks (SVG <mask>)
+export interface SVGMask {
+  id: string;
+  type: 'mask';
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  maskUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
+  maskContentUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
+  transform?: string;
+  children: SVGGroupChild[]; // Contenido de la máscara (paths, texts, etc.)
+  style?: Partial<PathStyle>; // Estilos para el contenido de la máscara
+  locked?: boolean;
+}
+
+// Primitivas de filtro básicas
+export type FilterPrimitiveType =
+  | { type: 'feGaussianBlur'; stdDeviation: number; in?: string; result?: string; }
+  | { type: 'feOffset'; dx: number; dy: number; in?: string; result?: string; }
+  | { type: 'feFlood'; floodColor: string; floodOpacity?: number; result?: string; }
+  | { type: 'feComposite'; operator: 'over' | 'in' | 'out' | 'atop' | 'xor' | 'arithmetic'; in?: string; in2?: string; result?: string; }
+  | { type: 'feColorMatrix'; values: string; in?: string; result?: string; }
+  | { type: 'feDropShadow'; dx: number; dy: number; stdDeviation: number; floodColor: string; floodOpacity?: number; result?: string; }
+  | { type: 'feBlend'; mode: 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 'color-dodge' | 'color-burn' | 'hard-light' | 'soft-light' | 'difference' | 'exclusion'; in?: string; in2?: string; result?: string; }
+  | { type: 'feMorphology'; operator: 'erode' | 'dilate'; radius: number; in?: string; result?: string; };
+
+// Filtros (SVG <filter>)
+export interface SVGFilter {
+  id: string;
+  type: 'filter';
+  x?: number; // Coordenadas del filter region
+  y?: number;
+  width?: number;
+  height?: number;
+  filterUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
+  primitiveUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
+  primitives: FilterPrimitiveType[]; // Array de primitivas en orden
+  locked?: boolean; // Opcional, si filters son editables
+}
+
+// Markers (SVG <marker>)
+export interface SVGMarker {
+  id: string;
+  type: 'marker';
+  markerUnits?: 'strokeWidth' | 'userSpaceOnUse';
+  refX?: number;
+  refY?: number;
+  markerWidth?: number;
+  markerHeight?: number;
+  orient?: 'auto' | 'auto-start-reverse' | number; // Ángulo en grados o 'auto'
+  viewBox?: string; // e.g., "0 0 10 10"
+  preserveAspectRatio?: string; // Similar a image
+  children: SVGGroupChild[]; // Contenido (paths, etc.)
+  style?: Partial<PathStyle>; // Estilos para el contenido
+  locked?: boolean;
+}
+
+// Symbols (SVG <symbol>)
+export interface SVGSymbol {
+  id: string;
+  type: 'symbol';
+  viewBox?: string; // e.g., "0 0 100 100"
+  preserveAspectRatio?: string;
+  children: SVGGroupChild[]; // Contenido reutilizable
+  style?: Partial<PathStyle>; // Estilos heredados
+  locked?: boolean;
+}
+
+// Use elements (SVG <use>)
+export interface SVGUse {
+  id: string;
+  type: 'use';
+  href: string; // e.g., "#starSymbol" o "#marker1"
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  transform?: string;
+  style?: Partial<PathStyle>; // Overrides locales
+  locked?: boolean;
+}
+
+// Tipo unión para todos los elementos SVG
+export type SVGElement = SVGPath | TextElementType | SVGGroup | SVGImage | SVGClipPath | SVGMask | SVGFilter | SVGMarker | SVGSymbol | SVGUse;

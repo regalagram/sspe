@@ -26,11 +26,11 @@ export interface GroupActions {
   getGroupById: (groupId: string) => SVGGroup | null;
   getAllGroups: () => SVGGroup[];
   getGroupChildren: (groupId: string) => SVGGroupChild[];
-  getGroupChildrenDetails: (groupId: string) => { id: string; type: 'path' | 'text' | 'group'; }[];
-  getParentGroup: (childId: string, childType: 'path' | 'text' | 'group') => SVGGroup | null;
-  isElementInGroup: (elementId: string, elementType: 'path' | 'text' | 'group') => boolean;
-  shouldMoveSyncGroup: (elementId: string, elementType: 'path' | 'text' | 'group') => SVGGroup | null;
-  moveSyncGroupByElement: (elementId: string, elementType: 'path' | 'text' | 'group', delta: Point) => boolean;
+  getGroupChildrenDetails: (groupId: string) => { id: string; type: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use'; }[];
+  getParentGroup: (childId: string, childType: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => SVGGroup | null;
+  isElementInGroup: (elementId: string, elementType: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => boolean;
+  shouldMoveSyncGroup: (elementId: string, elementType: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => SVGGroup | null;
+  moveSyncGroupByElement: (elementId: string, elementType: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use', delta: Point) => boolean;
   hasMultipleGroupElementsSelected: (groupId: string) => boolean;
   
   // Group visibility and locking
@@ -403,18 +403,18 @@ export const createGroupActions: StateCreator<
     return group.children.map(child => ({ id: child.id, type: child.type }));
   },
 
-  getParentGroup: (childId: string, childType: 'path' | 'text' | 'group') => {
+  getParentGroup: (childId: string, childType: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => {
     const state = get();
     return state.groups.find(group => 
       group.children.some(child => child.id === childId && child.type === childType)
     ) || null;
   },
 
-  isElementInGroup: (elementId: string, elementType: 'path' | 'text' | 'group') => {
+  isElementInGroup: (elementId: string, elementType: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => {
     return get().getParentGroup(elementId, elementType) !== null;
   },
 
-  shouldMoveSyncGroup: (elementId: string, elementType: 'path' | 'text' | 'group') => {
+  shouldMoveSyncGroup: (elementId: string, elementType: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => {
     const state = get();
     const parentGroup = state.getParentGroup(elementId, elementType);
     
@@ -424,7 +424,7 @@ export const createGroupActions: StateCreator<
     return lockLevel === 'movement-sync' ? parentGroup : null;
   },
 
-  moveSyncGroupByElement: (elementId: string, elementType: 'path' | 'text' | 'group', delta: Point) => {
+  moveSyncGroupByElement: (elementId: string, elementType: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use', delta: Point) => {
     const state = get();
     const syncGroup = state.shouldMoveSyncGroup(elementId, elementType);
     
