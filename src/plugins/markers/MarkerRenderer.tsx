@@ -1,5 +1,6 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
+import { getStyleValue } from '../../utils/gradient-utils';
 
 export const MarkerRenderer: React.FC = () => {
   const { markers, paths, groups, viewport } = useEditorStore();
@@ -7,7 +8,7 @@ export const MarkerRenderer: React.FC = () => {
   if (markers.length === 0) return null;
 
   // Helper function to render path from group children (simplified for markers)
-  const renderChildContent = (childId: string, childType: string) => {
+  const renderChildContent = (childId: string, childType: string, markerStyle?: any) => {
     switch (childType) {
       case 'path':
         const path = paths.find(p => p.id === childId);
@@ -31,13 +32,26 @@ export const MarkerRenderer: React.FC = () => {
           }).join(' ')
         ).join(' ');
 
+        // Use marker style if provided, otherwise use path's own style, using getStyleValue for gradients/patterns
+        const fill = markerStyle?.fill 
+          ? getStyleValue(markerStyle.fill) 
+          : (path.style.fill ? getStyleValue(path.style.fill) : 'currentColor');
+        const stroke = markerStyle?.stroke 
+          ? (markerStyle.stroke !== 'none' ? getStyleValue(markerStyle.stroke) : 'none')
+          : (path.style.stroke ? getStyleValue(path.style.stroke) : 'none');
+        const strokeWidth = markerStyle?.strokeWidth ? (markerStyle.strokeWidth / viewport.zoom) : (path.style.strokeWidth || 0) / viewport.zoom;
+        const fillOpacity = markerStyle?.fillOpacity ?? path.style.fillOpacity ?? 1;
+        const strokeOpacity = markerStyle?.strokeOpacity ?? path.style.strokeOpacity ?? 1;
+
         return (
           <path
             key={childId}
             d={pathData}
-            fill={typeof path.style.fill === 'string' ? path.style.fill : 'currentColor'}
-            stroke={typeof path.style.stroke === 'string' ? path.style.stroke : 'none'}
-            strokeWidth={path.style.strokeWidth}
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={strokeWidth}
+            fillOpacity={fillOpacity}
+            strokeOpacity={strokeOpacity}
           />
         );
 
@@ -47,7 +61,7 @@ export const MarkerRenderer: React.FC = () => {
         
         return (
           <g key={childId} transform={group.transform}>
-            {group.children.map(child => renderChildContent(child.id, child.type))}
+            {group.children.map(child => renderChildContent(child.id, child.type, markerStyle))}
           </g>
         );
 
@@ -57,13 +71,25 @@ export const MarkerRenderer: React.FC = () => {
   };
 
   // Create default arrow path if marker has no children
-  const createDefaultArrowPath = (zoomScale: number = 1) => {
+  const createDefaultArrowPath = (zoomScale: number = 1, markerStyle?: any) => {
     // Scale the path coordinates inversely with zoom to maintain visual size
     const scale = 1 / zoomScale;
+    
+    // Apply marker styles or use defaults, using getStyleValue to handle gradients/patterns
+    const fill = markerStyle?.fill ? getStyleValue(markerStyle.fill) : '#000000';
+    const stroke = markerStyle?.stroke && markerStyle.stroke !== 'none' ? getStyleValue(markerStyle.stroke) : 'none';
+    const strokeWidth = markerStyle?.strokeWidth ? (markerStyle.strokeWidth / zoomScale) : 0;
+    const fillOpacity = markerStyle?.fillOpacity ?? 1;
+    const strokeOpacity = markerStyle?.strokeOpacity ?? 1;
+    
     return (
       <path
         d={`M 0 0 L ${10 * scale} ${2.5 * scale} L 0 ${5 * scale} z`}
-        fill="currentColor"
+        fill={fill}
+        stroke={stroke}
+        strokeWidth={strokeWidth}
+        fillOpacity={fillOpacity}
+        strokeOpacity={strokeOpacity}
       />
     );
   };
@@ -98,7 +124,7 @@ export const MarkerRenderer: React.FC = () => {
           >
             {marker.children.length > 0 
               ? marker.children.map(child => renderChildContent(child.id, child.type))
-              : createDefaultArrowPath(viewport.zoom)
+              : createDefaultArrowPath(viewport.zoom, marker.style)
             }
           </marker>
         );

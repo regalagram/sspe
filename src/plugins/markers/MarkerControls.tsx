@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { createDefaultMarker, createArrowMarker, formatSVGReference } from '../../utils/svg-elements-utils';
+import { createDefaultMarker, createArrowMarker, formatSVGReference, parseSVGReference } from '../../utils/svg-elements-utils';
 import { PluginButton } from '../../components/PluginButton';
 import { ArrowUp, ArrowDown, Plus, Trash2, Target } from 'lucide-react';
 
@@ -9,6 +9,7 @@ export const MarkerControls: React.FC = () => {
     markers,
     selection, 
     paths,
+    gradients,
     addMarker, 
     updateMarker, 
     removeMarker,
@@ -396,6 +397,194 @@ export const MarkerControls: React.FC = () => {
                       <option value="270">270°</option>
                     </select>
                   </div>
+
+                  {/* Style Controls */}
+                  <div style={{ paddingTop: '6px', borderTop: '1px solid #e9ecef' }}>
+                    <span style={{ fontSize: '11px', color: '#666', fontWeight: '500', marginBottom: '6px', display: 'block' }}>
+                      Marker Style:
+                    </span>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
+                      <div>
+                        <label style={{ fontSize: '10px', color: '#666' }}>Fill</label>
+                        <input
+                          type="color"
+                          value={marker.style?.fill || '#000000'}
+                          onChange={(e) => handleUpdateMarker(marker.id, { 
+                            style: { ...marker.style, fill: e.target.value }
+                          })}
+                          style={{
+                            width: '100%',
+                            height: '28px',
+                            padding: '2px',
+                            border: '1px solid #ddd',
+                            borderRadius: '3px'
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '10px', color: '#666' }}>Fill Opacity</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={marker.style?.fillOpacity ?? 1}
+                          onChange={(e) => handleUpdateMarker(marker.id, { 
+                            style: { ...marker.style, fillOpacity: parseFloat(e.target.value) || 1 }
+                          })}
+                          style={{
+                            width: '100%',
+                            padding: '4px',
+                            fontSize: '11px',
+                            border: '1px solid #ddd',
+                            borderRadius: '3px'
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '6px' }}>
+                      <div>
+                        <label style={{ fontSize: '10px', color: '#666' }}>Stroke</label>
+                        <input
+                          type="color"
+                          value={marker.style?.stroke === 'none' ? '#000000' : (marker.style?.stroke || '#000000')}
+                          onChange={(e) => handleUpdateMarker(marker.id, { 
+                            style: { ...marker.style, stroke: e.target.value }
+                          })}
+                          style={{
+                            width: '100%',
+                            height: '28px',
+                            padding: '2px',
+                            border: '1px solid #ddd',
+                            borderRadius: '3px'
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '10px', color: '#666' }}>Stroke Width</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="10"
+                          step="0.5"
+                          value={marker.style?.strokeWidth || 0}
+                          onChange={(e) => handleUpdateMarker(marker.id, { 
+                            style: { ...marker.style, strokeWidth: parseFloat(e.target.value) || 0 }
+                          })}
+                          style={{
+                            width: '100%',
+                            padding: '4px',
+                            fontSize: '11px',
+                            border: '1px solid #ddd',
+                            borderRadius: '3px'
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '6px' }}>
+                      <div>
+                        <label style={{ fontSize: '10px', color: '#666' }}>Stroke Opacity</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={marker.style?.strokeOpacity ?? 1}
+                          onChange={(e) => handleUpdateMarker(marker.id, { 
+                            style: { ...marker.style, strokeOpacity: parseFloat(e.target.value) || 1 }
+                          })}
+                          style={{
+                            width: '100%',
+                            padding: '4px',
+                            fontSize: '11px',
+                            border: '1px solid #ddd',
+                            borderRadius: '3px'
+                          }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'end' }}>
+                        <button
+                          onClick={() => handleUpdateMarker(marker.id, { 
+                            style: { ...marker.style, stroke: 'none', strokeWidth: 0 }
+                          })}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '10px',
+                            border: '1px solid #6c757d',
+                            backgroundColor: '#fff',
+                            color: '#6c757d',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          No Stroke
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Gradients */}
+                    {gradients.length > 0 && (
+                      <div style={{ paddingTop: '6px', borderTop: '1px solid #e9ecef' }}>
+                        <span style={{ fontSize: '11px', color: '#666', fontWeight: '500', marginBottom: '6px', display: 'block' }}>
+                          Advanced Fill:
+                        </span>
+                        
+                        <div style={{ marginBottom: '6px' }}>
+                          <label style={{ fontSize: '10px', color: '#666', marginBottom: '4px', display: 'block' }}>Use Gradient</label>
+                          <select
+                            value={
+                              marker.style?.fill && typeof marker.style.fill === 'string' && marker.style.fill.startsWith('url(#') 
+                                ? parseSVGReference(marker.style.fill) || ''
+                                : ''
+                            }
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                handleUpdateMarker(marker.id, { 
+                                  style: { ...marker.style, fill: formatSVGReference(e.target.value) }
+                                });
+                              }
+                            }}
+                            style={{
+                              width: '100%',
+                              padding: '4px',
+                              fontSize: '11px',
+                              border: '1px solid #ddd',
+                              borderRadius: '3px'
+                            }}
+                          >
+                            <option value="">No gradient</option>
+                            {gradients.map((gradient) => (
+                              <option key={gradient.id} value={gradient.id}>
+                                {gradient.type === 'linear' ? 'Linear' : 'Radial'} Gradient
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <button
+                          onClick={() => handleUpdateMarker(marker.id, { 
+                            style: { ...marker.style, fill: '#000000' }
+                          })}
+                          style={{
+                            width: '100%',
+                            padding: '4px 8px',
+                            fontSize: '10px',
+                            border: '1px solid #6c757d',
+                            backgroundColor: '#fff',
+                            color: '#6c757d',
+                            borderRadius: '3px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Reset to Solid Color
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -476,7 +665,9 @@ export const MarkerControls: React.FC = () => {
         <div>• Create markers to decorate path endpoints and vertices</div>
         <div>• Apply to start, middle, or end positions of paths</div>
         <div>• Markers automatically orient to path direction</div>
-        <div>• Edit marker dimensions and orientation in the marker list</div>
+        <div>• Edit marker dimensions, orientation, and colors in the marker list</div>
+        <div>• Use solid colors or gradients for marker styling</div>
+        <div>• Markers maintain consistent size at all zoom levels</div>
       </div>
     </div>
   );

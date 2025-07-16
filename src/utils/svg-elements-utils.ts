@@ -132,6 +132,13 @@ export const createDefaultMarker = (): Omit<SVGMarker, 'id'> => ({
   orient: 'auto',
   viewBox: '0 0 10 5',
   children: [], // Empty children so MarkerRenderer will use default arrow path
+  style: {
+    fill: '#000000',
+    stroke: 'none',
+    fillOpacity: 1,
+    strokeOpacity: 1,
+    strokeWidth: 1,
+  },
   locked: false,
 });
 
@@ -145,6 +152,13 @@ export const createArrowMarker = (): Omit<SVGMarker, 'id'> => ({
   orient: 'auto',
   viewBox: '0 0 10 5',
   children: [], // Empty children so MarkerRenderer will use default arrow path
+  style: {
+    fill: '#000000',
+    stroke: 'none',
+    fillOpacity: 1,
+    strokeOpacity: 1,
+    strokeWidth: 1,
+  },
   locked: false,
 });
 
