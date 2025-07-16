@@ -250,6 +250,56 @@ export function moveAllCapturedElements(
       moveCommand(commandId, { x: newX, y: newY });
     }
   });
+  
+  // Sub-paths should be moved with delta by the specific plugin handlers
+  // since they need relative movement, not absolute positioning
+}
+
+/**
+ * Moves all captured elements by the specified delta from their current positions
+ */
+export function moveAllCapturedElementsByDelta(
+  capturedData: DraggedElementsData,
+  delta: Point,
+  enableGridSnapping: boolean = false,
+  gridSize: number = 10
+) {
+  const store = useEditorStore.getState();
+  const { moveImage, moveUse, moveGroup, moveText, moveSubPath } = store;
+  
+  // Apply grid snapping if enabled
+  let finalDelta = delta;
+  if (enableGridSnapping) {
+    finalDelta = {
+      x: Math.round(delta.x / gridSize) * gridSize,
+      y: Math.round(delta.y / gridSize) * gridSize,
+    };
+  }
+
+  // Move images using delta
+  Object.keys(capturedData.images).forEach((imageId: string) => {
+    moveImage(imageId, finalDelta);
+  });
+
+  // Move texts using delta
+  Object.keys(capturedData.texts).forEach((textId: string) => {
+    moveText(textId, finalDelta);
+  });
+
+  // Move use elements using delta
+  Object.keys(capturedData.uses).forEach((useId: string) => {
+    moveUse(useId, finalDelta);
+  });
+
+  // Move groups using delta
+  Object.keys(capturedData.groups).forEach((groupId: string) => {
+    moveGroup(groupId, finalDelta);
+  });
+
+  // Move sub-paths using delta
+  Object.keys(capturedData.subPaths).forEach((subPathId: string) => {
+    moveSubPath(subPathId, finalDelta);
+  });
 }
 
 // Helper function to get command position (copied from existing code)

@@ -7,7 +7,7 @@ import { transformManager } from '../transform/TransformManager';
 import { getStyleValue } from '../../utils/gradient-utils';
 import { guidelinesManager } from '../guidelines/GuidelinesManager';
 import { Point } from '../../types';
-import { captureAllSelectedElementsPositions, moveAllCapturedElements, DraggedElementsData } from '../../utils/drag-utils';
+import { captureAllSelectedElementsPositions, moveAllCapturedElementsByDelta, DraggedElementsData } from '../../utils/drag-utils';
 
 // Global path drag manager to handle pointer events from plugin system
 import { PointerEventContext } from '../../core/PluginSystem';
@@ -175,37 +175,17 @@ export const PathRenderer: React.FC = () => {
       y: snappedPoint.y - dragState.lastPoint.y,
     };
     
-    // Move all selected subpaths (including the one being dragged)
-    const subPathsToMove = selection.selectedSubPaths.length > 0 
-      ? selection.selectedSubPaths 
-      : [dragState.subPathId];
-    
-    subPathsToMove.forEach(subPathId => {
-      moveSubPath(subPathId, delta);
-    });
-    
-    // Use the centralized utility to move all other selected elements
+    // Use the centralized utility to move all selected elements with delta
     if (dragState.capturedElements) {
-      const totalOffset = {
-        x: snappedPoint.x - dragState.startPoint!.x,
-        y: snappedPoint.y - dragState.startPoint!.y,
-      };
-      
-      moveAllCapturedElements(
+      moveAllCapturedElementsByDelta(
         dragState.capturedElements,
-        totalOffset,
+        delta,
         false, // Grid snapping disabled for now
         10     // Grid size (not used since snapping is disabled)
       );
     }
     
-    console.log('handlePointerMove - Moving subpaths with other elements:', {
-      subpaths: subPathsToMove.length,
-      texts: dragState.capturedElements ? Object.keys(dragState.capturedElements.texts).length : 0,
-      images: dragState.capturedElements ? Object.keys(dragState.capturedElements.images).length : 0,
-      uses: dragState.capturedElements ? Object.keys(dragState.capturedElements.uses).length : 0,
-      groups: dragState.capturedElements ? Object.keys(dragState.capturedElements.groups).length : 0
-    });
+
     
     // Update last point (use snapped point to maintain consistent movement)
     setDragState(prev => ({

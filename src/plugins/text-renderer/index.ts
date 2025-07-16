@@ -5,13 +5,14 @@ import { useEditorStore } from '../../store/editorStore';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { getCommandPosition } from '../../utils/path-utils';
 import { transformManager } from '../transform/TransformManager';
-import { captureAllSelectedElementsPositions, moveAllCapturedElements, DraggedElementsData } from '../../utils/drag-utils';
+import { captureAllSelectedElementsPositions, moveAllCapturedElementsByDelta, DraggedElementsData } from '../../utils/drag-utils';
 
 // Global state for text dragging
 let textDragState = {
   isDragging: false,
   textId: null as string | null,
   startPoint: null as { x: number; y: number } | null,
+  lastPoint: null as { x: number; y: number } | null,
   capturedElements: null as DraggedElementsData | null,
   dragStarted: false,
 };
@@ -55,6 +56,7 @@ const handleTextPointerDown = (e: React.PointerEvent<SVGElement>, context: Point
       isDragging: true,
       textId,
       startPoint: point,
+      lastPoint: point,
       capturedElements,
       dragStarted: false,
     };
@@ -71,7 +73,6 @@ const handleTextPointerMove = (e: React.PointerEvent<SVGElement>, context: Point
   }
   
   const store = useEditorStore.getState();
-  const { moveSubPath, selection } = store;
   const currentPoint = getSVGPoint(e, context.svgRef, store.viewport);
   
   // Check drag threshold
@@ -80,49 +81,30 @@ const handleTextPointerMove = (e: React.PointerEvent<SVGElement>, context: Point
       Math.pow(currentPoint.x - textDragState.startPoint.x, 2) + 
       Math.pow(currentPoint.y - textDragState.startPoint.y, 2)
     );
-    
     if (distance < 5) return true;
     textDragState.dragStarted = true;
-    
-    // Hide transform handles during text dragging
     transformManager.setMoving(true);
   }
-  
-  // Calculate total offset from drag start
-  const totalOffset = {
-    x: currentPoint.x - textDragState.startPoint.x,
-    y: currentPoint.y - textDragState.startPoint.y,
+
+  // Calcular delta relativo
+  const lastPoint = textDragState.lastPoint || textDragState.startPoint;
+  const delta = {
+    x: currentPoint.x - lastPoint.x,
+    y: currentPoint.y - lastPoint.y,
   };
-  
-  // Move selected subpaths manually first (since they need special handling)
-  const subPathsToMove = selection.selectedSubPaths.length > 0 ? selection.selectedSubPaths : [];
-  subPathsToMove.forEach((subPathId: string) => {
-    const delta = {
-      x: totalOffset.x,
-      y: totalOffset.y,
-    };
-    moveSubPath(subPathId, delta);
-  });
-  
-  // Use the centralized utility to move all selected elements
+
+  // Mover todos los elementos capturados usando delta
   if (textDragState.capturedElements) {
-    moveAllCapturedElements(
+    moveAllCapturedElementsByDelta(
       textDragState.capturedElements,
-      totalOffset,
-      false, // Grid snapping disabled for now
-      10     // Grid size (not used since snapping is disabled)
+      delta,
+      false,
+      10
     );
   }
-  
-  console.log('handleTextPointerMove - Moving texts with other elements:', {
-    texts: textDragState.capturedElements ? Object.keys(textDragState.capturedElements.texts).length : 0,
-    subpaths: subPathsToMove.length,
-    commands: textDragState.capturedElements ? Object.keys(textDragState.capturedElements.commands).length : 0,
-    images: textDragState.capturedElements ? Object.keys(textDragState.capturedElements.images).length : 0,
-    uses: textDragState.capturedElements ? Object.keys(textDragState.capturedElements.uses).length : 0,
-    groups: textDragState.capturedElements ? Object.keys(textDragState.capturedElements.groups).length : 0
-  });
-  
+
+  // Actualizar lastPoint
+  textDragState.lastPoint = currentPoint;
   return true;
 };
 
@@ -138,6 +120,7 @@ const handleTextPointerUp = (e: React.PointerEvent<SVGElement>, context: Pointer
     isDragging: false,
     textId: null,
     startPoint: null,
+    lastPoint: null,
     capturedElements: null,
     dragStarted: false,
   };

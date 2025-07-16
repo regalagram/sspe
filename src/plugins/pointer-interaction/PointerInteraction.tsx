@@ -9,7 +9,7 @@ import { guidelinesManager } from '../guidelines/GuidelinesManager';
 interface PointerInteractionState {
   draggingCommand: string | null;
   draggingControlPoint: { commandId: string; point: 'x1y1' | 'x2y2' } | null;
-  draggingElement: { id: string; type: 'text' | 'image' | 'use' } | null;
+  draggingElement: { id: string; type: 'text' | 'image' | 'use' | 'group' } | null;
   isPanning: boolean;
   isSpacePressed: boolean;
   lastPointerPosition: { x: number; y: number };
@@ -125,7 +125,7 @@ class PointerInteractionManager {
       }
     });
     this.state.dragStartImagePositions = imagePositions;
-    console.log('captureAllSelectedPositions - Images captured:', Object.keys(imagePositions).length, selection.selectedImages?.length);
+    //console.log('captureAllSelectedPositions - Images captured:', Object.keys(imagePositions).length, selection.selectedImages?.length);
 
     // Capture use positions
     const usePositions: { [id: string]: { x: number; y: number; width?: number; height?: number } } = {};
@@ -461,6 +461,7 @@ class PointerInteractionManager {
   };
 
   handlePointerMove = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
+    if (!this.editorStore) return false;
     const { grid, selection, pan, updateCommand, moveCommand, moveText, moveImage, moveUse } = this.editorStore;
     if (this.state.isPanning) {
       const dx = e.clientX - this.state.lastPointerPosition.x;
@@ -537,7 +538,7 @@ class PointerInteractionManager {
       });
       
       // Move selected images
-      console.log('handlePointerMove - Attempting to move images:', Object.keys(this.state.dragStartImagePositions).length);
+      //console.log('handlePointerMove - Attempting to move images:', Object.keys(this.state.dragStartImagePositions).length);
       Object.keys(this.state.dragStartImagePositions).forEach((imageId: string) => {
         const start = this.state.dragStartImagePositions[imageId];
         if (start) {
