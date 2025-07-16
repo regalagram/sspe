@@ -124,26 +124,26 @@ export const createGrayscaleFilter = (): Omit<SVGFilter, 'id'> => ({
 // Marker utilities
 export const createDefaultMarker = (): Omit<SVGMarker, 'id'> => ({
   type: 'marker',
-  markerUnits: 'strokeWidth',
+  markerUnits: 'userSpaceOnUse',
   refX: 0,
-  refY: 3,
-  markerWidth: 10,
-  markerHeight: 6,
+  refY: 2.5,
+  markerWidth: 8,
+  markerHeight: 8,
   orient: 'auto',
-  viewBox: '0 0 10 6',
+  viewBox: '0 0 10 5',
   children: [], // Empty children so MarkerRenderer will use default arrow path
   locked: false,
 });
 
 export const createArrowMarker = (): Omit<SVGMarker, 'id'> => ({
   type: 'marker',
-  markerUnits: 'strokeWidth',
+  markerUnits: 'userSpaceOnUse',
   refX: 0,
-  refY: 3,
-  markerWidth: 10,
-  markerHeight: 6,
+  refY: 2.5,
+  markerWidth: 8,
+  markerHeight: 8,
   orient: 'auto',
-  viewBox: '0 0 10 6',
+  viewBox: '0 0 10 5',
   children: [], // Empty children so MarkerRenderer will use default arrow path
   locked: false,
 });

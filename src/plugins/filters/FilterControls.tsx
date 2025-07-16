@@ -467,7 +467,6 @@ export const FilterControls: React.FC = () => {
             disabled={!hasPathSelection}
             onPointerDown={() => handleQuickApplyFilter('drop-shadow')}
           />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
             <PluginButton
               icon={<Zap size={12} />}
               text="Blur"
@@ -482,7 +481,6 @@ export const FilterControls: React.FC = () => {
               disabled={!hasPathSelection}
               onPointerDown={() => handleQuickApplyFilter('grayscale')}
             />
-          </div>
         </div>
       </div>
 
@@ -491,7 +489,6 @@ export const FilterControls: React.FC = () => {
         <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
           Create Custom Filter:
         </span>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
           <PluginButton
             icon={<Droplets size={12} />}
             text="Drop Shadow"
@@ -516,7 +513,6 @@ export const FilterControls: React.FC = () => {
             color="#28a745"
             onPointerDown={() => handleCreateFilter('custom')}
           />
-        </div>
       </div>
 
       {/* Apply to Selected Elements */}

@@ -276,7 +276,15 @@ export const PathRenderer: React.FC = () => {
               fillOpacity={isWireframeMode ? 0 : path.style.fillOpacity}
               strokeOpacity={isWireframeMode ? 1 : path.style.strokeOpacity}
               fillRule={path.style.fillRule || 'nonzero'}
-              style={{ pointerEvents: 'all' }}
+              markerStart={path.style.markerStart}
+              markerMid={path.style.markerMid}
+              markerEnd={path.style.markerEnd}
+              style={{ 
+                pointerEvents: 'all',
+                clipPath: path.style.clipPath,
+                mask: path.style.mask,
+                filter: path.style.filter
+              }}
             />
 
             {/* Dibujar subpaths lockeados en wireframe con dash */}
@@ -308,6 +316,9 @@ export const PathRenderer: React.FC = () => {
                   fill="none"
                   stroke="transparent"
                   strokeWidth={12 / viewport.zoom}
+                  markerStart={path.style.markerStart}
+                  markerMid={path.style.markerMid}
+                  markerEnd={path.style.markerEnd}
                   style={{
                     cursor: 'grab',
                     pointerEvents: 'all',

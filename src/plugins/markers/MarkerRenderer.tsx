@@ -2,7 +2,7 @@ import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 
 export const MarkerRenderer: React.FC = () => {
-  const { markers, paths, groups } = useEditorStore();
+  const { markers, paths, groups, viewport } = useEditorStore();
 
   if (markers.length === 0) return null;
 
@@ -57,34 +57,52 @@ export const MarkerRenderer: React.FC = () => {
   };
 
   // Create default arrow path if marker has no children
-  const createDefaultArrowPath = () => (
-    <path
-      d="M 0 0 L 10 3 L 0 6 z"
-      fill="currentColor"
-    />
-  );
+  const createDefaultArrowPath = (zoomScale: number = 1) => {
+    // Scale the path coordinates inversely with zoom to maintain visual size
+    const scale = 1 / zoomScale;
+    return (
+      <path
+        d={`M 0 0 L ${10 * scale} ${2.5 * scale} L 0 ${5 * scale} z`}
+        fill="currentColor"
+      />
+    );
+  };
 
   return (
     <defs>
-      {markers.map((marker) => (
-        <marker
-          key={marker.id}
-          id={marker.id}
-          markerUnits={marker.markerUnits || 'strokeWidth'}
-          refX={marker.refX || 0}
-          refY={marker.refY || 3}
-          markerWidth={marker.markerWidth || 10}
-          markerHeight={marker.markerHeight || 6}
-          orient={marker.orient || 'auto'}
-          viewBox={marker.viewBox || '0 0 10 6'}
-          preserveAspectRatio={marker.preserveAspectRatio}
-        >
-          {marker.children.length > 0 
-            ? marker.children.map(child => renderChildContent(child.id, child.type))
-            : createDefaultArrowPath()
-          }
-        </marker>
-      ))}
+      {markers.map((marker) => {
+        // Calculate zoom-independent dimensions
+        const baseMarkerWidth = marker.markerWidth || 8;
+        const baseMarkerHeight = marker.markerHeight || 8;
+        const baseRefX = marker.refX || 0;
+        const baseRefY = marker.refY || 2.5;
+        
+        // Scale inversely with zoom to maintain constant visual size
+        const scaledMarkerWidth = baseMarkerWidth / viewport.zoom;
+        const scaledMarkerHeight = baseMarkerHeight / viewport.zoom;
+        const scaledRefX = baseRefX / viewport.zoom;
+        const scaledRefY = baseRefY / viewport.zoom;
+        
+        return (
+          <marker
+            key={marker.id}
+            id={marker.id}
+            markerUnits="userSpaceOnUse"
+            refX={scaledRefX}
+            refY={scaledRefY}
+            markerWidth={scaledMarkerWidth}
+            markerHeight={scaledMarkerHeight}
+            orient={marker.orient || 'auto'}
+            viewBox={marker.viewBox || '0 0 10 5'}
+            preserveAspectRatio={marker.preserveAspectRatio}
+          >
+            {marker.children.length > 0 
+              ? marker.children.map(child => renderChildContent(child.id, child.type))
+              : createDefaultArrowPath(viewport.zoom)
+            }
+          </marker>
+        );
+      })}
     </defs>
   );
 };

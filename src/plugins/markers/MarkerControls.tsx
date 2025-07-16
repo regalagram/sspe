@@ -72,10 +72,17 @@ export const MarkerControls: React.FC = () => {
   };
 
   const handleApplyMarker = (markerId: string, position: 'start' | 'mid' | 'end') => {
-    if (selectedPath) {
-      const reference = formatSVGReference(markerId);
+    if (selectedSubPaths.length === 0) {
+      alert('Please select one or more sub-paths first');
+      return;
+    }
+
+    const reference = formatSVGReference(markerId);
+    
+    // Apply to parent paths of selected sub-paths
+    const parentPaths = getParentPathsOfSelectedSubPaths();
+    parentPaths.forEach(pathId => {
       const updates: any = {};
-      
       switch (position) {
         case 'start':
           updates.markerStart = reference;
@@ -87,9 +94,8 @@ export const MarkerControls: React.FC = () => {
           updates.markerEnd = reference;
           break;
       }
-      
-      updatePathStyle(selectedPath.id, updates);
-    }
+      updatePathStyle(pathId, updates);
+    });
   };
 
   const handleRemoveMarkerDefinition = (id: string) => {
@@ -106,8 +112,15 @@ export const MarkerControls: React.FC = () => {
     updateMarker(markerId, updates);
   };
 
-  const handleRemoveMarkerFromPath = (position: 'start' | 'mid' | 'end') => {
-    if (selectedPath) {
+  const handleRemoveMarkerFromSubPaths = (position: 'start' | 'mid' | 'end') => {
+    if (selectedSubPaths.length === 0) {
+      alert('Please select one or more sub-paths first');
+      return;
+    }
+
+    // Remove from parent paths of selected sub-paths
+    const parentPaths = getParentPathsOfSelectedSubPaths();
+    parentPaths.forEach(pathId => {
       const updates: any = {};
       switch (position) {
         case 'start':
@@ -120,8 +133,8 @@ export const MarkerControls: React.FC = () => {
           updates.markerEnd = undefined;
           break;
       }
-      updatePathStyle(selectedPath.id, updates);
-    }
+      updatePathStyle(pathId, updates);
+    });
   };
 
   return (
@@ -137,7 +150,6 @@ export const MarkerControls: React.FC = () => {
             : 'Select sub-paths first to apply markers'
           }
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
           <PluginButton
             icon={<ArrowUp size={12} />}
             text="← Start Arrow"
@@ -152,7 +164,6 @@ export const MarkerControls: React.FC = () => {
             disabled={!hasPathSelection}
             onPointerDown={() => handleQuickApplyArrow('end')}
           />
-        </div>
       </div>
 
       {/* Create Markers */}
@@ -160,7 +171,6 @@ export const MarkerControls: React.FC = () => {
         <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
           Create Custom Marker:
         </span>
-        <div style={{ display: 'flex', gap: '6px' }}>
           <PluginButton
             icon={<Target size={12} />}
             text="Arrow"
@@ -173,73 +183,71 @@ export const MarkerControls: React.FC = () => {
             color="#28a745"
             onPointerDown={() => handleCreateMarker('default')}
           />
-        </div>
       </div>
 
-      {/* Apply to Selected Path */}
-      {selectedPath && (
+      {/* Apply Custom Markers to Selected Sub-Paths */}
+      {hasPathSelection && markers.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px', borderTop: '1px solid #e9ecef' }}>
           <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
-            Apply to Selected Path:
+            Apply Custom Markers:
           </span>
+          <div style={{ fontSize: '11px', color: '#999', marginBottom: '6px' }}>
+            Apply to {selectedSubPaths.length} selected sub-path{selectedSubPaths.length > 1 ? 's' : ''}
+          </div>
           
-          {markers.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {markers.map((marker) => (
-                <div key={marker.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <span style={{ fontSize: '11px', color: '#666', fontWeight: '500' }}>
-                    Marker ({marker.children.length} elements)
-                  </span>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px' }}>
-                    <button
-                      onClick={() => handleApplyMarker(marker.id, 'start')}
-                      style={{
-                        padding: '4px 8px',
-                        fontSize: '10px',
-                        border: '1px solid #007bff',
-                        backgroundColor: '#fff',
-                        color: '#007bff',
-                        borderRadius: '3px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Start
-                    </button>
-                    <button
-                      onClick={() => handleApplyMarker(marker.id, 'mid')}
-                      style={{
-                        padding: '4px 8px',
-                        fontSize: '10px',
-                        border: '1px solid #007bff',
-                        backgroundColor: '#fff',
-                        color: '#007bff',
-                        borderRadius: '3px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Mid
-                    </button>
-                    <button
-                      onClick={() => handleApplyMarker(marker.id, 'end')}
-                      style={{
-                        padding: '4px 8px',
-                        fontSize: '10px',
-                        border: '1px solid #007bff',
-                        backgroundColor: '#fff',
-                        color: '#007bff',
-                        borderRadius: '3px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      End
-                    </button>
-                  </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {markers.map((marker) => (
+              <div key={marker.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <span style={{ fontSize: '11px', color: '#666', fontWeight: '500' }}>
+                  Marker ({marker.children.length} elements)
+                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px' }}>
+                  <button
+                    onClick={() => handleApplyMarker(marker.id, 'start')}
+                    style={{
+                      padding: '4px 8px',
+                      fontSize: '10px',
+                      border: '1px solid #007bff',
+                      backgroundColor: '#fff',
+                      color: '#007bff',
+                      borderRadius: '3px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Start
+                  </button>
+                  <button
+                    onClick={() => handleApplyMarker(marker.id, 'mid')}
+                    style={{
+                      padding: '4px 8px',
+                      fontSize: '10px',
+                      border: '1px solid #007bff',
+                      backgroundColor: '#fff',
+                      color: '#007bff',
+                      borderRadius: '3px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Mid
+                  </button>
+                  <button
+                    onClick={() => handleApplyMarker(marker.id, 'end')}
+                    style={{
+                      padding: '4px 8px',
+                      fontSize: '10px',
+                      border: '1px solid #007bff',
+                      backgroundColor: '#fff',
+                      color: '#007bff',
+                      borderRadius: '3px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    End
+                  </button>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ fontSize: '11px', color: '#999' }}>No markers available</div>
-          )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -395,8 +403,8 @@ export const MarkerControls: React.FC = () => {
         </div>
       )}
 
-      {/* Remove Markers from Selected Path */}
-      {selectedPath && (selectedPath.style.markerStart || selectedPath.style.markerMid || selectedPath.style.markerEnd) && (
+      {/* Remove Markers from Selected Sub-Paths */}
+      {hasPathSelection && (
         <div style={{ 
           display: 'flex', 
           flexDirection: 'column', 
@@ -405,57 +413,54 @@ export const MarkerControls: React.FC = () => {
           borderTop: '1px solid #e9ecef' 
         }}>
           <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
-            Remove Markers from Selected Path:
+            Remove Markers:
           </span>
+          <div style={{ fontSize: '11px', color: '#999', marginBottom: '6px' }}>
+            Remove from {selectedSubPaths.length} selected sub-path{selectedSubPaths.length > 1 ? 's' : ''}
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px' }}>
-            {selectedPath.style.markerStart && (
-              <button
-                onClick={() => handleRemoveMarkerFromPath('start')}
-                style={{
-                  padding: '4px 8px',
-                  fontSize: '10px',
-                  border: '1px solid #dc3545',
-                  backgroundColor: '#fff',
-                  color: '#dc3545',
-                  borderRadius: '3px',
-                  cursor: 'pointer'
-                }}
-              >
-                Remove Start
-              </button>
-            )}
-            {selectedPath.style.markerMid && (
-              <button
-                onClick={() => handleRemoveMarkerFromPath('mid')}
-                style={{
-                  padding: '4px 8px',
-                  fontSize: '10px',
-                  border: '1px solid #dc3545',
-                  backgroundColor: '#fff',
-                  color: '#dc3545',
-                  borderRadius: '3px',
-                  cursor: 'pointer'
-                }}
-              >
-                Remove Mid
-              </button>
-            )}
-            {selectedPath.style.markerEnd && (
-              <button
-                onClick={() => handleRemoveMarkerFromPath('end')}
-                style={{
-                  padding: '4px 8px',
-                  fontSize: '10px',
-                  border: '1px solid #dc3545',
-                  backgroundColor: '#fff',
-                  color: '#dc3545',
-                  borderRadius: '3px',
-                  cursor: 'pointer'
-                }}
-              >
-                Remove End
-              </button>
-            )}
+            <button
+              onClick={() => handleRemoveMarkerFromSubPaths('start')}
+              style={{
+                padding: '4px 8px',
+                fontSize: '10px',
+                border: '1px solid #dc3545',
+                backgroundColor: '#fff',
+                color: '#dc3545',
+                borderRadius: '3px',
+                cursor: 'pointer'
+              }}
+            >
+              Remove Start
+            </button>
+            <button
+              onClick={() => handleRemoveMarkerFromSubPaths('mid')}
+              style={{
+                padding: '4px 8px',
+                fontSize: '10px',
+                border: '1px solid #dc3545',
+                backgroundColor: '#fff',
+                color: '#dc3545',
+                borderRadius: '3px',
+                cursor: 'pointer'
+              }}
+            >
+              Remove Mid
+            </button>
+            <button
+              onClick={() => handleRemoveMarkerFromSubPaths('end')}
+              style={{
+                padding: '4px 8px',
+                fontSize: '10px',
+                border: '1px solid #dc3545',
+                backgroundColor: '#fff',
+                color: '#dc3545',
+                borderRadius: '3px',
+                cursor: 'pointer'
+              }}
+            >
+              Remove End
+            </button>
           </div>
         </div>
       )}
