@@ -97,10 +97,10 @@ export const MarkerRenderer: React.FC = () => {
     <defs>
       {markers.map((marker) => {
         // Use fixed dimensions - SVG will handle the scaling automatically with strokeWidth units
-        const markerWidth = marker.markerWidth || 8;
-        const markerHeight = marker.markerHeight || 8;
+        const markerWidth = marker.markerWidth || 3;
+        const markerHeight = marker.markerHeight || 3;
         const refX = marker.refX || 0;
-        const refY = marker.refY || 2.5;
+        const refY = marker.refY || 1.5;
         
         return (
           <marker
