@@ -171,7 +171,7 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
 };
 
 export const SVGComponent: React.FC = () => {
-  const { paths, texts, groups, gradients, viewport, replacePaths, replaceTexts, replaceGroups, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients } = useEditorStore();
+  const { paths, texts, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, viewport, replacePaths, replaceTexts, replaceGroups, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients } = useEditorStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Generate SVG string from current paths and texts
@@ -204,6 +204,12 @@ export const SVGComponent: React.FC = () => {
         style.strokeLinejoin ? `stroke-linejoin="${style.strokeLinejoin}"` : '',
         style.fillOpacity !== undefined && style.fillOpacity !== 1 ? `fill-opacity="${style.fillOpacity}"` : '',
         style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${style.strokeOpacity}"` : '',
+        style.markerStart ? `marker-start="${convertStyleValue(style.markerStart)}"` : '',
+        style.markerMid ? `marker-mid="${convertStyleValue(style.markerMid)}"` : '',
+        style.markerEnd ? `marker-end="${convertStyleValue(style.markerEnd)}"` : '',
+        style.filter ? `filter="${convertStyleValue(style.filter)}"` : '',
+        style.clipPath ? `clip-path="${convertStyleValue(style.clipPath)}"` : '',
+        style.mask ? `mask="${convertStyleValue(style.mask)}"` : '',
       ].filter(Boolean).join(' ');
       
       return `<path ${attributes} />`;
@@ -229,6 +235,9 @@ export const SVGComponent: React.FC = () => {
         style.strokeWidth ? `stroke-width="${style.strokeWidth}"` : '',
         style.fillOpacity !== undefined && style.fillOpacity !== 1 ? `fill-opacity="${style.fillOpacity}"` : '',
         style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${style.strokeOpacity}"` : '',
+        style.filter ? `filter="${convertStyleValue(style.filter)}"` : '',
+        style.clipPath ? `clip-path="${convertStyleValue(style.clipPath)}"` : '',
+        style.mask ? `mask="${convertStyleValue(style.mask)}"` : '',
       ].filter(Boolean).join(' ');
 
       if (text.type === 'multiline-text') {
@@ -251,6 +260,41 @@ export const SVGComponent: React.FC = () => {
       }
     };
 
+    // Render image elements
+    const renderImage = (image: any) => {
+      const attributes = [
+        `x="${image.x}"`,
+        `y="${image.y}"`,
+        `width="${image.width}"`,
+        `height="${image.height}"`,
+        `href="${image.href}"`,
+        image.preserveAspectRatio ? `preserveAspectRatio="${image.preserveAspectRatio}"` : '',
+        image.transform ? `transform="${image.transform}"` : '',
+        image.style?.clipPath ? `clip-path="${convertStyleValue(image.style.clipPath)}"` : '',
+        image.style?.mask ? `mask="${convertStyleValue(image.style.mask)}"` : '',
+        image.style?.filter ? `filter="${convertStyleValue(image.style.filter)}"` : '',
+      ].filter(Boolean).join(' ');
+      
+      return `<image ${attributes} />`;
+    };
+
+    // Render use elements (symbol instances)
+    const renderUse = (use: any) => {
+      const attributes = [
+        `href="#${use.href.replace('#', '')}"`,
+        `x="${use.x}"`,
+        `y="${use.y}"`,
+        use.width ? `width="${use.width}"` : '',
+        use.height ? `height="${use.height}"` : '',
+        use.transform ? `transform="${use.transform}"` : '',
+        use.style?.clipPath ? `clip-path="${convertStyleValue(use.style.clipPath)}"` : '',
+        use.style?.mask ? `mask="${convertStyleValue(use.style.mask)}"` : '',
+        use.style?.filter ? `filter="${convertStyleValue(use.style.filter)}"` : '',
+      ].filter(Boolean).join(' ');
+      
+      return `<use ${attributes} />`;
+    };
+
     // Collect elements that are NOT in any group
     const elementsInGroups = new Set<string>();
     groups.forEach(group => {
@@ -262,6 +306,8 @@ export const SVGComponent: React.FC = () => {
     // Filter standalone elements (not in any group)
     const standalonePaths = paths.filter(path => !elementsInGroups.has(path.id));
     const standaloneTexts = texts.filter(text => !elementsInGroups.has(text.id));
+    const standaloneImages = images.filter(image => !elementsInGroups.has(image.id));
+    const standaloneUses = uses.filter(use => !elementsInGroups.has(use.id));
 
     // Generate standalone path elements
     const standalonePathElements = standalonePaths.map((path) => {
@@ -271,6 +317,16 @@ export const SVGComponent: React.FC = () => {
     // Generate standalone text elements
     const textElements = standaloneTexts.map((text) => {
       return `  ${renderText(text)}`;
+    }).join('\n');
+
+    // Generate standalone image elements
+    const imageElements = standaloneImages.map((image) => {
+      return `  ${renderImage(image)}`;
+    }).join('\n');
+
+    // Generate standalone use elements
+    const useElements = standaloneUses.map((use) => {
+      return `  ${renderUse(use)}`;
     }).join('\n');
 
     // Helper function to recursively render group contents
@@ -287,6 +343,16 @@ export const SVGComponent: React.FC = () => {
           const text = texts.find(t => t.id === child.id);
           if (text) {
             groupElements.push(`    ${renderText(text)}`);
+          }
+        } else if (child.type === 'image') {
+          const image = images.find(i => i.id === child.id);
+          if (image) {
+            groupElements.push(`    ${renderImage(image)}`);
+          }
+        } else if (child.type === 'use') {
+          const use = uses.find(u => u.id === child.id);
+          if (use) {
+            groupElements.push(`    ${renderUse(use)}`);
           }
         } else if (child.type === 'group') {
           const nestedGroup = groups.find(g => g.id === child.id);
@@ -382,42 +448,214 @@ export const SVGComponent: React.FC = () => {
     // Only include gradients that are actually used
     const allGradients = gradients.filter(gradient => usedGradientIds.has(gradient.id));
 
-    // Generate gradient and pattern definitions
+    // Generate all definitions (gradients, symbols, markers, filters, clip paths, masks)
     const generateDefinitions = () => {
-      if (allGradients.length === 0) return '';
+      const allDefs: string[] = [];
       
-      const defs = allGradients.map(gradient => {
-        switch (gradient.type) {
-          case 'linear':
-            const linearStops = gradient.stops.map(stop => 
-              `    <stop offset="${stop.offset}%" stop-color="${stop.color}" stop-opacity="${stop.opacity ?? 1}" />`
-            ).join('\n');
-            return `  <linearGradient id="${gradient.id}" x1="${gradient.x1}%" y1="${gradient.y1}%" x2="${gradient.x2}%" y2="${gradient.y2}%" gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">\n${linearStops}\n  </linearGradient>`;
-          
-          case 'radial':
-            const radialStops = gradient.stops.map(stop => 
-              `    <stop offset="${stop.offset}%" stop-color="${stop.color}" stop-opacity="${stop.opacity ?? 1}" />`
-            ).join('\n');
-            // Only include fx/fy if they exist and are different from cx/cy
-            const fxAttr = (gradient.fx !== undefined && gradient.fx !== gradient.cx) ? ` fx="${gradient.fx}%"` : '';
-            const fyAttr = (gradient.fy !== undefined && gradient.fy !== gradient.cy) ? ` fy="${gradient.fy}%"` : '';
-            return `  <radialGradient id="${gradient.id}" cx="${gradient.cx}%" cy="${gradient.cy}%" r="${gradient.r}%"${fxAttr}${fyAttr} gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">\n${radialStops}\n  </radialGradient>`;
-          
-          case 'pattern':
-            return `  <pattern id="${gradient.id}" width="${gradient.width}" height="${gradient.height}" patternUnits="${gradient.patternUnits || 'userSpaceOnUse'}"${gradient.patternContentUnits ? ` patternContentUnits="${gradient.patternContentUnits}"` : ''}${gradient.patternTransform ? ` patternTransform="${gradient.patternTransform}"` : ''}>\n    ${gradient.content}\n  </pattern>`;
-          
-          default:
+      // Add gradients and patterns
+      if (allGradients.length > 0) {
+        const gradientDefs = allGradients.map(gradient => {
+          switch (gradient.type) {
+            case 'linear':
+              const linearStops = gradient.stops.map(stop => 
+                `    <stop offset="${stop.offset}%" stop-color="${stop.color}" stop-opacity="${stop.opacity ?? 1}" />`
+              ).join('\n');
+              return `  <linearGradient id="${gradient.id}" x1="${gradient.x1}%" y1="${gradient.y1}%" x2="${gradient.x2}%" y2="${gradient.y2}%" gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">\n${linearStops}\n  </linearGradient>`;
+            
+            case 'radial':
+              const radialStops = gradient.stops.map(stop => 
+                `    <stop offset="${stop.offset}%" stop-color="${stop.color}" stop-opacity="${stop.opacity ?? 1}" />`
+              ).join('\n');
+              const fxAttr = (gradient.fx !== undefined && gradient.fx !== gradient.cx) ? ` fx="${gradient.fx}%"` : '';
+              const fyAttr = (gradient.fy !== undefined && gradient.fy !== gradient.cy) ? ` fy="${gradient.fy}%"` : '';
+              return `  <radialGradient id="${gradient.id}" cx="${gradient.cx}%" cy="${gradient.cy}%" r="${gradient.r}%"${fxAttr}${fyAttr} gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">\n${radialStops}\n  </radialGradient>`;
+            
+            case 'pattern':
+              return `  <pattern id="${gradient.id}" width="${gradient.width}" height="${gradient.height}" patternUnits="${gradient.patternUnits || 'userSpaceOnUse'}"${gradient.patternContentUnits ? ` patternContentUnits="${gradient.patternContentUnits}"` : ''}${gradient.patternTransform ? ` patternTransform="${gradient.patternTransform}"` : ''}>\n    ${gradient.content}\n  </pattern>`;
+            
+            default:
+              return '';
+          }
+        }).filter(Boolean);
+        allDefs.push(...gradientDefs);
+      }
+      
+      // Add symbols
+      if (symbols.length > 0) {
+        const symbolDefs = symbols.map(symbol => {
+          const symbolContent = symbol.children.map((child: any) => {
+            if (child.type === 'path') {
+              const pathData = child.subPaths.map((subPath: any) => subPathToString(subPath)).join(' ');
+              const style = child.style || {};
+              const fillValue = convertStyleValue(style.fill);
+              const strokeValue = convertStyleValue(style.stroke);
+              
+              const pathAttrs = [
+                `d="${pathData}"`,
+                fillValue !== 'none' ? `fill="${fillValue}"` : 'fill="none"',
+                strokeValue !== 'none' ? `stroke="${strokeValue}"` : '',
+                style.strokeWidth ? `stroke-width="${style.strokeWidth}"` : '',
+                style.fillOpacity !== undefined && style.fillOpacity !== 1 ? `fill-opacity="${style.fillOpacity}"` : '',
+                style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${style.strokeOpacity}"` : '',
+              ].filter(Boolean).join(' ');
+              
+              return `    <path ${pathAttrs} />`;
+            }
             return '';
-        }
-      }).filter(Boolean).join('\n');
+          }).filter(Boolean).join('\n');
+          
+          const symbolAttrs = [
+            `id="${symbol.id}"`,
+            symbol.viewBox ? `viewBox="${symbol.viewBox}"` : '',
+            symbol.preserveAspectRatio ? `preserveAspectRatio="${symbol.preserveAspectRatio}"` : '',
+          ].filter(Boolean).join(' ');
+          
+          return `  <symbol ${symbolAttrs}>\n${symbolContent}\n  </symbol>`;
+        });
+        allDefs.push(...symbolDefs);
+      }
       
-      return `  <defs>\n${defs}\n  </defs>\n`;
+      // Add markers
+      if (markers.length > 0) {
+        const markerDefs = markers.map(marker => {
+          const markerContent = marker.children.length > 0 
+            ? marker.children.map((child: any) => {
+                if (child.type === 'path') {
+                  const pathData = child.subPaths.map((subPath: any) => subPathToString(subPath)).join(' ');
+                  const style = { ...child.style, ...marker.style };
+                  const fillValue = convertStyleValue(style.fill);
+                  const strokeValue = convertStyleValue(style.stroke);
+                  
+                  const pathAttrs = [
+                    `d="${pathData}"`,
+                    fillValue !== 'none' ? `fill="${fillValue}"` : 'fill="none"',
+                    strokeValue !== 'none' ? `stroke="${strokeValue}"` : '',
+                    style.strokeWidth ? `stroke-width="${style.strokeWidth}"` : '',
+                  ].filter(Boolean).join(' ');
+                  
+                  return `    <path ${pathAttrs} />`;
+                }
+                return '';
+              }).filter(Boolean).join('\n')
+            : `    <path d="M 0 0 L 8 4 L 0 8 Z" fill="${marker.style?.fill || '#000000'}" />`;
+          
+          const markerAttrs = [
+            `id="${marker.id}"`,
+            `markerUnits="${marker.markerUnits || 'strokeWidth'}"`,
+            `refX="${marker.refX || 0}"`,
+            `refY="${marker.refY || 4}"`,
+            `markerWidth="${marker.markerWidth || 8}"`,
+            `markerHeight="${marker.markerHeight || 8}"`,
+            `orient="${marker.orient || 'auto'}"`,
+            marker.viewBox ? `viewBox="${marker.viewBox}"` : '',
+          ].filter(Boolean).join(' ');
+          
+          return `  <marker ${markerAttrs}>\n${markerContent}\n  </marker>`;
+        });
+        allDefs.push(...markerDefs);
+      }
+      
+      // Add filters
+      if (filters.length > 0) {
+        const filterDefs = filters.map(filter => {
+          const primitiveContent = filter.primitives.map((primitive: any) => {
+            switch (primitive.type) {
+              case 'feGaussianBlur':
+                return `    <feGaussianBlur stdDeviation="${primitive.stdDeviation}" />`;
+              case 'feOffset':
+                return `    <feOffset dx="${primitive.dx}" dy="${primitive.dy}" />`;
+              case 'feFlood':
+                return `    <feFlood flood-color="${primitive.floodColor}" flood-opacity="${primitive.floodOpacity || 1}" />`;
+              case 'feDropShadow':
+                return `    <feDropShadow dx="${primitive.dx}" dy="${primitive.dy}" stdDeviation="${primitive.stdDeviation}" flood-color="${primitive.floodColor}" flood-opacity="${primitive.floodOpacity || 1}" />`;
+              case 'feColorMatrix':
+                return `    <feColorMatrix values="${primitive.values}" />`;
+              case 'feComposite':
+                return `    <feComposite operator="${primitive.operator}" />`;
+              case 'feBlend':
+                return `    <feBlend mode="${primitive.mode}" />`;
+              case 'feMorphology':
+                return `    <feMorphology operator="${primitive.operator}" radius="${primitive.radius}" />`;
+              default:
+                return '';
+            }
+          }).filter(Boolean).join('\n');
+          
+          const filterAttrs = [
+            `id="${filter.id}"`,
+            `filterUnits="${filter.filterUnits || 'objectBoundingBox'}"`,
+            filter.primitiveUnits ? `primitiveUnits="${filter.primitiveUnits}"` : '',
+          ].filter(Boolean).join(' ');
+          
+          return `  <filter ${filterAttrs}>\n${primitiveContent}\n  </filter>`;
+        });
+        allDefs.push(...filterDefs);
+      }
+      
+      // Add clip paths
+      if (clipPaths.length > 0) {
+        const clipPathDefs = clipPaths.map(clipPath => {
+          const clipContent = clipPath.children.map((child: any) => {
+            if (child.type === 'path') {
+              const pathData = child.subPaths.map((subPath: any) => subPathToString(subPath)).join(' ');
+              return `    <path d="${pathData}" />`;
+            }
+            return '';
+          }).filter(Boolean).join('\n');
+          
+          const clipAttrs = [
+            `id="${clipPath.id}"`,
+            clipPath.clipPathUnits ? `clipPathUnits="${clipPath.clipPathUnits}"` : '',
+          ].filter(Boolean).join(' ');
+          
+          return `  <clipPath ${clipAttrs}>\n${clipContent}\n  </clipPath>`;
+        });
+        allDefs.push(...clipPathDefs);
+      }
+      
+      // Add masks
+      if (masks.length > 0) {
+        const maskDefs = masks.map(mask => {
+          const maskContent = mask.children.map((child: any) => {
+            if (child.type === 'path') {
+              const pathData = child.subPaths.map((subPath: any) => subPathToString(subPath)).join(' ');
+              const style = child.style || {};
+              const fillValue = convertStyleValue(style.fill);
+              
+              const pathAttrs = [
+                `d="${pathData}"`,
+                fillValue !== 'none' ? `fill="${fillValue}"` : 'fill="white"',
+              ].filter(Boolean).join(' ');
+              
+              return `    <path ${pathAttrs} />`;
+            }
+            return '';
+          }).filter(Boolean).join('\n');
+          
+          const maskAttrs = [
+            `id="${mask.id}"`,
+            mask.maskUnits ? `maskUnits="${mask.maskUnits}"` : '',
+            mask.maskContentUnits ? `maskContentUnits="${mask.maskContentUnits}"` : '',
+            mask.x !== undefined ? `x="${mask.x}"` : '',
+            mask.y !== undefined ? `y="${mask.y}"` : '',
+            mask.width !== undefined ? `width="${mask.width}"` : '',
+            mask.height !== undefined ? `height="${mask.height}"` : '',
+          ].filter(Boolean).join(' ');
+          
+          return `  <mask ${maskAttrs}>\n${maskContent}\n  </mask>`;
+        });
+        allDefs.push(...maskDefs);
+      }
+      
+      if (allDefs.length === 0) return '';
+      
+      return `  <defs>\n${allDefs.join('\n')}\n  </defs>\n`;
     };
 
     const definitions = generateDefinitions();
 
     // Combine all elements for viewBox calculation
-    const allElements = [standalonePathElements, textElements, groupElements].filter(Boolean).join('\n');
+    const allElements = [standalonePathElements, textElements, imageElements, useElements, groupElements].filter(Boolean).join('\n');
 
     // Create a temporary SVG with default viewBox to calculate proper bounds
     const tempSvgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { readFileAsDataURL, validateImageFile, createDefaultImage, calculateImageAspectRatio } from '../../utils/svg-elements-utils';
 import { PluginButton } from '../../components/PluginButton';
@@ -113,13 +113,31 @@ export const ImageControls: React.FC = () => {
           Add Image:
         </span>
         
-        <PluginButton
-          icon={<Upload size={12} />}
-          text={loading ? 'Loading...' : 'Browse File'}
-          color="#28a745"
+        <button
+          type="button"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            padding: '8px 16px',
+            fontSize: '12px',
+            fontWeight: 500,
+            background: loading ? '#6c757d' : '#28a745',
+            color: 'white',
+            border: 'none',
+            borderRadius: '18px',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            width: '100%',
+            opacity: loading ? 0.6 : 1,
+            minHeight: '32px'
+          }}
+          onClick={handleAddImage}
           disabled={loading}
-          onPointerDown={handleAddImage}
-        />
+        >
+          <Upload size={12} />
+          {loading ? 'Loading...' : 'Browse File'}
+        </button>
         
         <input
           ref={fileInputRef}
