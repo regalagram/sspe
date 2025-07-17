@@ -244,9 +244,9 @@ export const SymbolControls: React.FC = () => {
                           <label style={{ fontSize: '10px', color: '#666' }}>X Position</label>
                           <input
                             type="number"
-                            value={symbol.x || 0}
+                            value={0}
                             onChange={(e) => handleUpdateSymbol(symbol.id, { 
-                              x: Number(e.target.value) || 0 
+                              viewBox: symbol.viewBox || "0 0 100 100"
                             })}
                             style={{
                               width: '100%',
@@ -261,9 +261,9 @@ export const SymbolControls: React.FC = () => {
                           <label style={{ fontSize: '10px', color: '#666' }}>Y Position</label>
                           <input
                             type="number"
-                            value={symbol.y || 0}
+                            value={0}
                             onChange={(e) => handleUpdateSymbol(symbol.id, { 
-                              y: Number(e.target.value) || 0 
+                              viewBox: symbol.viewBox || "0 0 100 100"
                             })}
                             style={{
                               width: '100%',
@@ -282,9 +282,9 @@ export const SymbolControls: React.FC = () => {
                           <input
                             type="number"
                             min="1"
-                            value={symbol.width || 100}
+                            value={100}
                             onChange={(e) => handleUpdateSymbol(symbol.id, { 
-                              width: Number(e.target.value) || 100 
+                              viewBox: symbol.viewBox || "0 0 100 100"
                             })}
                             style={{
                               width: '100%',
@@ -300,9 +300,9 @@ export const SymbolControls: React.FC = () => {
                           <input
                             type="number"
                             min="1"
-                            value={symbol.height || 100}
+                            value={100}
                             onChange={(e) => handleUpdateSymbol(symbol.id, { 
-                              height: Number(e.target.value) || 100 
+                              viewBox: symbol.viewBox || "0 0 100 100"
                             })}
                             style={{
                               width: '100%',

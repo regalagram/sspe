@@ -8,14 +8,14 @@ import { pluginManager } from '../../core/PluginSystem';
 const extractPanelInfo = () => {
   const panels = pluginManager.getEnabledPlugins()
     .flatMap(plugin => plugin.ui || [])
-    .filter(ui => ui.position === 'sidebar' || ui.position === 'toolbar' || ui.position === 'accordion') // Include sidebar, toolbar and accordion
+    .filter(ui => ui.position === 'sidebar' || ui.position === 'toolbar') // Include sidebar and toolbar
     .map(ui => ({
       id: ui.id,
       name: formatPanelName(ui.id),
       enabled: true, // Default to enabled
       order: ui.order || 0,
       pluginId: extractPluginId(ui.id),
-      originalPosition: ui.position as 'sidebar' | 'toolbar' | 'accordion', // Type assertion for filtered positions
+      originalPosition: ui.position as 'sidebar' | 'toolbar', // Type assertion for filtered positions
     }));
 
   return panels;
