@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { readFileAsDataURL, validateImageFile, createDefaultImage, calculateImageAspectRatio } from '../../utils/svg-elements-utils';
 import { PluginButton } from '../../components/PluginButton';
