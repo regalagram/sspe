@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { createDefaultClipPath, createDefaultMask, formatSVGReference } from '../../utils/svg-elements-utils';
 import { PluginButton } from '../../components/PluginButton';
+import { ElementPreview } from '../../components/ElementPreview';
 import { Plus, Trash2, Scissors, Eye } from 'lucide-react';
 
 export const ClippingControls: React.FC = () => {
@@ -61,25 +62,106 @@ export const ClippingControls: React.FC = () => {
       return;
     }
 
-    // Get selected sub-paths data from all paths
-    const selectedSubPathsData: any[] = [];
+    // Collect selected sub-paths data and calculate bounding box in one pass
+    const selectedData: Array<{subPath: any, style: any}> = [];
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
     paths.forEach(path => {
       path.subPaths.forEach(subPath => {
         if (selectedSubPaths.includes(subPath.id)) {
-          selectedSubPathsData.push({
-            type: 'path' as const,
-            id: `clip-${subPath.id}`,
-            subPaths: [subPath], // Each selected sub-path becomes a separate path in the clip
+          // Store the original data
+          selectedData.push({
+            subPath: subPath,
             style: { ...path.style, fill: 'black' } // Clipping paths should be black
+          });
+
+          // Calculate bounding box from commands
+          subPath.commands.forEach((cmd: any) => {
+            if (cmd.x !== undefined) {
+              minX = Math.min(minX, cmd.x);
+              maxX = Math.max(maxX, cmd.x);
+            }
+            if (cmd.y !== undefined) {
+              minY = Math.min(minY, cmd.y);
+              maxY = Math.max(maxY, cmd.y);
+            }
+            // Handle control points for curves
+            if (cmd.x1 !== undefined) {
+              minX = Math.min(minX, cmd.x1);
+              maxX = Math.max(maxX, cmd.x1);
+            }
+            if (cmd.y1 !== undefined) {
+              minY = Math.min(minY, cmd.y1);
+              maxY = Math.max(maxY, cmd.y1);
+            }
+            if (cmd.x2 !== undefined) {
+              minX = Math.min(minX, cmd.x2);
+              maxX = Math.max(maxX, cmd.x2);
+            }
+            if (cmd.y2 !== undefined) {
+              minY = Math.min(minY, cmd.y2);
+              maxY = Math.max(maxY, cmd.y2);
+            }
           });
         }
       });
     });
 
-    if (selectedSubPathsData.length === 0) return;
+    if (selectedData.length === 0) return;
 
+    // If no valid coordinates found, use defaults
+    let offsetX = 0, offsetY = 0;
+    
+    if (minX !== Infinity) {
+      // Store original min values for normalization
+      const originalMinX = minX;
+      const originalMinY = minY;
+      
+      // The offset is the original minimum to start at 0,0
+      offsetX = originalMinX;
+      offsetY = originalMinY;
+    }
+
+    // Now normalize the coordinates and create the clip path data
+    const selectedSubPathsData = selectedData.map((data, index) => {
+      const normalizedCommands = data.subPath.commands.map((cmd: any) => {
+        const newCmd = { ...cmd };
+        
+        // Normalize main coordinates (subtract the offset to start from 0,0)
+        if (newCmd.x !== undefined) newCmd.x = newCmd.x - offsetX;
+        if (newCmd.y !== undefined) newCmd.y = newCmd.y - offsetY;
+        
+        // Normalize control points
+        if (newCmd.x1 !== undefined) newCmd.x1 = newCmd.x1 - offsetX;
+        if (newCmd.y1 !== undefined) newCmd.y1 = newCmd.y1 - offsetY;
+        if (newCmd.x2 !== undefined) newCmd.x2 = newCmd.x2 - offsetX;
+        if (newCmd.y2 !== undefined) newCmd.y2 = newCmd.y2 - offsetY;
+        
+        return newCmd;
+      });
+
+      return {
+        type: 'path' as const,
+        id: `clip-${data.subPath.id}`,
+        subPaths: [{
+          ...data.subPath,
+          commands: normalizedCommands
+        }],
+        style: data.style
+      };
+    });
+
+    // Calculate dimensions based on normalized content
+    const width = minX !== Infinity ? (maxX - minX) : 100;
+    const height = minX !== Infinity ? (maxY - minY) : 100;
+    
     const clipPathData = {
       ...createDefaultClipPath(),
+      clipPathUnits: 'userSpaceOnUse' as const,
+      x: 0,
+      y: 0,
+      width: width,
+      height: height,
       children: selectedSubPathsData
     };
 
@@ -99,25 +181,107 @@ export const ClippingControls: React.FC = () => {
       return;
     }
 
-    // Get selected sub-paths data from all paths
-    const selectedSubPathsData: any[] = [];
+    // Collect selected sub-paths data and calculate bounding box in one pass
+    const selectedData: Array<{subPath: any, style: any}> = [];
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
     paths.forEach(path => {
       path.subPaths.forEach(subPath => {
         if (selectedSubPaths.includes(subPath.id)) {
-          selectedSubPathsData.push({
-            type: 'path' as const,
-            id: `mask-${subPath.id}`,
-            subPaths: [subPath], // Each selected sub-path becomes a separate path in the mask
+          // Store the original data
+          selectedData.push({
+            subPath: subPath,
             style: { ...path.style, fill: 'white' } // Masks should be white for visible areas
+          });
+
+          // Calculate bounding box from commands
+          subPath.commands.forEach((cmd: any) => {
+            if (cmd.x !== undefined) {
+              minX = Math.min(minX, cmd.x);
+              maxX = Math.max(maxX, cmd.x);
+            }
+            if (cmd.y !== undefined) {
+              minY = Math.min(minY, cmd.y);
+              maxY = Math.max(maxY, cmd.y);
+            }
+            // Handle control points for curves
+            if (cmd.x1 !== undefined) {
+              minX = Math.min(minX, cmd.x1);
+              maxX = Math.max(maxX, cmd.x1);
+            }
+            if (cmd.y1 !== undefined) {
+              minY = Math.min(minY, cmd.y1);
+              maxY = Math.max(maxY, cmd.y1);
+            }
+            if (cmd.x2 !== undefined) {
+              minX = Math.min(minX, cmd.x2);
+              maxX = Math.max(maxX, cmd.x2);
+            }
+            if (cmd.y2 !== undefined) {
+              minY = Math.min(minY, cmd.y2);
+              maxY = Math.max(maxY, cmd.y2);
+            }
           });
         }
       });
     });
 
-    if (selectedSubPathsData.length === 0) return;
+    if (selectedData.length === 0) return;
 
+    // If no valid coordinates found, use defaults
+    let offsetX = 0, offsetY = 0;
+    
+    if (minX !== Infinity) {
+      // Store original min values for normalization
+      const originalMinX = minX;
+      const originalMinY = minY;
+      
+      // The offset is the original minimum to start at 0,0
+      offsetX = originalMinX;
+      offsetY = originalMinY;
+    }
+
+    // Now normalize the coordinates and create the mask data
+    const selectedSubPathsData = selectedData.map((data, index) => {
+      const normalizedCommands = data.subPath.commands.map((cmd: any) => {
+        const newCmd = { ...cmd };
+        
+        // Normalize main coordinates (subtract the offset to start from 0,0)
+        if (newCmd.x !== undefined) newCmd.x = newCmd.x - offsetX;
+        if (newCmd.y !== undefined) newCmd.y = newCmd.y - offsetY;
+        
+        // Normalize control points
+        if (newCmd.x1 !== undefined) newCmd.x1 = newCmd.x1 - offsetX;
+        if (newCmd.y1 !== undefined) newCmd.y1 = newCmd.y1 - offsetY;
+        if (newCmd.x2 !== undefined) newCmd.x2 = newCmd.x2 - offsetX;
+        if (newCmd.y2 !== undefined) newCmd.y2 = newCmd.y2 - offsetY;
+        
+        return newCmd;
+      });
+
+      return {
+        type: 'path' as const,
+        id: `mask-${data.subPath.id}`,
+        subPaths: [{
+          ...data.subPath,
+          commands: normalizedCommands
+        }],
+        style: data.style
+      };
+    });
+
+    // Calculate dimensions based on normalized content
+    const width = minX !== Infinity ? (maxX - minX) : 100;
+    const height = minX !== Infinity ? (maxY - minY) : 100;
+    
     const maskData = {
       ...createDefaultMask(),
+      maskUnits: 'userSpaceOnUse' as const, // Change to userSpaceOnUse for explicit dimensions
+      maskContentUnits: 'userSpaceOnUse' as const,
+      x: 0,
+      y: 0,
+      width: width,
+      height: height,
       children: selectedSubPathsData
     };
 
@@ -383,11 +547,77 @@ export const ClippingControls: React.FC = () => {
                       border: '1px solid #e9ecef'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '11px', color: '#666' }}>
-                        {clipPath.children.length} elements
-                      </span>
-                      <div style={{ display: 'flex', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
+                      <ElementPreview 
+                        elementId={clipPath.id} 
+                        elementType="clipPath" 
+                        size={48}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <div style={{ fontSize: '11px', color: '#666', fontWeight: '500' }}>
+                            Clip Path #{clipPath.id.slice(-6)}
+                          </div>
+                          <button
+                            onClick={() => handleRemoveClipPath(clipPath.id)}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '10px',
+                              border: '1px solid #dc3545',
+                              backgroundColor: '#fff',
+                              color: '#dc3545',
+                              borderRadius: '3px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#999', marginBottom: '2px' }}>
+                          {clipPath.children.length} element{clipPath.children.length !== 1 ? 's' : ''}
+                        </div>
+                        {clipPath.children.some((child: any) => child.type === 'path') && (
+                          <div style={{ fontSize: '9px', color: '#999', fontFamily: 'monospace', marginTop: '4px' }}>
+                            <div style={{ fontWeight: '500', marginBottom: '2px' }}>Path Commands:</div>
+                            {clipPath.children
+                              .filter((child: any) => child.type === 'path')
+                              .map((pathChild: any, index: number) => {
+                                const pathData = pathChild.subPaths?.map((subPath: any) => 
+                                  subPath.commands?.map((cmd: any) => {
+                                    switch (cmd.command) {
+                                      case 'M':
+                                        return `M ${(cmd.x || 0).toFixed(1)} ${(cmd.y || 0).toFixed(1)}`;
+                                      case 'L':
+                                        return `L ${(cmd.x || 0).toFixed(1)} ${(cmd.y || 0).toFixed(1)}`;
+                                      case 'C':
+                                        return `C ${(cmd.x1 || 0).toFixed(1)} ${(cmd.y1 || 0).toFixed(1)} ${(cmd.x2 || 0).toFixed(1)} ${(cmd.y2 || 0).toFixed(1)} ${(cmd.x || 0).toFixed(1)} ${(cmd.y || 0).toFixed(1)}`;
+                                      case 'Z':
+                                        return 'Z';
+                                      default:
+                                        return '';
+                                    }
+                                  }).join(' ')
+                                ).join(' ') || 'M 0 0';
+                                
+                                return (
+                                  <div key={index} style={{ 
+                                    marginBottom: '2px', 
+                                    wordBreak: 'break-all',
+                                    maxWidth: '100%',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    {pathData.length > 60 ? `${pathData.substring(0, 60)}...` : pathData}
+                                  </div>
+                                );
+                              })
+                            }
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                         {selectedPath && (
                           <button
                             onClick={() => handleApplyClipToPath(clipPath.id)}
@@ -473,22 +703,7 @@ export const ClippingControls: React.FC = () => {
                             Apply to Image
                           </button>
                         )}
-                        <button
-                          onClick={() => handleRemoveClipPath(clipPath.id)}
-                          style={{
-                            padding: '4px 8px',
-                            fontSize: '10px',
-                            border: '1px solid #dc3545',
-                            backgroundColor: '#fff',
-                            color: '#dc3545',
-                            borderRadius: '3px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          ✕
-                        </button>
                       </div>
-                    </div>
                   </div>
                 ))}
               </div>
@@ -580,11 +795,77 @@ export const ClippingControls: React.FC = () => {
                       border: '1px solid #e9ecef'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '11px', color: '#666' }}>
-                        {mask.children.length} elements
-                      </span>
-                      <div style={{ display: 'flex', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
+                      <ElementPreview 
+                        elementId={mask.id} 
+                        elementType="mask" 
+                        size={48}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <div style={{ fontSize: '11px', color: '#666', fontWeight: '500' }}>
+                            Mask #{mask.id.slice(-6)}
+                          </div>
+                          <button
+                            onClick={() => handleRemoveMask(mask.id)}
+                            style={{
+                              padding: '4px 8px',
+                              fontSize: '10px',
+                              border: '1px solid #dc3545',
+                              backgroundColor: '#fff',
+                              color: '#dc3545',
+                              borderRadius: '3px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <div style={{ fontSize: '10px', color: '#999', marginBottom: '2px' }}>
+                          {mask.children.length} element{mask.children.length !== 1 ? 's' : ''}
+                        </div>
+                        {mask.children.some((child: any) => child.type === 'path') && (
+                          <div style={{ fontSize: '9px', color: '#999', fontFamily: 'monospace', marginTop: '4px' }}>
+                            <div style={{ fontWeight: '500', marginBottom: '2px' }}>Path Commands:</div>
+                            {mask.children
+                              .filter((child: any) => child.type === 'path')
+                              .map((pathChild: any, index: number) => {
+                                const pathData = pathChild.subPaths?.map((subPath: any) => 
+                                  subPath.commands?.map((cmd: any) => {
+                                    switch (cmd.command) {
+                                      case 'M':
+                                        return `M ${(cmd.x || 0).toFixed(1)} ${(cmd.y || 0).toFixed(1)}`;
+                                      case 'L':
+                                        return `L ${(cmd.x || 0).toFixed(1)} ${(cmd.y || 0).toFixed(1)}`;
+                                      case 'C':
+                                        return `C ${(cmd.x1 || 0).toFixed(1)} ${(cmd.y1 || 0).toFixed(1)} ${(cmd.x2 || 0).toFixed(1)} ${(cmd.y2 || 0).toFixed(1)} ${(cmd.x || 0).toFixed(1)} ${(cmd.y || 0).toFixed(1)}`;
+                                      case 'Z':
+                                        return 'Z';
+                                      default:
+                                        return '';
+                                    }
+                                  }).join(' ')
+                                ).join(' ') || 'M 0 0';
+                                
+                                return (
+                                  <div key={index} style={{ 
+                                    marginBottom: '2px', 
+                                    wordBreak: 'break-all',
+                                    maxWidth: '100%',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    {pathData.length > 60 ? `${pathData.substring(0, 60)}...` : pathData}
+                                  </div>
+                                );
+                              })
+                            }
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                         {selectedPath && (
                           <button
                             onClick={() => handleApplyMaskToPath(mask.id)}
@@ -670,22 +951,7 @@ export const ClippingControls: React.FC = () => {
                             Apply to Image
                           </button>
                         )}
-                        <button
-                          onClick={() => handleRemoveMask(mask.id)}
-                          style={{
-                            padding: '4px 8px',
-                            fontSize: '10px',
-                            border: '1px solid #dc3545',
-                            backgroundColor: '#fff',
-                            color: '#dc3545',
-                            borderRadius: '3px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          ✕
-                        </button>
                       </div>
-                    </div>
                   </div>
                 ))}
               </div>

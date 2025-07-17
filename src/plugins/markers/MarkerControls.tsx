@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { createDefaultMarker, createArrowMarker, formatSVGReference, parseSVGReference } from '../../utils/svg-elements-utils';
 import { PluginButton } from '../../components/PluginButton';
+import { ElementPreview } from '../../components/ElementPreview';
 import { ArrowUp, ArrowDown, Plus, Trash2, Target } from 'lucide-react';
 
 export const MarkerControls: React.FC = () => {
@@ -199,9 +200,16 @@ export const MarkerControls: React.FC = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {markers.map((marker) => (
               <div key={marker.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <span style={{ fontSize: '11px', color: '#666', fontWeight: '500' }}>
-                  Marker ({marker.children.length} elements)
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ElementPreview 
+                    elementId={marker.id} 
+                    elementType="marker" 
+                    size={32}
+                  />
+                  <span style={{ fontSize: '11px', color: '#666', fontWeight: '500' }}>
+                    Marker ({marker.children.length} elements)
+                  </span>
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px' }}>
                   <button
                     onClick={() => handleApplyMarker(marker.id, 'start')}
@@ -269,29 +277,39 @@ export const MarkerControls: React.FC = () => {
                   border: selectedMarker?.id === marker.id ? '1px solid #1976d2' : '1px solid #e9ecef'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '11px', color: '#666' }}>
-                      {marker.children.length} elements
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
+                  <ElementPreview 
+                    elementId={marker.id} 
+                    elementType="marker" 
+                    size={48}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <div style={{ fontSize: '11px', color: '#666', fontWeight: '500' }}>
+                        Marker #{marker.id.slice(-6)}
+                      </div>
+                      <button
+                        onClick={() => handleRemoveMarkerDefinition(marker.id)}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '10px',
+                          border: '1px solid #dc3545',
+                          backgroundColor: '#fff',
+                          color: '#dc3545',
+                          borderRadius: '3px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#999', marginBottom: '2px' }}>
+                      {marker.children.length} element{marker.children.length !== 1 ? 's' : ''}
                     </div>
                     <div style={{ fontSize: '10px', color: '#999' }}>
-                      {marker.markerWidth} × {marker.markerHeight}
+                      Size: {marker.markerWidth} × {marker.markerHeight}
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleRemoveMarkerDefinition(marker.id)}
-                    style={{
-                      padding: '4px 8px',
-                      fontSize: '10px',
-                      border: '1px solid #dc3545',
-                      backgroundColor: '#fff',
-                      color: '#dc3545',
-                      borderRadius: '3px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Remove
-                  </button>
                 </div>
                 
                 {/* Marker Properties Editor */}

@@ -13,6 +13,7 @@ import { PluginButton } from '../../components/PluginButton';
 import { Plus, Trash2, Eye, Zap, Droplets, Palette, Edit, Copy } from 'lucide-react';
 
 export const FilterControls: React.FC = () => {
+  const store = useEditorStore();
   const { 
     filters, 
     selection, 
@@ -28,7 +29,7 @@ export const FilterControls: React.FC = () => {
     updateTextStyle,
     updateGroup,
     updateImage
-  } = useEditorStore();
+  } = store;
   
   const [editingFilter, setEditingFilter] = useState<string | null>(null);
 
@@ -97,15 +98,34 @@ export const FilterControls: React.FC = () => {
       const filterData = type === 'drop-shadow' ? createDropShadowFilter() :
                          type === 'blur' ? createBlurFilter() : 
                          createGrayscaleFilter();
+      
+      // Create the filter and apply immediately
       addFilter(filterData);
-      existingFilter = filterData as any;
+      
+      // Apply using a timeout to ensure the store is updated
+      setTimeout(() => {
+        // Access filters from the store directly to get the most current state
+        const storeState = useEditorStore.getState();
+        const currentFilters = storeState.filters;
+        const newFilter = currentFilters[currentFilters.length - 1]; // Get the last added filter
+        
+        if (newFilter && newFilter.id) {
+          const parentPaths = getParentPathsOfSelectedSubPaths();
+          parentPaths.forEach(pathId => {
+            updatePathStyle(pathId, {
+              filter: formatSVGReference(newFilter.id)
+            });
+          });
+        }
+      }, 200);
+      return;
     }
 
     // Apply to parent paths of selected sub-paths
     const parentPaths = getParentPathsOfSelectedSubPaths();
     parentPaths.forEach(pathId => {
       updatePathStyle(pathId, {
-        filter: formatSVGReference(existingFilter!.id)
+        filter: formatSVGReference(existingFilter.id)
       });
     });
   };
@@ -116,6 +136,21 @@ export const FilterControls: React.FC = () => {
         filter: formatSVGReference(filterId)
       });
     }
+  };
+
+  const handleApplyFilterToSubPaths = (filterId: string) => {
+    if (selectedSubPaths.length === 0) {
+      alert('Please select one or more sub-paths first');
+      return;
+    }
+
+    // Apply to parent paths of selected sub-paths
+    const parentPaths = getParentPathsOfSelectedSubPaths();
+    parentPaths.forEach(pathId => {
+      updatePathStyle(pathId, {
+        filter: formatSVGReference(filterId)
+      });
+    });
   };
 
   const handleApplyFilterToText = (filterId: string) => {
@@ -166,6 +201,20 @@ export const FilterControls: React.FC = () => {
         filter: undefined
       });
     }
+  };
+
+  const handleRemoveFilterFromSubPaths = () => {
+    if (selectedSubPaths.length === 0) {
+      return;
+    }
+
+    // Remove from parent paths of selected sub-paths
+    const parentPaths = getParentPathsOfSelectedSubPaths();
+    parentPaths.forEach(pathId => {
+      updatePathStyle(pathId, {
+        filter: undefined
+      });
+    });
   };
 
   const handleRemoveFilterFromText = () => {
@@ -516,7 +565,7 @@ export const FilterControls: React.FC = () => {
       </div>
 
       {/* Apply to Selected Elements */}
-      {(selectedPath || selection.selectedTexts.length > 0 || selection.selectedGroups.length > 0 || selection.selectedImages.length > 0) && (
+      {(selectedPath || selectedSubPaths.length > 0 || selection.selectedTexts.length > 0 || selection.selectedGroups.length > 0 || selection.selectedImages.length > 0) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px', borderTop: '1px solid #e9ecef' }}>
           <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
             Apply to Selected Elements:
@@ -543,6 +592,22 @@ export const FilterControls: React.FC = () => {
                         }}
                       >
                         Apply to Path
+                      </button>
+                    )}
+                    {selectedSubPaths.length > 0 && (
+                      <button
+                        onClick={() => handleApplyFilterToSubPaths(filter.id)}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '10px',
+                          border: '1px solid #007bff',
+                          backgroundColor: '#fff',
+                          color: '#007bff',
+                          borderRadius: '3px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Apply to Sub-paths ({selectedSubPaths.length})
                       </button>
                     )}
                     {selection.selectedTexts.length > 0 && (
@@ -614,6 +679,22 @@ export const FilterControls: React.FC = () => {
                       }}
                     >
                       Remove from Path
+                    </button>
+                  )}
+                  {selectedSubPaths.length > 0 && (
+                    <button
+                      onClick={handleRemoveFilterFromSubPaths}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        border: '1px solid #dc3545',
+                        backgroundColor: '#fff',
+                        color: '#dc3545',
+                        borderRadius: '3px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Remove from Sub-paths ({selectedSubPaths.length})
                     </button>
                   )}
                   {selection.selectedTexts.length > 0 && (

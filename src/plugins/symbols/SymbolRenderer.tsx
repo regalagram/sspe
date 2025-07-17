@@ -67,7 +67,46 @@ export const SymbolRenderer: React.FC = () => {
               viewBox={symbol.viewBox}
               preserveAspectRatio={symbol.preserveAspectRatio}
             >
-              {symbol.children.map(child => renderChildContent(child.id, child.type))}
+              {symbol.children.map((child, index) => {
+                // Handle direct child objects (created from selection)
+                if (child.type === 'path' && (child as any).subPaths) {
+                  const pathData = (child as any).subPaths.map((subPath: any) => 
+                    subPath.commands.map((cmd: any) => {
+                      switch (cmd.command) {
+                        case 'M':
+                          return `M ${cmd.x || 0} ${cmd.y || 0}`;
+                        case 'L':
+                          return `L ${cmd.x || 0} ${cmd.y || 0}`;
+                        case 'C':
+                          return `C ${cmd.x1 || 0} ${cmd.y1 || 0} ${cmd.x2 || 0} ${cmd.y2 || 0} ${cmd.x || 0} ${cmd.y || 0}`;
+                        case 'Z':
+                          return 'Z';
+                        default:
+                          return '';
+                      }
+                    }).join(' ')
+                  ).join(' ');
+
+                  return (
+                    <path
+                      key={`${symbol.id}-child-${index}`}
+                      d={pathData}
+                      fill={typeof (child as any).style?.fill === 'string' ? (child as any).style.fill : 'none'}
+                      stroke={typeof (child as any).style?.stroke === 'string' ? (child as any).style.stroke : 'none'}
+                      strokeWidth={(child as any).style?.strokeWidth || 0}
+                      fillOpacity={(child as any).style?.fillOpacity ?? 1}
+                      strokeOpacity={(child as any).style?.strokeOpacity ?? 1}
+                    />
+                  );
+                }
+                
+                // Handle reference-based children (existing logic)
+                if ((child as any).id && child.type) {
+                  return renderChildContent((child as any).id, child.type);
+                }
+                
+                return null;
+              })}
             </symbol>
           ))}
         </defs>
