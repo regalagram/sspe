@@ -173,7 +173,7 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
 };
 
 export const SVGComponent: React.FC = () => {
-  const { paths, texts, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, viewport, replacePaths, replaceTexts, replaceGroups, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients, addText, addGradient, addImage, addSymbol, addMarker, addClipPath, addMask, addFilter, addUse } = useEditorStore();
+  const { paths, texts, textPaths, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, viewport, replacePaths, replaceTexts, replaceTextPaths, replaceGroups, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients, addText, addGradient, addImage, addSymbol, addMarker, addClipPath, addMask, addFilter, addUse } = useEditorStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Import settings state
@@ -320,6 +320,42 @@ export const SVGComponent: React.FC = () => {
       return `<use ${attributes} />`;
     };
 
+    // Render textPath elements
+    const renderTextPath = (textPath: any) => {
+      const style = textPath.style || {};
+      const textFillValue = convertStyleValue(style.fill);
+      const textStrokeValue = convertStyleValue(style.stroke);
+      
+      const textAttributes = [
+        style.fontSize ? `font-size="${style.fontSize}"` : '',
+        style.fontFamily ? `font-family="${style.fontFamily}"` : '',
+        style.fontWeight ? `font-weight="${style.fontWeight}"` : '',
+        style.fontStyle ? `font-style="${style.fontStyle}"` : '',
+        style.textAnchor ? `text-anchor="${style.textAnchor}"` : '',
+        textFillValue !== 'none' ? `fill="${textFillValue}"` : '',
+        textStrokeValue !== 'none' ? `stroke="${textStrokeValue}"` : '',
+        style.strokeWidth ? `stroke-width="${style.strokeWidth}"` : '',
+        style.fillOpacity !== undefined && style.fillOpacity !== 1 ? `fill-opacity="${style.fillOpacity}"` : '',
+        style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${style.strokeOpacity}"` : '',
+        textPath.transform ? `transform="${textPath.transform}"` : '',
+        style.filter ? `filter="${convertStyleValue(style.filter)}"` : '',
+        style.clipPath ? `clip-path="${convertStyleValue(style.clipPath)}"` : '',
+        style.mask ? `mask="${convertStyleValue(style.mask)}"` : '',
+      ].filter(Boolean).join(' ');
+
+      const textPathAttributes = [
+        `href="#${textPath.pathRef}"`,
+        textPath.startOffset !== undefined ? `startOffset="${textPath.startOffset}"` : '',
+        textPath.method ? `method="${textPath.method}"` : '',
+        textPath.spacing ? `spacing="${textPath.spacing}"` : '',
+        textPath.side ? `side="${textPath.side}"` : '',
+        textPath.textLength ? `textLength="${textPath.textLength}"` : '',
+        textPath.lengthAdjust ? `lengthAdjust="${textPath.lengthAdjust}"` : '',
+      ].filter(Boolean).join(' ');
+      
+      return `<text ${textAttributes}><textPath ${textPathAttributes}>${textPath.content}</textPath></text>`;
+    };
+
     // Collect elements that are NOT in any group
     const elementsInGroups = new Set<string>();
     groups.forEach(group => {
@@ -331,6 +367,7 @@ export const SVGComponent: React.FC = () => {
     // Filter standalone elements (not in any group)
     const standalonePaths = paths.filter(path => !elementsInGroups.has(path.id));
     const standaloneTexts = texts.filter(text => !elementsInGroups.has(text.id));
+    const standaloneTextPaths = textPaths.filter(textPath => !elementsInGroups.has(textPath.id));
     const standaloneImages = images.filter(image => !elementsInGroups.has(image.id));
     const standaloneUses = uses.filter(use => !elementsInGroups.has(use.id));
 
@@ -342,6 +379,11 @@ export const SVGComponent: React.FC = () => {
     // Generate standalone text elements
     const textElements = standaloneTexts.map((text) => {
       return `  ${renderText(text)}`;
+    }).join('\n');
+
+    // Generate standalone textPath elements
+    const textPathElements = standaloneTextPaths.map((textPath) => {
+      return `  ${renderTextPath(textPath)}`;
     }).join('\n');
 
     // Generate standalone image elements
@@ -368,6 +410,11 @@ export const SVGComponent: React.FC = () => {
           const text = texts.find(t => t.id === child.id);
           if (text) {
             groupElements.push(`    ${renderText(text)}`);
+          }
+        } else if (child.type === 'textPath') {
+          const textPath = textPaths.find(tp => tp.id === child.id);
+          if (textPath) {
+            groupElements.push(`    ${renderTextPath(textPath)}`);
           }
         } else if (child.type === 'image') {
           const image = images.find(i => i.id === child.id);
@@ -680,7 +727,7 @@ export const SVGComponent: React.FC = () => {
     const definitions = generateDefinitions();
 
     // Combine all elements for viewBox calculation
-    const allElements = [standalonePathElements, textElements, imageElements, useElements, groupElements].filter(Boolean).join('\n');
+    const allElements = [standalonePathElements, textElements, textPathElements, imageElements, useElements, groupElements].filter(Boolean).join('\n');
 
     // Create a temporary SVG with default viewBox to calculate proper bounds
     const tempSvgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">

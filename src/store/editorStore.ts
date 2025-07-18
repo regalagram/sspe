@@ -12,6 +12,7 @@ import { UIStateActions, createUIStateActions } from './uiStateActions';
 import { HistoryActions, createHistoryActions } from './historyActions';
 import { TransformActions, createTransformActions } from './transformActions';
 import { TextActions, createTextActions } from './textActions';
+import { TextPathActions, createTextPathActions } from './textPathActions';
 import { GradientActions, createGradientActions } from './gradientActions';
 import { GroupActions, createGroupActions } from './groupActions';
 import { SVGElementActions, createSVGElementActions } from './svgElementActions';
@@ -25,6 +26,7 @@ interface EditorActions extends
   HistoryActions, 
   TransformActions,
   TextActions,
+  TextPathActions,
   GradientActions,
   GroupActions,
   SVGElementActions {}
@@ -87,6 +89,7 @@ const loadInitialState = (): EditorState => {
         }
       }
     ],
+    textPaths: [],
     groups: [],
     gradients: [],
     images: [],
@@ -103,6 +106,7 @@ const loadInitialState = (): EditorState => {
       selectedControlPoints: [],
       selectedTexts: [],
       selectedTextSpans: [],
+      selectedTextPaths: [],
       selectedGroups: [],
       selectedImages: [],
       selectedClipPaths: [],
@@ -180,6 +184,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     ...createHistoryActions(set, get, api),
     ...createTransformActions(set, get, api),
     ...createTextActions(set, get, api),
+    ...createTextPathActions(set, get, api),
     ...createGradientActions(set, get, api),
     ...createGroupActions(set, get, api),
     ...createSVGElementActions(set, get, api),

@@ -114,6 +114,7 @@ export interface SelectionState {
   selectedControlPoints: string[];
   selectedTexts: string[];
   selectedTextSpans: string[];
+  selectedTextPaths: string[];
   selectedGroups: string[]; // Selected group IDs
   selectedImages: string[]; // Selected image IDs
   selectedClipPaths: string[]; // Selected clip path IDs
@@ -155,6 +156,7 @@ export interface EditorState {
   shapeSize?: number;
   paths: SVGPath[];
   texts: TextElementType[];
+  textPaths: SVGTextPath[];
   groups: SVGGroup[]; // SVG group elements
   gradients: GradientOrPattern[]; // Imported gradients and patterns
   images: SVGImage[]; // Imágenes embebidas
@@ -284,6 +286,23 @@ export interface MultilineTextElement {
   locked?: boolean;
 }
 
+// TextPath Element Types
+export interface SVGTextPath {
+  id: string;
+  type: 'textPath';
+  content: string;
+  pathRef: string; // Reference to path ID for text to follow
+  startOffset?: number | string; // Start position along the path (number or percentage)
+  method?: 'align' | 'stretch'; // How text is positioned on path
+  spacing?: 'auto' | 'exact'; // Letter spacing method
+  side?: 'left' | 'right'; // Which side of the path to place text
+  textLength?: number; // Desired length of text
+  lengthAdjust?: 'spacing' | 'spacingAndGlyphs'; // How to adjust text to fit textLength
+  style: TextStyle;
+  transform?: string;
+  locked?: boolean;
+}
+
 export type TextElementType = TextElement | MultilineTextElement;
 
 // SVG Group Types
@@ -301,12 +320,12 @@ export interface SVGGroup {
 }
 
 export interface SVGGroupChild {
-  type: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use';
+  type: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use';
   id: string; // Reference to the actual element ID
 }
 
 // Update existing types to include all new elements
-export type ElementType = 'path' | 'text' | 'multiline-text' | 'group' | 'image' | 'clipPath' | 'mask' | 'filter' | 'marker' | 'symbol' | 'use';
+export type ElementType = 'path' | 'text' | 'multiline-text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'filter' | 'marker' | 'symbol' | 'use';
 
 // Guidelines and Snapping Types
 export interface GuidelinePoint {

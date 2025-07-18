@@ -1,0 +1,146 @@
+import React from 'react';
+import { useEditorStore } from '../../store/editorStore';
+import { SVGTextPath } from '../../types';
+import { subPathToString } from '../../utils/path-utils';
+
+export const TextPathRenderer: React.FC = () => {
+  const { textPaths, paths, selection, renderVersion } = useEditorStore();
+
+  const renderTextPath = (textPath: SVGTextPath) => {
+    // Find the referenced path
+    const referencedPath = paths.find(path => 
+      path.subPaths.some(subPath => subPath.id === textPath.pathRef)
+    );
+
+    if (!referencedPath) {
+      // If referenced path doesn't exist, don't render
+      return null;
+    }
+
+    const referencedSubPath = referencedPath.subPaths.find(subPath => subPath.id === textPath.pathRef);
+    if (!referencedSubPath) {
+      return null;
+    }
+
+    // Generate the path data for the textPath to follow
+    const pathData = subPathToString(referencedSubPath);
+    const pathId = `textpath-path-${textPath.id}`;
+
+    // Determine selection state
+    const isSelected = selection.selectedTextPaths.includes(textPath.id);
+
+    // Style processing
+    const style = textPath.style || {};
+    const fontSize = style.fontSize || 16;
+    const fontFamily = style.fontFamily || 'Arial, sans-serif';
+    const fill = style.fill || '#000000';
+    const textAnchor = style.textAnchor || 'start';
+
+    // Convert style values to strings for SVG
+    const convertStyleValue = (value: any): string => {
+      if (!value || value === 'none') return 'none';
+      if (typeof value === 'string') return value;
+      if (typeof value === 'object' && value.id) {
+        return `url(#${value.id})`;
+      }
+      return 'none';
+    };
+
+    const fillValue = convertStyleValue(fill);
+    const strokeValue = convertStyleValue(style.stroke);
+
+    // Build text attributes
+    const textAttributes: Record<string, any> = {
+      fontSize,
+      fontFamily,
+      textAnchor,
+    };
+
+    if (fillValue !== 'none') textAttributes.fill = fillValue;
+    if (strokeValue !== 'none') textAttributes.stroke = strokeValue;
+    if (style.strokeWidth) textAttributes.strokeWidth = style.strokeWidth;
+    if (style.fillOpacity !== undefined) textAttributes.fillOpacity = style.fillOpacity;
+    if (style.strokeOpacity !== undefined) textAttributes.strokeOpacity = style.strokeOpacity;
+    if (style.fontWeight) textAttributes.fontWeight = style.fontWeight;
+    if (style.fontStyle) textAttributes.fontStyle = style.fontStyle;
+    if (style.textDecoration) textAttributes.textDecoration = style.textDecoration;
+    if (style.letterSpacing) textAttributes.letterSpacing = style.letterSpacing;
+    if (style.wordSpacing) textAttributes.wordSpacing = style.wordSpacing;
+
+    // Build textPath attributes
+    const textPathAttributes: Record<string, any> = {
+      href: `#${pathId}`
+    };
+
+    if (textPath.startOffset !== undefined) {
+      textPathAttributes.startOffset = typeof textPath.startOffset === 'string' 
+        ? textPath.startOffset 
+        : `${textPath.startOffset}`;
+    }
+    if (textPath.method) textPathAttributes.method = textPath.method;
+    if (textPath.spacing) textPathAttributes.spacing = textPath.spacing;
+    if (textPath.side) textPathAttributes.side = textPath.side;
+    if (textPath.textLength) textPathAttributes.textLength = textPath.textLength;
+    if (textPath.lengthAdjust) textPathAttributes.lengthAdjust = textPath.lengthAdjust;
+
+    return (
+      <g key={`textpath-${textPath.id}-v${renderVersion}`}>
+        {/* Hidden path for text to follow */}
+        <defs>
+          <path id={pathId} d={pathData} />
+        </defs>
+
+        {/* Text following the path */}
+        <text
+          {...textAttributes}
+          transform={textPath.transform}
+          data-element-type="textPath"
+          data-element-id={textPath.id}
+          style={{
+            pointerEvents: textPath.locked ? 'none' : 'all',
+            cursor: textPath.locked ? 'default' : 'pointer',
+            userSelect: 'none'
+          }}
+        >
+          <textPath {...textPathAttributes}>
+            {textPath.content}
+          </textPath>
+        </text>
+
+        {/* Selection indicator */}
+        {isSelected && (
+          <text
+            {...textAttributes}
+            transform={textPath.transform}
+            style={{
+              pointerEvents: 'none',
+              userSelect: 'none'
+            }}
+          >
+            <textPath {...textPathAttributes}>
+              <tspan
+                fill="none"
+                stroke="#007bff"
+                strokeWidth="3"
+                strokeOpacity="0.5"
+              >
+                {textPath.content}
+              </tspan>
+            </textPath>
+          </text>
+        )}
+      </g>
+    );
+  };
+
+  // Don't render anything if there are no textPaths
+  if (textPaths.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      {textPaths.map(textPath => renderTextPath(textPath))}
+    </>
+  );
+};

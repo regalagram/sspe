@@ -34,6 +34,7 @@ interface TransformState {
   initialBounds: TransformBounds | null;
   initialCommands: { [commandId: string]: SVGCommand };
   initialTexts: { [textId: string]: any }; // Store initial text positions and properties
+  initialTextPaths: { [textPathId: string]: any }; // Store initial textPath positions and properties
   initialImages: { [imageId: string]: any }; // Store initial image positions and properties
   initialUses: { [useId: string]: any }; // Store initial use element positions and properties
   onStateChange?: () => void; // Callback for state changes
@@ -52,6 +53,7 @@ export class TransformManager {
     initialBounds: null,
     initialCommands: {},
     initialTexts: {},
+    initialTextPaths: {},
     initialImages: {},
     initialUses: {},
     onStateChange: undefined,
@@ -91,10 +93,10 @@ export class TransformManager {
   // Calculate bounds from selected commands or subpaths using DOM-based calculation
   calculateBounds(): TransformBounds | null {
     const store = this.editorStore || useEditorStore.getState();
-    const { selection, paths, texts, images, uses } = store;
+    const { selection, paths, texts, textPaths, images, uses } = store;
     
     // Create a temporary SVG element to calculate bounds using DOM
-    const tempSvg = this.createTempSVGForSelection(paths, selection, texts, images, uses);
+    const tempSvg = this.createTempSVGForSelection(paths, selection, texts, textPaths, images, uses);
     if (!tempSvg) {
       return null;
     }
@@ -137,7 +139,7 @@ export class TransformManager {
   }
 
   // Create a temporary SVG element containing only the selected elements
-  private createTempSVGForSelection(paths: any[], selection: any, texts?: any[], images?: any[], uses?: any[]): SVGSVGElement | null {
+  private createTempSVGForSelection(paths: any[], selection: any, texts?: any[], textPaths?: any[], images?: any[], uses?: any[]): SVGSVGElement | null {
     if (typeof document === 'undefined') return null;
 
     const svgNS = 'http://www.w3.org/2000/svg';
@@ -271,6 +273,67 @@ export class TransformManager {
           
           tempSvg.appendChild(textElement);
           hasContent = true;
+        }
+      }
+    }
+
+    // For selected textPaths
+    if (selection.selectedTextPaths?.length > 0 && textPaths) {
+      for (const textPathId of selection.selectedTextPaths) {
+        const textPath = textPaths.find((tp: any) => tp.id === textPathId);
+        if (textPath) {
+          // Find the path that this textPath references
+          const referencedPath = paths.find((path: any) => path.id === textPath.pathRef);
+          if (referencedPath) {
+            // Create a path element for the textPath to follow
+            const pathElement = document.createElementNS(svgNS, 'path');
+            pathElement.setAttribute('id', `temp-path-${textPath.pathRef}`);
+            
+            // Build path data from subPaths
+            let pathData = '';
+            for (const subPath of referencedPath.subPaths) {
+              pathData += subPathToString(subPath);
+            }
+            pathElement.setAttribute('d', pathData);
+            
+            // Create textPath element
+            const textElement = document.createElementNS(svgNS, 'text');
+            const textPathElement = document.createElementNS(svgNS, 'textPath');
+            
+            textPathElement.setAttribute('href', `#temp-path-${textPath.pathRef}`);
+            textPathElement.textContent = textPath.content;
+            
+            if (textPath.startOffset !== undefined) {
+              textPathElement.setAttribute('startOffset', textPath.startOffset.toString());
+            }
+            if (textPath.method) {
+              textPathElement.setAttribute('method', textPath.method);
+            }
+            if (textPath.spacing) {
+              textPathElement.setAttribute('spacing', textPath.spacing);
+            }
+            if (textPath.side) {
+              textPathElement.setAttribute('side', textPath.side);
+            }
+            
+            // Apply text styles
+            if (textPath.style?.fontSize) {
+              textElement.setAttribute('font-size', textPath.style.fontSize.toString());
+            }
+            if (textPath.style?.fontFamily) {
+              textElement.setAttribute('font-family', textPath.style.fontFamily);
+            }
+            
+            // Apply transform if present
+            if (textPath.transform) {
+              textElement.setAttribute('transform', textPath.transform);
+            }
+            
+            textElement.appendChild(textPathElement);
+            tempSvg.appendChild(pathElement);
+            tempSvg.appendChild(textElement);
+            hasContent = true;
+          }
         }
       }
     }
@@ -431,6 +494,7 @@ export class TransformManager {
       selection.selectedSubPaths.length > 0 || 
       selection.selectedCommands.length > 1 ||
       selection.selectedTexts?.length > 0 ||
+      selection.selectedTextPaths?.length > 0 ||
       selection.selectedImages?.length > 0 ||
       selection.selectedUses?.length > 0 ||
       // Mixed selections are also valid
@@ -438,6 +502,9 @@ export class TransformManager {
       (selection.selectedCommands.length > 0 && selection.selectedTexts?.length > 0) ||
       (selection.selectedImages?.length > 0 && selection.selectedTexts?.length > 0) ||
       (selection.selectedUses?.length > 0 && selection.selectedTexts?.length > 0) ||
+      (selection.selectedTextPaths?.length > 0 && selection.selectedTexts?.length > 0) ||
+      (selection.selectedTextPaths?.length > 0 && selection.selectedSubPaths.length > 0) ||
+      (selection.selectedTextPaths?.length > 0 && selection.selectedCommands.length > 0) ||
       (selection.selectedImages?.length > 0 && selection.selectedSubPaths.length > 0) ||
       (selection.selectedUses?.length > 0 && selection.selectedSubPaths.length > 0)
     );
@@ -808,7 +875,7 @@ export class TransformManager {
 
   private applyTransformToCommands(transform: (x: number, y: number) => Point) {
     const store = this.editorStore || useEditorStore.getState();
-    const { updateCommand, updateText, updateImage, updateUse } = store;
+    const { updateCommand, updateText, updateTextPathStyle, updateImage, updateUse } = store;
 
     // Transform selected commands
     for (const commandId of Object.keys(this.state.initialCommands)) {
@@ -861,6 +928,23 @@ export class TransformManager {
       // Apply the transform
       const { updateTextTransform } = store;
       updateTextTransform(textId, transformString);
+    }
+
+    // Transform selected textPaths - only scale fontSize, no position/rotation changes
+    for (const textPathId of Object.keys(this.state.initialTextPaths)) {
+      if (this.state.mode === 'scale') {
+        // Calculate scale based on initial fontSize, not current
+        const initialTextPath = this.state.initialTextPaths[textPathId];
+        if (initialTextPath.style?.fontSize) {
+          const { scaleX, scaleY } = this.getScaleParams();
+          const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2;
+          const newFontSize = Math.max(1, initialTextPath.style.fontSize * avgScale);
+          
+          // Apply the calculated fontSize directly, not as a scale factor
+          updateTextPathStyle(textPathId, { fontSize: newFontSize });
+        }
+      }
+      // No rotation or translation transforms for textPath - they follow the path
     }
 
     // Transform selected images
@@ -988,6 +1072,25 @@ export class TransformManager {
       }
     }
 
+    // Apply final transformations permanently to textPath elements
+    for (const textPathId of Object.keys(this.state.initialTextPaths)) {
+      const initialTextPath = this.state.initialTextPaths[textPathId];
+      
+      if (this.state.mode === 'scale') {
+        // For textPath, only scale the font size - no position/rotation transforms
+        if (initialTextPath.style?.fontSize) {
+          const { scaleX, scaleY } = this.getScaleParams();
+          const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2;
+          const newFontSize = initialTextPath.style.fontSize * avgScale;
+          
+          const { updateTextPathStyle } = store;
+          updateTextPathStyle(textPathId, { fontSize: Math.max(1, newFontSize) });
+        }
+      }
+      // No rotation transforms for textPath - they follow the path
+      // Any transformations should be applied to the path itself
+    }
+
     this.state.isTransforming = false;
     this.state.mode = null;
     this.state.activeHandle = null;
@@ -996,6 +1099,7 @@ export class TransformManager {
     this.state.initialBounds = null;
     this.state.initialCommands = {};
     this.state.initialTexts = {};
+    this.state.initialTextPaths = {};
     this.state.initialImages = {};
     this.state.initialUses = {};
 
@@ -1005,7 +1109,7 @@ export class TransformManager {
 
   private storeInitialCommands() {
     const store = this.editorStore || useEditorStore.getState();
-    const { selection, paths, texts, images, uses } = store;
+    const { selection, paths, texts, textPaths, images, uses } = store;
 
     // Store selected commands
     for (const commandId of selection.selectedCommands) {
@@ -1035,6 +1139,16 @@ export class TransformManager {
             // Deep copy spans for multiline text
             spans: text.spans ? text.spans.map((span: any) => ({ ...span })) : undefined
           };
+        }
+      }
+    }
+
+    // Store selected textPaths
+    if (selection.selectedTextPaths && textPaths) {
+      for (const textPathId of selection.selectedTextPaths) {
+        const textPath = textPaths.find((tp: any) => tp.id === textPathId);
+        if (textPath) {
+          this.state.initialTextPaths[textPathId] = { ...textPath };
         }
       }
     }

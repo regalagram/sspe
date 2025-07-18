@@ -14,6 +14,7 @@ const TransformPlugin: React.FC = () => {
   const selection = useEditorStore((state) => state.selection);
   const paths = useEditorStore((state) => state.paths);
   const texts = useEditorStore((state) => state.texts);
+  const textPaths = useEditorStore((state) => state.textPaths);
   const images = useEditorStore((state) => state.images);
   const uses = useEditorStore((state) => state.uses);
   const groups = useEditorStore((state) => state.groups);
@@ -53,7 +54,7 @@ const TransformPlugin: React.FC = () => {
       setBounds(null);
       setHandles([]);
     }
-  }, [selection.selectedCommands, selection.selectedSubPaths, selection.selectedTexts, selection.selectedImages, selection.selectedUses, selection.selectedGroups, paths, texts, images, uses, groups]);
+  }, [selection.selectedCommands, selection.selectedSubPaths, selection.selectedTexts, selection.selectedTextPaths, selection.selectedImages, selection.selectedUses, selection.selectedGroups, paths, texts, textPaths, images, uses, groups]);
 
   // Update during transformation and movement
   useEffect(() => {

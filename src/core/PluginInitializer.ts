@@ -37,6 +37,7 @@ import { FilterPlugin } from '../plugins/filters';
 import { ClippingPlugin } from '../plugins/clipping';
 import { MarkerPlugin } from '../plugins/markers';
 import { SymbolPlugin } from '../plugins/symbols';
+import { TextPathPlugin } from '../plugins/textpath';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -90,4 +91,7 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(ReorderPlugin);
   pluginManager.registerPlugin(PanelModePlugin);
   pluginManager.registerPlugin(ShortcutsPlugin);
+  
+  // Register sandbox plugins (experimental features)
+  pluginManager.registerPlugin(TextPathPlugin);
 };

@@ -9,12 +9,13 @@ import { guidelinesManager } from '../guidelines/GuidelinesManager';
 interface PointerInteractionState {
   draggingCommand: string | null;
   draggingControlPoint: { commandId: string; point: 'x1y1' | 'x2y2' } | null;
-  draggingElement: { id: string; type: 'text' | 'image' | 'use' | 'group' } | null;
+  draggingElement: { id: string; type: 'text' | 'textPath' | 'image' | 'use' | 'group' } | null;
   isPanning: boolean;
   isSpacePressed: boolean;
   lastPointerPosition: { x: number; y: number };
   dragStartPositions: { [id: string]: { x: number; y: number } };
   dragStartTextPositions: { [id: string]: { x: number; y: number } };
+  dragStartTextPathPositions: { [id: string]: { startOffset: number | string; transform?: string } };
   dragStartImagePositions: { [id: string]: { x: number; y: number; width: number; height: number } };
   dragStartUsePositions: { [id: string]: { x: number; y: number; width?: number; height?: number } };
   dragStartGroupPositions: { [id: string]: { transform?: string } };
@@ -31,6 +32,7 @@ class PointerInteractionManager {
     lastPointerPosition: { x: 0, y: 0 },
     dragStartPositions: {},
     dragStartTextPositions: {},
+    dragStartTextPathPositions: {},
     dragStartImagePositions: {},
     dragStartUsePositions: {},
     dragStartGroupPositions: {},
@@ -99,6 +101,7 @@ class PointerInteractionManager {
            selection.selectedSubPaths.length > 0 || 
            selection.selectedPaths.length > 0 ||
            selection.selectedTexts.length > 0 ||
+           selection.selectedTextPaths?.length > 0 ||
            selection.selectedImages?.length > 0 ||
            selection.selectedUses?.length > 0 ||
            selection.selectedGroups?.length > 0;
@@ -109,7 +112,7 @@ class PointerInteractionManager {
   }
 
   private captureAllSelectedPositions() {
-    const { selection, images, uses, texts, paths, groups } = this.editorStore;
+    const { selection, images, uses, texts, textPaths, paths, groups } = this.editorStore;
     
     // Capture image positions
     const imagePositions: { [id: string]: { x: number; y: number; width: number; height: number } } = {};
@@ -151,6 +154,19 @@ class PointerInteractionManager {
       }
     });
     this.state.dragStartTextPositions = textPositions;
+
+    // Capture textPath positions
+    const textPathPositions: { [id: string]: { startOffset: number | string; transform?: string } } = {};
+    selection.selectedTextPaths?.forEach((textPathId: string) => {
+      const textPath = textPaths.find((tp: any) => tp.id === textPathId);
+      if (textPath) {
+        textPathPositions[textPathId] = { 
+          startOffset: textPath.startOffset || 0,
+          transform: textPath.transform
+        };
+      }
+    });
+    this.state.dragStartTextPathPositions = textPathPositions;
 
     // Capture command positions (from selected commands and selected subpaths)
     const commandPositions: { [id: string]: { x: number; y: number } } = {};
@@ -328,6 +344,36 @@ class PointerInteractionManager {
         pushToHistory();
         return true;
       }
+    } else if (elementType === 'textPath' && elementId && !this.state.isSpacePressed) {
+      e.stopPropagation();
+      // Handle textPath selection and dragging
+      if (e.shiftKey) {
+        if (selection.selectedTextPaths?.includes(elementId)) {
+          // Remove from selection
+          this.editorStore.removeFromSelection(elementId, 'textPath');
+        } else {
+          // Add to selection
+          addToSelection(elementId, 'textPath');
+        }
+        // For shift-click, only change selection, don't start dragging
+        return true;
+      } else {
+        if (!selection.selectedTextPaths?.includes(elementId)) {
+          this.editorStore.selectTextPath(elementId);
+        }
+        
+        // Note: TextPath elements don't drag independently - they follow their path
+        // But we can still support multi-selection and transform operations
+        // The actual dragging will be applied to the underlying path
+        
+        // Prepare for potential transform operations
+        this.state.draggingElement = { id: elementId, type: 'textPath' };
+        this.captureAllSelectedPositions();
+        this.state.dragOrigin = this.getSVGPoint(e, context.svgRef);
+        transformManager.setMoving(true);
+        pushToHistory();
+        return true;
+      }
     } else if (elementType === 'group' && elementId && !this.state.isSpacePressed) {
       e.stopPropagation();
       // Handle group selection and dragging
@@ -402,7 +448,7 @@ class PointerInteractionManager {
 
   handlePointerMove = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     if (!this.editorStore) return false;
-    const { grid, selection, pan, updateCommand, moveCommand, moveText, moveImage, moveUse } = this.editorStore;
+    const { grid, selection, pan, updateCommand, moveCommand, moveText, moveImage, moveUse, textPaths, paths } = this.editorStore;
     if (this.state.isPanning) {
       const dx = e.clientX - this.state.lastPointerPosition.x;
       const dy = e.clientY - this.state.lastPointerPosition.y;
@@ -578,6 +624,42 @@ class PointerInteractionManager {
         }
       });
       
+      // Handle TextPath dragging by moving the underlying path
+      Object.keys(this.state.dragStartTextPathPositions).forEach((textPathId: string) => {
+        const textPath = textPaths.find((tp: any) => tp.id === textPathId);
+        if (textPath && textPath.pathRef) {
+          // Find the referenced subpath and move its commands
+          const referencedPath = paths.find((path: any) => 
+            path.subPaths.some((subPath: any) => subPath.id === textPath.pathRef)
+          );
+          
+          if (referencedPath) {
+            const referencedSubPath = referencedPath.subPaths.find((subPath: any) => subPath.id === textPath.pathRef);
+            if (referencedSubPath) {
+              // Move all commands in the referenced subpath
+              referencedSubPath.commands.forEach((cmd: any) => {
+                const cmdId = cmd.id;
+                // Only move if we haven't already captured this command's position
+                if (!this.state.dragStartPositions[cmdId]) {
+                  const currentPos = { x: cmd.x || 0, y: cmd.y || 0 };
+                  let newX = currentPos.x + dx;
+                  let newY = currentPos.y + dy;
+                  
+                  if (grid.snapToGrid) {
+                    const snapped = snapToGrid({ x: newX, y: newY }, grid.size);
+                    newX = snapped.x;
+                    newY = snapped.y;
+                  }
+                  
+                  const { moveCommand } = this.editorStore;
+                  moveCommand(cmdId, { x: newX, y: newY });
+                }
+              });
+            }
+          }
+        }
+      });
+      
       // Update transform bounds in real-time during movement
       transformManager.updateTransformState();
       
@@ -600,6 +682,7 @@ class PointerInteractionManager {
     this.state.isPanning = false;
     this.state.dragStartPositions = {};
     this.state.dragStartTextPositions = {};
+    this.state.dragStartTextPathPositions = {};
     this.state.dragStartImagePositions = {};
     this.state.dragStartUsePositions = {};
     this.state.dragStartGroupPositions = {};

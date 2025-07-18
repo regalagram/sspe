@@ -43,6 +43,7 @@ export function executeDelete(editorState?: any) {
     state.selection.selectedSubPaths.length > 0 ||
     state.selection.selectedCommands.length > 0 ||
     state.selection.selectedTexts?.length > 0 ||
+    state.selection.selectedTextPaths?.length > 0 ||
     state.selection.selectedGroups?.length > 0 ||
     state.selection.selectedImages?.length > 0 ||
     state.selection.selectedUses?.length > 0;
@@ -70,6 +71,13 @@ export function executeDelete(editorState?: any) {
   if (state.selection.selectedTexts) {
     state.selection.selectedTexts.forEach((textId: string) => {
       state.deleteText(textId);
+    });
+  }
+
+  // Delete selected textPaths
+  if (state.selection.selectedTextPaths) {
+    state.selection.selectedTextPaths.forEach((textPathId: string) => {
+      state.removeTextPath(textPathId);
     });
   }
 
@@ -115,6 +123,7 @@ export const DeleteComponent: React.FC = () => {
     selection.selectedSubPaths.length > 0 || 
     selection.selectedCommands.length > 0 ||
     (selection.selectedTexts?.length || 0) > 0 ||
+    (selection.selectedTextPaths?.length || 0) > 0 ||
     (selection.selectedGroups?.length || 0) > 0 ||
     (selection.selectedImages?.length || 0) > 0 ||
     (selection.selectedUses?.length || 0) > 0;

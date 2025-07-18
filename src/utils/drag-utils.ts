@@ -68,6 +68,9 @@ export function captureAllSelectedElementsPositions(): DraggedElementsData {
     }
   });
 
+  // TextPaths are not captured for dragging - they follow their paths
+  // Any movement should be applied to the path that the textPath references
+
   // Capture command positions
   const commandPositions: { [id: string]: { x: number; y: number } } = {};
   const subPathCommands: { [subPathId: string]: string[] } = {};
@@ -233,6 +236,9 @@ export function moveAllCapturedElements(
     }
   });
   
+  // TextPaths are not moved directly - they follow their paths
+  // Any movement should be applied to the path that the textPath references
+  
   // Move commands
   Object.keys(capturedData.commands).forEach((commandId: string) => {
     const start = capturedData.commands[commandId];
@@ -285,6 +291,9 @@ export function moveAllCapturedElementsByDelta(
   Object.keys(capturedData.texts).forEach((textId: string) => {
     moveText(textId, finalDelta);
   });
+
+  // TextPaths are not moved directly - they follow their paths
+  // Any movement should be applied to the path that the textPath references
 
   // Move use elements using delta
   Object.keys(capturedData.uses).forEach((useId: string) => {

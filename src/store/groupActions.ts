@@ -14,7 +14,7 @@ export interface GroupActions {
   deleteGroup: (groupId: string, deleteChildren?: boolean) => void;
   
   // Group hierarchy management
-  addChildToGroup: (groupId: string, childId: string, childType: 'path' | 'text' | 'group') => void;
+  addChildToGroup: (groupId: string, childId: string, childType: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => void;
   removeChildFromGroup: (groupId: string, childId: string) => void;
   moveChildInGroup: (groupId: string, childId: string, newIndex: number) => void;
   ungroupElements: (groupId: string) => void;
@@ -27,11 +27,11 @@ export interface GroupActions {
   getGroupById: (groupId: string) => SVGGroup | null;
   getAllGroups: () => SVGGroup[];
   getGroupChildren: (groupId: string) => SVGGroupChild[];
-  getGroupChildrenDetails: (groupId: string) => { id: string; type: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use'; }[];
-  getParentGroup: (childId: string, childType: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => SVGGroup | null;
-  isElementInGroup: (elementId: string, elementType: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => boolean;
-  shouldMoveSyncGroup: (elementId: string, elementType: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => SVGGroup | null;
-  moveSyncGroupByElement: (elementId: string, elementType: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use', delta: Point) => boolean;
+  getGroupChildrenDetails: (groupId: string) => { id: string; type: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use'; }[];
+  getParentGroup: (childId: string, childType: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => SVGGroup | null;
+  isElementInGroup: (elementId: string, elementType: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => boolean;
+  shouldMoveSyncGroup: (elementId: string, elementType: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => SVGGroup | null;
+  moveSyncGroupByElement: (elementId: string, elementType: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use', delta: Point) => boolean;
   hasMultipleGroupElementsSelected: (groupId: string) => boolean;
   
   // Group visibility and locking
@@ -88,6 +88,7 @@ export const createGroupActions: StateCreator<
     // Safely handle undefined selection arrays
     const selectedPaths = selection.selectedPaths ?? [];
     const selectedTexts = selection.selectedTexts ?? [];
+    const selectedTextPaths = selection.selectedTextPaths ?? [];
     const selectedGroups = selection.selectedGroups ?? [];
     const selectedSubPaths = selection.selectedSubPaths ?? [];
     const selectedImages = selection.selectedImages ?? [];
@@ -111,6 +112,7 @@ export const createGroupActions: StateCreator<
     const children: SVGGroupChild[] = [
       ...Array.from(allPathIds).map(id => ({ type: 'path' as const, id })),
       ...selectedTexts.map(id => ({ type: 'text' as const, id })),
+      ...selectedTextPaths.map(id => ({ type: 'textPath' as const, id })),
       ...selectedGroups.map(id => ({ type: 'group' as const, id })),
       ...selectedImages.map(id => ({ type: 'image' as const, id })),
       ...selectedUses.map(id => ({ type: 'use' as const, id }))
@@ -135,6 +137,7 @@ export const createGroupActions: StateCreator<
         ...state.selection,
         selectedPaths: [],
         selectedTexts: [],
+        selectedTextPaths: [],
         selectedGroups: [newGroup.id],
         selectedSubPaths: [],
         selectedImages: [],
@@ -182,8 +185,8 @@ export const createGroupActions: StateCreator<
       // If deleteChildren is true, also delete all child elements
       if (deleteChildren) {
         // Helper function to recursively collect all child elements
-        const collectAllChildren = (group: any, allGroups: any[]): { paths: string[], texts: string[], groups: string[], images: string[], uses: string[] } => {
-          const result = { paths: [] as string[], texts: [] as string[], groups: [] as string[], images: [] as string[], uses: [] as string[] };
+        const collectAllChildren = (group: any, allGroups: any[]): { paths: string[], texts: string[], textPaths: string[], groups: string[], images: string[], uses: string[] } => {
+          const result = { paths: [] as string[], texts: [] as string[], textPaths: [] as string[], groups: [] as string[], images: [] as string[], uses: [] as string[] };
           
           group.children.forEach((child: any) => {
             switch (child.type) {
@@ -193,6 +196,9 @@ export const createGroupActions: StateCreator<
               case 'text':
                 result.texts.push(child.id);
                 break;
+              case 'textPath':
+                result.textPaths.push(child.id);
+                break;
               case 'group':
                 result.groups.push(child.id);
                 const childGroup = allGroups.find(g => g.id === child.id);
@@ -200,6 +206,7 @@ export const createGroupActions: StateCreator<
                   const nestedChildren = collectAllChildren(childGroup, allGroups);
                   result.paths.push(...nestedChildren.paths);
                   result.texts.push(...nestedChildren.texts);
+                  result.textPaths.push(...nestedChildren.textPaths);
                   result.groups.push(...nestedChildren.groups);
                   result.images.push(...nestedChildren.images);
                   result.uses.push(...nestedChildren.uses);
@@ -222,6 +229,7 @@ export const createGroupActions: StateCreator<
         // Remove all child elements
         newState.paths = newState.paths.filter(p => !allChildren.paths.includes(p.id));
         newState.texts = newState.texts.filter(t => !allChildren.texts.includes(t.id));
+        newState.textPaths = newState.textPaths.filter(tp => !allChildren.textPaths.includes(tp.id));
         newState.groups = newState.groups.filter(g => !allChildren.groups.includes(g.id));
         newState.images = newState.images.filter(img => !allChildren.images.includes(img.id));
         newState.uses = newState.uses.filter(u => !allChildren.uses.includes(u.id));
@@ -229,6 +237,7 @@ export const createGroupActions: StateCreator<
         // Remove from selection
         newState.selection.selectedPaths = newState.selection.selectedPaths.filter(id => !allChildren.paths.includes(id));
         newState.selection.selectedTexts = newState.selection.selectedTexts.filter(id => !allChildren.texts.includes(id));
+        newState.selection.selectedTextPaths = newState.selection.selectedTextPaths.filter(id => !allChildren.textPaths.includes(id));
         newState.selection.selectedGroups = newState.selection.selectedGroups.filter(id => !allChildren.groups.includes(id));
         newState.selection.selectedImages = newState.selection.selectedImages.filter(id => !allChildren.images.includes(id));
         newState.selection.selectedUses = newState.selection.selectedUses.filter(id => !allChildren.uses.includes(id));
@@ -238,7 +247,7 @@ export const createGroupActions: StateCreator<
     });
   },
 
-  addChildToGroup: (groupId: string, childId: string, childType: 'path' | 'text' | 'group') => {
+  addChildToGroup: (groupId: string, childId: string, childType: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => {
     set(state => {
       const group = state.groups.find(g => g.id === groupId);
       if (!group) return state;
@@ -254,6 +263,8 @@ export const createGroupActions: StateCreator<
         exists = state.paths.some(p => p.id === childId);
       } else if (childType === 'text') {
         exists = state.texts.some(t => t.id === childId);
+      } else if (childType === 'textPath') {
+        exists = state.textPaths.some(tp => tp.id === childId);
       } else if (childType === 'group') {
         exists = state.groups.some(g => g.id === childId);
       } else if (childType === 'image') {
@@ -352,6 +363,10 @@ export const createGroupActions: StateCreator<
           ...state.selection.selectedTexts,
           ...group.children.filter(c => c.type === 'text').map(c => c.id)
         ],
+        selectedTextPaths: [
+          ...state.selection.selectedTextPaths,
+          ...group.children.filter(c => c.type === 'textPath').map(c => c.id)
+        ],
         selectedImages: [
           ...state.selection.selectedImages,
           ...group.children.filter(c => c.type === 'image').map(c => c.id)
@@ -394,6 +409,12 @@ export const createGroupActions: StateCreator<
       if (child.type === 'text') {
         if (typeof get().moveText === 'function') {
           get().moveText(child.id, delta, true); // Skip group sync to avoid recursion
+        }
+      }
+      if (child.type === 'textPath') {
+        const state = get() as any;
+        if (typeof state.moveTextPath === 'function') {
+          state.moveTextPath(child.id, delta, true); // Skip group sync to avoid recursion
         }
       }
       if (child.type === 'group') {
@@ -444,18 +465,18 @@ export const createGroupActions: StateCreator<
     return group.children.map(child => ({ id: child.id, type: child.type }));
   },
 
-  getParentGroup: (childId: string, childType: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => {
+  getParentGroup: (childId: string, childType: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => {
     const state = get();
     return state.groups.find(group => 
       group.children.some(child => child.id === childId && child.type === childType)
     ) || null;
   },
 
-  isElementInGroup: (elementId: string, elementType: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => {
+  isElementInGroup: (elementId: string, elementType: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => {
     return get().getParentGroup(elementId, elementType) !== null;
   },
 
-  shouldMoveSyncGroup: (elementId: string, elementType: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => {
+  shouldMoveSyncGroup: (elementId: string, elementType: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => {
     const state = get();
     const parentGroup = state.getParentGroup(elementId, elementType);
     
@@ -465,7 +486,7 @@ export const createGroupActions: StateCreator<
     return lockLevel === 'movement-sync' ? parentGroup : null;
   },
 
-  moveSyncGroupByElement: (elementId: string, elementType: 'path' | 'text' | 'group' | 'image' | 'clipPath' | 'mask' | 'use', delta: Point) => {
+  moveSyncGroupByElement: (elementId: string, elementType: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use', delta: Point) => {
     const state = get();
     const syncGroup = state.shouldMoveSyncGroup(elementId, elementType);
     

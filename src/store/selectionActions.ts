@@ -417,6 +417,7 @@ export const createSelectionActions: StateCreator<
       selectedControlPoints: [] as string[],
       selectedTexts: [] as string[],
       selectedTextSpans: [] as string[],
+      selectedTextPaths: [] as string[],
       selectedGroups: [] as string[],
       selectedImages: [] as string[],
       selectedClipPaths: [] as string[],
@@ -440,6 +441,37 @@ export const createSelectionActions: StateCreator<
           textBounds.y < box.y + box.height &&
           textBounds.y + textBounds.height > box.y) {
         newSelection.selectedTexts.push(text.id);
+      }
+    });
+
+    // Check textPaths in box
+    state.textPaths.forEach(textPath => {
+      if (textPath.locked) return;
+      
+      // For textPaths, we need to check if they are near the path they follow
+      // This is a simplified check - in a real implementation you might want to
+      // calculate the actual position along the path
+      const referencedPath = state.paths.find(p => 
+        p.subPaths.some(sp => sp.id === textPath.pathRef)
+      );
+      
+      if (referencedPath) {
+        // Check if any part of the referenced path is in the box
+        let pathInBox = false;
+        referencedPath.subPaths.forEach(subPath => {
+          subPath.commands.forEach(command => {
+            if (command.x !== undefined && command.y !== undefined) {
+              if (command.x >= box.x && command.x <= box.x + box.width &&
+                  command.y >= box.y && command.y <= box.y + box.height) {
+                pathInBox = true;
+              }
+            }
+          });
+        });
+        
+        if (pathInBox) {
+          newSelection.selectedTextPaths.push(textPath.id);
+        }
       }
     });
 

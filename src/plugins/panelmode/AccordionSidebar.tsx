@@ -61,6 +61,7 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
     'marker-controls',
     'symbol-controls',
     'image-controls',
+    'textpath-controls',
   ];
 
   // Filtrar plugins visibles
