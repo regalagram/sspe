@@ -580,46 +580,40 @@ class PointerInteractionManager {
       Object.keys(this.state.dragStartGroupPositions).forEach((groupId: string) => {
         const start = this.state.dragStartGroupPositions[groupId];
         if (start) {
-          // Apply translation to the group's transform
-          let currentTransform = start.transform || '';
+          // Use the initial transform captured at drag start
+          let newTransform = start.transform || '';
           
-          // Parse existing transform or create new one
+          // Calculate new translation based on drag delta
           let translationX = dx;
           let translationY = dy;
-          
-          // If there's already a translate in the transform, we need to add to it
-          const translateMatch = currentTransform.match(/translate\(([^,)]+)[,\s]+([^)]+)\)/);
-          if (translateMatch) {
-            const existingX = parseFloat(translateMatch[1]) || 0;
-            const existingY = parseFloat(translateMatch[2]) || 0;
-            translationX = existingX + dx;
-            translationY = existingY + dy;
-            
-            // Replace existing translate
-            currentTransform = currentTransform.replace(/translate\([^)]+\)/, `translate(${translationX}, ${translationY})`);
-          } else {
-            // Add new translate at the beginning
-            currentTransform = `translate(${translationX}, ${translationY}) ${currentTransform}`.trim();
-          }
           
           // Apply grid snapping if enabled
           if (grid.snapToGrid) {
             const snapped = snapToGrid({ x: translationX, y: translationY }, grid.size);
             translationX = snapped.x;
             translationY = snapped.y;
+          }
+          
+          // Parse existing transform from initial state
+          const translateMatch = newTransform.match(/translate\(([^,)]+)[,\s]+([^)]+)\)/);
+          if (translateMatch) {
+            // There was already a translate in the initial transform - add to it
+            const existingX = parseFloat(translateMatch[1]) || 0;
+            const existingY = parseFloat(translateMatch[2]) || 0;
+            const finalX = existingX + translationX;
+            const finalY = existingY + translationY;
             
-            // Update transform with snapped values
-            if (translateMatch) {
-              currentTransform = currentTransform.replace(/translate\([^)]+\)/, `translate(${translationX}, ${translationY})`);
-            } else {
-              currentTransform = `translate(${translationX}, ${translationY}) ${currentTransform.replace(/^translate\([^)]+\)\s*/, '')}`.trim();
-            }
+            // Replace existing translate with new values
+            newTransform = newTransform.replace(/translate\([^)]+\)/, `translate(${finalX}, ${finalY})`);
+          } else {
+            // No existing translate - add new one at the beginning
+            newTransform = `translate(${translationX}, ${translationY}) ${newTransform}`.trim();
           }
           
           // Update group transform
           const { moveGroup } = this.editorStore;
           if (moveGroup) {
-            moveGroup(groupId, { transform: currentTransform });
+            moveGroup(groupId, { transform: newTransform });
           }
         }
       });
