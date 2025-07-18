@@ -358,20 +358,6 @@ class PointerInteractionManager {
     
     if (commandId && !this.state.isSpacePressed) {
       e.stopPropagation();
-      // Check if this command belongs to a selected sub-path
-      let belongsToSelectedSubPath = false;
-      let parentSubPathId: string | null = null;
-      
-      paths.forEach((path: any) => {
-        path.subPaths.forEach((subPath: any) => {
-          if (selection.selectedSubPaths.includes(subPath.id)) {
-            if (subPath.commands.some((cmd: any) => cmd.id === commandId)) {
-              belongsToSelectedSubPath = true;
-              parentSubPathId = subPath.id;
-            }
-          }
-        });
-      });
       
       let finalSelectedIds: string[] = [];
       if (e.shiftKey) {
@@ -385,21 +371,11 @@ class PointerInteractionManager {
         }
       } else {
         if (selection.selectedCommands.includes(commandId)) {
-          // Already selected command - check if we have mixed selection
-          const hasMixedSelection = selection.selectedTexts.length > 0 || 
-                                  selection.selectedSubPaths.length > 0 || 
-                                  selection.selectedPaths.length > 0;
-          
-          if (hasMixedSelection) {
-            // Don't change selection, just prepare for dragging
-            finalSelectedIds = selection.selectedCommands;
-          } else {
-            // Single command selection
-            finalSelectedIds = selection.selectedCommands;
-            selectMultiple(finalSelectedIds, 'commands');
-          }
+          // Already selected command - always maintain only command selection
+          finalSelectedIds = selection.selectedCommands;
+          selectMultiple(finalSelectedIds, 'commands');
         } else {
-          // New command selection
+          // New command selection - always clear other selections
           finalSelectedIds = [commandId];
           selectCommand(commandId);
         }

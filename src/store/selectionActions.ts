@@ -443,27 +443,67 @@ export const createSelectionActions: StateCreator<
       }
     });
 
-    // Check subpaths in box
+    // Check subpaths and commands in box
+    // First pass: analyze which sub-paths are fully vs partially in the box
+    const subPathAnalysis: Array<{
+      subPath: any;
+      commandsInBox: string[];
+      commandsOutOfBox: string[];
+      isFullyInBox: boolean;
+      isPartiallyInBox: boolean;
+    }> = [];
+
     state.paths.forEach(path => {
       path.subPaths.forEach(subPath => {
         if (subPath.locked) return;
         
-        // Check if any command is in the box
-        let subPathInBox = false;
+        const commandsInBox: string[] = [];
+        const commandsOutOfBox: string[] = [];
+        
         subPath.commands.forEach(command => {
           if (command.x !== undefined && command.y !== undefined) {
             if (command.x >= box.x && command.x <= box.x + box.width &&
                 command.y >= box.y && command.y <= box.y + box.height) {
-              subPathInBox = true;
+              commandsInBox.push(command.id);
+            } else {
+              commandsOutOfBox.push(command.id);
             }
           }
         });
         
-        if (subPathInBox) {
-          newSelection.selectedSubPaths.push(subPath.id);
+        const isFullyInBox = commandsInBox.length > 0 && commandsOutOfBox.length === 0;
+        const isPartiallyInBox = commandsInBox.length > 0 && commandsOutOfBox.length > 0;
+        
+        if (commandsInBox.length > 0) {
+          subPathAnalysis.push({
+            subPath,
+            commandsInBox,
+            commandsOutOfBox,
+            isFullyInBox,
+            isPartiallyInBox
+          });
         }
       });
     });
+
+    // Determine selection strategy:
+    // If ANY sub-path is partially in the box, select individual commands
+    // If ALL sub-paths are fully in the box, select whole sub-paths
+    const hasPartialSubPaths = subPathAnalysis.some(analysis => analysis.isPartiallyInBox);
+    
+    if (hasPartialSubPaths) {
+      // Select individual commands when there are partial sub-paths
+      subPathAnalysis.forEach(analysis => {
+        newSelection.selectedCommands.push(...analysis.commandsInBox);
+      });
+    } else {
+      // Select whole sub-paths when all are fully contained
+      subPathAnalysis.forEach(analysis => {
+        if (analysis.isFullyInBox) {
+          newSelection.selectedSubPaths.push(analysis.subPath.id);
+        }
+      });
+    }
 
     // Check images in box
     state.images.forEach(image => {
