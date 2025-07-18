@@ -384,43 +384,7 @@ class PointerInteractionManager {
           figmaHandleManager.onSelectionChanged();
         }
       } else {
-        if (belongsToSelectedSubPath) {
-          // Command belongs to selected sub-path - treat as sub-path drag
-          const hasMixedSelection = selection.selectedTexts.length > 0 || 
-                                  selection.selectedPaths.length > 0 ||
-                                  selection.selectedCommands.length > 0;
-          
-          if (hasMixedSelection) {
-            // Don't change selection, use all selected commands (including from sub-paths)
-            finalSelectedIds = [...selection.selectedCommands];
-            // Add all commands from selected sub-paths if not already included
-            selection.selectedSubPaths.forEach((subPathId: string) => {
-              paths.forEach((path: any) => {
-                const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
-                if (subPath) {
-                  subPath.commands.forEach((cmd: any) => {
-                    if (!finalSelectedIds.includes(cmd.id)) {
-                      finalSelectedIds.push(cmd.id);
-                    }
-                  });
-                }
-              });
-            });
-          } else {
-            // Just sub-path selection - include all commands from selected sub-paths
-            finalSelectedIds = [];
-            selection.selectedSubPaths.forEach((subPathId: string) => {
-              paths.forEach((path: any) => {
-                const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
-                if (subPath) {
-                  subPath.commands.forEach((cmd: any) => {
-                    finalSelectedIds.push(cmd.id);
-                  });
-                }
-              });
-            });
-          }
-        } else if (selection.selectedCommands.includes(commandId)) {
+        if (selection.selectedCommands.includes(commandId)) {
           // Already selected command - check if we have mixed selection
           const hasMixedSelection = selection.selectedTexts.length > 0 || 
                                   selection.selectedSubPaths.length > 0 || 
