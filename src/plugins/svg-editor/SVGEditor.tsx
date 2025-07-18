@@ -6,6 +6,8 @@ import { parseSVGToSubPaths, parseCompleteSVG } from '../../utils/svg-parser';
 import { calculateViewBoxFromSVGString } from '../../utils/viewbox-utils';
 import { extractGradientsFromPaths } from '../../utils/gradient-utils';
 import { PluginButton } from '../../components/PluginButton';
+import { SVGDropZone } from '../../components/SVGDropZone';
+import { SVGImportOptions, ImportSettings } from '../../components/SVGImportOptions';
 import { RotateCcw, CheckCircle2, Trash2, Upload, Download } from 'lucide-react';
 
 interface PrecisionControlProps {
@@ -171,8 +173,31 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
 };
 
 export const SVGComponent: React.FC = () => {
-  const { paths, texts, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, viewport, replacePaths, replaceTexts, replaceGroups, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients } = useEditorStore();
+  const { paths, texts, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, viewport, replacePaths, replaceTexts, replaceGroups, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients, addText, addGradient, addImage, addSymbol, addMarker, addClipPath, addMask, addFilter, addUse } = useEditorStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Import settings state
+  const [importSettings, setImportSettings] = useState<ImportSettings>({
+    mode: 'replace',
+    preserveViewBox: true,
+    autoAdjustViewport: true,
+    validateBeforeImport: true,
+    showConfirmation: true
+  });
+
+  const handleImportSettingsChange = (settings: ImportSettings) => {
+    setImportSettings(settings);
+  };
+
+  const handleApplyDefaultSettings = () => {
+    setImportSettings({
+      mode: 'replace',
+      preserveViewBox: true,
+      autoAdjustViewport: true,
+      validateBeforeImport: true,
+      showConfirmation: true
+    });
+  };
 
   // Generate SVG string from current paths and texts
   const generateSVGCode = (): string => {
@@ -675,36 +700,80 @@ ${definitions}${allElements}
 
   const handleSVGChange = (svgCode: string) => {
     try {
+      // Validate SVG before parsing if enabled
+      if (importSettings.validateBeforeImport) {
+        if (!svgCode.trim()) {
+          alert('SVG code is empty.');
+          return;
+        }
+        
+        if (!svgCode.includes('<svg')) {
+          alert('Invalid SVG: Missing <svg> tag.');
+          return;
+        }
+      }
+
       // Parse the complete SVG including paths, texts, gradients, patterns, and groups
-      const { paths: newPaths, texts: newTexts, gradients, groups: newGroups } = parseCompleteSVG(svgCode);
+      const { paths: newPaths, texts: newTexts, gradients: newGradients, groups: newGroups } = parseCompleteSVG(svgCode);
       
-      const totalElements = newPaths.length + newTexts.length + gradients.length + newGroups.length;
+      const totalElements = newPaths.length + newTexts.length + newGradients.length + newGroups.length;
       
       if (totalElements === 0) {
         alert('No valid elements found in the SVG code. Make sure your SVG contains paths, text, gradients, patterns, or groups.');
         return;
       }
       
-      // Show confirmation for destructive action
-      const elementsInfo = [
-        newPaths.length > 0 ? `${newPaths.length} path(s)` : '',
-        newTexts.length > 0 ? `${newTexts.length} text element(s)` : '',
-        gradients.length > 0 ? `${gradients.length} gradient(s)/pattern(s)` : '',
-        newGroups.length > 0 ? `${newGroups.length} group(s)` : ''
-      ].filter(Boolean).join(', ');
-      
-      const confirmMessage = `This will replace all current content with: ${elementsInfo}. Continue?`;
-      if (!confirm(confirmMessage)) {
-        return;
+      // Show confirmation dialog if enabled
+      if (importSettings.showConfirmation) {
+        const elementsInfo = [
+          newPaths.length > 0 ? `${newPaths.length} path(s)` : '',
+          newTexts.length > 0 ? `${newTexts.length} text element(s)` : '',
+          newGradients.length > 0 ? `${newGradients.length} gradient(s)/pattern(s)` : '',
+          newGroups.length > 0 ? `${newGroups.length} group(s)` : ''
+        ].filter(Boolean).join(', ');
+        
+        const action = importSettings.mode === 'replace' ? 'replace all current content' : 'append to existing content';
+        const confirmMessage = `This will ${action} with: ${elementsInfo}. Continue?`;
+        
+        if (!confirm(confirmMessage)) {
+          return;
+        }
       }
       
-      // Update the store with the new content
-      replacePaths(newPaths);
-      replaceTexts(newTexts);
-      setGradients(gradients);
-      replaceGroups(newGroups);
+      // Update the store based on import mode
+      if (importSettings.mode === 'replace') {
+        // Replace existing content
+        replacePaths(newPaths);
+        replaceTexts(newTexts);
+        setGradients(newGradients);
+        replaceGroups(newGroups);
+      } else {
+        // Append to existing content
+        // For append mode, we need to merge the new content with existing content
+        const currentPaths = [...paths];
+        const currentTexts = [...texts];
+        const currentGradients = [...gradients];
+        const currentGroups = [...groups];
+        
+        // Merge paths
+        replacePaths([...currentPaths, ...newPaths]);
+        
+        // Merge texts
+        replaceTexts([...currentTexts, ...newTexts]);
+        
+        // Merge gradients  
+        setGradients([...currentGradients, ...newGradients]);
+        
+        // Merge groups
+        replaceGroups([...currentGroups, ...newGroups]);
+      }
       
-      console.log(`Imported: ${newPaths.length} paths, ${newTexts.length} texts, ${gradients.length} gradients/patterns, ${newGroups.length} groups`);
+      // Auto-adjust viewport if enabled
+      if (importSettings.autoAdjustViewport) {
+        resetViewportCompletely();
+      }
+      
+      console.log(`Imported (${importSettings.mode}): ${newPaths.length} paths, ${newTexts.length} texts, ${newGradients.length} gradients/patterns, ${newGroups.length} groups`);
       
     } catch (error) {
       console.error('Error parsing SVG:', error);
@@ -738,15 +807,7 @@ ${definitions}${allElements}
     fileInputRef.current?.click();
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (file.type !== 'image/svg+xml' && !file.name.toLowerCase().endsWith('.svg')) {
-      alert('Please select a valid SVG file.');
-      return;
-    }
-
+  const handleFileUpload = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const svgContent = e.target?.result as string;
@@ -758,6 +819,22 @@ ${definitions}${allElements}
       alert('Error reading the file.');
     };
     reader.readAsText(file);
+  };
+
+  const handleSVGCodeDrop = (svgCode: string) => {
+    handleSVGChange(svgCode);
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'image/svg+xml' && !file.name.toLowerCase().endsWith('.svg')) {
+      alert('Please select a valid SVG file.');
+      return;
+    }
+
+    handleFileUpload(file);
     
     // Reset the input value so the same file can be selected again
     event.target.value = '';
@@ -783,6 +860,24 @@ ${definitions}${allElements}
 
   return (
     <div>
+      {/* Import Options */}
+      <div style={{ marginBottom: '16px' }}>
+        <SVGImportOptions
+          settings={importSettings}
+          onSettingsChange={handleImportSettingsChange}
+          onApplyDefaults={handleApplyDefaultSettings}
+        />
+      </div>
+
+      {/* Drag & Drop Zone */}
+      <div style={{ marginBottom: '16px' }}>
+        <SVGDropZone
+          onFileUpload={handleFileUpload}
+          onSVGCodeDrop={handleSVGCodeDrop}
+          disabled={false}
+        />
+      </div>
+
       {/* Upload/Download buttons */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
         <button
