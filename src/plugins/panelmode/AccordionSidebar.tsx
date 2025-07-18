@@ -58,9 +58,14 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
   const sandboxedIds = [
     'clipping-controls',
     'filter-controls',
+    'gradient-controls',
+    'group-controls',
+    'guidelines-controls',
+    'image-controls',
     'marker-controls',
     'symbol-controls',
-    'image-controls',
+    'text-controls',
+    'text-style-controls',
     'textpath-controls',
   ];
 

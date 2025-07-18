@@ -16,7 +16,7 @@ export class GuidelinesManager {
 
   private constructor() {
     this.config = {
-      enabled: false,
+      enabled: true,
       detectionRadius: 20, // Aumentado para facilitar el snap
       snapDuration: 1000, // Aumentado para que las guías persistan más tiempo
       guidelineColor: '#ff0000',

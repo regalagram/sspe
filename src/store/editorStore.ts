@@ -146,7 +146,7 @@ const loadInitialState = (): EditorState => {
       wireframeEnabled: false,
       hidePointsInSelect: false,
       showGroupsFrame: false,
-      guidelinesEnabled: true
+      guidelinesEnabled: false
     },
     renderVersion: 0,
     precision: 2,
