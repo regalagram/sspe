@@ -752,6 +752,8 @@ export const validateFilterPrimitive = (primitive: FilterPrimitiveType): boolean
       return true; // Basic validation
     case 'feTile':
       return true; // Basic validation
+    case 'feMerge':
+      return true; // Basic validation - feMergeNodes is optional
     case 'feFuncR':
     case 'feFuncG':
     case 'feFuncB':

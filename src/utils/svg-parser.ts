@@ -1,4 +1,4 @@
-import { SVGCommand, PathStyle, SVGCommandType, SVGPath, TextElement, MultilineTextElement, TextElementType, SVGGroup, SVGGroupChild } from '../types';
+import { SVGCommand, PathStyle, SVGCommandType, SVGPath, TextElement, MultilineTextElement, TextElementType, SVGGroup, SVGGroupChild, SVGFilter, FilterPrimitiveType } from '../types';
 import { parsePath, absolutize, normalize, serialize } from 'path-data-parser';
 import { generateId } from './id-utils';
 import { decomposeIntoSubPaths } from './subpath-utils';
@@ -1268,11 +1268,47 @@ export function parseTextElements(svgElement: Element): TextElementType[] {
     if (textNode.getAttribute('font-style')) {
       style.fontStyle = textNode.getAttribute('font-style');
     }
+    if (textNode.getAttribute('font-variant')) {
+      style.fontVariant = textNode.getAttribute('font-variant');
+    }
+    if (textNode.getAttribute('font-stretch')) {
+      style.fontStretch = textNode.getAttribute('font-stretch');
+    }
+    if (textNode.getAttribute('text-decoration')) {
+      style.textDecoration = textNode.getAttribute('text-decoration');
+    }
     if (textNode.getAttribute('text-anchor')) {
       style.textAnchor = textNode.getAttribute('text-anchor');
     }
     if (textNode.getAttribute('dominant-baseline')) {
       style.dominantBaseline = textNode.getAttribute('dominant-baseline');
+    }
+    if (textNode.getAttribute('alignment-baseline')) {
+      style.alignmentBaseline = textNode.getAttribute('alignment-baseline');
+    }
+    if (textNode.getAttribute('baseline-shift')) {
+      style.baselineShift = textNode.getAttribute('baseline-shift');
+    }
+    if (textNode.getAttribute('direction')) {
+      style.direction = textNode.getAttribute('direction');
+    }
+    if (textNode.getAttribute('writing-mode')) {
+      style.writingMode = textNode.getAttribute('writing-mode');
+    }
+    if (textNode.getAttribute('text-rendering')) {
+      style.textRendering = textNode.getAttribute('text-rendering');
+    }
+    if (textNode.getAttribute('letter-spacing')) {
+      style.letterSpacing = parseFloat(textNode.getAttribute('letter-spacing')!);
+    }
+    if (textNode.getAttribute('word-spacing')) {
+      style.wordSpacing = parseFloat(textNode.getAttribute('word-spacing')!);
+    }
+    if (textNode.getAttribute('textLength')) {
+      style.textLength = parseFloat(textNode.getAttribute('textLength')!);
+    }
+    if (textNode.getAttribute('lengthAdjust')) {
+      style.lengthAdjust = textNode.getAttribute('lengthAdjust');
     }
     
     // Color and opacity
@@ -1298,11 +1334,43 @@ export function parseTextElements(svgElement: Element): TextElementType[] {
     if (textNode.getAttribute('stroke-width')) {
       style.strokeWidth = parseFloat(textNode.getAttribute('stroke-width')!);
     }
+    if (textNode.getAttribute('stroke-dasharray')) {
+      const dasharray = textNode.getAttribute('stroke-dasharray')!;
+      if (dasharray === 'none') {
+        style.strokeDasharray = 'none';
+      } else {
+        style.strokeDasharray = dasharray.split(',').map(v => parseFloat(v.trim()));
+      }
+    }
+    if (textNode.getAttribute('stroke-dashoffset')) {
+      style.strokeDashoffset = parseFloat(textNode.getAttribute('stroke-dashoffset')!);
+    }
+    if (textNode.getAttribute('stroke-linecap')) {
+      style.strokeLinecap = textNode.getAttribute('stroke-linecap');
+    }
+    if (textNode.getAttribute('stroke-linejoin')) {
+      style.strokeLinejoin = textNode.getAttribute('stroke-linejoin');
+    }
+    if (textNode.getAttribute('stroke-miterlimit')) {
+      style.strokeMiterlimit = parseFloat(textNode.getAttribute('stroke-miterlimit')!);
+    }
     if (textNode.getAttribute('fill-opacity')) {
       style.fillOpacity = parseFloat(textNode.getAttribute('fill-opacity')!);
     }
     if (textNode.getAttribute('stroke-opacity')) {
       style.strokeOpacity = parseFloat(textNode.getAttribute('stroke-opacity')!);
+    }
+    if (textNode.getAttribute('opacity')) {
+      style.opacity = parseFloat(textNode.getAttribute('opacity')!);
+    }
+    if (textNode.getAttribute('filter')) {
+      style.filter = textNode.getAttribute('filter');
+    }
+    if (textNode.getAttribute('clip-path')) {
+      style.clipPath = textNode.getAttribute('clip-path');
+    }
+    if (textNode.getAttribute('mask')) {
+      style.mask = textNode.getAttribute('mask');
     }
     
     // Parse inline styles
@@ -1329,8 +1397,47 @@ export function parseTextElements(svgElement: Element): TextElementType[] {
           case 'font-style':
             style.fontStyle = value;
             break;
+          case 'font-variant':
+            style.fontVariant = value;
+            break;
+          case 'font-stretch':
+            style.fontStretch = value;
+            break;
+          case 'text-decoration':
+            style.textDecoration = value;
+            break;
           case 'text-anchor':
             style.textAnchor = value;
+            break;
+          case 'dominant-baseline':
+            style.dominantBaseline = value;
+            break;
+          case 'alignment-baseline':
+            style.alignmentBaseline = value;
+            break;
+          case 'baseline-shift':
+            style.baselineShift = value;
+            break;
+          case 'direction':
+            style.direction = value;
+            break;
+          case 'writing-mode':
+            style.writingMode = value;
+            break;
+          case 'text-rendering':
+            style.textRendering = value;
+            break;
+          case 'letter-spacing':
+            style.letterSpacing = parseFloat(value);
+            break;
+          case 'word-spacing':
+            style.wordSpacing = parseFloat(value);
+            break;
+          case 'textLength':
+            style.textLength = parseFloat(value);
+            break;
+          case 'lengthAdjust':
+            style.lengthAdjust = value;
             break;
           case 'fill':
             if (value.startsWith('url(#')) {
@@ -1349,11 +1456,42 @@ export function parseTextElements(svgElement: Element): TextElementType[] {
           case 'stroke-width':
             style.strokeWidth = parseFloat(value);
             break;
+          case 'stroke-dasharray':
+            if (value === 'none') {
+              style.strokeDasharray = 'none';
+            } else {
+              style.strokeDasharray = value.split(',').map(v => parseFloat(v.trim()));
+            }
+            break;
+          case 'stroke-dashoffset':
+            style.strokeDashoffset = parseFloat(value);
+            break;
+          case 'stroke-linecap':
+            style.strokeLinecap = value;
+            break;
+          case 'stroke-linejoin':
+            style.strokeLinejoin = value;
+            break;
+          case 'stroke-miterlimit':
+            style.strokeMiterlimit = parseFloat(value);
+            break;
           case 'fill-opacity':
             style.fillOpacity = parseFloat(value);
             break;
           case 'stroke-opacity':
             style.strokeOpacity = parseFloat(value);
+            break;
+          case 'opacity':
+            style.opacity = parseFloat(value);
+            break;
+          case 'filter':
+            style.filter = value;
+            break;
+          case 'clip-path':
+            style.clipPath = value;
+            break;
+          case 'mask':
+            style.mask = value;
             break;
         }
       }
@@ -1517,6 +1655,337 @@ export function parseGradients(svgElement: Element): GradientOrPattern[] {
 }
 
 /**
+ * Parse filter definitions from SVG
+ */
+export function parseFilters(svgElement: Element): SVGFilter[] {
+  const filters: SVGFilter[] = [];
+  const defsElement = svgElement.querySelector('defs');
+  
+  if (!defsElement) return filters;
+  
+  // Parse filter elements
+  const filterElements = defsElement.querySelectorAll('filter');
+  filterElements.forEach((filterNode) => {
+    const id = filterNode.getAttribute('id');
+    if (!id) return;
+    
+    const x = filterNode.getAttribute('x') ? parseFloat(filterNode.getAttribute('x')!) : undefined;
+    const y = filterNode.getAttribute('y') ? parseFloat(filterNode.getAttribute('y')!) : undefined;
+    const width = filterNode.getAttribute('width') ? parseFloat(filterNode.getAttribute('width')!) : undefined;
+    const height = filterNode.getAttribute('height') ? parseFloat(filterNode.getAttribute('height')!) : undefined;
+    const filterUnits = filterNode.getAttribute('filterUnits') as 'userSpaceOnUse' | 'objectBoundingBox' | undefined;
+    const primitiveUnits = filterNode.getAttribute('primitiveUnits') as 'userSpaceOnUse' | 'objectBoundingBox' | undefined;
+    const colorInterpolationFilters = filterNode.getAttribute('color-interpolation-filters') as 'auto' | 'sRGB' | 'linearRGB' | undefined;
+    
+    // Parse filter primitives
+    const primitives: FilterPrimitiveType[] = [];
+    
+    // Parse feGaussianBlur
+    const blurElements = filterNode.querySelectorAll('feGaussianBlur');
+    blurElements.forEach((element) => {
+      primitives.push({
+        type: 'feGaussianBlur',
+        stdDeviation: parseFloat(element.getAttribute('stdDeviation') || '3'),
+        in: element.getAttribute('in') || undefined,
+        result: element.getAttribute('result') || undefined,
+      });
+    });
+    
+    // Parse feOffset
+    const offsetElements = filterNode.querySelectorAll('feOffset');
+    offsetElements.forEach((element) => {
+      primitives.push({
+        type: 'feOffset',
+        dx: parseFloat(element.getAttribute('dx') || '0'),
+        dy: parseFloat(element.getAttribute('dy') || '0'),
+        in: element.getAttribute('in') || undefined,
+        result: element.getAttribute('result') || undefined,
+      });
+    });
+    
+    // Parse feFlood
+    const floodElements = filterNode.querySelectorAll('feFlood');
+    floodElements.forEach((element) => {
+      primitives.push({
+        type: 'feFlood',
+        floodColor: element.getAttribute('flood-color') || '#000000',
+        floodOpacity: element.getAttribute('flood-opacity') ? parseFloat(element.getAttribute('flood-opacity')!) : undefined,
+        result: element.getAttribute('result') || undefined,
+      });
+    });
+    
+    // Parse feComposite
+    const compositeElements = filterNode.querySelectorAll('feComposite');
+    compositeElements.forEach((element) => {
+      primitives.push({
+        type: 'feComposite',
+        operator: (element.getAttribute('operator') || 'over') as 'over' | 'in' | 'out' | 'atop' | 'xor' | 'arithmetic',
+        in: element.getAttribute('in') || undefined,
+        in2: element.getAttribute('in2') || undefined,
+        result: element.getAttribute('result') || undefined,
+      });
+    });
+    
+    // Parse feColorMatrix
+    const colorMatrixElements = filterNode.querySelectorAll('feColorMatrix');
+    colorMatrixElements.forEach((element) => {
+      primitives.push({
+        type: 'feColorMatrix',
+        colorMatrixType: (element.getAttribute('type') || 'matrix') as 'matrix' | 'saturate' | 'hueRotate' | 'luminanceToAlpha',
+        values: element.getAttribute('values') || undefined,
+        in: element.getAttribute('in') || undefined,
+        result: element.getAttribute('result') || undefined,
+      });
+    });
+    
+    // Parse feDropShadow
+    const dropShadowElements = filterNode.querySelectorAll('feDropShadow');
+    dropShadowElements.forEach((element) => {
+      primitives.push({
+        type: 'feDropShadow',
+        dx: parseFloat(element.getAttribute('dx') || '2'),
+        dy: parseFloat(element.getAttribute('dy') || '2'),
+        stdDeviation: parseFloat(element.getAttribute('stdDeviation') || '3'),
+        floodColor: element.getAttribute('flood-color') || '#000000',
+        floodOpacity: element.getAttribute('flood-opacity') ? parseFloat(element.getAttribute('flood-opacity')!) : undefined,
+        result: element.getAttribute('result') || undefined,
+      });
+    });
+    
+    // Parse feBlend
+    const blendElements = filterNode.querySelectorAll('feBlend');
+    blendElements.forEach((element) => {
+      primitives.push({
+        type: 'feBlend',
+        mode: (element.getAttribute('mode') || 'normal') as 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 'color-dodge' | 'color-burn' | 'hard-light' | 'soft-light' | 'difference' | 'exclusion',
+        in: element.getAttribute('in') || undefined,
+        in2: element.getAttribute('in2') || undefined,
+        result: element.getAttribute('result') || undefined,
+      });
+    });
+    
+    // Parse feMorphology
+    const morphologyElements = filterNode.querySelectorAll('feMorphology');
+    morphologyElements.forEach((element) => {
+      primitives.push({
+        type: 'feMorphology',
+        operator: (element.getAttribute('operator') || 'dilate') as 'erode' | 'dilate',
+        radius: parseFloat(element.getAttribute('radius') || '1'),
+        in: element.getAttribute('in') || undefined,
+        result: element.getAttribute('result') || undefined,
+      });
+    });
+    
+    // Parse feConvolveMatrix
+    const convolveMatrixElements = filterNode.querySelectorAll('feConvolveMatrix');
+    convolveMatrixElements.forEach((element) => {
+      primitives.push({
+        type: 'feConvolveMatrix',
+        order: element.getAttribute('order') || '3',
+        kernelMatrix: element.getAttribute('kernelMatrix') || '0 -1 0 -1 5 -1 0 -1 0',
+        in: element.getAttribute('in') || undefined,
+        result: element.getAttribute('result') || undefined,
+      });
+    });
+    
+    // Parse feTurbulence
+    const turbulenceElements = filterNode.querySelectorAll('feTurbulence');
+    turbulenceElements.forEach((element) => {
+      primitives.push({
+        type: 'feTurbulence',
+        baseFrequency: element.getAttribute('baseFrequency') || '0.1',
+        numOctaves: element.getAttribute('numOctaves') ? parseInt(element.getAttribute('numOctaves')!) : 4,
+        seed: element.getAttribute('seed') ? parseInt(element.getAttribute('seed')!) : 2,
+        stitchTiles: (element.getAttribute('stitchTiles') || 'noStitch') as 'stitch' | 'noStitch',
+        turbulenceType: (element.getAttribute('type') || 'turbulence') as 'fractalNoise' | 'turbulence',
+        result: element.getAttribute('result') || undefined,
+      });
+    });
+    
+    // Parse feDisplacementMap
+    const displacementMapElements = filterNode.querySelectorAll('feDisplacementMap');
+    displacementMapElements.forEach((element) => {
+      primitives.push({
+        type: 'feDisplacementMap',
+        scale: element.getAttribute('scale') ? parseFloat(element.getAttribute('scale')!) : 0,
+        xChannelSelector: (element.getAttribute('xChannelSelector') || 'A') as 'R' | 'G' | 'B' | 'A',
+        yChannelSelector: (element.getAttribute('yChannelSelector') || 'A') as 'R' | 'G' | 'B' | 'A',
+        in: element.getAttribute('in') || undefined,
+        in2: element.getAttribute('in2') || undefined,
+        result: element.getAttribute('result') || undefined,
+      });
+    });
+    
+    // Parse feMerge
+    const mergeElements = filterNode.querySelectorAll('feMerge');
+    mergeElements.forEach((element) => {
+      const mergeNodes = Array.from(element.querySelectorAll('feMergeNode')).map(node => ({
+        in: node.getAttribute('in') || '',
+      }));
+      
+      primitives.push({
+        type: 'feMerge',
+        feMergeNodes: mergeNodes,
+        result: element.getAttribute('result') || undefined,
+      });
+    });
+    
+    // Parse feComponentTransfer
+    const componentTransferElements = filterNode.querySelectorAll('feComponentTransfer');
+    componentTransferElements.forEach((element) => {
+      primitives.push({
+        type: 'feComponentTransfer',
+        in: element.getAttribute('in') || undefined,
+        result: element.getAttribute('result') || undefined,
+      });
+    });
+    
+    // Parse feImage
+    const imageElements = filterNode.querySelectorAll('feImage');
+    imageElements.forEach((element) => {
+      primitives.push({
+        type: 'feImage',
+        href: element.getAttribute('href') || element.getAttribute('xlink:href') || undefined,
+        preserveAspectRatio: element.getAttribute('preserveAspectRatio') || undefined,
+        crossorigin: element.getAttribute('crossorigin') as 'anonymous' | 'use-credentials' | undefined,
+        result: element.getAttribute('result') || undefined,
+      });
+    });
+    
+    // Parse feTile
+    const tileElements = filterNode.querySelectorAll('feTile');
+    tileElements.forEach((element) => {
+      primitives.push({
+        type: 'feTile',
+        in: element.getAttribute('in') || undefined,
+        result: element.getAttribute('result') || undefined,
+      });
+    });
+    
+    // Parse feDiffuseLighting
+    const diffuseLightingElements = filterNode.querySelectorAll('feDiffuseLighting');
+    diffuseLightingElements.forEach((element) => {
+      // Parse light source
+      const distantLight = element.querySelector('feDistantLight');
+      const pointLight = element.querySelector('fePointLight');
+      const spotLight = element.querySelector('feSpotLight');
+      
+      let lightSource: any;
+      if (distantLight) {
+        lightSource = {
+          type: 'feDistantLight',
+          azimuth: distantLight.getAttribute('azimuth') ? parseFloat(distantLight.getAttribute('azimuth')!) : 45,
+          elevation: distantLight.getAttribute('elevation') ? parseFloat(distantLight.getAttribute('elevation')!) : 45,
+        };
+      } else if (pointLight) {
+        lightSource = {
+          type: 'fePointLight',
+          x: pointLight.getAttribute('x') ? parseFloat(pointLight.getAttribute('x')!) : 0,
+          y: pointLight.getAttribute('y') ? parseFloat(pointLight.getAttribute('y')!) : 0,
+          z: pointLight.getAttribute('z') ? parseFloat(pointLight.getAttribute('z')!) : 1,
+        };
+      } else if (spotLight) {
+        lightSource = {
+          type: 'feSpotLight',
+          x: spotLight.getAttribute('x') ? parseFloat(spotLight.getAttribute('x')!) : 0,
+          y: spotLight.getAttribute('y') ? parseFloat(spotLight.getAttribute('y')!) : 0,
+          z: spotLight.getAttribute('z') ? parseFloat(spotLight.getAttribute('z')!) : 1,
+          pointsAtX: spotLight.getAttribute('pointsAtX') ? parseFloat(spotLight.getAttribute('pointsAtX')!) : 0,
+          pointsAtY: spotLight.getAttribute('pointsAtY') ? parseFloat(spotLight.getAttribute('pointsAtY')!) : 0,
+          pointsAtZ: spotLight.getAttribute('pointsAtZ') ? parseFloat(spotLight.getAttribute('pointsAtZ')!) : 0,
+        };
+      } else {
+        // Default light source
+        lightSource = {
+          type: 'feDistantLight',
+          azimuth: 45,
+          elevation: 45,
+        };
+      }
+      
+      primitives.push({
+        type: 'feDiffuseLighting',
+        surfaceScale: element.getAttribute('surface-scale') ? parseFloat(element.getAttribute('surface-scale')!) : 1,
+        diffuseConstant: element.getAttribute('diffuse-constant') ? parseFloat(element.getAttribute('diffuse-constant')!) : 1,
+        lightColor: element.getAttribute('lighting-color') || '#ffffff',
+        in: element.getAttribute('in') || undefined,
+        result: element.getAttribute('result') || undefined,
+        lightSource,
+      });
+    });
+    
+    // Parse feSpecularLighting
+    const specularLightingElements = filterNode.querySelectorAll('feSpecularLighting');
+    specularLightingElements.forEach((element) => {
+      // Parse light source (same logic as diffuse lighting)
+      const distantLight = element.querySelector('feDistantLight');
+      const pointLight = element.querySelector('fePointLight');
+      const spotLight = element.querySelector('feSpotLight');
+      
+      let lightSource: any;
+      if (distantLight) {
+        lightSource = {
+          type: 'feDistantLight',
+          azimuth: distantLight.getAttribute('azimuth') ? parseFloat(distantLight.getAttribute('azimuth')!) : 45,
+          elevation: distantLight.getAttribute('elevation') ? parseFloat(distantLight.getAttribute('elevation')!) : 45,
+        };
+      } else if (pointLight) {
+        lightSource = {
+          type: 'fePointLight',
+          x: pointLight.getAttribute('x') ? parseFloat(pointLight.getAttribute('x')!) : 0,
+          y: pointLight.getAttribute('y') ? parseFloat(pointLight.getAttribute('y')!) : 0,
+          z: pointLight.getAttribute('z') ? parseFloat(pointLight.getAttribute('z')!) : 1,
+        };
+      } else if (spotLight) {
+        lightSource = {
+          type: 'feSpotLight',
+          x: spotLight.getAttribute('x') ? parseFloat(spotLight.getAttribute('x')!) : 0,
+          y: spotLight.getAttribute('y') ? parseFloat(spotLight.getAttribute('y')!) : 0,
+          z: spotLight.getAttribute('z') ? parseFloat(spotLight.getAttribute('z')!) : 1,
+          pointsAtX: spotLight.getAttribute('pointsAtX') ? parseFloat(spotLight.getAttribute('pointsAtX')!) : 0,
+          pointsAtY: spotLight.getAttribute('pointsAtY') ? parseFloat(spotLight.getAttribute('pointsAtY')!) : 0,
+          pointsAtZ: spotLight.getAttribute('pointsAtZ') ? parseFloat(spotLight.getAttribute('pointsAtZ')!) : 0,
+        };
+      } else {
+        lightSource = {
+          type: 'feDistantLight',
+          azimuth: 45,
+          elevation: 45,
+        };
+      }
+      
+      primitives.push({
+        type: 'feSpecularLighting',
+        surfaceScale: element.getAttribute('surface-scale') ? parseFloat(element.getAttribute('surface-scale')!) : 1,
+        specularConstant: element.getAttribute('specular-constant') ? parseFloat(element.getAttribute('specular-constant')!) : 1,
+        specularExponent: element.getAttribute('specular-exponent') ? parseFloat(element.getAttribute('specular-exponent')!) : 1,
+        lightColor: element.getAttribute('lighting-color') || '#ffffff',
+        in: element.getAttribute('in') || undefined,
+        result: element.getAttribute('result') || undefined,
+        lightSource,
+      });
+    });
+    
+    const filter: SVGFilter = {
+      id,
+      type: 'filter',
+      x,
+      y,
+      width,
+      height,
+      filterUnits,
+      primitiveUnits,
+      colorInterpolationFilters,
+      primitives,
+    };
+    
+    filters.push(filter);
+  });
+  
+  return filters;
+}
+
+/**
  * Parse SVG group elements (<g>) from SVG
  */
 export function parseGroups(svgElement: Element, allPaths: SVGPath[], allTexts: TextElementType[]): SVGGroup[] {
@@ -1654,6 +2123,7 @@ export function parseCompleteSVG(svgString: string): {
   paths: SVGPath[];
   texts: TextElementType[];
   gradients: GradientOrPattern[];
+  filters: SVGFilter[];
   groups: SVGGroup[];
 } {
   try {
@@ -1668,6 +2138,9 @@ export function parseCompleteSVG(svgString: string): {
     // Parse gradients and patterns
     const gradients = parseGradients(svgElement);
     
+    // Parse filters
+    const filters = parseFilters(svgElement);
+    
     // Parse groups
     const groups = parseGroups(svgElement, paths, texts);
     
@@ -1675,6 +2148,7 @@ export function parseCompleteSVG(svgString: string): {
       paths,
       texts,
       gradients,
+      filters,
       groups
     };
   } catch (error) {

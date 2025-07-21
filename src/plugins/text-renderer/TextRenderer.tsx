@@ -29,16 +29,33 @@ export const TextRenderer: React.FC = () => {
           fontSize={text.style.fontSize}
           fontWeight={text.style.fontWeight}
           fontStyle={text.style.fontStyle}
+          fontVariant={text.style.fontVariant}
+          fontStretch={text.style.fontStretch}
           textDecoration={text.style.textDecoration}
           textAnchor={text.style.textAnchor}
           dominantBaseline={text.style.dominantBaseline}
+          alignmentBaseline={text.style.alignmentBaseline}
+          baselineShift={text.style.baselineShift}
+          direction={text.style.direction}
+          writingMode={text.style.writingMode}
+          textRendering={text.style.textRendering}
           fill={isWireframeMode ? 'none' : (text.style.fill ? getStyleValue(text.style.fill) : '#000000')}
           fillOpacity={isWireframeMode ? 0 : text.style.fillOpacity}
           stroke={isWireframeMode ? '#000000' : (text.style.stroke ? getStyleValue(text.style.stroke) : undefined)}
           strokeWidth={isWireframeMode ? (1 / viewport.zoom) : text.style.strokeWidth}
           strokeOpacity={isWireframeMode ? 1 : text.style.strokeOpacity}
+          strokeDasharray={Array.isArray(text.style.strokeDasharray) 
+            ? text.style.strokeDasharray.join(',') 
+            : text.style.strokeDasharray}
+          strokeDashoffset={text.style.strokeDashoffset}
+          strokeLinecap={text.style.strokeLinecap}
+          strokeLinejoin={text.style.strokeLinejoin}
+          strokeMiterlimit={text.style.strokeMiterlimit}
           letterSpacing={text.style.letterSpacing}
           wordSpacing={text.style.wordSpacing}
+          textLength={text.style.textLength}
+          lengthAdjust={text.style.lengthAdjust}
+          opacity={text.style.opacity}
           transform={text.transform}
           filter={text.style.filter}
           clipPath={text.style.clipPath}
@@ -125,16 +142,33 @@ export const TextRenderer: React.FC = () => {
           fontSize={text.style.fontSize}
           fontWeight={text.style.fontWeight}
           fontStyle={text.style.fontStyle}
+          fontVariant={text.style.fontVariant}
+          fontStretch={text.style.fontStretch}
           textDecoration={text.style.textDecoration}
           textAnchor={text.style.textAnchor}
           dominantBaseline={text.style.dominantBaseline}
+          alignmentBaseline={text.style.alignmentBaseline}
+          baselineShift={text.style.baselineShift}
+          direction={text.style.direction}
+          writingMode={text.style.writingMode}
+          textRendering={text.style.textRendering}
           fill={isWireframeMode ? 'none' : (text.style.fill ? getStyleValue(text.style.fill) : '#000000')}
           fillOpacity={isWireframeMode ? 0 : text.style.fillOpacity}
           stroke={isWireframeMode ? '#000000' : (text.style.stroke ? getStyleValue(text.style.stroke) : undefined)}
           strokeWidth={isWireframeMode ? (1 / viewport.zoom) : text.style.strokeWidth}
           strokeOpacity={isWireframeMode ? 1 : text.style.strokeOpacity}
+          strokeDasharray={Array.isArray(text.style.strokeDasharray) 
+            ? text.style.strokeDasharray.join(',') 
+            : text.style.strokeDasharray}
+          strokeDashoffset={text.style.strokeDashoffset}
+          strokeLinecap={text.style.strokeLinecap}
+          strokeLinejoin={text.style.strokeLinejoin}
+          strokeMiterlimit={text.style.strokeMiterlimit}
           letterSpacing={text.style.letterSpacing}
           wordSpacing={text.style.wordSpacing}
+          textLength={text.style.textLength}
+          lengthAdjust={text.style.lengthAdjust}
+          opacity={text.style.opacity}
           transform={text.transform}
           style={{
             cursor: text.locked ? 'default' : 'grab',
@@ -155,7 +189,7 @@ export const TextRenderer: React.FC = () => {
               <tspan
                 key={span.id}
                 x={text.x}
-                dy={lineNumber === 0 ? 0 : (text.style?.fontSize || 16) * 1.2}
+                dy={lineNumber === 0 ? 0 : (text.style?.fontSize || 16) * (text.style?.lineHeight || 1.2)}
                 data-span-id={span.id}
               >
                 {span.content}

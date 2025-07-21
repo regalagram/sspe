@@ -627,8 +627,9 @@ export const createGroupActions: StateCreator<
     }
 
     try {
-      // Get all gradients (including imported ones)
+      // Get all gradients and filters (including imported ones)
       const allGradients = [...state.gradients];
+      const allFilters = [...state.filters];
       
       // Generate SVG content for the group
       const svgContent = generateGroupSVG(
@@ -637,6 +638,7 @@ export const createGroupActions: StateCreator<
         state.texts,
         state.groups,
         allGradients,
+        allFilters,
         state.precision || 2
       );
 
