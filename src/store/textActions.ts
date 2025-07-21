@@ -149,11 +149,11 @@ export const createTextActions: StateCreator<
       const newGradients = [...state.gradients];
       
       Object.values(style).forEach(value => {
-        if (typeof value === 'object' && value?.id && value?.type) {
+        if (typeof value === 'object' && value !== null && 'id' in value && 'type' in value) {
           // Check if this gradient/pattern is already in the store
           const exists = newGradients.some(g => g.id === value.id);
           if (!exists) {
-            newGradients.push(value);
+            newGradients.push(value as any);
           }
         } else if (typeof value === 'string' && value.startsWith('url(#')) {
           // Handle url(#id) format - extract ID and look for predefined gradients
