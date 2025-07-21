@@ -29,11 +29,23 @@ import {
   createMosaicFilter,
   createGlitchFilter,
   createPixelateFilter,
+  // New artistic filters
+  createDancingStrokeFilter,
+  createSmokeFilter,
+  createWavesFilter,
+  createPaperTextureFilter,
+  createZebraFilter,
+  createNetFilter,
+  createDustFilter,
+  createColoredStripesFilter,
+  createColoredSpotsFilter,
+  createColoredFlameFilter,
+  createAdvancedWatercolorFilter,
   formatSVGReference 
 } from '../../utils/svg-elements-utils';
 import { FilterPrimitiveType } from '../../types';
 import { PluginButton } from '../../components/PluginButton';
-import { Plus, Trash2, Eye, Zap, Droplets, Palette, Edit, Copy, Contrast, Sun, RotateCcw, Sparkles, Layers, Move, Volume2, Waves, Grid, Brush, Camera, Clock, Shuffle, Monitor } from 'lucide-react';
+import { Plus, Trash2, Eye, Zap, Droplets, Palette, Edit, Copy, Contrast, Sun, RotateCcw, Sparkles, Layers, Move, Volume2, Waves, Grid, Brush, Camera, Clock, Shuffle, Monitor, Activity, Wind, FileText, Network, Sparkle, Cloud, Flame } from 'lucide-react';
 
 export const FilterControls: React.FC = () => {
   const store = useEditorStore();
@@ -81,7 +93,7 @@ export const FilterControls: React.FC = () => {
     return parentPaths;
   };
 
-  const handleCreateFilter = (type: 'custom' | 'drop-shadow' | 'blur' | 'grayscale' | 'sepia' | 'invert' | 'brightness' | 'contrast' | 'saturate' | 'hue-rotate' | 'emboss' | 'sharpen' | 'edge-detect' | 'glow' | 'bevel' | 'motion-blur' | 'noise' | 'wave-distortion' | 'posterize' | 'oil-painting' | 'watercolor' | 'vintage' | 'chromatic-aberration' | 'neon-glow' | 'mosaic' | 'glitch' | 'pixelate') => {
+  const handleCreateFilter = (type: 'custom' | 'drop-shadow' | 'blur' | 'grayscale' | 'sepia' | 'invert' | 'brightness' | 'contrast' | 'saturate' | 'hue-rotate' | 'emboss' | 'sharpen' | 'edge-detect' | 'glow' | 'bevel' | 'motion-blur' | 'noise' | 'wave-distortion' | 'posterize' | 'oil-painting' | 'watercolor' | 'vintage' | 'chromatic-aberration' | 'neon-glow' | 'mosaic' | 'glitch' | 'pixelate' | 'dancing-stroke' | 'smoke' | 'waves' | 'paper-texture' | 'zebra' | 'net' | 'dust' | 'colored-stripes' | 'colored-spots' | 'colored-flame' | 'advanced-watercolor') => {
     let filterData;
     switch (type) {
       case 'drop-shadow':
@@ -162,13 +174,46 @@ export const FilterControls: React.FC = () => {
       case 'pixelate':
         filterData = createPixelateFilter();
         break;
+      case 'dancing-stroke':
+        filterData = createDancingStrokeFilter();
+        break;
+      case 'smoke':
+        filterData = createSmokeFilter();
+        break;
+      case 'waves':
+        filterData = createWavesFilter();
+        break;
+      case 'paper-texture':
+        filterData = createPaperTextureFilter();
+        break;
+      case 'zebra':
+        filterData = createZebraFilter();
+        break;
+      case 'net':
+        filterData = createNetFilter();
+        break;
+      case 'dust':
+        filterData = createDustFilter();
+        break;
+      case 'colored-stripes':
+        filterData = createColoredStripesFilter();
+        break;
+      case 'colored-spots':
+        filterData = createColoredSpotsFilter();
+        break;
+      case 'colored-flame':
+        filterData = createColoredFlameFilter();
+        break;
+      case 'advanced-watercolor':
+        filterData = createAdvancedWatercolorFilter();
+        break;
       default:
         filterData = createDefaultFilter();
     }
     addFilter(filterData);
   };
 
-  const handleQuickApplyFilter = (type: 'drop-shadow' | 'blur' | 'grayscale' | 'sepia' | 'invert' | 'brightness' | 'contrast' | 'saturate' | 'hue-rotate' | 'emboss' | 'sharpen' | 'edge-detect' | 'glow' | 'bevel' | 'motion-blur' | 'noise' | 'wave-distortion' | 'posterize' | 'oil-painting' | 'watercolor' | 'vintage' | 'chromatic-aberration' | 'neon-glow' | 'mosaic' | 'glitch' | 'pixelate') => {
+  const handleQuickApplyFilter = (type: 'drop-shadow' | 'blur' | 'grayscale' | 'sepia' | 'invert' | 'brightness' | 'contrast' | 'saturate' | 'hue-rotate' | 'emboss' | 'sharpen' | 'edge-detect' | 'glow' | 'bevel' | 'motion-blur' | 'noise' | 'wave-distortion' | 'posterize' | 'oil-painting' | 'watercolor' | 'vintage' | 'chromatic-aberration' | 'neon-glow' | 'mosaic' | 'glitch' | 'pixelate' | 'dancing-stroke' | 'smoke' | 'waves' | 'paper-texture' | 'zebra' | 'net' | 'dust' | 'colored-stripes' | 'colored-spots' | 'colored-flame' | 'advanced-watercolor') => {
     if (selectedSubPaths.length === 0) {
       alert('Please select one or more sub-paths first');
       return;
@@ -222,7 +267,18 @@ export const FilterControls: React.FC = () => {
                          type === 'neon-glow' ? createNeonGlowFilter() :
                          type === 'mosaic' ? createMosaicFilter() :
                          type === 'glitch' ? createGlitchFilter() :
-                         createPixelateFilter();
+                         type === 'pixelate' ? createPixelateFilter() :
+                         type === 'dancing-stroke' ? createDancingStrokeFilter() :
+                         type === 'smoke' ? createSmokeFilter() :
+                         type === 'waves' ? createWavesFilter() :
+                         type === 'paper-texture' ? createPaperTextureFilter() :
+                         type === 'zebra' ? createZebraFilter() :
+                         type === 'net' ? createNetFilter() :
+                         type === 'dust' ? createDustFilter() :
+                         type === 'colored-stripes' ? createColoredStripesFilter() :
+                         type === 'colored-spots' ? createColoredSpotsFilter() :
+                         type === 'colored-flame' ? createColoredFlameFilter() :
+                         createAdvancedWatercolorFilter();
       
       // Create the filter and apply immediately
       addFilter(filterData);
@@ -947,17 +1003,295 @@ export const FilterControls: React.FC = () => {
           </div>
         );
 
-      case 'feComponentTransfer':
       case 'feTile':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '500', color: '#333' }}>{primitive.type}</div>
+            <div style={{ fontSize: '10px', color: '#666' }}>
+              Tiles the input image to fill the filter region. Use with displacement maps for interesting effects.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '10px', color: '#666' }}>Input:</label>
+              <input
+                type="text"
+                value={primitive.in || ''}
+                onChange={(e) => updatePrimitive({ in: e.target.value })}
+                placeholder="Input source (e.g., SourceGraphic)"
+                style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '10px', color: '#666' }}>Result:</label>
+              <input
+                type="text"
+                value={primitive.result || ''}
+                onChange={(e) => updatePrimitive({ result: e.target.value })}
+                placeholder="Result name (e.g., tiled)"
+                style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+              />
+            </div>
+          </div>
+        );
+
+      case 'feComponentTransfer':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '500', color: '#333' }}>{primitive.type}</div>
+            <div style={{ fontSize: '10px', color: '#666' }}>
+              Performs component-wise remapping of color data. Use with nested feFuncR, feFuncG, feFuncB, feFuncA elements.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '10px', color: '#666' }}>Input:</label>
+              <input
+                type="text"
+                value={primitive.in || ''}
+                onChange={(e) => updatePrimitive({ in: e.target.value })}
+                placeholder="Input source (e.g., SourceGraphic)"
+                style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '10px', color: '#666' }}>Result:</label>
+              <input
+                type="text"
+                value={primitive.result || ''}
+                onChange={(e) => updatePrimitive({ result: e.target.value })}
+                placeholder="Result name (e.g., transfered)"
+                style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+              />
+            </div>
+            <div style={{ fontSize: '10px', color: '#888', fontStyle: 'italic' }}>
+              Add feFuncR, feFuncG, feFuncB, feFuncA primitives as children for channel-specific transformations.
+            </div>
+          </div>
+        );
+
       case 'feDiffuseLighting':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '500', color: '#333' }}>{primitive.type}</div>
+            <div style={{ fontSize: '10px', color: '#666' }}>
+              Lights a source image using alpha channel as a height map. Creates 3D lighting effects.
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <label style={{ fontSize: '10px', color: '#666' }}>Surface Scale:</label>
+                <input
+                  type="number"
+                  value={primitive.surfaceScale || 1}
+                  onChange={(e) => updatePrimitive({ surfaceScale: parseFloat(e.target.value) })}
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <label style={{ fontSize: '10px', color: '#666' }}>Diffuse Constant:</label>
+                <input
+                  type="number"
+                  value={primitive.diffuseConstant || 1}
+                  onChange={(e) => updatePrimitive({ diffuseConstant: parseFloat(e.target.value) })}
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '10px', color: '#666' }}>Light Color:</label>
+              <input
+                type="color"
+                value={primitive.lightColor || '#ffffff'}
+                onChange={(e) => updatePrimitive({ lightColor: e.target.value })}
+                style={{ width: '100%', padding: '2px', border: '1px solid #ddd', borderRadius: '3px' }}
+              />
+            </div>
+            <div style={{ fontSize: '10px', color: '#888', fontStyle: 'italic' }}>
+              Add feDistantLight, fePointLight, or feSpotLight as a child light source.
+            </div>
+          </div>
+        );
+
       case 'feSpecularLighting':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '500', color: '#333' }}>{primitive.type}</div>
+            <div style={{ fontSize: '10px', color: '#666' }}>
+              Creates specular highlights using alpha channel as a height map. Great for metallic/reflective effects.
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <label style={{ fontSize: '10px', color: '#666' }}>Surface Scale:</label>
+                <input
+                  type="number"
+                  value={primitive.surfaceScale || 1}
+                  onChange={(e) => updatePrimitive({ surfaceScale: parseFloat(e.target.value) })}
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+                />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <label style={{ fontSize: '10px', color: '#666' }}>Specular Constant:</label>
+                <input
+                  type="number"
+                  value={primitive.specularConstant || 1}
+                  onChange={(e) => updatePrimitive({ specularConstant: parseFloat(e.target.value) })}
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '10px', color: '#666' }}>Specular Exponent:</label>
+              <input
+                type="number"
+                value={primitive.specularExponent || 20}
+                onChange={(e) => updatePrimitive({ specularExponent: parseFloat(e.target.value) })}
+                min="1"
+                max="128"
+                step="1"
+                style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '10px', color: '#666' }}>Light Color:</label>
+              <input
+                type="color"
+                value={primitive.lightColor || '#ffffff'}
+                onChange={(e) => updatePrimitive({ lightColor: e.target.value })}
+                style={{ width: '100%', padding: '2px', border: '1px solid #ddd', borderRadius: '3px' }}
+              />
+            </div>
+            <div style={{ fontSize: '10px', color: '#888', fontStyle: 'italic' }}>
+              Add feDistantLight, fePointLight, or feSpotLight as a child light source.
+            </div>
+          </div>
+        );
+
       case 'feFuncR':
       case 'feFuncG':
       case 'feFuncB':
       case 'feFuncA':
+        const channelName = primitive.type.slice(-1); // Get R, G, B, or A
         return (
-          <div style={{ fontSize: '11px', color: '#666', padding: '8px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-            {primitive.type} - Advanced editing available in source mode
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '500', color: '#333' }}>{primitive.type} - {channelName} Channel</div>
+            <div style={{ fontSize: '10px', color: '#666' }}>
+              Defines the transfer function for the {channelName} color channel.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '10px', color: '#666' }}>Function Type:</label>
+              <select
+                value={primitive.funcType || 'identity'}
+                onChange={(e) => updatePrimitive({ funcType: e.target.value as any })}
+                style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+              >
+                <option value="identity">Identity (no change)</option>
+                <option value="table">Table (lookup)</option>
+                <option value="discrete">Discrete</option>
+                <option value="linear">Linear</option>
+                <option value="gamma">Gamma correction</option>
+              </select>
+            </div>
+            {primitive.funcType === 'table' || primitive.funcType === 'discrete' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '10px', color: '#666' }}>Table Values:</label>
+                <input
+                  type="text"
+                  value={primitive.tableValues || ''}
+                  onChange={(e) => updatePrimitive({ tableValues: e.target.value })}
+                  placeholder="e.g., 0 0.5 1 (space-separated)"
+                  style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+                />
+              </div>
+            ) : null}
+            {primitive.funcType === 'linear' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <label style={{ fontSize: '10px', color: '#666' }}>Slope:</label>
+                  <input
+                    type="number"
+                    value={primitive.slope || 1}
+                    onChange={(e) => updatePrimitive({ slope: parseFloat(e.target.value) })}
+                    step="0.1"
+                    style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <label style={{ fontSize: '10px', color: '#666' }}>Intercept:</label>
+                  <input
+                    type="number"
+                    value={primitive.intercept || 0}
+                    onChange={(e) => updatePrimitive({ intercept: parseFloat(e.target.value) })}
+                    step="0.1"
+                    style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+                  />
+                </div>
+              </div>
+            ) : null}
+            {primitive.funcType === 'gamma' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <label style={{ fontSize: '10px', color: '#666' }}>Amplitude:</label>
+                  <input
+                    type="number"
+                    value={primitive.amplitude || 1}
+                    onChange={(e) => updatePrimitive({ amplitude: parseFloat(e.target.value) })}
+                    step="0.1"
+                    style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <label style={{ fontSize: '10px', color: '#666' }}>Exponent:</label>
+                  <input
+                    type="number"
+                    value={primitive.exponent || 1}
+                    onChange={(e) => updatePrimitive({ exponent: parseFloat(e.target.value) })}
+                    step="0.1"
+                    style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <label style={{ fontSize: '10px', color: '#666' }}>Offset:</label>
+                  <input
+                    type="number"
+                    value={primitive.offset || 0}
+                    onChange={(e) => updatePrimitive({ offset: parseFloat(e.target.value) })}
+                    step="0.1"
+                    style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+                  />
+                </div>
+              </div>
+            ) : null}
+          </div>
+        );
+
+      case 'feMerge':
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '500', color: '#333' }}>{primitive.type}</div>
+            <div style={{ fontSize: '10px', color: '#666' }}>
+              Merges multiple filter results. Each feMergeNode specifies an input to layer.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '10px', color: '#666' }}>Result:</label>
+              <input
+                type="text"
+                value={primitive.result || ''}
+                onChange={(e) => updatePrimitive({ result: e.target.value })}
+                placeholder="Result name (e.g., merged)"
+                style={{ width: '100%', padding: '4px', fontSize: '11px', border: '1px solid #ddd', borderRadius: '3px' }}
+              />
+            </div>
+            <div style={{ fontSize: '10px', color: '#888', fontStyle: 'italic' }}>
+              Configure merge nodes in source mode or use filter presets for complex merging.
+            </div>
           </div>
         );
 
@@ -1179,10 +1513,92 @@ export const FilterControls: React.FC = () => {
             />
             <PluginButton
               icon={<Clock size={12} />}
-              text="Chromatic Aberration"
+              text="Chromatic"
               color={hasPathSelection ? '#17a2b8' : '#6c757d'}
               disabled={!hasPathSelection}
               onPointerDown={() => handleQuickApplyFilter('chromatic-aberration')}
+            />
+          </div>
+
+          {/* New Artistic Filters Inspired by SVG Filters Website */}
+          <div style={{ fontSize: '10px', color: '#666', fontWeight: '500', marginTop: '8px', marginBottom: '2px' }}>Artistic Presets (Inspired):</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+            <PluginButton
+              icon={<Activity size={12} />}
+              text="Dancing Stroke"
+              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
+              disabled={!hasPathSelection}
+              onPointerDown={() => handleQuickApplyFilter('dancing-stroke')}
+            />
+            <PluginButton
+              icon={<Cloud size={12} />}
+              text="Smoke"
+              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
+              disabled={!hasPathSelection}
+              onPointerDown={() => handleQuickApplyFilter('smoke')}
+            />
+            <PluginButton
+              icon={<Waves size={12} />}
+              text="Waves"
+              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
+              disabled={!hasPathSelection}
+              onPointerDown={() => handleQuickApplyFilter('waves')}
+            />
+            <PluginButton
+              icon={<FileText size={12} />}
+              text="Paper"
+              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
+              disabled={!hasPathSelection}
+              onPointerDown={() => handleQuickApplyFilter('paper-texture')}
+            />
+            <PluginButton
+              icon={<Sparkle size={12} />}
+              text="Zebra"
+              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
+              disabled={!hasPathSelection}
+              onPointerDown={() => handleQuickApplyFilter('zebra')}
+            />
+            <PluginButton
+              icon={<Network size={12} />}
+              text="Net"
+              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
+              disabled={!hasPathSelection}
+              onPointerDown={() => handleQuickApplyFilter('net')}
+            />
+            <PluginButton
+              icon={<Wind size={12} />}
+              text="Dust"
+              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
+              disabled={!hasPathSelection}
+              onPointerDown={() => handleQuickApplyFilter('dust')}
+            />
+            <PluginButton
+              icon={<Layers size={12} />}
+              text="Stripes"
+              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
+              disabled={!hasPathSelection}
+              onPointerDown={() => handleQuickApplyFilter('colored-stripes')}
+            />
+            <PluginButton
+              icon={<Sparkles size={12} />}
+              text="Spots"
+              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
+              disabled={!hasPathSelection}
+              onPointerDown={() => handleQuickApplyFilter('colored-spots')}
+            />
+            <PluginButton
+              icon={<Flame size={12} />}
+              text="Flame"
+              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
+              disabled={!hasPathSelection}
+              onPointerDown={() => handleQuickApplyFilter('colored-flame')}
+            />
+            <PluginButton
+              icon={<Droplets size={12} />}
+              text="Advanced Watercolor"
+              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
+              disabled={!hasPathSelection}
+              onPointerDown={() => handleQuickApplyFilter('advanced-watercolor')}
             />
           </div>
         </div>
@@ -1670,6 +2086,7 @@ export const FilterControls: React.FC = () => {
                         <optgroup label="Image & Tile">
                           <option value="feImage">Image</option>
                           <option value="feTile">Tile</option>
+                          <option value="feMerge">Merge</option>
                         </optgroup>
                       </select>
                     </div>

@@ -456,6 +456,7 @@ export type FilterPrimitiveType =
   | { type: 'feTurbulence'; baseFrequency: string; numOctaves?: number; seed?: number; stitchTiles?: 'stitch' | 'noStitch'; turbulenceType?: 'fractalNoise' | 'turbulence'; result?: string; }
   | { type: 'feImage'; href?: string; preserveAspectRatio?: string; crossorigin?: 'anonymous' | 'use-credentials'; result?: string; }
   | { type: 'feTile'; in?: string; result?: string; }
+  | { type: 'feMerge'; in?: string; result?: string; feMergeNodes?: { in: string }[]; }
   // Filtro de transferencia de componentes
   | { type: 'feFuncR'; funcType?: 'identity' | 'table' | 'discrete' | 'linear' | 'gamma'; tableValues?: string; slope?: number; intercept?: number; amplitude?: number; exponent?: number; offset?: number; }
   | { type: 'feFuncG'; funcType?: 'identity' | 'table' | 'discrete' | 'linear' | 'gamma'; tableValues?: string; slope?: number; intercept?: number; amplitude?: number; exponent?: number; offset?: number; }
@@ -488,6 +489,7 @@ export interface SVGFilter {
   height?: number;
   filterUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
   primitiveUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
+  colorInterpolationFilters?: 'auto' | 'sRGB' | 'linearRGB';
   primitives: FilterPrimitiveType[]; // Array de primitivas en orden
   locked?: boolean; // Opcional, si filters son editables
 }

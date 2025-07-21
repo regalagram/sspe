@@ -305,6 +305,18 @@ export const FilterRenderer: React.FC = () => {
           />
         );
 
+      case 'feMerge':
+        return (
+          <feMerge
+            key={index}
+            {...commonProps}
+          >
+            {primitive.feMergeNodes && primitive.feMergeNodes.map((node, nodeIndex) => (
+              <feMergeNode key={nodeIndex} in={node.in} />
+            ))}
+          </feMerge>
+        );
+
       case 'feFuncR':
         return (
           <feFuncR
@@ -378,6 +390,7 @@ export const FilterRenderer: React.FC = () => {
           height={filter.height || '140%'}
           filterUnits={filter.filterUnits || 'objectBoundingBox'}
           primitiveUnits={filter.primitiveUnits || 'userSpaceOnUse'}
+          colorInterpolationFilters={filter.colorInterpolationFilters || 'linearRGB'}
         >
           {filter.primitives.map((primitive, index) => renderFilterPrimitive(primitive, index))}
         </filter>

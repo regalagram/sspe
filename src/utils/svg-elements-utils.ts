@@ -461,6 +461,173 @@ export const createPixelateFilter = (): Omit<SVGFilter, 'id'> => ({
   locked: false,
 });
 
+// New Artistic Filters inspired by yoksel.github.io/svg-filters
+export const createDancingStrokeFilter = (strokeColor: string = '#30597E'): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  colorInterpolationFilters: 'linearRGB',
+  primitives: [
+    // Create dilated stroke outline
+    { type: 'feMorphology', operator: 'dilate', radius: 4, in: 'SourceAlpha', result: 'morphology' },
+    { type: 'feFlood', floodColor: strokeColor, floodOpacity: 1, result: 'flood' },
+    { type: 'feComposite', in: 'flood', in2: 'morphology', operator: 'in', result: 'composite' },
+    { type: 'feComposite', in: 'composite', in2: 'SourceAlpha', operator: 'out', result: 'composite1' },
+    // Add turbulence for dancing effect
+    { type: 'feTurbulence', turbulenceType: 'fractalNoise', baseFrequency: '0.01 0.02', numOctaves: 1, seed: 0, stitchTiles: 'stitch', result: 'turbulence' },
+    { type: 'feDisplacementMap', in: 'composite1', in2: 'turbulence', scale: 17, xChannelSelector: 'A', yChannelSelector: 'A', result: 'displacementMap' },
+    // Merge with original
+    { type: 'feMerge', result: 'merge', feMergeNodes: [
+      { in: 'SourceGraphic' },
+      { in: 'displacementMap' }
+    ]}
+  ],
+  locked: false,
+});
+
+export const createSmokeFilter = (color: string = '#38252f'): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  colorInterpolationFilters: 'linearRGB',
+  primitives: [
+    { type: 'feTurbulence', turbulenceType: 'turbulence', baseFrequency: '0.013 0.01', numOctaves: 2, seed: 1, stitchTiles: 'stitch', result: 'turbulence' },
+    { type: 'feFlood', floodColor: color, floodOpacity: 1, result: 'flood' },
+    { type: 'feComposite', in: 'flood', in2: 'turbulence', operator: 'in', result: 'composite1' },
+    { type: 'feComposite', in: 'composite1', in2: 'SourceAlpha', operator: 'in', result: 'composite2' }
+  ],
+  locked: false,
+});
+
+export const createWavesFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  colorInterpolationFilters: 'linearRGB',
+  primitives: [
+    { type: 'feTurbulence', turbulenceType: 'turbulence', baseFrequency: '0.01 0.05', numOctaves: 2, seed: 2, stitchTiles: 'noStitch', result: 'turbulence' },
+    { type: 'feDisplacementMap', in: 'SourceGraphic', in2: 'turbulence', scale: 20, xChannelSelector: 'G', yChannelSelector: 'A', result: 'displacementMap' }
+  ],
+  locked: false,
+});
+
+export const createPaperTextureFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  colorInterpolationFilters: 'sRGB',
+  primitives: [
+    { type: 'feTurbulence', turbulenceType: 'fractalNoise', baseFrequency: '0.04', numOctaves: 5, seed: 2, result: 'noise' },
+    { type: 'feColorMatrix', in: 'noise', colorMatrixType: 'saturate', values: '0', result: 'desaturatedNoise' },
+    { type: 'feBlend', mode: 'multiply', in: 'SourceGraphic', in2: 'desaturatedNoise', result: 'blend' },
+    { type: 'feComposite', in: 'blend', in2: 'SourceAlpha', operator: 'in' }
+  ],
+  locked: false,
+});
+
+export const createZebraFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feTurbulence', turbulenceType: 'turbulence', baseFrequency: '0 0.15', numOctaves: 1, seed: 0, result: 'turbulence' },
+    { type: 'feColorMatrix', in: 'turbulence', colorMatrixType: 'matrix', 
+      values: '0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0', result: 'alpha' },
+    { type: 'feComposite', in: 'SourceGraphic', in2: 'alpha', operator: 'in' }
+  ],
+  locked: false,
+});
+
+export const createNetFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feTurbulence', turbulenceType: 'turbulence', baseFrequency: '0.1', numOctaves: 1, seed: 0, result: 'grid' },
+    { type: 'feColorMatrix', in: 'grid', colorMatrixType: 'matrix',
+      values: '1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 20 -10', result: 'gridPattern' },
+    { type: 'feComposite', in: 'SourceGraphic', in2: 'gridPattern', operator: 'in' }
+  ],
+  locked: false,
+});
+
+export const createDustFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feTurbulence', turbulenceType: 'fractalNoise', baseFrequency: '0.3', numOctaves: 4, seed: 5, result: 'noise' },
+    { type: 'feColorMatrix', in: 'noise', colorMatrixType: 'matrix',
+      values: '0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 -0.2', result: 'dustPattern' },
+    { type: 'feBlend', mode: 'multiply', in: 'SourceGraphic', in2: 'dustPattern' }
+  ],
+  locked: false,
+});
+
+export const createColoredStripesFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feTurbulence', turbulenceType: 'turbulence', baseFrequency: '0 0.15', numOctaves: 1, seed: 0, result: 'stripes' },
+    { type: 'feColorMatrix', in: 'stripes', colorMatrixType: 'matrix',
+      values: '1 0 1 0 0 0.5 1 0.5 0 0 0 0.5 1 0 0 0 0 0 1 0', result: 'coloredStripes' },
+    { type: 'feBlend', mode: 'multiply', in: 'SourceGraphic', in2: 'coloredStripes' }
+  ],
+  locked: false,
+});
+
+export const createColoredSpotsFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feTurbulence', turbulenceType: 'fractalNoise', baseFrequency: '0.02', numOctaves: 1, seed: 0, result: 'spots' },
+    { type: 'feColorMatrix', in: 'spots', colorMatrixType: 'matrix',
+      values: '2 0 0 0 0 0 2 0 0 0 0 0 2 0 0 0 0 0 1 0', result: 'coloredSpots' },
+    { type: 'feBlend', mode: 'screen', in: 'SourceGraphic', in2: 'coloredSpots' }
+  ],
+  locked: false,
+});
+
+export const createColoredFlameFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feTurbulence', turbulenceType: 'fractalNoise', baseFrequency: '0.01 0.1', numOctaves: 3, seed: 1, result: 'flame' },
+    { type: 'feColorMatrix', in: 'flame', colorMatrixType: 'matrix',
+      values: '3 0 0 0 0 0 1.5 0 0 0 0 0 0.5 0 0 0 0 0 1 0', result: 'coloredFlame' },
+    { type: 'feBlend', mode: 'screen', in: 'SourceGraphic', in2: 'coloredFlame' }
+  ],
+  locked: false,
+});
+
+// Enhanced Watercolor Filter (inspired by the website)
+export const createAdvancedWatercolorFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  colorInterpolationFilters: 'sRGB',
+  primitives: [
+    // Base turbulence for texture
+    { type: 'feTurbulence', turbulenceType: 'fractalNoise', baseFrequency: '0.05 0.05', numOctaves: 5, seed: 1, stitchTiles: 'stitch', result: 'turbulence' },
+    // Diffuse lighting for 3D effect
+    { type: 'feDiffuseLighting', surfaceScale: 0.5, diffuseConstant: 3.2, lightColor: '#ffffff', in: 'turbulence', result: 'diffuseLighting', lightSource: {
+      type: 'feDistantLight',
+      azimuth: 150,
+      elevation: 16
+    }},
+    // Secondary turbulence for color variation
+    { type: 'feTurbulence', turbulenceType: 'fractalNoise', baseFrequency: '0.011 0.004', numOctaves: 2, seed: 3, stitchTiles: 'noStitch', result: 'turbulence1' },
+    { type: 'feColorMatrix', colorMatrixType: 'saturate', values: '3', in: 'turbulence1', result: 'colormatrix' },
+    { type: 'feColorMatrix', colorMatrixType: 'matrix', values: '2 0 0 0 0 0 1.5 0 0 0 0 0 2 0 0 0 0 0 2 0', in: 'colormatrix', result: 'colormatrix1' },
+    { type: 'feBlend', mode: 'multiply', in: 'diffuseLighting', in2: 'colormatrix1', result: 'blend' },
+    { type: 'feComposite', in: 'blend', in2: 'SourceAlpha', operator: 'in', result: 'composite1' }
+  ],
+  locked: false,
+});
+
 // Marker utilities
 export const createDefaultMarker = (): Omit<SVGMarker, 'id'> => ({
   type: 'marker',
