@@ -23,10 +23,23 @@ export function calculateTextBounds(text: TextElementType): {
       height: textHeight
     };
   } else if (text.type === 'multiline-text') {
-    // For multi-line text, calculate based on spans
-    const lineHeight = text.style?.lineHeight || fontSize * 1.2;
-    const maxWidth = Math.max(...text.spans.map(span => span.content.length)) * fontSize * 0.6;
-    const totalHeight = text.spans.length * lineHeight;
+    // For multi-line text, calculate based on non-empty spans
+    const lineHeight = fontSize * 1.2;
+    const nonEmptySpans = text.spans.filter(span => span.content && span.content.trim());
+    
+    // Handle empty spans case
+    if (nonEmptySpans.length === 0) {
+      return {
+        x: text.x,
+        y: text.y - fontSize,
+        width: 0,
+        height: fontSize
+      };
+    }
+    
+    // Find the maximum width among all non-empty spans
+    const maxWidth = Math.max(...nonEmptySpans.map(span => span.content.length * fontSize * 0.6));
+    const totalHeight = nonEmptySpans.length * lineHeight;
     
     return {
       x: text.x,
@@ -59,9 +72,8 @@ export function calculateTextBoundsDOM(text: TextElementType): {
     tempSvg.style.position = 'absolute';
     tempSvg.style.top = '-9999px';
     tempSvg.style.left = '-9999px';
-    tempSvg.style.width = '1000px'; // Larger to accommodate rotated text
-    tempSvg.style.height = '1000px';
-    tempSvg.setAttribute('viewBox', '-500 -500 1000 1000'); // Center the coordinate system
+    tempSvg.style.width = '1px';
+    tempSvg.style.height = '1px';
     document.body.appendChild(tempSvg);
 
     const textElement = document.createElementNS(svgNS, 'text');
@@ -89,58 +101,108 @@ export function calculateTextBoundsDOM(text: TextElementType): {
     if (text.type === 'text') {
       textElement.textContent = text.content;
     } else if (text.type === 'multiline-text') {
-      for (const span of text.spans) {
-        const tspanElement = document.createElementNS(svgNS, 'tspan');
-        tspanElement.textContent = span.content;
-        if (span.x !== undefined) tspanElement.setAttribute('x', span.x.toString());
-        if (span.y !== undefined) tspanElement.setAttribute('y', span.y.toString());
-        if (span.dx !== undefined) tspanElement.setAttribute('dx', span.dx.toString());
-        if (span.dy !== undefined) tspanElement.setAttribute('dy', span.dy.toString());
-        textElement.appendChild(tspanElement);
-      }
+      text.spans.forEach((span, index, spans) => {
+        // Only add spans with content
+        if (span.content && span.content.trim()) {
+          // Calculate the actual line number for dy (count non-empty spans before this one)
+          const lineNumber = spans.slice(0, index).filter(s => s.content && s.content.trim()).length;
+          
+          const tspanElement = document.createElementNS(svgNS, 'tspan');
+          tspanElement.textContent = span.content;
+          tspanElement.setAttribute('x', text.x.toString());
+          if (lineNumber === 0) {
+            tspanElement.setAttribute('dy', '0');
+          } else {
+            const fontSize = text.style?.fontSize || 16;
+            tspanElement.setAttribute('dy', (fontSize * 1.2).toString());
+          }
+          textElement.appendChild(tspanElement);
+        }
+      });
     }
     
     tempSvg.appendChild(textElement);
     
-    // Get bounding box in screen coordinates, then convert to SVG coordinates
+    // Use getBBox for accurate measurement
     try {
-      // getBoundingClientRect gives us the actual screen position after transforms
-      const screenRect = textElement.getBoundingClientRect();
-      const svgRect = tempSvg.getBoundingClientRect();
-      
-      // Convert screen coordinates to SVG coordinates
-      const svgX = screenRect.left - svgRect.left;
-      const svgY = screenRect.top - svgRect.top;
-      
-      // Get the viewBox to transform coordinates properly
-      const viewBox = tempSvg.viewBox.baseVal;
-      const scaleX = viewBox.width / tempSvg.clientWidth;
-      const scaleY = viewBox.height / tempSvg.clientHeight;
-      
-      const finalX = (svgX * scaleX) + viewBox.x;
-      const finalY = (svgY * scaleY) + viewBox.y;
-      const finalWidth = screenRect.width * scaleX;
-      const finalHeight = screenRect.height * scaleY;
-      
+      if (text.type === 'multiline-text') {
+        // For multiline text, calculate bbox manually by measuring each tspan
+        let maxWidth = 0;
+        let totalHeight = 0;
+        const fontSize = text.style?.fontSize || 16;
+        const lineHeight = fontSize * 1.2;
+        
+        const tspans = textElement.querySelectorAll('tspan');
+        const nonEmptySpansCount = tspans.length;
+        
+        // Measure each tspan individually
+        tspans.forEach((tspan) => {
+          try {
+            const tspanBbox = tspan.getBBox();
+            maxWidth = Math.max(maxWidth, tspanBbox.width);
+          } catch (e) {
+            // Fallback to text length estimation if getBBox fails
+            const content = tspan.textContent || '';
+            const estimatedWidth = content.length * fontSize * 0.6;
+            maxWidth = Math.max(maxWidth, estimatedWidth);
+          }
+        });
+        
+        totalHeight = nonEmptySpansCount * lineHeight;
+        
+        document.body.removeChild(tempSvg);
+        
+        return {
+          x: text.x,
+          y: text.y - fontSize,
+          width: maxWidth,
+          height: totalHeight
+        };
+      } else {
+        // For single line text, use standard getBBox
+        const bbox = textElement.getBBox();
+        document.body.removeChild(tempSvg);
+        
+        return {
+          x: bbox.x,
+          y: bbox.y,
+          width: bbox.width,
+          height: bbox.height
+        };
+      }
+    } catch (error) {
+      console.error('Error getting bbox:', error);
       document.body.removeChild(tempSvg);
       
-      return {
-        x: finalX,
-        y: finalY,
-        width: finalWidth,
-        height: finalHeight
-      };
-    } catch (transformError) {
-      // Fallback: use getBBox if the transform calculation fails
-      const bbox = textElement.getBBox();
-      document.body.removeChild(tempSvg);
+      // Fallback with better calculation for multiline text
+      if (text.type === 'multiline-text') {
+        const fontSize = text.style?.fontSize || 16;
+        const lineHeight = fontSize * 1.2;
+        const nonEmptySpans = text.spans.filter(span => span.content && span.content.trim());
+        
+        if (nonEmptySpans.length === 0) {
+          return {
+            x: text.x,
+            y: text.y - fontSize,
+            width: 0,
+            height: fontSize
+          };
+        }
+        
+        const longestLine = nonEmptySpans.reduce((max, span) => 
+          span.content.length > max ? span.content.length : max, 0);
+        const estimatedWidth = longestLine * fontSize * 0.6;
+        const estimatedHeight = nonEmptySpans.length * lineHeight;
+        
+        return {
+          x: text.x,
+          y: text.y - fontSize,
+          width: estimatedWidth,
+          height: estimatedHeight
+        };
+      }
       
-      return {
-        x: bbox.x,
-        y: bbox.y,
-        width: bbox.width,
-        height: bbox.height
-      };
+      return calculateTextBounds(text); // Fallback
     }
   } catch (error) {
     console.error('Error calculating text bounds with DOM:', error);

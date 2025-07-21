@@ -144,18 +144,24 @@ export const TextRenderer: React.FC = () => {
           data-element-type="multiline-text"
           data-element-id={text.id}
         >
-          {text.spans.map((span, index) => (
-            <tspan
-              key={span.id}
-              x={span.x}
-              y={span.y}
-              dx={span.dx}
-              dy={span.dy}
-              data-span-id={span.id}
-            >
-              {span.content}
-            </tspan>
-          ))}
+          {text.spans.map((span, index, spans) => {
+            // Calculate the actual line number for dy (count non-empty spans before this one)
+            const lineNumber = spans.slice(0, index).filter(s => s.content && s.content.trim()).length;
+            
+            // Don't render empty spans
+            if (!span.content || !span.content.trim()) return null;
+            
+            return (
+              <tspan
+                key={span.id}
+                x={text.x}
+                dy={lineNumber === 0 ? 0 : (text.style?.fontSize || 16) * 1.2}
+                data-span-id={span.id}
+              >
+                {span.content}
+              </tspan>
+            );
+          })}
         </text>
 
         {/* Selection indicator for multiline text */}

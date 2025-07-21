@@ -259,20 +259,77 @@ export class TransformManager {
           
           if (text.type === 'text') {
             textElement.textContent = text.content;
+            tempSvg.appendChild(textElement);
+            hasContent = true;
           } else if (text.type === 'multiline-text') {
-            for (const span of text.spans) {
-              const tspanElement = document.createElementNS(svgNS, 'tspan');
-              tspanElement.textContent = span.content;
-              if (span.x !== undefined) tspanElement.setAttribute('x', span.x.toString());
-              if (span.y !== undefined) tspanElement.setAttribute('y', span.y.toString());
-              if (span.dx !== undefined) tspanElement.setAttribute('dx', span.dx.toString());
-              if (span.dy !== undefined) tspanElement.setAttribute('dy', span.dy.toString());
-              textElement.appendChild(tspanElement);
+            // For multiline text, use the exact same logic as calculateTextBoundsDOM
+            // to ensure the transform bounds match the yellow selection rectangle
+            const fontSize = text.style?.fontSize || 16;
+            const lineHeight = fontSize * 1.2;
+            
+            // Create the same structure as calculateTextBoundsDOM
+            text.spans.forEach((span: any, index: number, spans: any[]) => {
+              // Only add spans with content
+              if (span.content && span.content.trim()) {
+                // Calculate the actual line number for dy (count non-empty spans before this one)
+                const lineNumber = spans.slice(0, index).filter((s: any) => s.content && s.content.trim()).length;
+                
+                const tspanElement = document.createElementNS(svgNS, 'tspan');
+                tspanElement.textContent = span.content;
+                tspanElement.setAttribute('x', text.x.toString());
+                if (lineNumber === 0) {
+                  tspanElement.setAttribute('dy', '0');
+                } else {
+                  tspanElement.setAttribute('dy', lineHeight.toString());
+                }
+                textElement.appendChild(tspanElement);
+              }
+            });
+            
+            tempSvg.appendChild(textElement);
+            
+            // Now measure each tspan individually to get max width (same as calculateTextBoundsDOM)
+            let maxWidth = 0;
+            const tspans = textElement.querySelectorAll('tspan');
+            const nonEmptySpansCount = tspans.length;
+            
+            // Measure each tspan individually
+            tspans.forEach((tspan) => {
+              try {
+                const tspanBbox = tspan.getBBox();
+                maxWidth = Math.max(maxWidth, tspanBbox.width);
+              } catch (e) {
+                // Fallback to text length estimation if getBBox fails
+                const content = tspan.textContent || '';
+                const estimatedWidth = content.length * fontSize * 0.6;
+                maxWidth = Math.max(maxWidth, estimatedWidth);
+              }
+            });
+            
+            const totalHeight = nonEmptySpansCount * lineHeight;
+            
+            // Remove the text element and create a path element with the measured bounds
+            tempSvg.removeChild(textElement);
+            
+            if (maxWidth > 0 && totalHeight > 0) {
+              // Create a path element that represents a rectangle with the measured bounds
+              const x = text.x;
+              const y = text.y - fontSize;
+              const width = maxWidth;
+              const height = totalHeight;
+              
+              // Create rectangle path: M x,y L x+w,y L x+w,y+h L x,y+h Z
+              const pathData = `M ${x},${y} L ${x + width},${y} L ${x + width},${y + height} L ${x},${y + height} Z`;
+              
+              const pathElement = document.createElementNS(svgNS, 'path');
+              pathElement.setAttribute('d', pathData);
+              pathElement.setAttribute('fill', 'none');
+              pathElement.setAttribute('stroke', 'none');
+              tempSvg.appendChild(pathElement);
+              
+              hasContent = true;
             }
           }
-          
-          tempSvg.appendChild(textElement);
-          hasContent = true;
         }
       }
     }
@@ -820,7 +877,6 @@ export class TransformManager {
     const isMirroredX = mirrorState.mirrorX;
     const isMirroredY = mirrorState.mirrorY;
 
-
     // Apply scaling to all selected commands
     this.applyTransformToCommands((x: number, y: number) => {
       const newX = originX + (x - originX) * scaleX;
@@ -854,8 +910,6 @@ export class TransformManager {
     const initialAngle = Math.atan2(initialVector.y, initialVector.x);
     const currentAngle = Math.atan2(currentVector.y, currentVector.x);
     const rotationAngle = currentAngle - initialAngle;
-
-    
 
     // Apply rotation to all selected commands
     this.applyTransformToCommands((x: number, y: number) => {

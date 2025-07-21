@@ -71,10 +71,7 @@ export const createTextActions: StateCreator<
     const textSpans = spans.map((content, index) => ({
       id: generateId(),
       content,
-      x: index === 0 ? undefined : 0,
-      y: index === 0 ? undefined : index * 20,
-      dx: 0,
-      dy: index === 0 ? 0 : 20
+      // Don't set individual x, y, dx, dy values - they're handled by the renderer
     }));
 
     const newText: MultilineTextElement = {
@@ -322,10 +319,7 @@ export const createTextActions: StateCreator<
     const newSpan = {
       id: generateId(),
       content,
-      x: 0,
-      y: 0,
-      dx: 0,
-      dy: 20
+      // Don't set individual positioning values
     };
     
     const spans = [...text.spans];
