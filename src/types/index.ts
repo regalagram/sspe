@@ -436,16 +436,47 @@ export interface SVGMask {
   locked?: boolean;
 }
 
-// Primitivas de filtro básicas
+// Primitivas de filtro completas (todos los filtros estándar SVG)
 export type FilterPrimitiveType =
+  // Filtros básicos
   | { type: 'feGaussianBlur'; stdDeviation: number; in?: string; result?: string; }
   | { type: 'feOffset'; dx: number; dy: number; in?: string; result?: string; }
   | { type: 'feFlood'; floodColor: string; floodOpacity?: number; result?: string; }
-  | { type: 'feComposite'; operator: 'over' | 'in' | 'out' | 'atop' | 'xor' | 'arithmetic'; in?: string; in2?: string; result?: string; }
-  | { type: 'feColorMatrix'; values: string; in?: string; result?: string; }
+  | { type: 'feComposite'; operator: 'over' | 'in' | 'out' | 'atop' | 'xor' | 'arithmetic'; k1?: number; k2?: number; k3?: number; k4?: number; in?: string; in2?: string; result?: string; }
+  | { type: 'feColorMatrix'; colorMatrixType?: 'matrix' | 'saturate' | 'hueRotate' | 'luminanceToAlpha'; values?: string; result?: string; in?: string; }
   | { type: 'feDropShadow'; dx: number; dy: number; stdDeviation: number; floodColor: string; floodOpacity?: number; result?: string; }
   | { type: 'feBlend'; mode: 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 'color-dodge' | 'color-burn' | 'hard-light' | 'soft-light' | 'difference' | 'exclusion'; in?: string; in2?: string; result?: string; }
-  | { type: 'feMorphology'; operator: 'erode' | 'dilate'; radius: number; in?: string; result?: string; };
+  | { type: 'feMorphology'; operator: 'erode' | 'dilate'; radius: number; in?: string; result?: string; }
+  // Filtros de convolución y efectos especiales
+  | { type: 'feConvolveMatrix'; order: string; kernelMatrix: string; divisor?: number; bias?: number; targetX?: number; targetY?: number; edgeMode?: 'duplicate' | 'wrap' | 'none'; preserveAlpha?: boolean; in?: string; result?: string; }
+  | { type: 'feComponentTransfer'; in?: string; result?: string; funcR?: ComponentTransferFunction; funcG?: ComponentTransferFunction; funcB?: ComponentTransferFunction; funcA?: ComponentTransferFunction; }
+  | { type: 'feDiffuseLighting'; surfaceScale?: number; diffuseConstant?: number; lightColor?: string; in?: string; result?: string; lightSource: LightSource; }
+  | { type: 'feSpecularLighting'; surfaceScale?: number; specularConstant?: number; specularExponent?: number; lightColor?: string; in?: string; result?: string; lightSource: LightSource; }
+  | { type: 'feDisplacementMap'; scale?: number; xChannelSelector?: 'R' | 'G' | 'B' | 'A'; yChannelSelector?: 'R' | 'G' | 'B' | 'A'; in?: string; in2?: string; result?: string; }
+  | { type: 'feTurbulence'; baseFrequency: string; numOctaves?: number; seed?: number; stitchTiles?: 'stitch' | 'noStitch'; turbulenceType?: 'fractalNoise' | 'turbulence'; result?: string; }
+  | { type: 'feImage'; href?: string; preserveAspectRatio?: string; crossorigin?: 'anonymous' | 'use-credentials'; result?: string; }
+  | { type: 'feTile'; in?: string; result?: string; }
+  // Filtro de transferencia de componentes
+  | { type: 'feFuncR'; funcType?: 'identity' | 'table' | 'discrete' | 'linear' | 'gamma'; tableValues?: string; slope?: number; intercept?: number; amplitude?: number; exponent?: number; offset?: number; }
+  | { type: 'feFuncG'; funcType?: 'identity' | 'table' | 'discrete' | 'linear' | 'gamma'; tableValues?: string; slope?: number; intercept?: number; amplitude?: number; exponent?: number; offset?: number; }
+  | { type: 'feFuncB'; funcType?: 'identity' | 'table' | 'discrete' | 'linear' | 'gamma'; tableValues?: string; slope?: number; intercept?: number; amplitude?: number; exponent?: number; offset?: number; }
+  | { type: 'feFuncA'; funcType?: 'identity' | 'table' | 'discrete' | 'linear' | 'gamma'; tableValues?: string; slope?: number; intercept?: number; amplitude?: number; exponent?: number; offset?: number; };
+
+// Tipos auxiliares para filtros complejos
+export interface ComponentTransferFunction {
+  funcType?: 'identity' | 'table' | 'discrete' | 'linear' | 'gamma';
+  tableValues?: string;
+  slope?: number;
+  intercept?: number;
+  amplitude?: number;
+  exponent?: number;
+  offset?: number;
+}
+
+export type LightSource = 
+  | { type: 'feDistantLight'; azimuth?: number; elevation?: number; }
+  | { type: 'fePointLight'; x?: number; y?: number; z?: number; }
+  | { type: 'feSpotLight'; x?: number; y?: number; z?: number; pointsAtX?: number; pointsAtY?: number; pointsAtZ?: number; specularExponent?: number; limitingConeAngle?: number; };
 
 // Filtros (SVG <filter>)
 export interface SVGFilter {

@@ -44,21 +44,43 @@ export const FilterRenderer: React.FC = () => {
         );
 
       case 'feComposite':
+        const compositeProps = {
+          ...commonProps,
+          operator: primitive.operator,
+          in2: primitive.in2 || 'SourceGraphic'
+        };
+        
+        if (primitive.operator === 'arithmetic') {
+          return (
+            <feComposite
+              key={index}
+              {...compositeProps}
+              k1={primitive.k1 || 0}
+              k2={primitive.k2 || 0}
+              k3={primitive.k3 || 0}
+              k4={primitive.k4 || 0}
+            />
+          );
+        }
+        
         return (
           <feComposite
             key={index}
-            {...commonProps}
-            operator={primitive.operator}
-            in2={'in2' in primitive ? primitive.in2 || 'SourceGraphic' : 'SourceGraphic'}
+            {...compositeProps}
           />
         );
 
       case 'feColorMatrix':
+        const colorMatrixProps = {
+          ...commonProps,
+          type: primitive.colorMatrixType || 'matrix',
+          values: primitive.values
+        };
+        
         return (
           <feColorMatrix
             key={index}
-            {...commonProps}
-            values={primitive.values}
+            {...colorMatrixProps}
           />
         );
 
@@ -81,7 +103,7 @@ export const FilterRenderer: React.FC = () => {
             key={index}
             {...commonProps}
             mode={primitive.mode}
-            in2={'in2' in primitive ? primitive.in2 || 'SourceGraphic' : 'SourceGraphic'}
+            in2={primitive.in2 || 'SourceGraphic'}
           />
         );
 
@@ -92,6 +114,250 @@ export const FilterRenderer: React.FC = () => {
             {...commonProps}
             operator={primitive.operator}
             radius={primitive.radius}
+          />
+        );
+
+      case 'feConvolveMatrix':
+        return (
+          <feConvolveMatrix
+            key={index}
+            {...commonProps}
+            order={primitive.order}
+            kernelMatrix={primitive.kernelMatrix}
+            divisor={primitive.divisor}
+            bias={primitive.bias || 0}
+            targetX={primitive.targetX}
+            targetY={primitive.targetY}
+            edgeMode={primitive.edgeMode || 'duplicate'}
+            preserveAlpha={primitive.preserveAlpha || false}
+          />
+        );
+
+      case 'feComponentTransfer':
+        return (
+          <feComponentTransfer
+            key={index}
+            {...commonProps}
+          >
+            {primitive.funcR && (
+              <feFuncR
+                type={primitive.funcR.funcType || 'identity'}
+                tableValues={primitive.funcR.tableValues}
+                slope={primitive.funcR.slope}
+                intercept={primitive.funcR.intercept}
+                amplitude={primitive.funcR.amplitude}
+                exponent={primitive.funcR.exponent}
+                offset={primitive.funcR.offset}
+              />
+            )}
+            {primitive.funcG && (
+              <feFuncG
+                type={primitive.funcG.funcType || 'identity'}
+                tableValues={primitive.funcG.tableValues}
+                slope={primitive.funcG.slope}
+                intercept={primitive.funcG.intercept}
+                amplitude={primitive.funcG.amplitude}
+                exponent={primitive.funcG.exponent}
+                offset={primitive.funcG.offset}
+              />
+            )}
+            {primitive.funcB && (
+              <feFuncB
+                type={primitive.funcB.funcType || 'identity'}
+                tableValues={primitive.funcB.tableValues}
+                slope={primitive.funcB.slope}
+                intercept={primitive.funcB.intercept}
+                amplitude={primitive.funcB.amplitude}
+                exponent={primitive.funcB.exponent}
+                offset={primitive.funcB.offset}
+              />
+            )}
+            {primitive.funcA && (
+              <feFuncA
+                type={primitive.funcA.funcType || 'identity'}
+                tableValues={primitive.funcA.tableValues}
+                slope={primitive.funcA.slope}
+                intercept={primitive.funcA.intercept}
+                amplitude={primitive.funcA.amplitude}
+                exponent={primitive.funcA.exponent}
+                offset={primitive.funcA.offset}
+              />
+            )}
+          </feComponentTransfer>
+        );
+
+      case 'feDiffuseLighting':
+        return (
+          <feDiffuseLighting
+            key={index}
+            {...commonProps}
+            surfaceScale={primitive.surfaceScale || 1}
+            diffuseConstant={primitive.diffuseConstant || 1}
+            lightingColor={primitive.lightColor || '#ffffff'}
+          >
+            {primitive.lightSource.type === 'feDistantLight' && (
+              <feDistantLight
+                azimuth={primitive.lightSource.azimuth || 45}
+                elevation={primitive.lightSource.elevation || 45}
+              />
+            )}
+            {primitive.lightSource.type === 'fePointLight' && (
+              <fePointLight
+                x={primitive.lightSource.x || 0}
+                y={primitive.lightSource.y || 0}
+                z={primitive.lightSource.z || 0}
+              />
+            )}
+            {primitive.lightSource.type === 'feSpotLight' && (
+              <feSpotLight
+                x={primitive.lightSource.x || 0}
+                y={primitive.lightSource.y || 0}
+                z={primitive.lightSource.z || 0}
+                pointsAtX={primitive.lightSource.pointsAtX || 0}
+                pointsAtY={primitive.lightSource.pointsAtY || 0}
+                pointsAtZ={primitive.lightSource.pointsAtZ || 0}
+                specularExponent={primitive.lightSource.specularExponent || 1}
+                limitingConeAngle={primitive.lightSource.limitingConeAngle}
+              />
+            )}
+          </feDiffuseLighting>
+        );
+
+      case 'feSpecularLighting':
+        return (
+          <feSpecularLighting
+            key={index}
+            {...commonProps}
+            surfaceScale={primitive.surfaceScale || 1}
+            specularConstant={primitive.specularConstant || 1}
+            specularExponent={primitive.specularExponent || 20}
+            lightingColor={primitive.lightColor || '#ffffff'}
+          >
+            {primitive.lightSource.type === 'feDistantLight' && (
+              <feDistantLight
+                azimuth={primitive.lightSource.azimuth || 45}
+                elevation={primitive.lightSource.elevation || 45}
+              />
+            )}
+            {primitive.lightSource.type === 'fePointLight' && (
+              <fePointLight
+                x={primitive.lightSource.x || 0}
+                y={primitive.lightSource.y || 0}
+                z={primitive.lightSource.z || 0}
+              />
+            )}
+            {primitive.lightSource.type === 'feSpotLight' && (
+              <feSpotLight
+                x={primitive.lightSource.x || 0}
+                y={primitive.lightSource.y || 0}
+                z={primitive.lightSource.z || 0}
+                pointsAtX={primitive.lightSource.pointsAtX || 0}
+                pointsAtY={primitive.lightSource.pointsAtY || 0}
+                pointsAtZ={primitive.lightSource.pointsAtZ || 0}
+                specularExponent={primitive.lightSource.specularExponent || 1}
+                limitingConeAngle={primitive.lightSource.limitingConeAngle}
+              />
+            )}
+          </feSpecularLighting>
+        );
+
+      case 'feDisplacementMap':
+        return (
+          <feDisplacementMap
+            key={index}
+            {...commonProps}
+            scale={primitive.scale || 0}
+            xChannelSelector={primitive.xChannelSelector || 'R'}
+            yChannelSelector={primitive.yChannelSelector || 'G'}
+            in2={primitive.in2 || 'SourceGraphic'}
+          />
+        );
+
+      case 'feTurbulence':
+        return (
+          <feTurbulence
+            key={index}
+            {...commonProps}
+            baseFrequency={primitive.baseFrequency}
+            numOctaves={primitive.numOctaves || 1}
+            seed={primitive.seed || 0}
+            stitchTiles={primitive.stitchTiles || 'noStitch'}
+            type={primitive.turbulenceType || 'turbulence'}
+          />
+        );
+
+      case 'feImage':
+        return (
+          <feImage
+            key={index}
+            {...commonProps}
+            href={primitive.href}
+            preserveAspectRatio={primitive.preserveAspectRatio || 'xMidYMid meet'}
+            crossOrigin={primitive.crossorigin}
+          />
+        );
+
+      case 'feTile':
+        return (
+          <feTile
+            key={index}
+            {...commonProps}
+          />
+        );
+
+      case 'feFuncR':
+        return (
+          <feFuncR
+            key={index}
+            type={primitive.funcType || 'identity'}
+            tableValues={primitive.tableValues}
+            slope={primitive.slope}
+            intercept={primitive.intercept}
+            amplitude={primitive.amplitude}
+            exponent={primitive.exponent}
+            offset={primitive.offset}
+          />
+        );
+
+      case 'feFuncG':
+        return (
+          <feFuncG
+            key={index}
+            type={primitive.funcType || 'identity'}
+            tableValues={primitive.tableValues}
+            slope={primitive.slope}
+            intercept={primitive.intercept}
+            amplitude={primitive.amplitude}
+            exponent={primitive.exponent}
+            offset={primitive.offset}
+          />
+        );
+
+      case 'feFuncB':
+        return (
+          <feFuncB
+            key={index}
+            type={primitive.funcType || 'identity'}
+            tableValues={primitive.tableValues}
+            slope={primitive.slope}
+            intercept={primitive.intercept}
+            amplitude={primitive.amplitude}
+            exponent={primitive.exponent}
+            offset={primitive.offset}
+          />
+        );
+
+      case 'feFuncA':
+        return (
+          <feFuncA
+            key={index}
+            type={primitive.funcType || 'identity'}
+            tableValues={primitive.tableValues}
+            slope={primitive.slope}
+            intercept={primitive.intercept}
+            amplitude={primitive.amplitude}
+            exponent={primitive.exponent}
+            offset={primitive.offset}
           />
         );
 

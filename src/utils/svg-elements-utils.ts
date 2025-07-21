@@ -78,13 +78,50 @@ export const createFilterPrimitive = (type: FilterPrimitiveType['type']): Filter
     case 'feComposite':
       return { type: 'feComposite', operator: 'over' };
     case 'feColorMatrix':
-      return { type: 'feColorMatrix', values: '1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0' };
+      return { type: 'feColorMatrix', colorMatrixType: 'matrix', values: '1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0' };
     case 'feDropShadow':
       return { type: 'feDropShadow', dx: 2, dy: 2, stdDeviation: 3, floodColor: '#000000', floodOpacity: 0.5 };
     case 'feBlend':
       return { type: 'feBlend', mode: 'normal' };
     case 'feMorphology':
       return { type: 'feMorphology', operator: 'dilate', radius: 1 };
+    case 'feConvolveMatrix':
+      return { type: 'feConvolveMatrix', order: '3', kernelMatrix: '0 -1 0 -1 5 -1 0 -1 0' };
+    case 'feComponentTransfer':
+      return { type: 'feComponentTransfer' };
+    case 'feDiffuseLighting':
+      return { 
+        type: 'feDiffuseLighting', 
+        surfaceScale: 1, 
+        diffuseConstant: 1, 
+        lightColor: '#ffffff',
+        lightSource: { type: 'feDistantLight', azimuth: 45, elevation: 45 }
+      };
+    case 'feSpecularLighting':
+      return { 
+        type: 'feSpecularLighting', 
+        surfaceScale: 1, 
+        specularConstant: 1, 
+        specularExponent: 20, 
+        lightColor: '#ffffff',
+        lightSource: { type: 'feDistantLight', azimuth: 45, elevation: 45 }
+      };
+    case 'feDisplacementMap':
+      return { type: 'feDisplacementMap', scale: 50, xChannelSelector: 'R', yChannelSelector: 'G' };
+    case 'feTurbulence':
+      return { type: 'feTurbulence', baseFrequency: '0.04', numOctaves: 2, turbulenceType: 'turbulence' };
+    case 'feImage':
+      return { type: 'feImage', preserveAspectRatio: 'xMidYMid meet' };
+    case 'feTile':
+      return { type: 'feTile' };
+    case 'feFuncR':
+      return { type: 'feFuncR', funcType: 'identity' };
+    case 'feFuncG':
+      return { type: 'feFuncG', funcType: 'identity' };
+    case 'feFuncB':
+      return { type: 'feFuncB', funcType: 'identity' };
+    case 'feFuncA':
+      return { type: 'feFuncA', funcType: 'identity' };
     default:
       throw new Error(`Unknown filter primitive type: ${type}`);
   }
@@ -116,7 +153,310 @@ export const createGrayscaleFilter = (): Omit<SVGFilter, 'id'> => ({
   filterUnits: 'objectBoundingBox',
   primitiveUnits: 'userSpaceOnUse',
   primitives: [
-    { type: 'feColorMatrix', values: '0.3 0.6 0.1 0 0 0.3 0.6 0.1 0 0 0.3 0.6 0.1 0 0 0 0 0 1 0' }
+    { type: 'feColorMatrix', colorMatrixType: 'matrix', values: '0.3 0.6 0.1 0 0 0.3 0.6 0.1 0 0 0.3 0.6 0.1 0 0 0 0 0 1 0' }
+  ],
+  locked: false,
+});
+
+// Filtros adicionales preconfigurados
+export const createSepiaFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feColorMatrix', colorMatrixType: 'matrix', values: '0.393 0.769 0.189 0 0 0.349 0.686 0.168 0 0 0.272 0.534 0.131 0 0 0 0 0 1 0' }
+  ],
+  locked: false,
+});
+
+export const createInvertFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feColorMatrix', colorMatrixType: 'matrix', values: '-1 0 0 0 1 0 -1 0 0 1 0 0 -1 0 1 0 0 0 1 0' }
+  ],
+  locked: false,
+});
+
+export const createBrightnessFilter = (brightness: number = 1.2): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feColorMatrix', colorMatrixType: 'matrix', values: `${brightness} 0 0 0 0 0 ${brightness} 0 0 0 0 0 ${brightness} 0 0 0 0 0 1 0` }
+  ],
+  locked: false,
+});
+
+export const createContrastFilter = (contrast: number = 1.5): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feColorMatrix', colorMatrixType: 'matrix', values: `${contrast} 0 0 0 ${0.5 * (1 - contrast)} 0 ${contrast} 0 0 ${0.5 * (1 - contrast)} 0 0 ${contrast} 0 ${0.5 * (1 - contrast)} 0 0 0 1 0` }
+  ],
+  locked: false,
+});
+
+export const createSaturateFilter = (saturation: number = 1.5): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feColorMatrix', colorMatrixType: 'saturate', values: saturation.toString() }
+  ],
+  locked: false,
+});
+
+export const createHueRotateFilter = (angle: number = 90): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feColorMatrix', colorMatrixType: 'hueRotate', values: angle.toString() }
+  ],
+  locked: false,
+});
+
+export const createEmbossFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feConvolveMatrix', order: '3', kernelMatrix: '-2 -1 0 -1 1 1 0 1 2' }
+  ],
+  locked: false,
+});
+
+export const createSharpenFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feConvolveMatrix', order: '3', kernelMatrix: '0 -1 0 -1 5 -1 0 -1 0' }
+  ],
+  locked: false,
+});
+
+export const createEdgeDetectFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feConvolveMatrix', order: '3', kernelMatrix: '-1 -1 -1 -1 8 -1 -1 -1 -1' }
+  ],
+  locked: false,
+});
+
+export const createGlowFilter = (color: string = '#ffff00', intensity: number = 3): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feMorphology', operator: 'dilate', radius: 2, result: 'dilated' },
+    { type: 'feGaussianBlur', stdDeviation: intensity, in: 'dilated', result: 'blurred' },
+    { type: 'feFlood', floodColor: color, floodOpacity: 0.8, result: 'glowColor' },
+    { type: 'feComposite', operator: 'in', in: 'glowColor', in2: 'blurred', result: 'coloredGlow' },
+    { type: 'feComposite', operator: 'over', in: 'SourceGraphic', in2: 'coloredGlow' }
+  ],
+  locked: false,
+});
+
+export const createBevelFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feGaussianBlur', stdDeviation: 3, in: 'SourceAlpha', result: 'blur' },
+    { type: 'feOffset', dx: 2, dy: 2, in: 'blur', result: 'offsetBlur' },
+    { type: 'feSpecularLighting', 
+      surfaceScale: 5, 
+      specularConstant: 0.75, 
+      specularExponent: 20, 
+      lightColor: '#bbbbbb',
+      in: 'blur',
+      result: 'specOut',
+      lightSource: { type: 'feDistantLight', azimuth: 45, elevation: 45 }
+    },
+    { type: 'feComposite', operator: 'in', in: 'specOut', in2: 'SourceAlpha', result: 'specOut2' },
+    { type: 'feComposite', operator: 'arithmetic', k1: 0, k2: 1, k3: 1, k4: 0, in: 'SourceGraphic', in2: 'specOut2' }
+  ],
+  locked: false,
+});
+
+export const createMotionBlurFilter = (direction: 'horizontal' | 'vertical' = 'horizontal', intensity: number = 5): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { 
+      type: 'feGaussianBlur', 
+      stdDeviation: intensity,
+      // Note: SVG feGaussianBlur doesn't support different X/Y values in the type system
+      // For true motion blur, we would need multiple primitives or use a different approach
+    }
+  ],
+  locked: false,
+});
+
+export const createNoiseFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feTurbulence', baseFrequency: '0.9', numOctaves: 4, result: 'noise', turbulenceType: 'fractalNoise' },
+    { type: 'feColorMatrix', in: 'noise', colorMatrixType: 'saturate', values: '0', result: 'monoNoise' },
+    { type: 'feComponentTransfer', in: 'monoNoise', result: 'noiseContrast' },
+    { type: 'feBlend', mode: 'multiply', in: 'SourceGraphic', in2: 'noiseContrast' }
+  ],
+  locked: false,
+});
+
+export const createWaveDistortionFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feTurbulence', baseFrequency: '0.02', numOctaves: 3, result: 'turbulence', turbulenceType: 'turbulence' },
+    { type: 'feDisplacementMap', in: 'SourceGraphic', in2: 'turbulence', scale: 20, xChannelSelector: 'R', yChannelSelector: 'G' }
+  ],
+  locked: false,
+});
+
+export const createPosterizeFilter = (levels: number = 4): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feComponentTransfer',
+      funcR: { funcType: 'discrete', tableValues: Array.from({length: levels}, (_, i) => i / (levels - 1)).join(' ') },
+      funcG: { funcType: 'discrete', tableValues: Array.from({length: levels}, (_, i) => i / (levels - 1)).join(' ') },
+      funcB: { funcType: 'discrete', tableValues: Array.from({length: levels}, (_, i) => i / (levels - 1)).join(' ') }
+    }
+  ],
+  locked: false,
+});
+
+// Filtros adicionales avanzados
+export const createOilPaintingFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feTurbulence', baseFrequency: '0.04', numOctaves: 3, turbulenceType: 'fractalNoise', result: 'noise' },
+    { type: 'feDisplacementMap', in: 'SourceGraphic', in2: 'noise', scale: 5, xChannelSelector: 'R', yChannelSelector: 'G', result: 'displaced' },
+    { type: 'feGaussianBlur', in: 'displaced', stdDeviation: 2, result: 'blurred' },
+    { type: 'feColorMatrix', in: 'blurred', colorMatrixType: 'saturate', values: '1.2' }
+  ],
+  locked: false,
+});
+
+export const createWatercolorFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feTurbulence', baseFrequency: '0.08', numOctaves: 2, turbulenceType: 'fractalNoise', result: 'noise' },
+    { type: 'feColorMatrix', in: 'noise', colorMatrixType: 'saturate', values: '0', result: 'monoNoise' },
+    { type: 'feComponentTransfer', in: 'monoNoise', result: 'noiseContrast' },
+    { type: 'feDisplacementMap', in: 'SourceGraphic', in2: 'noiseContrast', scale: 8, result: 'displaced' },
+    { type: 'feGaussianBlur', in: 'displaced', stdDeviation: 1.5, result: 'soft' },
+    { type: 'feColorMatrix', in: 'soft', colorMatrixType: 'matrix', values: '1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.9 0' }
+  ],
+  locked: false,
+});
+
+export const createVintageFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feColorMatrix', colorMatrixType: 'matrix', values: '1.1 -0.1 0.1 0 0.1 0.1 0.9 0.1 0 0.1 0.1 0.1 0.8 0 0.1 0 0 0 1 0', result: 'vintage' },
+    { type: 'feTurbulence', baseFrequency: '0.9', numOctaves: 4, turbulenceType: 'fractalNoise', result: 'noise' },
+    { type: 'feColorMatrix', in: 'noise', colorMatrixType: 'saturate', values: '0', result: 'monoNoise' },
+    { type: 'feBlend', mode: 'multiply', in: 'vintage', in2: 'monoNoise', result: 'noisy' },
+    { type: 'feColorMatrix', in: 'noisy', colorMatrixType: 'matrix', values: '1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.95 0' }
+  ],
+  locked: false,
+});
+
+export const createChromaticAberrationFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    // Red channel offset
+    { type: 'feOffset', dx: -2, dy: 0, in: 'SourceGraphic', result: 'redOffset' },
+    { type: 'feColorMatrix', in: 'redOffset', colorMatrixType: 'matrix', values: '1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0', result: 'redChannel' },
+    // Blue channel offset
+    { type: 'feOffset', dx: 2, dy: 0, in: 'SourceGraphic', result: 'blueOffset' },
+    { type: 'feColorMatrix', in: 'blueOffset', colorMatrixType: 'matrix', values: '0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0', result: 'blueChannel' },
+    // Green channel (no offset)
+    { type: 'feColorMatrix', in: 'SourceGraphic', colorMatrixType: 'matrix', values: '0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0', result: 'greenChannel' },
+    // Combine channels
+    { type: 'feComposite', operator: 'arithmetic', k1: 0, k2: 1, k3: 1, k4: 0, in: 'redChannel', in2: 'greenChannel', result: 'redGreen' },
+    { type: 'feComposite', operator: 'arithmetic', k1: 0, k2: 1, k3: 1, k4: 0, in: 'redGreen', in2: 'blueChannel' }
+  ],
+  locked: false,
+});
+
+export const createNeonGlowFilter = (color: string = '#00ffff'): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    // Inner glow
+    { type: 'feGaussianBlur', stdDeviation: 3, in: 'SourceAlpha', result: 'blur1' },
+    { type: 'feFlood', floodColor: color, floodOpacity: 0.8, result: 'color1' },
+    { type: 'feComposite', operator: 'in', in: 'color1', in2: 'blur1', result: 'glow1' },
+    // Outer glow
+    { type: 'feGaussianBlur', stdDeviation: 8, in: 'SourceAlpha', result: 'blur2' },
+    { type: 'feFlood', floodColor: color, floodOpacity: 0.6, result: 'color2' },
+    { type: 'feComposite', operator: 'in', in: 'color2', in2: 'blur2', result: 'glow2' },
+    // Combine glows
+    { type: 'feComposite', operator: 'over', in: 'glow1', in2: 'glow2', result: 'combinedGlow' },
+    { type: 'feComposite', operator: 'over', in: 'SourceGraphic', in2: 'combinedGlow' }
+  ],
+  locked: false,
+});
+
+export const createMosaicFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feTurbulence', baseFrequency: '0.02', numOctaves: 1, turbulenceType: 'turbulence', result: 'turbulence' },
+    { type: 'feColorMatrix', in: 'turbulence', colorMatrixType: 'saturate', values: '0', result: 'greyscale' },
+    { type: 'feConvolveMatrix', in: 'greyscale', order: '3', kernelMatrix: '1 1 1 1 1 1 1 1 1', divisor: 9, result: 'convolved' },
+    { type: 'feComposite', operator: 'in', in: 'SourceGraphic', in2: 'convolved', result: 'masked' },
+    { type: 'feTile', in: 'masked' }
+  ],
+  locked: false,
+});
+
+export const createGlitchFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    // Random displacement
+    { type: 'feTurbulence', baseFrequency: '0.01 0.9', numOctaves: 1, turbulenceType: 'fractalNoise', result: 'displacement' },
+    { type: 'feDisplacementMap', in: 'SourceGraphic', in2: 'displacement', scale: 15, xChannelSelector: 'R', yChannelSelector: 'G', result: 'displaced' },
+    // Color separation
+    { type: 'feOffset', dx: 3, dy: 0, in: 'displaced', result: 'redOffset' },
+    { type: 'feOffset', dx: -3, dy: 0, in: 'displaced', result: 'blueOffset' },
+    { type: 'feBlend', mode: 'screen', in: 'redOffset', in2: 'blueOffset' }
+  ],
+  locked: false,
+});
+
+export const createPixelateFilter = (): Omit<SVGFilter, 'id'> => ({
+  type: 'filter',
+  filterUnits: 'objectBoundingBox',
+  primitiveUnits: 'userSpaceOnUse',
+  primitives: [
+    { type: 'feConvolveMatrix', order: '5', kernelMatrix: '1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1', divisor: 25 }
   ],
   locked: false,
 });
@@ -223,13 +563,33 @@ export const validateFilterPrimitive = (primitive: FilterPrimitiveType): boolean
     case 'feComposite':
       return ['over', 'in', 'out', 'atop', 'xor', 'arithmetic'].includes(primitive.operator);
     case 'feColorMatrix':
-      return Boolean(primitive.values);
+      return Boolean(primitive.values) || Boolean(primitive.colorMatrixType);
     case 'feDropShadow':
       return primitive.stdDeviation >= 0 && Boolean(primitive.floodColor);
     case 'feBlend':
       return ['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'hard-light', 'soft-light', 'difference', 'exclusion'].includes(primitive.mode);
     case 'feMorphology':
       return ['erode', 'dilate'].includes(primitive.operator) && primitive.radius >= 0;
+    case 'feConvolveMatrix':
+      return Boolean(primitive.order) && Boolean(primitive.kernelMatrix);
+    case 'feComponentTransfer':
+      return true; // Basic validation - has optional function components
+    case 'feDiffuseLighting':
+    case 'feSpecularLighting':
+      return Boolean(primitive.lightSource);
+    case 'feDisplacementMap':
+      return typeof primitive.scale === 'number';
+    case 'feTurbulence':
+      return Boolean(primitive.baseFrequency);
+    case 'feImage':
+      return true; // Basic validation
+    case 'feTile':
+      return true; // Basic validation
+    case 'feFuncR':
+    case 'feFuncG':
+    case 'feFuncB':
+    case 'feFuncA':
+      return Boolean(primitive.funcType);
     default:
       return false;
   }
