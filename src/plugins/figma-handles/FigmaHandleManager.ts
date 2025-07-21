@@ -131,7 +131,7 @@ export class FigmaHandleManager {
                     const command = subPath.commands[commandIndex];
           const prevCommand = commandIndex > 0 ? subPath.commands[commandIndex - 1] : null;
           const nextCommand = commandIndex < subPath.commands.length - 1 ? subPath.commands[commandIndex + 1] : null;
-          const result = this.createControlPointInfo(command, prevCommand, nextCommand);
+          const result = this.createControlPointInfo(command, prevCommand, nextCommand, subPath, commandIndex);
                     return result;
         }
       }
@@ -141,11 +141,13 @@ export class FigmaHandleManager {
   private createControlPointInfo(
     command: SVGCommand,
     prevCommand: SVGCommand | null,
-    nextCommand: SVGCommand | null
+    nextCommand: SVGCommand | null,
+    subPath?: any,
+    commandIndex?: number
   ): ControlPointInfo {
     const anchor = { x: command.x || 0, y: command.y || 0 };
-    const incomingHandle = this.getIncomingHandle(command, prevCommand);
-    const outgoingHandle = this.getOutgoingHandle(command, nextCommand);
+    const incomingHandle = this.getIncomingHandle(command, prevCommand, subPath, commandIndex);
+    const outgoingHandle = this.getOutgoingHandle(command, nextCommand, subPath, commandIndex);
     const type = this.determineControlPointType(command, incomingHandle, outgoingHandle);
     const isBreakable = incomingHandle !== null && outgoingHandle !== null;
     const isNextCommandDisplay = this.isNextCommandDisplay(command.id);
@@ -160,15 +162,75 @@ export class FigmaHandleManager {
       isNextCommandDisplay
     };
   }
-  private getIncomingHandle(command: SVGCommand, prevCommand: SVGCommand | null): Point | null {
-    if (!prevCommand) return null;
+  private getIncomingHandle(
+    command: SVGCommand, 
+    prevCommand: SVGCommand | null, 
+    subPath?: any, 
+    commandIndex?: number
+  ): Point | null {
+    if (!prevCommand) {
+      // Caso especial: si es el primer comando de curva en un path cerrado,
+      // buscar el handle del último comando
+      if (subPath && commandIndex !== undefined && command.command === 'C' && this.isSubPathClosed(subPath)) {
+        // Verificar si este es realmente el primer comando de curva (después de M)
+        let isFirstCurveCommand = true;
+        for (let i = 1; i < commandIndex; i++) {
+          if (subPath.commands[i].command === 'C') {
+            isFirstCurveCommand = false;
+            break;
+          }
+        }
+        
+        if (isFirstCurveCommand) {
+          // Buscar el último comando de tipo C
+          for (let i = subPath.commands.length - 1; i >= 1; i--) {
+            const lastCurveCommand = subPath.commands[i];
+            if (lastCurveCommand.command === 'C' && lastCurveCommand.x2 !== undefined && lastCurveCommand.y2 !== undefined) {
+              return { x: lastCurveCommand.x2, y: lastCurveCommand.y2 };
+            }
+          }
+        }
+      }
+      return null;
+    }
+    
     if (prevCommand.command === 'C' && prevCommand.x2 !== undefined && prevCommand.y2 !== undefined) {
       return { x: prevCommand.x2, y: prevCommand.y2 };
     }
     return null;
   }
-  private getOutgoingHandle(command: SVGCommand, nextCommand: SVGCommand | null): Point | null {
-    if (!nextCommand) return null;
+  private getOutgoingHandle(
+    command: SVGCommand, 
+    nextCommand: SVGCommand | null, 
+    subPath?: any, 
+    commandIndex?: number
+  ): Point | null {
+    if (!nextCommand) {
+      // Caso especial: si es el último comando en un path cerrado,
+      // buscar el handle del primer comando de curva
+      if (subPath && commandIndex !== undefined && this.isSubPathClosed(subPath)) {
+        // Verificar si este es realmente el último comando de curva
+        let isLastCurveCommand = true;
+        for (let i = commandIndex + 1; i < subPath.commands.length; i++) {
+          if (subPath.commands[i].command === 'C') {
+            isLastCurveCommand = false;
+            break;
+          }
+        }
+        
+        if (isLastCurveCommand) {
+          // Buscar el primer comando de tipo C (después del M inicial)
+          for (let i = 1; i < subPath.commands.length; i++) {
+            const firstCurveCommand = subPath.commands[i];
+            if (firstCurveCommand.command === 'C' && firstCurveCommand.x1 !== undefined && firstCurveCommand.y1 !== undefined) {
+              return { x: firstCurveCommand.x1, y: firstCurveCommand.y1 };
+            }
+          }
+        }
+      }
+      return null;
+    }
+    
     if (nextCommand.command === 'C' && nextCommand.x1 !== undefined && nextCommand.y1 !== undefined) {
       return { x: nextCommand.x1, y: nextCommand.y1 };
     }
@@ -722,6 +784,32 @@ export class FigmaHandleManager {
       this.updateSingleHandleByControlPoint(pairedHandle.commandId, pairedHandle.controlPoint, oppositePoint);
     }
   }
+  /**
+   * Check if a subpath is closed (has Z command or ends where it starts)
+   */
+  private isSubPathClosed(subPath: any): boolean {
+    if (!subPath.commands || subPath.commands.length === 0) return false;
+    
+    // Check for explicit Z command
+    const lastCommand = subPath.commands[subPath.commands.length - 1];
+    if (lastCommand.command.toLowerCase() === 'z') {
+      return true;
+    }
+    
+    // Check if the path ends where it starts
+    const firstCommand = subPath.commands[0];
+    const lastPosition = { x: lastCommand.x || 0, y: lastCommand.y || 0 };
+    const firstPosition = { x: firstCommand.x || 0, y: firstCommand.y || 0 };
+    
+    const threshold = 1; // Allow small tolerance for floating point errors
+    const distance = Math.sqrt(
+      Math.pow(lastPosition.x - firstPosition.x, 2) + 
+      Math.pow(lastPosition.y - firstPosition.y, 2)
+    );
+    
+    return distance < threshold;
+  }
+
   public findPairedHandle(commandId: string, handleType: 'incoming' | 'outgoing'): {
     commandId: string;
     handleType: 'incoming' | 'outgoing';
@@ -736,7 +824,12 @@ export class FigmaHandleManager {
         if (commandIndex !== -1) {
           const commands = subPath.commands;
           const currentCommand = commands[commandIndex];
+          const isClosedPath = this.isSubPathClosed(subPath);
+          
+          // Debug logs para entender qué está pasando
+          
           if (handleType === 'incoming') {
+            // Buscar el siguiente comando
             if (commandIndex < commands.length - 1) {
               const nextCommand = commands[commandIndex + 1];
               if (nextCommand.command === 'C' && nextCommand.x1 !== undefined && nextCommand.y1 !== undefined) {
@@ -748,8 +841,36 @@ export class FigmaHandleManager {
                   controlPoint: 'x1y1'
                 };
               }
+            } else if (isClosedPath) {
+              // Caso especial: último comando en path cerrado, buscar el primer comando de curva
+              // Solo aplicar si este es realmente el último comando de curva
+              let isLastCurveCommand = true;
+              for (let i = commandIndex + 1; i < commands.length; i++) {
+                if (commands[i].command === 'C') {
+                  isLastCurveCommand = false;
+                  break;
+                }
+              }
+              
+              if (isLastCurveCommand) {
+                // Buscar el primer comando que sea tipo C (después del M inicial)
+                for (let i = 1; i < commands.length; i++) {
+                  const firstCurveCommand = commands[i];
+                  if (firstCurveCommand.command === 'C' && firstCurveCommand.x1 !== undefined && firstCurveCommand.y1 !== undefined) {
+                    const anchor = { x: currentCommand.x || 0, y: currentCommand.y || 0 };
+                    return {
+                      commandId: firstCurveCommand.id,
+                      handleType: 'outgoing',
+                      anchor: anchor,
+                      controlPoint: 'x1y1'
+                    };
+                  }
+                }
+              }
             }
           } else {
+            // handleType === 'outgoing'
+            // Buscar el comando anterior
             if (commandIndex > 0) {
               const prevCommand = commands[commandIndex - 1];
               if (prevCommand.command === 'C' && prevCommand.x2 !== undefined && prevCommand.y2 !== undefined) {
@@ -761,8 +882,66 @@ export class FigmaHandleManager {
                   controlPoint: 'x2y2'
                 };
               }
+              // Si el comando anterior no es tipo C, verificar si es caso especial de path cerrado
+              else if (isClosedPath && currentCommand.command === 'C') {
+                // Verificar si este es realmente el primer comando de curva (después de M)
+                let isFirstCurveCommand = true;
+                for (let i = 1; i < commandIndex; i++) {
+                  if (commands[i].command === 'C') {
+                    isFirstCurveCommand = false;
+                    break;
+                  }
+                }
+                
+                if (isFirstCurveCommand) {
+                  // Buscar el último comando que sea tipo C
+                  for (let i = commands.length - 1; i >= 1; i--) {
+                    const lastCurveCommand = commands[i];
+                    if (lastCurveCommand.command === 'C' && lastCurveCommand.x2 !== undefined && lastCurveCommand.y2 !== undefined) {
+                      // El anchor debe ser el punto del primer comando (M) que es donde ambos handles se conectan
+                      const firstCommand = commands[0];
+                      const anchor = { x: firstCommand.x || 0, y: firstCommand.y || 0 };
+                      return {
+                        commandId: lastCurveCommand.id,
+                        handleType: 'incoming',
+                        anchor: anchor,
+                        controlPoint: 'x2y2'
+                      };
+                    }
+                  }
+                }
+              }
+            } else if (isClosedPath && currentCommand.command === 'C') {
+              // Caso especial: primer comando de curva en path cerrado, buscar el último comando
+              // Solo aplicar si este es realmente el primer comando de curva (después de M)
+              let isFirstCurveCommand = true;
+              for (let i = 1; i < commandIndex; i++) {
+                if (commands[i].command === 'C') {
+                  isFirstCurveCommand = false;
+                  break;
+                }
+              }
+              
+              if (isFirstCurveCommand) {
+                // Buscar el último comando que sea tipo C
+                for (let i = commands.length - 1; i >= 1; i--) {
+                  const lastCurveCommand = commands[i];
+                  if (lastCurveCommand.command === 'C' && lastCurveCommand.x2 !== undefined && lastCurveCommand.y2 !== undefined) {
+                    // El anchor debe ser el punto del primer comando (M) que es donde ambos handles se conectan
+                    const firstCommand = commands[0];
+                    const anchor = { x: firstCommand.x || 0, y: firstCommand.y || 0 };
+                    return {
+                      commandId: lastCurveCommand.id,
+                      handleType: 'incoming',
+                      anchor: anchor,
+                      controlPoint: 'x2y2'
+                    };
+                  }
+                }
+              }
             }
           }
+          
         }
       }
     }
