@@ -287,6 +287,7 @@ export function generateGroupSVG(
     const strokeValue = convertStyleValue(style.stroke);
     
     const attributes = [
+      `id="${path.id}"`,
       `d="${pathData}"`,
       fillValue !== 'none' ? `fill="${fillValue}"` : 'fill="none"',
       strokeValue !== 'none' ? `stroke="${strokeValue}"` : '',

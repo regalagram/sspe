@@ -36,7 +36,7 @@ export const TextPathControls: React.FC = () => {
 
   useEffect(() => {
     if (availablePaths.length > 0 && !selectedPath) {
-      setSelectedPath(availablePaths[0].subPaths[0].id);
+      setSelectedPath(availablePaths[0].id);
     }
   }, [availablePaths.length, selectedPath]);
 
@@ -170,13 +170,11 @@ export const TextPathControls: React.FC = () => {
             style={selectStyle}
           >
             <option value="">Select a path...</option>
-            {availablePaths.map(path => 
-              path.subPaths.map(subPath => (
-                <option key={subPath.id} value={subPath.id}>
-                  Path {path.id.slice(-8)} - SubPath {subPath.id.slice(-8)}
-                </option>
-              ))
-            )}
+            {availablePaths.map(path => (
+              <option key={path.id} value={path.id}>
+                Path {path.id.slice(-8)} ({path.subPaths.length} subpath{path.subPaths.length !== 1 ? 's' : ''})
+              </option>
+            ))}
           </select>
           
           <div style={{ display: 'flex', gap: '8px' }}>

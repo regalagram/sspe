@@ -1,4 +1,4 @@
-import { SVGCommand, PathStyle, SVGCommandType, SVGPath, TextElement, MultilineTextElement, TextElementType, SVGGroup, SVGGroupChild, SVGFilter, FilterPrimitiveType } from '../types';
+import { SVGCommand, PathStyle, SVGCommandType, SVGPath, TextElement, MultilineTextElement, TextElementType, SVGGroup, SVGGroupChild, SVGFilter, FilterPrimitiveType, SVGTextPath } from '../types';
 import { parsePath, absolutize, normalize, serialize } from 'path-data-parser';
 import { generateId } from './id-utils';
 import { decomposeIntoSubPaths } from './subpath-utils';
@@ -2117,11 +2117,220 @@ export function parseGroups(svgElement: Element, allPaths: SVGPath[], allTexts: 
 }
 
 /**
+ * Parse text style from an element (for both text and textPath elements)
+ */
+function parseTextStyle(element: Element): any {
+  const style: any = {};
+  
+  // Font properties
+  if (element.getAttribute('font-family')) {
+    style.fontFamily = element.getAttribute('font-family');
+  }
+  if (element.getAttribute('font-size')) {
+    style.fontSize = parseFloat(element.getAttribute('font-size')!);
+  }
+  if (element.getAttribute('font-weight')) {
+    style.fontWeight = element.getAttribute('font-weight');
+  }
+  if (element.getAttribute('font-style')) {
+    style.fontStyle = element.getAttribute('font-style');
+  }
+  if (element.getAttribute('font-variant')) {
+    style.fontVariant = element.getAttribute('font-variant');
+  }
+  if (element.getAttribute('font-stretch')) {
+    style.fontStretch = element.getAttribute('font-stretch');
+  }
+  if (element.getAttribute('text-decoration')) {
+    style.textDecoration = element.getAttribute('text-decoration');
+  }
+  if (element.getAttribute('text-anchor')) {
+    style.textAnchor = element.getAttribute('text-anchor');
+  }
+  if (element.getAttribute('dominant-baseline')) {
+    style.dominantBaseline = element.getAttribute('dominant-baseline');
+  }
+  if (element.getAttribute('alignment-baseline')) {
+    style.alignmentBaseline = element.getAttribute('alignment-baseline');
+  }
+  if (element.getAttribute('baseline-shift')) {
+    style.baselineShift = element.getAttribute('baseline-shift');
+  }
+  if (element.getAttribute('direction')) {
+    style.direction = element.getAttribute('direction');
+  }
+  if (element.getAttribute('writing-mode')) {
+    style.writingMode = element.getAttribute('writing-mode');
+  }
+  if (element.getAttribute('text-rendering')) {
+    style.textRendering = element.getAttribute('text-rendering');
+  }
+  if (element.getAttribute('letter-spacing')) {
+    style.letterSpacing = parseFloat(element.getAttribute('letter-spacing')!);
+  }
+  if (element.getAttribute('word-spacing')) {
+    style.wordSpacing = parseFloat(element.getAttribute('word-spacing')!);
+  }
+  if (element.getAttribute('textLength')) {
+    style.textLength = parseFloat(element.getAttribute('textLength')!);
+  }
+  if (element.getAttribute('lengthAdjust')) {
+    style.lengthAdjust = element.getAttribute('lengthAdjust');
+  }
+  
+  // Color and opacity
+  const fill = element.getAttribute('fill');
+  if (fill) {
+    if (fill.startsWith('url(#')) {
+      style.fill = fill;
+    } else {
+      style.fill = convertRgbToHex(fill) || fill;
+    }
+  }
+  
+  const stroke = element.getAttribute('stroke');
+  if (stroke) {
+    if (stroke.startsWith('url(#')) {
+      style.stroke = stroke;
+    } else {
+      style.stroke = convertRgbToHex(stroke) || stroke;
+    }
+  }
+  
+  if (element.getAttribute('stroke-width')) {
+    style.strokeWidth = parseFloat(element.getAttribute('stroke-width')!);
+  }
+  if (element.getAttribute('stroke-dasharray')) {
+    const dasharray = element.getAttribute('stroke-dasharray')!;
+    if (dasharray === 'none') {
+      style.strokeDasharray = 'none';
+    } else {
+      style.strokeDasharray = dasharray.split(',').map(v => parseFloat(v.trim()));
+    }
+  }
+  if (element.getAttribute('stroke-dashoffset')) {
+    style.strokeDashoffset = parseFloat(element.getAttribute('stroke-dashoffset')!);
+  }
+  if (element.getAttribute('stroke-linecap')) {
+    style.strokeLinecap = element.getAttribute('stroke-linecap');
+  }
+  if (element.getAttribute('stroke-linejoin')) {
+    style.strokeLinejoin = element.getAttribute('stroke-linejoin');
+  }
+  if (element.getAttribute('stroke-miterlimit')) {
+    style.strokeMiterlimit = parseFloat(element.getAttribute('stroke-miterlimit')!);
+  }
+  if (element.getAttribute('fill-opacity')) {
+    style.fillOpacity = parseFloat(element.getAttribute('fill-opacity')!);
+  }
+  if (element.getAttribute('stroke-opacity')) {
+    style.strokeOpacity = parseFloat(element.getAttribute('stroke-opacity')!);
+  }
+  if (element.getAttribute('opacity')) {
+    style.opacity = parseFloat(element.getAttribute('opacity')!);
+  }
+  if (element.getAttribute('filter')) {
+    style.filter = element.getAttribute('filter');
+  }
+  if (element.getAttribute('clip-path')) {
+    style.clipPath = element.getAttribute('clip-path');
+  }
+  if (element.getAttribute('mask')) {
+    style.mask = element.getAttribute('mask');
+  }
+  
+  return style;
+}
+
+/**
+ * Parse SVG textPath elements from SVG
+ */
+export function parseTextPaths(svgElement: Element, allPaths?: SVGPath[]): SVGTextPath[] {
+  const textPaths: SVGTextPath[] = [];
+  
+  // Find all textPath elements
+  const textPathElements = svgElement.querySelectorAll('textPath');
+  
+  textPathElements.forEach(textPathElement => {
+    try {
+      const textElement = textPathElement.parentElement;
+      if (!textElement || textElement.tagName.toLowerCase() !== 'text') {
+        return; // textPath must be inside a text element
+      }
+
+      // Get path reference
+      const pathRef = textPathElement.getAttribute('href') || textPathElement.getAttribute('xlink:href');
+      if (!pathRef) {
+        console.warn('textPath element missing href attribute');
+        return; // textPath must reference a path
+      }
+
+      // Remove # from href if present
+      const cleanPathRef = pathRef.replace('#', '');
+
+      // Validate that the referenced path exists if allPaths is provided
+      if (allPaths && !allPaths.some(p => p.id === cleanPathRef)) {
+        // Try to find a path element with this ID in the SVG
+        const pathElement = svgElement.querySelector(`path[id="${cleanPathRef}"]`);
+        if (!pathElement) {
+          console.warn(`textPath references non-existent path: ${cleanPathRef}`);
+          // Continue parsing anyway - the textPath will be imported but may not work properly
+        }
+      }
+
+      // Get content
+      const content = textPathElement.textContent || '';
+
+      // Parse attributes
+      const startOffset = textPathElement.getAttribute('startOffset');
+      const method = textPathElement.getAttribute('method') as 'align' | 'stretch' | null;
+      const spacing = textPathElement.getAttribute('spacing') as 'auto' | 'exact' | null;
+      const side = textPathElement.getAttribute('side') as 'left' | 'right' | null;
+      const textLength = textPathElement.getAttribute('textLength');
+      const lengthAdjust = textPathElement.getAttribute('lengthAdjust') as 'spacing' | 'spacingAndGlyphs' | null;
+
+      // Parse style from both text element and textPath element
+      const textStyle = parseTextStyle(textElement);
+      const textPathStyle = parseTextStyle(textPathElement);
+      
+      // Merge styles (textPath takes precedence)
+      const style = { ...textStyle, ...textPathStyle };
+
+      // Get transform from text element
+      const transform = textElement.getAttribute('transform');
+
+      const textPath: SVGTextPath = {
+        id: generateId(),
+        type: 'textPath',
+        content,
+        pathRef: cleanPathRef,
+        startOffset: startOffset ? (isNaN(Number(startOffset)) ? startOffset : Number(startOffset)) : undefined,
+        method: method || undefined,
+        spacing: spacing || undefined,
+        side: side || undefined,
+        textLength: textLength ? Number(textLength) : undefined,
+        lengthAdjust: lengthAdjust || undefined,
+        style,
+        transform: transform || undefined,
+        locked: false
+      };
+
+      textPaths.push(textPath);
+    } catch (error) {
+      console.warn('Failed to parse textPath element:', error);
+    }
+  });
+
+  return textPaths;
+}
+
+/**
  * Enhanced SVG parser that handles paths, texts, gradients, patterns, and groups
  */
 export function parseCompleteSVG(svgString: string): {
   paths: SVGPath[];
   texts: TextElementType[];
+  textPaths: SVGTextPath[];
   gradients: GradientOrPattern[];
   filters: SVGFilter[];
   groups: SVGGroup[];
@@ -2135,6 +2344,9 @@ export function parseCompleteSVG(svgString: string): {
     // Parse texts
     const texts = parseTextElements(svgElement);
     
+    // Parse textPaths (pass paths for validation)
+    const textPaths = parseTextPaths(svgElement, paths);
+    
     // Parse gradients and patterns
     const gradients = parseGradients(svgElement);
     
@@ -2147,6 +2359,7 @@ export function parseCompleteSVG(svgString: string): {
     return {
       paths,
       texts,
+      textPaths,
       gradients,
       filters,
       groups

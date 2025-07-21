@@ -21,8 +21,18 @@ export const TextPathPlugin: Plugin = {
           const selectedSubPaths = state.selection.selectedSubPaths;
           
           if (selectedSubPaths.length > 0) {
-            const textPathId = state.addTextPath(selectedSubPaths[0], 'Text on path', 0);
-            state.selectTextPath(textPathId);
+            // Find the path that contains the selected subpath
+            const selectedSubPathId = selectedSubPaths[0];
+            const parentPath = state.paths.find((path: any) => 
+              path.subPaths.some((subPath: any) => subPath.id === selectedSubPathId)
+            );
+            
+            if (parentPath) {
+              const textPathId = state.addTextPath(parentPath.id, 'Text on path', 0);
+              state.selectTextPath(textPathId);
+            } else {
+              alert('Could not find the path containing the selected subpath');
+            }
           } else {
             alert('Please select a path first to create a TextPath');
           }

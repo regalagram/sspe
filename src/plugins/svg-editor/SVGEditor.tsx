@@ -220,6 +220,7 @@ export const SVGComponent: React.FC = () => {
       const strokeValue = convertStyleValue(style.stroke);
       
       const attributes = [
+        `id="${path.id}"`,
         `d="${pathData}"`,
         fillValue !== 'none' ? `fill="${fillValue}"` : 'fill="none"',
         strokeValue !== 'none' ? `stroke="${strokeValue}"` : '',
@@ -789,13 +790,13 @@ ${definitions}${allElements}
         }
       }
 
-      // Parse the complete SVG including paths, texts, gradients, patterns, and groups
-      const { paths: newPaths, texts: newTexts, gradients: newGradients, groups: newGroups } = parseCompleteSVG(svgCode);
+      // Parse the complete SVG including paths, texts, textPaths, gradients, patterns, and groups
+      const { paths: newPaths, texts: newTexts, textPaths: newTextPaths, gradients: newGradients, groups: newGroups } = parseCompleteSVG(svgCode);
       
-      const totalElements = newPaths.length + newTexts.length + newGradients.length + newGroups.length;
+      const totalElements = newPaths.length + newTexts.length + newTextPaths.length + newGradients.length + newGroups.length;
       
       if (totalElements === 0) {
-        alert('No valid elements found in the SVG code. Make sure your SVG contains paths, text, gradients, patterns, or groups.');
+        alert('No valid elements found in the SVG code. Make sure your SVG contains paths, text, textPaths, gradients, patterns, or groups.');
         return;
       }
       
@@ -804,6 +805,7 @@ ${definitions}${allElements}
         const elementsInfo = [
           newPaths.length > 0 ? `${newPaths.length} path(s)` : '',
           newTexts.length > 0 ? `${newTexts.length} text element(s)` : '',
+          newTextPaths.length > 0 ? `${newTextPaths.length} textPath element(s)` : '',
           newGradients.length > 0 ? `${newGradients.length} gradient(s)/pattern(s)` : '',
           newGroups.length > 0 ? `${newGroups.length} group(s)` : ''
         ].filter(Boolean).join(', ');
@@ -821,6 +823,7 @@ ${definitions}${allElements}
         // Replace existing content
         replacePaths(newPaths);
         replaceTexts(newTexts);
+        replaceTextPaths(newTextPaths);
         setGradients(newGradients);
         replaceGroups(newGroups);
       } else {
@@ -828,6 +831,7 @@ ${definitions}${allElements}
         // For append mode, we need to merge the new content with existing content
         const currentPaths = [...paths];
         const currentTexts = [...texts];
+        const currentTextPaths = [...textPaths];
         const currentGradients = [...gradients];
         const currentGroups = [...groups];
         
@@ -836,6 +840,9 @@ ${definitions}${allElements}
         
         // Merge texts
         replaceTexts([...currentTexts, ...newTexts]);
+        
+        // Merge textPaths
+        replaceTextPaths([...currentTextPaths, ...newTextPaths]);
         
         // Merge gradients  
         setGradients([...currentGradients, ...newGradients]);
@@ -849,7 +856,7 @@ ${definitions}${allElements}
         resetViewportCompletely();
       }
       
-      console.log(`Imported (${importSettings.mode}): ${newPaths.length} paths, ${newTexts.length} texts, ${newGradients.length} gradients/patterns, ${newGroups.length} groups`);
+      console.log(`Imported (${importSettings.mode}): ${newPaths.length} paths, ${newTexts.length} texts, ${newTextPaths.length} textPaths, ${newGradients.length} gradients/patterns, ${newGroups.length} groups`);
       
     } catch (error) {
       console.error('Error parsing SVG:', error);

@@ -7,23 +7,17 @@ export const TextPathRenderer: React.FC = () => {
   const { textPaths, paths, selection, renderVersion } = useEditorStore();
 
   const renderTextPath = (textPath: SVGTextPath) => {
-    // Find the referenced path
-    const referencedPath = paths.find(path => 
-      path.subPaths.some(subPath => subPath.id === textPath.pathRef)
-    );
+    // Find the referenced path by path ID (not subPath ID)
+    const referencedPath = paths.find(path => path.id === textPath.pathRef);
 
     if (!referencedPath) {
       // If referenced path doesn't exist, don't render
+      console.warn(`TextPath ${textPath.id} references non-existent path: ${textPath.pathRef}`);
       return null;
     }
 
-    const referencedSubPath = referencedPath.subPaths.find(subPath => subPath.id === textPath.pathRef);
-    if (!referencedSubPath) {
-      return null;
-    }
-
-    // Generate the path data for the textPath to follow
-    const pathData = subPathToString(referencedSubPath);
+    // Generate the path data for the entire path (all subPaths)
+    const pathData = referencedPath.subPaths.map(subPath => subPathToString(subPath)).join(' ');
     const pathId = `textpath-path-${textPath.id}`;
 
     // Determine selection state
