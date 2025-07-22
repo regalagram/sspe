@@ -4,7 +4,6 @@ import { formatSVGReference } from '../../utils/svg-elements-utils';
 import { PluginButton } from '../../components/PluginButton';
 import { ElementPreview } from '../../components/ElementPreview';
 import { Plus, Scissors, Eye } from 'lucide-react';
-
 export const ClippingControls: React.FC = () => {
   const { 
     clipPaths,
@@ -22,17 +21,13 @@ export const ClippingControls: React.FC = () => {
     updateImage,
     removeSubPath
   } = useEditorStore();
-  
   const [activeTab, setActiveTab] = useState<'clips' | 'masks'>('clips');
   const [scaleToFit, setScaleToFit] = useState(false);
-
   const selectedSubPaths = selection.selectedSubPaths;
   const hasPathSelection = selectedSubPaths.length > 0;
-
   const selectedPath = selection.selectedPaths.length === 1 
     ? paths.find(path => path.id === selection.selectedPaths[0])
     : null;
-
   const getParentPathsOfSelectedSubPaths = () => {
     const parentPaths: string[] = [];
     selectedSubPaths.forEach(subPathId => {
@@ -45,15 +40,12 @@ export const ClippingControls: React.FC = () => {
     });
     return parentPaths;
   };
-
-  // Helper functions for creating default structures
   const createDefaultClipPath = () => ({
     type: 'clipPath' as const,
     clipPathUnits: 'userSpaceOnUse' as const,
     children: [],
     locked: false,
   });
-
   const createDefaultMask = () => ({
     type: 'mask' as const,
     maskUnits: 'userSpaceOnUse' as const,
@@ -65,30 +57,20 @@ export const ClippingControls: React.FC = () => {
     children: [],
     locked: false,
   });
-
   const handleCreateClipFromSelection = () => {
     if (selectedSubPaths.length === 0) {
       alert('Please select one or more sub-paths to create a clipping path');
       return;
     }
-
-    console.log('Creating clip from selection...');
-    console.log('Selected sub-paths:', selectedSubPaths);
-
-    // Collect selected sub-paths data and calculate bounding box in one pass
     const selectedData: Array<{subPath: any, style: any}> = [];
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
     paths.forEach(path => {
       path.subPaths.forEach(subPath => {
         if (selectedSubPaths.includes(subPath.id)) {
-          // Store the original data
           selectedData.push({
             subPath: subPath,
-            style: { ...path.style, fill: 'black' } // Clipping paths should be black
+            style: { ...path.style, fill: 'black' } 
           });
-
-          // Calculate bounding box from commands
           subPath.commands.forEach((cmd: any) => {
             if (cmd.x !== undefined) {
               minX = Math.min(minX, cmd.x);
@@ -98,7 +80,6 @@ export const ClippingControls: React.FC = () => {
               minY = Math.min(minY, cmd.y);
               maxY = Math.max(maxY, cmd.y);
             }
-            // Handle control points for curves
             if (cmd.x1 !== undefined) {
               minX = Math.min(minX, cmd.x1);
               maxX = Math.max(maxX, cmd.x1);
@@ -119,69 +100,46 @@ export const ClippingControls: React.FC = () => {
         }
       });
     });
-
     if (selectedData.length === 0) return;
-
-    console.log('Bounding box calculated:', { minX, minY, maxX, maxY });
-
-    // For clip paths, we DON'T normalize coordinates - we want to preserve the original position
-    // This ensures the clip path appears in the same location as the original paths
     const selectedSubPathsData = selectedData.map((data, index) => {
-      console.log('Processing sub-path data:', data);
-      return {
+            return {
         type: 'path' as const,
         id: `clip-${data.subPath.id}`,
         subPaths: [{
           ...data.subPath,
-          commands: data.subPath.commands // Keep original commands with original coordinates
+          commands: data.subPath.commands 
         }],
         style: data.style
       };
     });
-
-    console.log('Final clip path data:', selectedSubPathsData);
-
-    // Calculate dimensions based on original coordinates
     const width = minX !== Infinity ? (maxX - minX) : 100;
     const height = minX !== Infinity ? (maxY - minY) : 100;
-    
     const clipPathData = {
       ...createDefaultClipPath(),
       clipPathUnits: 'userSpaceOnUse' as const,
       children: selectedSubPathsData
     };
-
-    console.log('Adding clip path:', clipPathData);
-    addClipPath(clipPathData);
-    
-    // Optionally remove original sub-paths
+        addClipPath(clipPathData);
     if (confirm('Remove original sub-paths from document? (they will be preserved in the clipping path)')) {
       selectedSubPaths.forEach(subPathId => {
         removeSubPath(subPathId);
       });
     }
   };
-
   const handleCreateMaskFromSelection = () => {
     if (selectedSubPaths.length === 0) {
       alert('Please select one or more sub-paths to create a mask');
       return;
     }
-
-    // Collect selected sub-paths data and calculate bounding box in one pass
     const selectedData: Array<{subPath: any, style: any}> = [];
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
     paths.forEach(path => {
       path.subPaths.forEach(subPath => {
         if (selectedSubPaths.includes(subPath.id)) {
-          // Store the original data
           selectedData.push({
             subPath: subPath,
-            style: { ...path.style, fill: 'white' } // Masks should be white for visible areas
+            style: { ...path.style, fill: 'white' } 
           });
-
-          // Calculate bounding box from commands
           subPath.commands.forEach((cmd: any) => {
             if (cmd.x !== undefined) {
               minX = Math.min(minX, cmd.x);
@@ -191,7 +149,6 @@ export const ClippingControls: React.FC = () => {
               minY = Math.min(minY, cmd.y);
               maxY = Math.max(maxY, cmd.y);
             }
-            // Handle control points for curves
             if (cmd.x1 !== undefined) {
               minX = Math.min(minX, cmd.x1);
               maxX = Math.max(maxX, cmd.x1);
@@ -212,50 +169,37 @@ export const ClippingControls: React.FC = () => {
         }
       });
     });
-
     if (selectedData.length === 0) return;
-
-    // For masks with userSpaceOnUse, we keep the original coordinates for precision
     const selectedSubPathsData = selectedData.map((data, index) => {
       return {
         type: 'path' as const,
         id: `mask-${data.subPath.id}`,
         subPaths: [{
           ...data.subPath,
-          commands: data.subPath.commands // Keep original commands with full precision
+          commands: data.subPath.commands 
         }],
-        // For masks, we need white fill for visibility (black = transparent, white = opaque)
         style: {
           ...data.style,
-          fill: 'white', // Force white fill for masks
-          stroke: 'none' // Remove stroke to avoid edge effects
+          fill: 'white', 
+          stroke: 'none' 
         }
       };
     });
-
-    // Calculate dimensions based on original coordinates  
     const maskWidth = minX !== Infinity ? (maxX - minX) : 100;
     const maskHeight = minX !== Infinity ? (maxY - minY) : 100;
-    
     const maskData = {
       ...createDefaultMask(),
       maskUnits: 'userSpaceOnUse' as const,
       maskContentUnits: 'userSpaceOnUse' as const,
-      // Store original coordinates for precision
       children: selectedSubPathsData
     };
-
-    console.log('Creating mask with data:', maskData);
-    addMask(maskData);
-    
-    // Optionally remove original sub-paths
+        addMask(maskData);
     if (confirm('Remove original sub-paths from document? (they will be preserved in the mask)')) {
       selectedSubPaths.forEach(subPathId => {
         removeSubPath(subPathId);
       });
     }
   };
-
   const handleApplyClipToPath = (clipId: string) => {
     if (selectedPath) {
       updatePathStyle(selectedPath.id, {
@@ -263,7 +207,6 @@ export const ClippingControls: React.FC = () => {
       });
     }
   };
-
   const handleApplyClipToSubPaths = (clipId: string) => {
     const parentPaths = getParentPathsOfSelectedSubPaths();
     parentPaths.forEach(pathId => {
@@ -272,7 +215,6 @@ export const ClippingControls: React.FC = () => {
       });
     });
   };
-
   const handleApplyMaskToPath = (maskId: string) => {
     if (selectedPath) {
       updatePathStyle(selectedPath.id, {
@@ -280,7 +222,6 @@ export const ClippingControls: React.FC = () => {
       });
     }
   };
-
   const handleApplyMaskToSubPaths = (maskId: string) => {
     const parentPaths = getParentPathsOfSelectedSubPaths();
     parentPaths.forEach(pathId => {
@@ -289,8 +230,6 @@ export const ClippingControls: React.FC = () => {
       });
     });
   };
-
-  // Apply clipping to text elements
   const handleApplyClipToText = (clipId: string) => {
     selection.selectedTexts.forEach(textId => {
       updateTextStyle(textId, {
@@ -298,7 +237,6 @@ export const ClippingControls: React.FC = () => {
       });
     });
   };
-
   const handleApplyMaskToText = (maskId: string) => {
     selection.selectedTexts.forEach(textId => {
       updateTextStyle(textId, {
@@ -306,11 +244,8 @@ export const ClippingControls: React.FC = () => {
       });
     });
   };
-
-  // Apply clipping to group elements
   const handleApplyClipToGroup = (clipId: string) => {
     selection.selectedGroups.forEach(groupId => {
-      // Get current group to preserve existing style
       const currentGroup = useEditorStore.getState().groups.find(group => group.id === groupId);
       updateGroup(groupId, {
         style: {
@@ -320,10 +255,8 @@ export const ClippingControls: React.FC = () => {
       });
     });
   };
-
   const handleApplyMaskToGroup = (maskId: string) => {
     selection.selectedGroups.forEach(groupId => {
-      // Get current group to preserve existing style
       const currentGroup = useEditorStore.getState().groups.find(group => group.id === groupId);
       updateGroup(groupId, {
         style: {
@@ -333,28 +266,14 @@ export const ClippingControls: React.FC = () => {
       });
     });
   };
-
-  // Apply clipping to image elements
   const handleApplyClipToImage = (clipId: string) => {
-    console.log('Applying clip:', clipId, 'to images:', selection.selectedImages);
-    
-    selection.selectedImages.forEach(imageId => {
-      // Get current image and clipPath
+        selection.selectedImages.forEach(imageId => {
       const currentImage = useEditorStore.getState().images.find(img => img.id === imageId);
       const currentClipPath = clipPaths.find(cp => cp.id === clipId);
-      
       if (!currentImage || !currentClipPath) return;
-      
-      console.log('Image before:', currentImage);
-      console.log('Original clipPath:', currentClipPath);
-      
-      // Calculate translation needed to move clipPath to image position
       const imageX = currentImage.x;
       const imageY = currentImage.y;
-      
-      // Get clipPath bounding box
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      
       currentClipPath.children.forEach(child => {
         if (child.type === 'path' && (child as any).subPaths) {
           (child as any).subPaths.forEach((subPath: any) => {
@@ -371,109 +290,59 @@ export const ClippingControls: React.FC = () => {
           });
         }
       });
-      
       const clipPathX = minX !== Infinity ? minX : 0;
       const clipPathY = minY !== Infinity ? minY : 0;
-      
-      // Calculate translation
       const translateX = imageX - clipPathX;
       const translateY = imageY - clipPathY;
-      
-      console.log('Coordinate adjustment:', {
-        imagePos: { x: imageX, y: imageY },
-        clipPathPos: { x: clipPathX, y: clipPathY },
-        translation: { x: translateX, y: translateY },
-        scaleToFit
-      });
-      
-      let transform = `translate(${translateX}, ${translateY})`;
-      
-      // If scale to fit is enabled, calculate scaling
+            let transform = `translate(${translateX}, ${translateY})`;
       if (scaleToFit) {
         const clipWidth = maxX - minX;
         const clipHeight = maxY - minY;
         const imageWidth = currentImage.width;
         const imageHeight = currentImage.height;
-        
         if (clipWidth > 0 && clipHeight > 0) {
           const scaleX = imageWidth / clipWidth;
           const scaleY = imageHeight / clipHeight;
-          
-          // Use uniform scaling (smaller scale to fit entirely)
           const scale = Math.min(scaleX, scaleY);
-          
-          console.log('Scaling calculation:', {
-            clipSize: { width: clipWidth, height: clipHeight },
-            imageSize: { width: imageWidth, height: imageHeight },
-            scaleX, scaleY, scale
-          });
-          
-          // Center the scaled clipPath within the image
           const scaledWidth = clipWidth * scale;
           const scaledHeight = clipHeight * scale;
           const centerOffsetX = (imageWidth - scaledWidth) / 2;
           const centerOffsetY = (imageHeight - scaledHeight) / 2;
-          
-          // Simple approach: translate to image position, then center and scale
           transform = `translate(${imageX + centerOffsetX}, ${imageY + centerOffsetY}) scale(${scale}) translate(${-clipPathX}, ${-clipPathY})`;
-          
-          console.log('Final transform:', transform);
-        }
+                  }
       }
-      
-      // Update the existing clipPath with transform
       const updatedClipPath = {
         ...currentClipPath,
         transform
       };
-      
       updateClipPath(clipId, updatedClipPath);
-      console.log('Updated clipPath with transform:', updatedClipPath);
-      
-      const newStyle = {
+            const newStyle = {
         ...currentImage?.style,
         clipPath: formatSVGReference(clipId)
       };
-      console.log('Applying style:', newStyle);
-      
-      updateImage(imageId, {
+            updateImage(imageId, {
         style: newStyle
       });
-      
-      // Check the result
       setTimeout(() => {
         const updatedImage = useEditorStore.getState().images.find(img => img.id === imageId);
-        console.log('Image after:', updatedImage);
-      }, 100);
+              }, 100);
     });
   };
-
   const handleApplyMaskToImage = (maskId: string) => {
-    console.log('Applying mask:', maskId, 'to images:', selection.selectedImages);
-    
-    selection.selectedImages.forEach(imageId => {
-      // Get current image
+        selection.selectedImages.forEach(imageId => {
       const currentImage = useEditorStore.getState().images.find(img => img.id === imageId);
-      
       if (!currentImage) {
-        console.log('Missing image:', { currentImage });
-        return;
+                return;
       }
-      
-      // Simply apply the mask reference without any transformation or cloning
       const newStyle = {
         ...currentImage?.style,
         mask: formatSVGReference(maskId)
       };
-      
-      console.log('Applying mask style to image:', newStyle);
-      
-      updateImage(imageId, {
+            updateImage(imageId, {
         style: newStyle
       });
     });
   };
-
   const handleRemoveClipFromPath = () => {
     if (selectedPath) {
       updatePathStyle(selectedPath.id, {
@@ -481,7 +350,6 @@ export const ClippingControls: React.FC = () => {
       });
     }
   };
-
   const handleRemoveMaskFromPath = () => {
     if (selectedPath) {
       updatePathStyle(selectedPath.id, {
@@ -489,8 +357,6 @@ export const ClippingControls: React.FC = () => {
       });
     }
   };
-
-  // Remove clipping from text elements
   const handleRemoveClipFromText = () => {
     selection.selectedTexts.forEach(textId => {
       updateTextStyle(textId, {
@@ -498,7 +364,6 @@ export const ClippingControls: React.FC = () => {
       });
     });
   };
-
   const handleRemoveMaskFromText = () => {
     selection.selectedTexts.forEach(textId => {
       updateTextStyle(textId, {
@@ -506,8 +371,6 @@ export const ClippingControls: React.FC = () => {
       });
     });
   };
-
-  // Remove clipping from group elements
   const handleRemoveClipFromGroup = () => {
     selection.selectedGroups.forEach(groupId => {
       updateGroup(groupId, {
@@ -517,7 +380,6 @@ export const ClippingControls: React.FC = () => {
       });
     });
   };
-
   const handleRemoveMaskFromGroup = () => {
     selection.selectedGroups.forEach(groupId => {
       updateGroup(groupId, {
@@ -527,8 +389,6 @@ export const ClippingControls: React.FC = () => {
       });
     });
   };
-
-  // Remove clipping from image elements
   const handleRemoveClipFromImage = () => {
     selection.selectedImages.forEach(imageId => {
       updateImage(imageId, {
@@ -538,7 +398,6 @@ export const ClippingControls: React.FC = () => {
       });
     });
   };
-
   const handleRemoveMaskFromImage = () => {
     selection.selectedImages.forEach(imageId => {
       updateImage(imageId, {
@@ -548,24 +407,19 @@ export const ClippingControls: React.FC = () => {
       });
     });
   };
-
   const handleRemoveClipPath = (id: string) => {
     if (confirm('Are you sure you want to remove this clip path?')) {
       removeClipPath(id);
     }
   };
-
   const handleRemoveMask = (id: string) => {
     if (confirm('Are you sure you want to remove this mask?')) {
       removeMask(id);
     }
   };
-
   const totalElements = clipPaths.length + masks.length;
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      {/* Tab Navigation */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
           Type:
@@ -587,11 +441,8 @@ export const ClippingControls: React.FC = () => {
           />
         </div>
       </div>
-
-      {/* Clip Paths Tab */}
       {activeTab === 'clips' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {/* Create Clip Path */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
               Create Clip Path:
@@ -620,12 +471,8 @@ export const ClippingControls: React.FC = () => {
               </div>
             )}
           </div>
-
-          {/* Clip Path List */}
           {clipPaths.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              
-              {/* Scale to Fit Option */}
               <div style={{ 
                 padding: '6px', 
                 backgroundColor: '#f0f8ff', 
@@ -646,7 +493,6 @@ export const ClippingControls: React.FC = () => {
                   {scaleToFit ? 'Clip will scale to fit the target size' : 'Clip will keep original size and position'}
                 </div>
               </div>
-              
               <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
                 Clip Paths ({clipPaths.length}):
               </span>
@@ -712,7 +558,6 @@ export const ClippingControls: React.FC = () => {
                                     }
                                   }).join(' ')
                                 ).join(' ') || 'M 0 0';
-                                
                                 return (
                                   <div key={index} style={{ 
                                     marginBottom: '2px', 
@@ -823,8 +668,6 @@ export const ClippingControls: React.FC = () => {
               </div>
             </div>
           )}
-
-          {/* Selected Path Clip Control */}
           {selectedPath && (
             <div style={{ 
               display: 'flex', 
@@ -863,11 +706,8 @@ export const ClippingControls: React.FC = () => {
           )}
         </div>
       )}
-
-      {/* Masks Tab */}
       {activeTab === 'masks' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {/* Create Mask */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
               Create Mask:
@@ -896,12 +736,8 @@ export const ClippingControls: React.FC = () => {
               </div>
             )}
           </div>
-
-          {/* Mask List */}
           {masks.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              
-              {/* Scale to Fit Option for Masks */}
               <div style={{ 
                 padding: '6px', 
                 backgroundColor: '#f0f8ff', 
@@ -922,8 +758,6 @@ export const ClippingControls: React.FC = () => {
                   {scaleToFit ? 'Mask will scale to fit the target size' : 'Mask will keep original size and position'}
                 </div>
               </div>
-              
-              {/* Mask Explanation */}
               <div style={{ 
                 padding: '6px', 
                 backgroundColor: '#fff3cd', 
@@ -939,7 +773,6 @@ export const ClippingControls: React.FC = () => {
                   • Paths are automatically converted to white
                 </div>
               </div>
-              
               <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
                 Masks ({masks.length}):
               </span>
@@ -1005,7 +838,6 @@ export const ClippingControls: React.FC = () => {
                                     }
                                   }).join(' ')
                                 ).join(' ') || 'M 0 0';
-                                
                                 return (
                                   <div key={index} style={{ 
                                     marginBottom: '2px', 
@@ -1116,8 +948,6 @@ export const ClippingControls: React.FC = () => {
               </div>
             </div>
           )}
-
-          {/* Selected Path Mask Control */}
           {selectedPath && (
             <div style={{ 
               display: 'flex', 
@@ -1156,8 +986,6 @@ export const ClippingControls: React.FC = () => {
           )}
         </div>
       )}
-
-      {/* Apply/Remove Section for Selected Elements */}
       {(selection.selectedTexts.length > 0 || selection.selectedGroups.length > 0 || selection.selectedImages.length > 0 || selectedPath) && (
         <div style={{ 
           display: 'flex', 
@@ -1169,8 +997,6 @@ export const ClippingControls: React.FC = () => {
           <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
             Selected Elements:
           </span>
-          
-          {/* Remove Clipping Buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <div style={{ fontSize: '11px', color: '#666' }}>Remove Clipping:</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
@@ -1240,8 +1066,6 @@ export const ClippingControls: React.FC = () => {
               )}
             </div>
           </div>
-
-          {/* Remove Mask Buttons */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <div style={{ fontSize: '11px', color: '#666' }}>Remove Mask:</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>

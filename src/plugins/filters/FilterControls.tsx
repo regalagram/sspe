@@ -79,6 +79,13 @@ export const FilterControls: React.FC = () => {
     ? paths.find(path => path.id === selection.selectedPaths[0])
     : null;
 
+  // Check if any elements are selected for quick apply
+  const hasAnyElementsSelected = hasPathSelection || 
+                                selectedPath !== null || 
+                                selection.selectedTexts.length > 0 || 
+                                selection.selectedGroups.length > 0 || 
+                                selection.selectedImages.length > 0;
+
   // Find the parent paths of selected sub-paths
   const getParentPathsOfSelectedSubPaths = () => {
     const parentPaths: string[] = [];
@@ -214,8 +221,15 @@ export const FilterControls: React.FC = () => {
   };
 
   const handleQuickApplyFilter = (type: 'drop-shadow' | 'blur' | 'grayscale' | 'sepia' | 'invert' | 'brightness' | 'contrast' | 'saturate' | 'hue-rotate' | 'emboss' | 'sharpen' | 'edge-detect' | 'glow' | 'bevel' | 'motion-blur' | 'noise' | 'wave-distortion' | 'posterize' | 'oil-painting' | 'watercolor' | 'vintage' | 'chromatic-aberration' | 'neon-glow' | 'mosaic' | 'glitch' | 'pixelate' | 'dancing-stroke' | 'smoke' | 'waves' | 'paper-texture' | 'zebra' | 'net' | 'dust' | 'colored-stripes' | 'colored-spots' | 'colored-flame' | 'advanced-watercolor') => {
-    if (selectedSubPaths.length === 0) {
-      alert('Please select one or more sub-paths first');
+    // Check if any elements are selected
+    const hasSubPaths = selectedSubPaths.length > 0;
+    const hasTexts = selection.selectedTexts.length > 0;
+    const hasGroups = selection.selectedGroups.length > 0;
+    const hasImages = selection.selectedImages.length > 0;
+    const hasSelectedPath = selectedPath !== null;
+
+    if (!hasSubPaths && !hasTexts && !hasGroups && !hasImages && !hasSelectedPath) {
+      alert('Please select one or more elements (sub-paths, texts, groups, images, or paths) first');
       return;
     }
 
@@ -291,24 +305,119 @@ export const FilterControls: React.FC = () => {
         const newFilter = currentFilters[currentFilters.length - 1]; // Get the last added filter
         
         if (newFilter && newFilter.id) {
-          const parentPaths = getParentPathsOfSelectedSubPaths();
-          parentPaths.forEach(pathId => {
-            updatePathStyle(pathId, {
-              filter: formatSVGReference(newFilter.id)
+          // Apply to all selected element types
+          const filterRef = formatSVGReference(newFilter.id);
+          
+          // Apply to parent paths of selected sub-paths
+          if (hasSubPaths) {
+            const parentPaths = getParentPathsOfSelectedSubPaths();
+            parentPaths.forEach(pathId => {
+              updatePathStyle(pathId, {
+                filter: filterRef
+              });
             });
-          });
+          }
+          
+          // Apply to selected path
+          if (hasSelectedPath && selectedPath) {
+            updatePathStyle(selectedPath.id, {
+              filter: filterRef
+            });
+          }
+          
+          // Apply to selected texts
+          if (hasTexts) {
+            selection.selectedTexts.forEach(textId => {
+              updateTextStyle(textId, {
+                filter: filterRef
+              });
+            });
+          }
+          
+          // Apply to selected groups
+          if (hasGroups) {
+            selection.selectedGroups.forEach(groupId => {
+              const currentGroup = useEditorStore.getState().groups.find(group => group.id === groupId);
+              updateGroup(groupId, {
+                style: {
+                  ...currentGroup?.style,
+                  filter: filterRef
+                }
+              });
+            });
+          }
+          
+          // Apply to selected images
+          if (hasImages) {
+            selection.selectedImages.forEach(imageId => {
+              const currentImage = useEditorStore.getState().images.find(img => img.id === imageId);
+              updateImage(imageId, {
+                style: {
+                  ...currentImage?.style,
+                  filter: filterRef
+                }
+              });
+            });
+          }
         }
       }, 200);
       return;
     }
 
+    // Apply to all selected element types when filter already exists
+    const filterRef = formatSVGReference(existingFilter.id);
+    
     // Apply to parent paths of selected sub-paths
-    const parentPaths = getParentPathsOfSelectedSubPaths();
-    parentPaths.forEach(pathId => {
-      updatePathStyle(pathId, {
-        filter: formatSVGReference(existingFilter.id)
+    if (hasSubPaths) {
+      const parentPaths = getParentPathsOfSelectedSubPaths();
+      parentPaths.forEach(pathId => {
+        updatePathStyle(pathId, {
+          filter: filterRef
+        });
       });
-    });
+    }
+    
+    // Apply to selected path
+    if (hasSelectedPath && selectedPath) {
+      updatePathStyle(selectedPath.id, {
+        filter: filterRef
+      });
+    }
+    
+    // Apply to selected texts
+    if (hasTexts) {
+      selection.selectedTexts.forEach(textId => {
+        updateTextStyle(textId, {
+          filter: filterRef
+        });
+      });
+    }
+    
+    // Apply to selected groups
+    if (hasGroups) {
+      selection.selectedGroups.forEach(groupId => {
+        const currentGroup = useEditorStore.getState().groups.find(group => group.id === groupId);
+        updateGroup(groupId, {
+          style: {
+            ...currentGroup?.style,
+            filter: filterRef
+          }
+        });
+      });
+    }
+    
+    // Apply to selected images
+    if (hasImages) {
+      selection.selectedImages.forEach(imageId => {
+        const currentImage = useEditorStore.getState().images.find(img => img.id === imageId);
+        updateImage(imageId, {
+          style: {
+            ...currentImage?.style,
+            filter: filterRef
+          }
+        });
+      });
+    }
   };
 
   const handleApplyFilterToPath = (filterId: string) => {
@@ -1312,10 +1421,20 @@ export const FilterControls: React.FC = () => {
           Quick Apply:
         </span>
         <div style={{ fontSize: '11px', color: '#999', marginBottom: '6px' }}>
-          {hasPathSelection 
-            ? `Apply to ${selectedSubPaths.length} selected sub-path${selectedSubPaths.length > 1 ? 's' : ''}`
-            : 'Select sub-paths first to apply filters'
-          }
+          {(() => {
+            const selectedElements = [];
+            if (selectedSubPaths.length > 0) selectedElements.push(`${selectedSubPaths.length} sub-path${selectedSubPaths.length > 1 ? 's' : ''}`);
+            if (selectedPath) selectedElements.push('1 path');
+            if (selection.selectedTexts.length > 0) selectedElements.push(`${selection.selectedTexts.length} text${selection.selectedTexts.length > 1 ? 's' : ''}`);
+            if (selection.selectedGroups.length > 0) selectedElements.push(`${selection.selectedGroups.length} group${selection.selectedGroups.length > 1 ? 's' : ''}`);
+            if (selection.selectedImages.length > 0) selectedElements.push(`${selection.selectedImages.length} image${selection.selectedImages.length > 1 ? 's' : ''}`);
+            
+            if (selectedElements.length === 0) {
+              return 'Select elements (sub-paths, paths, texts, groups, or images) first to apply filters';
+            }
+            
+            return `Apply to ${selectedElements.join(', ')}`;
+          })()}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {/* Filtros Básicos */}
@@ -1324,15 +1443,15 @@ export const FilterControls: React.FC = () => {
             <PluginButton
               icon={<Droplets size={12} />}
               text="Drop Shadow"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('drop-shadow')}
             />
             <PluginButton
               icon={<Zap size={12} />}
               text="Blur"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('blur')}
             />
           </div>
@@ -1343,57 +1462,57 @@ export const FilterControls: React.FC = () => {
             <PluginButton
               icon={<Eye size={12} />}
               text="Grayscale"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('grayscale')}
             />
             <PluginButton
               icon={<Palette size={12} />}
               text="Sepia"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('sepia')}
             />
             <PluginButton
               icon={<RotateCcw size={12} />}
               text="Invert"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('invert')}
             />
             <PluginButton
               icon={<Sun size={12} />}
               text="Brightness"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('brightness')}
             />
             <PluginButton
               icon={<Contrast size={12} />}
               text="Contrast"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('contrast')}
             />
             <PluginButton
               icon={<Sparkles size={12} />}
               text="Saturate"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('saturate')}
             />
             <PluginButton
               icon={<RotateCcw size={12} />}
               text="Hue Rotate"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('hue-rotate')}
             />
             <PluginButton
               icon={<Grid size={12} />}
               text="Posterize"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('posterize')}
             />
           </div>
@@ -1404,57 +1523,57 @@ export const FilterControls: React.FC = () => {
             <PluginButton
               icon={<Layers size={12} />}
               text="Emboss"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('emboss')}
             />
             <PluginButton
               icon={<Zap size={12} />}
               text="Sharpen"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('sharpen')}
             />
             <PluginButton
               icon={<Edit size={12} />}
               text="Edge Detect"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('edge-detect')}
             />
             <PluginButton
               icon={<Sparkles size={12} />}
               text="Glow"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('glow')}
             />
             <PluginButton
               icon={<Layers size={12} />}
               text="Bevel"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('bevel')}
             />
             <PluginButton
               icon={<Move size={12} />}
               text="Motion Blur"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('motion-blur')}
             />
             <PluginButton
               icon={<Volume2 size={12} />}
               text="Noise"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('noise')}
             />
             <PluginButton
               icon={<Waves size={12} />}
               text="Wave Distort"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('wave-distortion')}
             />
           </div>
@@ -1465,57 +1584,57 @@ export const FilterControls: React.FC = () => {
             <PluginButton
               icon={<Brush size={12} />}
               text="Oil Painting"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('oil-painting')}
             />
             <PluginButton
               icon={<Droplets size={12} />}
               text="Watercolor"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('watercolor')}
             />
             <PluginButton
               icon={<Camera size={12} />}
               text="Vintage"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('vintage')}
             />
             <PluginButton
               icon={<Zap size={12} />}
               text="Neon Glow"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('neon-glow')}
             />
             <PluginButton
               icon={<Grid size={12} />}
               text="Mosaic"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('mosaic')}
             />
             <PluginButton
               icon={<Shuffle size={12} />}
               text="Glitch"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('glitch')}
             />
             <PluginButton
               icon={<Monitor size={12} />}
               text="Pixelate"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('pixelate')}
             />
             <PluginButton
               icon={<Clock size={12} />}
               text="Chromatic"
-              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('chromatic-aberration')}
             />
           </div>
@@ -1526,78 +1645,78 @@ export const FilterControls: React.FC = () => {
             <PluginButton
               icon={<Activity size={12} />}
               text="Dancing Stroke"
-              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('dancing-stroke')}
             />
             <PluginButton
               icon={<Cloud size={12} />}
               text="Smoke"
-              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('smoke')}
             />
             <PluginButton
               icon={<Waves size={12} />}
               text="Waves"
-              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('waves')}
             />
             <PluginButton
               icon={<FileText size={12} />}
               text="Paper"
-              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('paper-texture')}
             />
             <PluginButton
               icon={<Sparkle size={12} />}
               text="Zebra"
-              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('zebra')}
             />
             <PluginButton
               icon={<Network size={12} />}
               text="Net"
-              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('net')}
             />
             <PluginButton
               icon={<Wind size={12} />}
               text="Dust"
-              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('dust')}
             />
             <PluginButton
               icon={<Layers size={12} />}
               text="Stripes"
-              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('colored-stripes')}
             />
             <PluginButton
               icon={<Sparkles size={12} />}
               text="Spots"
-              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('colored-spots')}
             />
             <PluginButton
               icon={<Flame size={12} />}
               text="Flame"
-              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('colored-flame')}
             />
             <PluginButton
               icon={<Droplets size={12} />}
               text="Advanced Watercolor"
-              color={hasPathSelection ? '#ff6b35' : '#6c757d'}
-              disabled={!hasPathSelection}
+              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+              disabled={!hasAnyElementsSelected}
               onPointerDown={() => handleQuickApplyFilter('advanced-watercolor')}
             />
           </div>
