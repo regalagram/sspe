@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useSvgTextBBox } from '../../utils/SvgTextBBox';
+import { useSvgTextBBox } from '../../hooks/useSvgTextBBox';
 import { useEditorStore } from '../../store/editorStore';
 import { PluginButton } from '../../components/PluginButton';
 import { 
