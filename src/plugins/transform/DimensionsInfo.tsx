@@ -8,7 +8,8 @@ interface DimensionsInfoProps {
 
 export const DimensionsInfo: React.FC<DimensionsInfoProps> = ({ bounds, viewport }) => {
   // Calculate the position below the bounding box (in world coordinates, so it appears at a fixed screen distance)
-  const screenDistance = 20; // px in screen space
+  // Increased distance to avoid overlapping with the bottom edge handle
+  const screenDistance = 40; // px in screen space - increased from 20 to avoid handle overlap
   const infoY = bounds.y + bounds.height + screenDistance / viewport.zoom;
   const infoX = bounds.x + bounds.width / 2; // Center horizontally
   
