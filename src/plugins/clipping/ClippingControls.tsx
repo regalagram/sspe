@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { createDefaultClipPath, createDefaultMask, formatSVGReference } from '../../utils/svg-elements-utils';
+import { formatSVGReference } from '../../utils/svg-elements-utils';
 import { PluginButton } from '../../components/PluginButton';
 import { ElementPreview } from '../../components/ElementPreview';
 import { Plus, Trash2, Scissors, Eye } from 'lucide-react';
@@ -36,7 +36,6 @@ export const ClippingControls: React.FC = () => {
     ? paths.find(path => path.id === selection.selectedPaths[0])
     : null;
 
-  // Find the parent paths of selected sub-paths
   const getParentPathsOfSelectedSubPaths = () => {
     const parentPaths: string[] = [];
     selectedSubPaths.forEach(subPathId => {
@@ -50,13 +49,25 @@ export const ClippingControls: React.FC = () => {
     return parentPaths;
   };
 
-  const handleCreateClipPath = () => {
-    addClipPath(createDefaultClipPath());
-  };
+  // Helper functions for creating default structures
+  const createDefaultClipPath = () => ({
+    type: 'clipPath' as const,
+    clipPathUnits: 'userSpaceOnUse' as const,
+    children: [],
+    locked: false,
+  });
 
-  const handleCreateMask = () => {
-    addMask(createDefaultMask());
-  };
+  const createDefaultMask = () => ({
+    type: 'mask' as const,
+    maskUnits: 'userSpaceOnUse' as const,
+    maskContentUnits: 'userSpaceOnUse' as const,
+    x: 0,
+    y: 0,
+    width: 100,
+    height: 100,
+    children: [],
+    locked: false,
+  });
 
   const handleCreateClipFromSelection = () => {
     if (selectedSubPaths.length === 0) {
@@ -735,24 +746,29 @@ export const ClippingControls: React.FC = () => {
             <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
               Create Clip Path:
             </span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <PluginButton
-                icon={<Plus size={12} />}
-                text={hasPathSelection 
-                  ? `From Selection (${selectedSubPaths.length})`
-                  : 'From Selection (none)'
-                }
-                color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-                disabled={!hasPathSelection}
-                onPointerDown={handleCreateClipFromSelection}
-              />
-              <PluginButton
-                icon={<Plus size={12} />}
-                text="Empty Clip Path"
-                color="#17a2b8"
-                onPointerDown={handleCreateClipPath}
-              />
-            </div>
+            <PluginButton
+              icon={<Plus size={12} />}
+              text={hasPathSelection 
+                ? `From Selection (${selectedSubPaths.length})`
+                : 'From Selection (none)'
+              }
+              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
+              disabled={!hasPathSelection}
+              onPointerDown={handleCreateClipFromSelection}
+            />
+            {!hasPathSelection && (
+              <div style={{ 
+                fontSize: '10px', 
+                color: '#999', 
+                fontStyle: 'italic',
+                padding: '4px',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '3px',
+                border: '1px solid #e9ecef'
+              }}>
+                Select one or more sub-paths to create a clipping path
+              </div>
+            )}
           </div>
 
           {/* Clip Path List */}
@@ -1006,24 +1022,29 @@ export const ClippingControls: React.FC = () => {
             <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
               Create Mask:
             </span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <PluginButton
-                icon={<Plus size={12} />}
-                text={hasPathSelection 
-                  ? `From Selection (${selectedSubPaths.length})`
-                  : 'From Selection (none)'
-                }
-                color={hasPathSelection ? '#17a2b8' : '#6c757d'}
-                disabled={!hasPathSelection}
-                onPointerDown={handleCreateMaskFromSelection}
-              />
-              <PluginButton
-                icon={<Plus size={12} />}
-                text="Empty Mask"
-                color="#17a2b8"
-                onPointerDown={handleCreateMask}
-              />
-            </div>
+            <PluginButton
+              icon={<Plus size={12} />}
+              text={hasPathSelection 
+                ? `From Selection (${selectedSubPaths.length})`
+                : 'From Selection (none)'
+              }
+              color={hasPathSelection ? '#17a2b8' : '#6c757d'}
+              disabled={!hasPathSelection}
+              onPointerDown={handleCreateMaskFromSelection}
+            />
+            {!hasPathSelection && (
+              <div style={{ 
+                fontSize: '10px', 
+                color: '#999', 
+                fontStyle: 'italic',
+                padding: '4px',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '3px',
+                border: '1px solid #e9ecef'
+              }}>
+                Select one or more sub-paths to create a mask
+              </div>
+            )}
           </div>
 
           {/* Mask List */}
