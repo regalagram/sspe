@@ -18,6 +18,18 @@ export const ImageRenderer: React.FC = () => {
         const isSelected = selection.selectedImages.includes(image.id);
         const strokeWidth = 1 / viewport.zoom;
         
+        // Debug log for images with masks/clips
+        if (image.style?.mask || image.style?.clipPath) {
+          console.log('🖼️ Rendering image with mask/clip:', {
+            imageId: image.id,
+            position: { x: image.x, y: image.y },
+            size: { width: image.width, height: image.height },
+            mask: image.style?.mask,
+            clipPath: image.style?.clipPath,
+            style: image.style
+          });
+        }
+        
         return (
           <g key={image.id} data-image-id={image.id}>
             {/* Image element */}
@@ -48,15 +60,12 @@ export const ImageRenderer: React.FC = () => {
                 width={image.width}
                 height={image.height}
                 fill="none"
-                stroke="#007ACC"
+                stroke="#007bff"
                 strokeWidth={strokeWidth}
-                strokeDasharray={`${4 / viewport.zoom} ${4 / viewport.zoom}`}
+                strokeDasharray={`${2 / viewport.zoom} ${2 / viewport.zoom}`}
                 pointerEvents="none"
-                data-element-type="image-selection"
-                data-element-id={image.id}
               />
             )}
-            
           </g>
         );
       })}

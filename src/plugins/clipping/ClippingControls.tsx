@@ -11,6 +11,7 @@ export const ClippingControls: React.FC = () => {
     masks,
     selection, 
     paths,
+    images,
     addClipPath, 
     updateClipPath, 
     removeClipPath,
@@ -26,6 +27,7 @@ export const ClippingControls: React.FC = () => {
   } = useEditorStore();
   
   const [activeTab, setActiveTab] = useState<'clips' | 'masks'>('clips');
+  const [scaleToFit, setScaleToFit] = useState(false);
 
   const selectedSubPaths = selection.selectedSubPaths;
   const hasPathSelection = selectedSubPaths.length > 0;
@@ -61,6 +63,9 @@ export const ClippingControls: React.FC = () => {
       alert('Please select one or more sub-paths to create a clipping path');
       return;
     }
+
+    console.log('Creating clip from selection...');
+    console.log('Selected sub-paths:', selectedSubPaths);
 
     // Collect selected sub-paths data and calculate bounding box in one pass
     const selectedData: Array<{subPath: any, style: any}> = [];
@@ -109,62 +114,36 @@ export const ClippingControls: React.FC = () => {
 
     if (selectedData.length === 0) return;
 
-    // If no valid coordinates found, use defaults
-    let offsetX = 0, offsetY = 0;
-    
-    if (minX !== Infinity) {
-      // Store original min values for normalization
-      const originalMinX = minX;
-      const originalMinY = minY;
-      
-      // The offset is the original minimum to start at 0,0
-      offsetX = originalMinX;
-      offsetY = originalMinY;
-    }
+    console.log('Bounding box calculated:', { minX, minY, maxX, maxY });
 
-    // Now normalize the coordinates and create the clip path data
+    // For clip paths, we DON'T normalize coordinates - we want to preserve the original position
+    // This ensures the clip path appears in the same location as the original paths
     const selectedSubPathsData = selectedData.map((data, index) => {
-      const normalizedCommands = data.subPath.commands.map((cmd: any) => {
-        const newCmd = { ...cmd };
-        
-        // Normalize main coordinates (subtract the offset to start from 0,0)
-        if (newCmd.x !== undefined) newCmd.x = newCmd.x - offsetX;
-        if (newCmd.y !== undefined) newCmd.y = newCmd.y - offsetY;
-        
-        // Normalize control points
-        if (newCmd.x1 !== undefined) newCmd.x1 = newCmd.x1 - offsetX;
-        if (newCmd.y1 !== undefined) newCmd.y1 = newCmd.y1 - offsetY;
-        if (newCmd.x2 !== undefined) newCmd.x2 = newCmd.x2 - offsetX;
-        if (newCmd.y2 !== undefined) newCmd.y2 = newCmd.y2 - offsetY;
-        
-        return newCmd;
-      });
-
+      console.log('Processing sub-path data:', data);
       return {
         type: 'path' as const,
         id: `clip-${data.subPath.id}`,
         subPaths: [{
           ...data.subPath,
-          commands: normalizedCommands
+          commands: data.subPath.commands // Keep original commands with original coordinates
         }],
         style: data.style
       };
     });
 
-    // Calculate dimensions based on normalized content
+    console.log('Final clip path data:', selectedSubPathsData);
+
+    // Calculate dimensions based on original coordinates
     const width = minX !== Infinity ? (maxX - minX) : 100;
     const height = minX !== Infinity ? (maxY - minY) : 100;
     
     const clipPathData = {
       ...createDefaultClipPath(),
       clipPathUnits: 'userSpaceOnUse' as const,
-      x: 0,
-      y: 0,
-      width: width,
-      height: height,
       children: selectedSubPathsData
     };
 
+    console.log('Adding clip path:', clipPathData);
     addClipPath(clipPathData);
     
     // Optionally remove original sub-paths
@@ -228,63 +207,37 @@ export const ClippingControls: React.FC = () => {
 
     if (selectedData.length === 0) return;
 
-    // If no valid coordinates found, use defaults
-    let offsetX = 0, offsetY = 0;
-    
-    if (minX !== Infinity) {
-      // Store original min values for normalization
-      const originalMinX = minX;
-      const originalMinY = minY;
-      
-      // The offset is the original minimum to start at 0,0
-      offsetX = originalMinX;
-      offsetY = originalMinY;
-    }
-
-    // Now normalize the coordinates and create the mask data
+    // For masks with userSpaceOnUse, we keep the original coordinates for precision
     const selectedSubPathsData = selectedData.map((data, index) => {
-      const normalizedCommands = data.subPath.commands.map((cmd: any) => {
-        const newCmd = { ...cmd };
-        
-        // Normalize main coordinates (subtract the offset to start from 0,0)
-        if (newCmd.x !== undefined) newCmd.x = newCmd.x - offsetX;
-        if (newCmd.y !== undefined) newCmd.y = newCmd.y - offsetY;
-        
-        // Normalize control points
-        if (newCmd.x1 !== undefined) newCmd.x1 = newCmd.x1 - offsetX;
-        if (newCmd.y1 !== undefined) newCmd.y1 = newCmd.y1 - offsetY;
-        if (newCmd.x2 !== undefined) newCmd.x2 = newCmd.x2 - offsetX;
-        if (newCmd.y2 !== undefined) newCmd.y2 = newCmd.y2 - offsetY;
-        
-        return newCmd;
-      });
-
       return {
         type: 'path' as const,
         id: `mask-${data.subPath.id}`,
         subPaths: [{
           ...data.subPath,
-          commands: normalizedCommands
+          commands: data.subPath.commands // Keep original commands with full precision
         }],
-        style: data.style
+        // For masks, we need white fill for visibility (black = transparent, white = opaque)
+        style: {
+          ...data.style,
+          fill: 'white', // Force white fill for masks
+          stroke: 'none' // Remove stroke to avoid edge effects
+        }
       };
     });
 
-    // Calculate dimensions based on normalized content
-    const width = minX !== Infinity ? (maxX - minX) : 100;
-    const height = minX !== Infinity ? (maxY - minY) : 100;
+    // Calculate dimensions based on original coordinates  
+    const maskWidth = minX !== Infinity ? (maxX - minX) : 100;
+    const maskHeight = minX !== Infinity ? (maxY - minY) : 100;
     
     const maskData = {
       ...createDefaultMask(),
-      maskUnits: 'userSpaceOnUse' as const, // Change to userSpaceOnUse for explicit dimensions
+      maskUnits: 'userSpaceOnUse' as const,
       maskContentUnits: 'userSpaceOnUse' as const,
-      x: 0,
-      y: 0,
-      width: width,
-      height: height,
+      // Store original coordinates for precision
       children: selectedSubPathsData
     };
 
+    console.log('Creating mask with data:', maskData);
     addMask(maskData);
     
     // Optionally remove original sub-paths
@@ -349,8 +302,11 @@ export const ClippingControls: React.FC = () => {
   // Apply clipping to group elements
   const handleApplyClipToGroup = (clipId: string) => {
     selection.selectedGroups.forEach(groupId => {
+      // Get current group to preserve existing style
+      const currentGroup = useEditorStore.getState().groups.find(group => group.id === groupId);
       updateGroup(groupId, {
         style: {
+          ...currentGroup?.style,
           clipPath: formatSVGReference(clipId)
         }
       });
@@ -359,8 +315,11 @@ export const ClippingControls: React.FC = () => {
 
   const handleApplyMaskToGroup = (maskId: string) => {
     selection.selectedGroups.forEach(groupId => {
+      // Get current group to preserve existing style
+      const currentGroup = useEditorStore.getState().groups.find(group => group.id === groupId);
       updateGroup(groupId, {
         style: {
+          ...currentGroup?.style,
           mask: formatSVGReference(maskId)
         }
       });
@@ -369,22 +328,288 @@ export const ClippingControls: React.FC = () => {
 
   // Apply clipping to image elements
   const handleApplyClipToImage = (clipId: string) => {
+    console.log('Applying clip:', clipId, 'to images:', selection.selectedImages);
+    
     selection.selectedImages.forEach(imageId => {
-      updateImage(imageId, {
-        style: {
-          clipPath: formatSVGReference(clipId)
+      // Get current image and clipPath
+      const currentImage = useEditorStore.getState().images.find(img => img.id === imageId);
+      const currentClipPath = clipPaths.find(cp => cp.id === clipId);
+      
+      if (!currentImage || !currentClipPath) return;
+      
+      console.log('Image before:', currentImage);
+      console.log('Original clipPath:', currentClipPath);
+      
+      // Calculate translation needed to move clipPath to image position
+      const imageX = currentImage.x;
+      const imageY = currentImage.y;
+      
+      // Get clipPath bounding box
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      
+      currentClipPath.children.forEach(child => {
+        if (child.type === 'path' && (child as any).subPaths) {
+          (child as any).subPaths.forEach((subPath: any) => {
+            subPath.commands.forEach((cmd: any) => {
+              if (cmd.x !== undefined) {
+                minX = Math.min(minX, cmd.x);
+                maxX = Math.max(maxX, cmd.x);
+              }
+              if (cmd.y !== undefined) {
+                minY = Math.min(minY, cmd.y);
+                maxY = Math.max(maxY, cmd.y);
+              }
+            });
+          });
         }
       });
+      
+      const clipPathX = minX !== Infinity ? minX : 0;
+      const clipPathY = minY !== Infinity ? minY : 0;
+      
+      // Calculate translation
+      const translateX = imageX - clipPathX;
+      const translateY = imageY - clipPathY;
+      
+      console.log('Coordinate adjustment:', {
+        imagePos: { x: imageX, y: imageY },
+        clipPathPos: { x: clipPathX, y: clipPathY },
+        translation: { x: translateX, y: translateY },
+        scaleToFit
+      });
+      
+      let transform = `translate(${translateX}, ${translateY})`;
+      
+      // If scale to fit is enabled, calculate scaling
+      if (scaleToFit) {
+        const clipWidth = maxX - minX;
+        const clipHeight = maxY - minY;
+        const imageWidth = currentImage.width;
+        const imageHeight = currentImage.height;
+        
+        if (clipWidth > 0 && clipHeight > 0) {
+          const scaleX = imageWidth / clipWidth;
+          const scaleY = imageHeight / clipHeight;
+          
+          // Use uniform scaling (smaller scale to fit entirely)
+          const scale = Math.min(scaleX, scaleY);
+          
+          console.log('Scaling calculation:', {
+            clipSize: { width: clipWidth, height: clipHeight },
+            imageSize: { width: imageWidth, height: imageHeight },
+            scaleX, scaleY, scale
+          });
+          
+          // Center the scaled clipPath within the image
+          const scaledWidth = clipWidth * scale;
+          const scaledHeight = clipHeight * scale;
+          const centerOffsetX = (imageWidth - scaledWidth) / 2;
+          const centerOffsetY = (imageHeight - scaledHeight) / 2;
+          
+          // Simple approach: translate to image position, then center and scale
+          transform = `translate(${imageX + centerOffsetX}, ${imageY + centerOffsetY}) scale(${scale}) translate(${-clipPathX}, ${-clipPathY})`;
+          
+          console.log('Final transform:', transform);
+        }
+      }
+      
+      // Update the existing clipPath with transform
+      const updatedClipPath = {
+        ...currentClipPath,
+        transform
+      };
+      
+      updateClipPath(clipId, updatedClipPath);
+      console.log('Updated clipPath with transform:', updatedClipPath);
+      
+      const newStyle = {
+        ...currentImage?.style,
+        clipPath: formatSVGReference(clipId)
+      };
+      console.log('Applying style:', newStyle);
+      
+      updateImage(imageId, {
+        style: newStyle
+      });
+      
+      // Check the result
+      setTimeout(() => {
+        const updatedImage = useEditorStore.getState().images.find(img => img.id === imageId);
+        console.log('Image after:', updatedImage);
+      }, 100);
     });
   };
 
   const handleApplyMaskToImage = (maskId: string) => {
+    console.log('Applying mask:', maskId, 'to images:', selection.selectedImages);
+    
     selection.selectedImages.forEach(imageId => {
-      updateImage(imageId, {
-        style: {
-          mask: formatSVGReference(maskId)
+      // Get current image and mask
+      const currentImage = useEditorStore.getState().images.find(img => img.id === imageId);
+      const currentMask = masks.find(m => m.id === maskId);
+      
+      if (!currentImage || !currentMask) {
+        console.log('Missing image or mask:', { currentImage, currentMask });
+        return;
+      }
+      
+      console.log('Found image:', currentImage);
+      console.log('Found mask:', currentMask);
+      
+      // Calculate translation needed to move mask to image position
+      const imageX = currentImage.x;
+      const imageY = currentImage.y;
+      
+      // Get mask bounding box
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      
+      currentMask.children.forEach(child => {
+        if (child.type === 'path' && (child as any).subPaths) {
+          (child as any).subPaths.forEach((subPath: any) => {
+            subPath.commands.forEach((cmd: any) => {
+              if (cmd.x !== undefined) {
+                minX = Math.min(minX, cmd.x);
+                maxX = Math.max(maxX, cmd.x);
+              }
+              if (cmd.y !== undefined) {
+                minY = Math.min(minY, cmd.y);
+                maxY = Math.max(maxY, cmd.y);
+              }
+            });
+          });
         }
       });
+      
+      const maskX = minX !== Infinity ? minX : 0;
+      const maskY = minY !== Infinity ? minY : 0;
+      
+      console.log('Mask bounding box:', { minX, minY, maxX, maxY, maskX, maskY });
+      console.log('Image position:', { imageX, imageY });
+      
+      // Calculate translation
+      const translateX = imageX - maskX;
+      const translateY = imageY - maskY;
+      
+      console.log('Translation needed:', { translateX, translateY });
+
+      // RADICAL SOLUTION for MASKS: Instead of moving the mask, recreate the mask path at the image position
+      if (currentMask.type === 'mask') {
+        // Clone the mask and recreate its paths at the image position
+        const clonedMask = {
+          ...currentMask,
+          id: `${currentMask.id}-positioned`, // New ID to avoid conflicts
+          transform: undefined, // No transform needed
+          children: currentMask.children.map((child: any) => {
+            if (child.type === 'path') {
+              // Recreate the path at the image position
+              const translatedSubPaths = (child as any).subPaths?.map((subPath: any) => ({
+                ...subPath,
+                commands: subPath.commands?.map((cmd: any) => {
+                  const newCmd = { ...cmd };
+                  if (cmd.x !== undefined) newCmd.x = cmd.x + translateX;
+                  if (cmd.y !== undefined) newCmd.y = cmd.y + translateY;
+                  if (cmd.x1 !== undefined) newCmd.x1 = cmd.x1 + translateX;
+                  if (cmd.y1 !== undefined) newCmd.y1 = cmd.y1 + translateY;
+                  if (cmd.x2 !== undefined) newCmd.x2 = cmd.x2 + translateX;
+                  if (cmd.y2 !== undefined) newCmd.y2 = cmd.y2 + translateY;
+                  return newCmd;
+                })
+              }));
+              
+              return {
+                ...child,
+                id: `${child.id}-translated`,
+                subPaths: translatedSubPaths
+              };
+            }
+            return child;
+          })
+        };
+        
+        // Add the new positioned mask
+        addMask(clonedMask);
+        
+        // Update the image to reference the new mask
+        const currentImage = images.find(img => img.id === imageId);
+        if (currentImage) {
+          updateImage(imageId, {
+            ...currentImage,
+            style: { ...currentImage.style, mask: `url(#${clonedMask.id})` }
+          });
+        }
+
+        console.log('🎭 MASK: Recreated mask at image position instead of using transforms');
+        console.log('🎭 Original mask position:', { maskX, maskY });
+        console.log('🎭 New mask position:', { imageX, imageY });
+        console.log('🎭 Translation applied to paths:', { translateX, translateY });
+        console.log('🎭 New mask ID:', clonedMask.id);
+        
+        return; // Skip all the transform logic
+      }
+
+      let transform = `translate(${translateX}, ${translateY})`;
+
+      // If scale to fit is enabled, calculate scaling  
+      if (scaleToFit) {
+        const maskWidth = maxX - minX;
+        const maskHeight = maxY - minY;
+        const imageWidth = currentImage.width;
+        const imageHeight = currentImage.height;
+        
+        if (maskWidth > 0 && maskHeight > 0) {
+          const scaleX = imageWidth / maskWidth;
+          const scaleY = imageHeight / maskHeight;
+          
+          // Use uniform scaling (smaller scale to fit entirely)
+          const scale = Math.min(scaleX, scaleY);
+          
+          // Center the scaled mask within the image
+          const scaledWidth = maskWidth * scale;
+          const scaledHeight = maskHeight * scale;
+          const centerOffsetX = (imageWidth - scaledWidth) / 2;
+          const centerOffsetY = (imageHeight - scaledHeight) / 2;
+          
+          // For clipPaths, we can use scaling
+          transform = `translate(${imageX + centerOffsetX}, ${imageY + centerOffsetY}) scale(${scale}) translate(${-maskX}, ${-maskY})`;
+        }
+      }
+      
+      console.log('Applying transform:', transform);
+      
+      // Update the existing mask with transform
+      const updatedMask = {
+        ...currentMask,
+        transform
+      };
+      
+      console.log('Updated mask:', updatedMask);
+      updateMask(maskId, updatedMask);
+      
+      const newStyle = {
+        ...currentImage?.style,
+        mask: formatSVGReference(maskId)
+        // Don't override clipPath - preserve existing clipping
+      };
+      
+      console.log('Applying style to image:', newStyle);
+      
+      updateImage(imageId, {
+        style: newStyle
+      });
+      
+      // Let's check the final state after a short delay
+      setTimeout(() => {
+        const finalMask = useEditorStore.getState().masks.find(m => m.id === maskId);
+        const finalImage = useEditorStore.getState().images.find(img => img.id === imageId);
+        console.log('Final mask state:', finalMask);
+        console.log('Final image state:', finalImage);
+        console.log('Final image style mask:', finalImage?.style?.mask);
+        
+        // Let's also verify the SVG is correct by checking what's being rendered
+        console.log('🔍 SVG Debug - Mask transform:', finalMask?.transform);
+        console.log('🔍 SVG Debug - Image mask reference:', finalImage?.style?.mask);
+        console.log('🔍 SVG Debug - Expected mask ID:', `url(#${maskId})`);
+      }, 100);
     });
   };
 
@@ -533,6 +758,29 @@ export const ClippingControls: React.FC = () => {
           {/* Clip Path List */}
           {clipPaths.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              
+              {/* Scale to Fit Option */}
+              <div style={{ 
+                padding: '6px', 
+                backgroundColor: '#f0f8ff', 
+                borderRadius: '3px',
+                fontSize: '11px',
+                border: '1px solid #e0e0e0'
+              }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={scaleToFit}
+                    onChange={(e) => setScaleToFit(e.target.checked)}
+                    style={{ margin: 0 }}
+                  />
+                  <span style={{ fontWeight: '500' }}>Scale to fit destination</span>
+                </label>
+                <div style={{ color: '#666', fontSize: '10px', marginTop: '2px', marginLeft: '18px' }}>
+                  {scaleToFit ? 'Clip will scale to fit the target size' : 'Clip will keep original size and position'}
+                </div>
+              </div>
+              
               <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
                 Clip Paths ({clipPaths.length}):
               </span>
@@ -781,6 +1029,46 @@ export const ClippingControls: React.FC = () => {
           {/* Mask List */}
           {masks.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              
+              {/* Scale to Fit Option for Masks */}
+              <div style={{ 
+                padding: '6px', 
+                backgroundColor: '#f0f8ff', 
+                borderRadius: '3px',
+                fontSize: '11px',
+                border: '1px solid #e0e0e0'
+              }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={scaleToFit}
+                    onChange={(e) => setScaleToFit(e.target.checked)}
+                    style={{ margin: 0 }}
+                  />
+                  <span style={{ fontWeight: '500' }}>Scale to fit destination</span>
+                </label>
+                <div style={{ color: '#666', fontSize: '10px', marginTop: '2px', marginLeft: '18px' }}>
+                  {scaleToFit ? 'Mask will scale to fit the target size' : 'Mask will keep original size and position'}
+                </div>
+              </div>
+              
+              {/* Mask Explanation */}
+              <div style={{ 
+                padding: '6px', 
+                backgroundColor: '#fff3cd', 
+                borderRadius: '3px',
+                fontSize: '10px',
+                border: '1px solid #ffeaa7'
+              }}>
+                <div style={{ fontWeight: '500', marginBottom: '2px', color: '#856404' }}>💡 How masks work:</div>
+                <div style={{ color: '#856404' }}>
+                  • White areas = image visible<br/>
+                  • Black areas = image hidden<br/>
+                  • Gray areas = partially transparent<br/>
+                  • Paths are automatically converted to white
+                </div>
+              </div>
+              
               <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
                 Masks ({masks.length}):
               </span>

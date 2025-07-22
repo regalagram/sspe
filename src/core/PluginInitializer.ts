@@ -56,10 +56,10 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(PathRendererPlugin);
   pluginManager.registerPlugin(TextRendererPlugin);
   pluginManager.registerPlugin(GroupRendererPlugin);
-  pluginManager.registerPlugin(ImagePlugin); // Image rendering and controls
   pluginManager.registerPlugin(FilterPlugin); // Filter definitions (must be before paths use them)
-  pluginManager.registerPlugin(ClippingPlugin); // Clip path and mask definitions
+  pluginManager.registerPlugin(ClippingPlugin); // Clip path and mask definitions (must be before ImagePlugin)
   pluginManager.registerPlugin(MarkerPlugin); // Marker definitions
+  pluginManager.registerPlugin(ImagePlugin); // Image rendering and controls
   pluginManager.registerPlugin(SymbolPlugin); // Symbol definitions and use instances
   pluginManager.registerPlugin(GuidelinesPlugin);
   pluginManager.registerPlugin(VisualDebugPlugin);

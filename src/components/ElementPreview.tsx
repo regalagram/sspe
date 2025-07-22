@@ -126,6 +126,50 @@ export const ElementPreview: React.FC<ElementPreviewProps> = ({
         return `0 0 ${(element as any).markerWidth || 6} ${(element as any).markerHeight || 6}`;
       case 'clipPath':
       case 'mask':
+        // Calculate viewBox from children content
+        const children = (element as any).children || [];
+        if (children.length > 0) {
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          
+          children.forEach((child: any) => {
+            if (child.type === 'path' && child.subPaths) {
+              child.subPaths.forEach((subPath: any) => {
+                subPath.commands?.forEach((cmd: any) => {
+                  if (cmd.x !== undefined) {
+                    minX = Math.min(minX, cmd.x);
+                    maxX = Math.max(maxX, cmd.x);
+                  }
+                  if (cmd.y !== undefined) {
+                    minY = Math.min(minY, cmd.y);
+                    maxY = Math.max(maxY, cmd.y);
+                  }
+                  // Handle control points
+                  if (cmd.x1 !== undefined) {
+                    minX = Math.min(minX, cmd.x1);
+                    maxX = Math.max(maxX, cmd.x1);
+                  }
+                  if (cmd.y1 !== undefined) {
+                    minY = Math.min(minY, cmd.y1);
+                    maxY = Math.max(maxY, cmd.y1);
+                  }
+                  if (cmd.x2 !== undefined) {
+                    minX = Math.min(minX, cmd.x2);
+                    maxX = Math.max(maxX, cmd.x2);
+                  }
+                  if (cmd.y2 !== undefined) {
+                    minY = Math.min(minY, cmd.y2);
+                    maxY = Math.max(maxY, cmd.y2);
+                  }
+                });
+              });
+            }
+          });
+          
+          if (minX !== Infinity) {
+            const padding = Math.max((maxX - minX) * 0.1, (maxY - minY) * 0.1, 10);
+            return `${minX - padding} ${minY - padding} ${(maxX - minX) + (padding * 2)} ${(maxY - minY) + (padding * 2)}`;
+          }
+        }
         return '0 0 100 100';
       default:
         return '0 0 100 100';
@@ -223,16 +267,25 @@ export const ElementPreview: React.FC<ElementPreviewProps> = ({
 
         {elementType === 'mask' && (
           <>
+            {/* Background pattern to show mask effect */}
+            <defs>
+              <pattern id={`checker-${elementId}`} x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+                <rect x="0" y="0" width="4" height="4" fill="#f0f0f0"/>
+                <rect x="4" y="4" width="4" height="4" fill="#f0f0f0"/>
+                <rect x="4" y="0" width="4" height="4" fill="#e0e0e0"/>
+                <rect x="0" y="4" width="4" height="4" fill="#e0e0e0"/>
+              </pattern>
+            </defs>
             <rect 
               width="100%" 
               height="100%" 
-              fill="#666"
+              fill={`url(#checker-${elementId})`}
               mask={`url(#preview-${elementId})`}
             />
             {renderChildren((element as any).children || []).map((child, idx) => 
               child ? React.cloneElement(child as React.ReactElement, { 
                 key: `outline-${idx}`,
-                ...{ fill: 'none', stroke: '#999', strokeWidth: 1, strokeDasharray: '2,2' }
+                ...{ fill: 'none', stroke: '#007bff', strokeWidth: 1, strokeDasharray: '1,1' }
               } as any) : null
             )}
           </>
