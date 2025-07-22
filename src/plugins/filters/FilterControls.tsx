@@ -1320,7 +1320,7 @@ export const FilterControls: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {/* Filtros Básicos */}
           <div style={{ fontSize: '10px', color: '#666', fontWeight: '500', marginBottom: '2px' }}>Basic Filters:</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
             <PluginButton
               icon={<Droplets size={12} />}
               text="Drop Shadow"
@@ -1339,7 +1339,7 @@ export const FilterControls: React.FC = () => {
           
           {/* Filtros de Color */}
           <div style={{ fontSize: '10px', color: '#666', fontWeight: '500', marginTop: '8px', marginBottom: '2px' }}>Color Effects:</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
             <PluginButton
               icon={<Eye size={12} />}
               text="Grayscale"
@@ -1400,7 +1400,7 @@ export const FilterControls: React.FC = () => {
 
           {/* Filtros de Efectos Especiales */}
           <div style={{ fontSize: '10px', color: '#666', fontWeight: '500', marginTop: '8px', marginBottom: '2px' }}>Special Effects:</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
             <PluginButton
               icon={<Layers size={12} />}
               text="Emboss"
@@ -1461,7 +1461,7 @@ export const FilterControls: React.FC = () => {
 
           {/* Filtros Artísticos */}
           <div style={{ fontSize: '10px', color: '#666', fontWeight: '500', marginTop: '8px', marginBottom: '2px' }}>Artistic Filters:</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
             <PluginButton
               icon={<Brush size={12} />}
               text="Oil Painting"
@@ -1522,7 +1522,7 @@ export const FilterControls: React.FC = () => {
 
           {/* New Artistic Filters Inspired by SVG Filters Website */}
           <div style={{ fontSize: '10px', color: '#666', fontWeight: '500', marginTop: '8px', marginBottom: '2px' }}>Artistic Presets (Inspired):</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
             <PluginButton
               icon={<Activity size={12} />}
               text="Dancing Stroke"
@@ -1609,7 +1609,7 @@ export const FilterControls: React.FC = () => {
         <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
           Create Custom Filter:
         </span>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
           <PluginButton
             icon={<Droplets size={12} />}
             text="Drop Shadow"
@@ -1788,7 +1788,7 @@ export const FilterControls: React.FC = () => {
                   <span style={{ fontSize: '11px', color: '#666', fontWeight: '500' }}>
                     Filter ({filter.primitives.length} effects)
                   </span>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
                     {selectedPath && (
                       <button
                         onClick={() => handleApplyFilterToPath(filter.id)}
@@ -1875,7 +1875,7 @@ export const FilterControls: React.FC = () => {
               
               {/* Remove Filter Buttons */}
               <div style={{ paddingTop: '8px', borderTop: '1px solid #e9ecef' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
                   {selectedPath && selectedPath.style.filter && (
                     <button
                       onClick={handleRemoveFilterFromPath}
