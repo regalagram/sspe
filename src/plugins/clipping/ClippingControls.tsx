@@ -3,7 +3,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { formatSVGReference } from '../../utils/svg-elements-utils';
 import { PluginButton } from '../../components/PluginButton';
 import { ElementPreview } from '../../components/ElementPreview';
-import { Plus, Trash2, Scissors, Eye } from 'lucide-react';
+import { Plus, Scissors, Eye } from 'lucide-react';
 
 export const ClippingControls: React.FC = () => {
   const { 
@@ -22,7 +22,6 @@ export const ClippingControls: React.FC = () => {
     updateTextStyle,
     updateGroup,
     updateImage,
-    removePath,
     removeSubPath
   } = useEditorStore();
   
@@ -455,172 +454,25 @@ export const ClippingControls: React.FC = () => {
     console.log('Applying mask:', maskId, 'to images:', selection.selectedImages);
     
     selection.selectedImages.forEach(imageId => {
-      // Get current image and mask
+      // Get current image
       const currentImage = useEditorStore.getState().images.find(img => img.id === imageId);
-      const currentMask = masks.find(m => m.id === maskId);
       
-      if (!currentImage || !currentMask) {
-        console.log('Missing image or mask:', { currentImage, currentMask });
+      if (!currentImage) {
+        console.log('Missing image:', { currentImage });
         return;
       }
       
-      console.log('Found image:', currentImage);
-      console.log('Found mask:', currentMask);
-      
-      // Calculate translation needed to move mask to image position
-      const imageX = currentImage.x;
-      const imageY = currentImage.y;
-      
-      // Get mask bounding box
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      
-      currentMask.children.forEach(child => {
-        if (child.type === 'path' && (child as any).subPaths) {
-          (child as any).subPaths.forEach((subPath: any) => {
-            subPath.commands.forEach((cmd: any) => {
-              if (cmd.x !== undefined) {
-                minX = Math.min(minX, cmd.x);
-                maxX = Math.max(maxX, cmd.x);
-              }
-              if (cmd.y !== undefined) {
-                minY = Math.min(minY, cmd.y);
-                maxY = Math.max(maxY, cmd.y);
-              }
-            });
-          });
-        }
-      });
-      
-      const maskX = minX !== Infinity ? minX : 0;
-      const maskY = minY !== Infinity ? minY : 0;
-      
-      console.log('Mask bounding box:', { minX, minY, maxX, maxY, maskX, maskY });
-      console.log('Image position:', { imageX, imageY });
-      
-      // Calculate translation
-      const translateX = imageX - maskX;
-      const translateY = imageY - maskY;
-      
-      console.log('Translation needed:', { translateX, translateY });
-
-      // RADICAL SOLUTION for MASKS: Instead of moving the mask, recreate the mask path at the image position
-      if (currentMask.type === 'mask') {
-        // Clone the mask and recreate its paths at the image position
-        const clonedMask = {
-          ...currentMask,
-          id: `${currentMask.id}-positioned`, // New ID to avoid conflicts
-          transform: undefined, // No transform needed
-          children: currentMask.children.map((child: any) => {
-            if (child.type === 'path') {
-              // Recreate the path at the image position
-              const translatedSubPaths = (child as any).subPaths?.map((subPath: any) => ({
-                ...subPath,
-                commands: subPath.commands?.map((cmd: any) => {
-                  const newCmd = { ...cmd };
-                  if (cmd.x !== undefined) newCmd.x = cmd.x + translateX;
-                  if (cmd.y !== undefined) newCmd.y = cmd.y + translateY;
-                  if (cmd.x1 !== undefined) newCmd.x1 = cmd.x1 + translateX;
-                  if (cmd.y1 !== undefined) newCmd.y1 = cmd.y1 + translateY;
-                  if (cmd.x2 !== undefined) newCmd.x2 = cmd.x2 + translateX;
-                  if (cmd.y2 !== undefined) newCmd.y2 = cmd.y2 + translateY;
-                  return newCmd;
-                })
-              }));
-              
-              return {
-                ...child,
-                id: `${child.id}-translated`,
-                subPaths: translatedSubPaths
-              };
-            }
-            return child;
-          })
-        };
-        
-        // Add the new positioned mask
-        addMask(clonedMask);
-        
-        // Update the image to reference the new mask
-        const currentImage = images.find(img => img.id === imageId);
-        if (currentImage) {
-          updateImage(imageId, {
-            ...currentImage,
-            style: { ...currentImage.style, mask: `url(#${clonedMask.id})` }
-          });
-        }
-
-        console.log('🎭 MASK: Recreated mask at image position instead of using transforms');
-        console.log('🎭 Original mask position:', { maskX, maskY });
-        console.log('🎭 New mask position:', { imageX, imageY });
-        console.log('🎭 Translation applied to paths:', { translateX, translateY });
-        console.log('🎭 New mask ID:', clonedMask.id);
-        
-        return; // Skip all the transform logic
-      }
-
-      let transform = `translate(${translateX}, ${translateY})`;
-
-      // If scale to fit is enabled, calculate scaling  
-      if (scaleToFit) {
-        const maskWidth = maxX - minX;
-        const maskHeight = maxY - minY;
-        const imageWidth = currentImage.width;
-        const imageHeight = currentImage.height;
-        
-        if (maskWidth > 0 && maskHeight > 0) {
-          const scaleX = imageWidth / maskWidth;
-          const scaleY = imageHeight / maskHeight;
-          
-          // Use uniform scaling (smaller scale to fit entirely)
-          const scale = Math.min(scaleX, scaleY);
-          
-          // Center the scaled mask within the image
-          const scaledWidth = maskWidth * scale;
-          const scaledHeight = maskHeight * scale;
-          const centerOffsetX = (imageWidth - scaledWidth) / 2;
-          const centerOffsetY = (imageHeight - scaledHeight) / 2;
-          
-          // For clipPaths, we can use scaling
-          transform = `translate(${imageX + centerOffsetX}, ${imageY + centerOffsetY}) scale(${scale}) translate(${-maskX}, ${-maskY})`;
-        }
-      }
-      
-      console.log('Applying transform:', transform);
-      
-      // Update the existing mask with transform
-      const updatedMask = {
-        ...currentMask,
-        transform
-      };
-      
-      console.log('Updated mask:', updatedMask);
-      updateMask(maskId, updatedMask);
-      
+      // Simply apply the mask reference without any transformation or cloning
       const newStyle = {
         ...currentImage?.style,
         mask: formatSVGReference(maskId)
-        // Don't override clipPath - preserve existing clipping
       };
       
-      console.log('Applying style to image:', newStyle);
+      console.log('Applying mask style to image:', newStyle);
       
       updateImage(imageId, {
         style: newStyle
       });
-      
-      // Let's check the final state after a short delay
-      setTimeout(() => {
-        const finalMask = useEditorStore.getState().masks.find(m => m.id === maskId);
-        const finalImage = useEditorStore.getState().images.find(img => img.id === imageId);
-        console.log('Final mask state:', finalMask);
-        console.log('Final image state:', finalImage);
-        console.log('Final image style mask:', finalImage?.style?.mask);
-        
-        // Let's also verify the SVG is correct by checking what's being rendered
-        console.log('🔍 SVG Debug - Mask transform:', finalMask?.transform);
-        console.log('🔍 SVG Debug - Image mask reference:', finalImage?.style?.mask);
-        console.log('🔍 SVG Debug - Expected mask ID:', `url(#${maskId})`);
-      }, 100);
     });
   };
 
