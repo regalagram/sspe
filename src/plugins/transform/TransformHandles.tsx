@@ -35,6 +35,33 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
     dy = handle.position.y < centerY ? -margin : margin;
     return { dx, dy };
   }
+
+  function getEdgeOffset(handle: TransformHandle, size: number) {
+    const margin = (
+      baseHandleSize *
+      visualDebugSizes.globalFactor *
+      visualDebugSizes.commandPointsFactor *
+      visualDebugSizes.transformResizeFactor * 1
+    )/ viewport.zoom;
+    let dx = 0, dy = 0;
+    
+    // Apply offset based on edge direction
+    switch (handle.id) {
+      case 'n': // Top edge
+        dy = -margin;
+        break;
+      case 's': // Bottom edge
+        dy = margin;
+        break;
+      case 'e': // Right edge
+        dx = margin;
+        break;
+      case 'w': // Left edge
+        dx = -margin;
+        break;
+    }
+    return { dx, dy };
+  }
   return (
     <g className="transform-handles">
       <rect
@@ -52,7 +79,7 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
       />
       {handles.map((handle) => {
         const isHovered = hoveredHandle === handle.id;
-        const sizeFactor = handle.type === 'corner' 
+        const sizeFactor = handle.type === 'corner' || handle.type === 'edge'
           ? visualDebugSizes.transformResizeFactor 
           : visualDebugSizes.transformRotateFactor;
         const handleSize = (baseHandleSize * visualDebugSizes.globalFactor * sizeFactor) / viewport.zoom;
@@ -61,6 +88,8 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
         let offset = { dx: 0, dy: 0 };
         if (handle.type === 'corner') {
           offset = getCornerOffset(handle, currentSize);
+        } else if (handle.type === 'edge') {
+          offset = getEdgeOffset(handle, currentSize);
         }
         return (
           <g
@@ -84,6 +113,24 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
                 fill="#007acc"
                 fillOpacity={0.3}
                 stroke="#007acc"
+                strokeWidth={strokeWidth}
+                data-handle-id={handle.id}
+                data-handle-type="transform"
+                style={{
+                  pointerEvents: 'all',
+                  cursor: handle.cursor,
+                  transition: 'all 0.1s ease'
+                }}
+              />
+            ) : handle.type === 'edge' ? (
+              <rect
+                x={handle.position.x + offset.dx - currentSize / 2}
+                y={handle.position.y + offset.dy - currentSize / 2}
+                width={currentSize}
+                height={currentSize}
+                fill="#28a745"
+                fillOpacity={0.4}
+                stroke="#28a745"
                 strokeWidth={strokeWidth}
                 data-handle-id={handle.id}
                 data-handle-type="transform"

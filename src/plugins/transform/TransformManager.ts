@@ -16,7 +16,7 @@ export interface TransformBounds {
 
 export interface TransformHandle {
   id: string;
-  type: 'corner' | 'rotation';
+  type: 'corner' | 'edge' | 'rotation';
   position: Point;
   cursor: string;
 }
@@ -61,33 +61,13 @@ export class TransformManager {
   };
 
   private editorStore: any = null;
-  private isShiftPressed: boolean = false;
 
   setEditorStore(store: any) {
     this.editorStore = store;
-    this.setupKeyboardListeners();
   }
-
-  private setupKeyboardListeners() {
-    document.addEventListener('keydown', this.handleKeyDown);
-    document.addEventListener('keyup', this.handleKeyUp);
-  }
-
-  private handleKeyDown = (e: KeyboardEvent) => {
-    if (e.shiftKey) {
-      this.isShiftPressed = true;
-    }
-  };
-
-  private handleKeyUp = (e: KeyboardEvent) => {
-    if (!e.shiftKey) {
-      this.isShiftPressed = false;
-    }
-  };
 
   cleanup() {
-    document.removeEventListener('keydown', this.handleKeyDown);
-    document.removeEventListener('keyup', this.handleKeyUp);
+    // No cleanup needed anymore since we removed keyboard listeners
   }
 
   // Calculate bounds from selected commands or subpaths using DOM-based calculation
@@ -463,7 +443,7 @@ export class TransformManager {
     const rotationHandleOffset = 30 / viewport.zoom; // Distance above the bounding box
 
     const handles: TransformHandle[] = [
-      // Corner handles for scaling
+      // Corner handles for proportional scaling
       {
         id: 'nw',
         type: 'corner',
@@ -487,6 +467,31 @@ export class TransformManager {
         type: 'corner',
         position: { x: x + width, y: y + height },
         cursor: 'se-resize'
+      },
+      // Edge handles for non-proportional scaling
+      {
+        id: 'n',
+        type: 'edge',
+        position: { x: x + width / 2, y: y },
+        cursor: 'n-resize'
+      },
+      {
+        id: 's',
+        type: 'edge',
+        position: { x: x + width / 2, y: y + height },
+        cursor: 's-resize'
+      },
+      {
+        id: 'e',
+        type: 'edge',
+        position: { x: x + width, y: y + height / 2 },
+        cursor: 'e-resize'
+      },
+      {
+        id: 'w',
+        type: 'edge',
+        position: { x: x, y: y + height / 2 },
+        cursor: 'w-resize'
       },
       // Rotation handle - positioned above the center of the top edge
       {
@@ -598,11 +603,6 @@ export class TransformManager {
   // Get current transform mode
   getTransformMode(): string | null {
     return this.state.mode;
-  }
-
-  // Check if shift is pressed
-  getShiftPressed(): boolean {
-    return this.isShiftPressed;
   }
 
   // Get current mirror state (useful for visual feedback)
@@ -813,32 +813,62 @@ export class TransformManager {
 
     // Determine scale direction based on active handle
     switch (this.state.activeHandle) {
+      // Corner handles - always proportional scaling
       case 'nw':
         scaleX = (initialWidth - deltaX) / initialWidth;
         scaleY = (initialHeight - deltaY) / initialHeight;
+        // Force proportional scaling for corners
+        const scaleNW = Math.min(Math.abs(scaleX), Math.abs(scaleY));
+        scaleX = scaleX < 0 ? -scaleNW : scaleNW;
+        scaleY = scaleY < 0 ? -scaleNW : scaleNW;
         break;
       case 'ne':
         scaleX = (initialWidth + deltaX) / initialWidth;
         scaleY = (initialHeight - deltaY) / initialHeight;
+        // Force proportional scaling for corners
+        const scaleNE = Math.min(Math.abs(scaleX), Math.abs(scaleY));
+        scaleX = scaleX < 0 ? -scaleNE : scaleNE;
+        scaleY = scaleY < 0 ? -scaleNE : scaleNE;
         break;
       case 'sw':
         scaleX = (initialWidth - deltaX) / initialWidth;
         scaleY = (initialHeight + deltaY) / initialHeight;
+        // Force proportional scaling for corners
+        const scaleSW = Math.min(Math.abs(scaleX), Math.abs(scaleY));
+        scaleX = scaleX < 0 ? -scaleSW : scaleSW;
+        scaleY = scaleY < 0 ? -scaleSW : scaleSW;
         break;
       case 'se':
         scaleX = (initialWidth + deltaX) / initialWidth;
         scaleY = (initialHeight + deltaY) / initialHeight;
+        // Force proportional scaling for corners
+        const scaleSE = Math.min(Math.abs(scaleX), Math.abs(scaleY));
+        scaleX = scaleX < 0 ? -scaleSE : scaleSE;
+        scaleY = scaleY < 0 ? -scaleSE : scaleSE;
+        break;
+      
+      // Edge handles - non-proportional scaling (only one dimension)
+      case 'n': // Top edge - only height
+        scaleX = 1; // No horizontal scaling
+        scaleY = (initialHeight - deltaY) / initialHeight;
+        break;
+      case 's': // Bottom edge - only height
+        scaleX = 1; // No horizontal scaling
+        scaleY = (initialHeight + deltaY) / initialHeight;
+        break;
+      case 'e': // Right edge - only width
+        scaleX = (initialWidth + deltaX) / initialWidth;
+        scaleY = 1; // No vertical scaling
+        break;
+      case 'w': // Left edge - only width
+        scaleX = (initialWidth - deltaX) / initialWidth;
+        scaleY = 1; // No vertical scaling
         break;
     }
 
-    // Check if shift is pressed to maintain aspect ratio
-    const shiftPressed = this.isShiftPressed;
-    if (shiftPressed) {
-      const scale = Math.min(Math.abs(scaleX), Math.abs(scaleY));
-      scaleX = scaleX < 0 ? -scale : scale;
-      scaleY = scaleY < 0 ? -scale : scale;
-    }
-
+    // Edge handles always scale in one dimension only
+    // Corner handles always scale proportionally
+    
     // Allow negative scaling for mirror effect (remove minimum scale restriction)
     // Only apply minimum scale to prevent collapse to zero, but allow mirroring
     const minScale = 0.01; // Very small but not zero to prevent division issues
@@ -849,11 +879,12 @@ export class TransformManager {
       scaleY = scaleY < 0 ? -minScale : minScale;
     }
 
-    // Calculate transform origin based on the opposite corner
+    // Calculate transform origin based on the active handle
     let originX = initialX;
     let originY = initialY;
 
     switch (this.state.activeHandle) {
+      // Corner handles
       case 'nw':
         originX = initialX + initialWidth;
         originY = initialY + initialHeight;
@@ -869,6 +900,24 @@ export class TransformManager {
       case 'se':
         originX = initialX;
         originY = initialY;
+        break;
+      
+      // Edge handles
+      case 'n': // Top edge - origin at bottom center
+        originX = initialX + initialWidth / 2;
+        originY = initialY + initialHeight;
+        break;
+      case 's': // Bottom edge - origin at top center
+        originX = initialX + initialWidth / 2;
+        originY = initialY;
+        break;
+      case 'e': // Right edge - origin at left center
+        originX = initialX;
+        originY = initialY + initialHeight / 2;
+        break;
+      case 'w': // Left edge - origin at right center
+        originX = initialX + initialWidth;
+        originY = initialY + initialHeight / 2;
         break;
     }
 
@@ -1245,6 +1294,7 @@ export class TransformManager {
     let scaleY = 1;
 
     switch (this.state.activeHandle) {
+      // Corner handles
       case 'nw':
         scaleX = (initialWidth - deltaX) / initialWidth;
         scaleY = (initialHeight - deltaY) / initialHeight;
@@ -1260,6 +1310,24 @@ export class TransformManager {
       case 'se':
         scaleX = (initialWidth + deltaX) / initialWidth;
         scaleY = (initialHeight + deltaY) / initialHeight;
+        break;
+      
+      // Edge handles
+      case 'n':
+        scaleX = 1; // No horizontal mirroring for vertical edges
+        scaleY = (initialHeight - deltaY) / initialHeight;
+        break;
+      case 's':
+        scaleX = 1; // No horizontal mirroring for vertical edges
+        scaleY = (initialHeight + deltaY) / initialHeight;
+        break;
+      case 'e':
+        scaleX = (initialWidth + deltaX) / initialWidth;
+        scaleY = 1; // No vertical mirroring for horizontal edges
+        break;
+      case 'w':
+        scaleX = (initialWidth - deltaX) / initialWidth;
+        scaleY = 1; // No vertical mirroring for horizontal edges
         break;
     }
 
@@ -1286,39 +1354,78 @@ export class TransformManager {
 
     // Calculate scale factors based on active handle
     switch (this.state.activeHandle) {
+      // Corner handles
       case 'nw':
         scaleX = (initialWidth - deltaX) / initialWidth;
         scaleY = (initialHeight - deltaY) / initialHeight;
         originX = initialX + initialWidth;
         originY = initialY + initialHeight;
+        // Force proportional scaling for corners
+        const scaleNW = Math.min(Math.abs(scaleX), Math.abs(scaleY));
+        scaleX = scaleX < 0 ? -scaleNW : scaleNW;
+        scaleY = scaleY < 0 ? -scaleNW : scaleNW;
         break;
       case 'ne':
         scaleX = (initialWidth + deltaX) / initialWidth;
         scaleY = (initialHeight - deltaY) / initialHeight;
         originX = initialX;
         originY = initialY + initialHeight;
+        // Force proportional scaling for corners
+        const scaleNE = Math.min(Math.abs(scaleX), Math.abs(scaleY));
+        scaleX = scaleX < 0 ? -scaleNE : scaleNE;
+        scaleY = scaleY < 0 ? -scaleNE : scaleNE;
         break;
       case 'sw':
         scaleX = (initialWidth - deltaX) / initialWidth;
         scaleY = (initialHeight + deltaY) / initialHeight;
         originX = initialX + initialWidth;
         originY = initialY;
+        // Force proportional scaling for corners
+        const scaleSW = Math.min(Math.abs(scaleX), Math.abs(scaleY));
+        scaleX = scaleX < 0 ? -scaleSW : scaleSW;
+        scaleY = scaleY < 0 ? -scaleSW : scaleSW;
         break;
       case 'se':
         scaleX = (initialWidth + deltaX) / initialWidth;
         scaleY = (initialHeight + deltaY) / initialHeight;
         originX = initialX;
         originY = initialY;
+        // Force proportional scaling for corners
+        const scaleSE = Math.min(Math.abs(scaleX), Math.abs(scaleY));
+        scaleX = scaleX < 0 ? -scaleSE : scaleSE;
+        scaleY = scaleY < 0 ? -scaleSE : scaleSE;
+        break;
+      
+      // Edge handles
+      case 'n':
+        scaleX = 1; // No horizontal scaling
+        scaleY = (initialHeight - deltaY) / initialHeight;
+        originX = initialX + initialWidth / 2;
+        originY = initialY + initialHeight;
+        break;
+      case 's':
+        scaleX = 1; // No horizontal scaling
+        scaleY = (initialHeight + deltaY) / initialHeight;
+        originX = initialX + initialWidth / 2;
+        originY = initialY;
+        break;
+      case 'e':
+        scaleX = (initialWidth + deltaX) / initialWidth;
+        scaleY = 1; // No vertical scaling
+        originX = initialX;
+        originY = initialY + initialHeight / 2;
+        break;
+      case 'w':
+        scaleX = (initialWidth - deltaX) / initialWidth;
+        scaleY = 1; // No vertical scaling
+        originX = initialX + initialWidth;
+        originY = initialY + initialHeight / 2;
         break;
     }
 
-    // Check if shift is pressed to maintain aspect ratio
-    if (this.isShiftPressed) {
-      const scale = Math.min(Math.abs(scaleX), Math.abs(scaleY));
-      scaleX = scaleX < 0 ? -scale : scale;
-      scaleY = scaleY < 0 ? -scale : scale;
-    }
-
+    // Edge handles always scale in one dimension only
+    // Corner handles always scale proportionally
+    
     // Prevent collapse to zero
     const minScale = 0.01;
     if (Math.abs(scaleX) < minScale) {

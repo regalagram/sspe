@@ -106,7 +106,6 @@ const TransformPlugin: React.FC = () => {
             pointerEvents="none"
           >
             {transformMode === 'scale' ? 'Scaling' : 'Rotating'}
-            {transformManager.getShiftPressed() ? ' (Proportional)' : ''}
           </text>
         </g>
       )}
