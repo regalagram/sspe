@@ -586,6 +586,20 @@ export const FilterControls: React.FC = () => {
     }
   };
 
+  const handleClearAllFilters = () => {
+    if (filters.length === 0) {
+      alert('No filters to remove');
+      return;
+    }
+    
+    if (confirm(`Are you sure you want to remove all ${filters.length} filter${filters.length > 1 ? 's' : ''}? This action cannot be undone.`)) {
+      // Remove all filters one by one
+      filters.forEach(filter => {
+        removeFilter(filter.id);
+      });
+    }
+  };
+
   const renderPrimitiveEditor = (primitive: FilterPrimitiveType, filterId: string, index: number) => {
     const updatePrimitive = (updates: Partial<FilterPrimitiveType>) => {
       handleUpdatePrimitive(filterId, index, updates);
@@ -2087,9 +2101,17 @@ export const FilterControls: React.FC = () => {
       {/* Filter List */}
       {filters.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
-            Filters ({filters.length}):
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+              Filters ({filters.length}):
+            </span>
+            <PluginButton
+              icon={<Trash2 size={12} />}
+              text="Clear All"
+              color="#dc3545"
+              onPointerDown={handleClearAllFilters}
+            />
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '250px', overflow: 'auto' }}>
             {filters.map((filter) => (
               <div

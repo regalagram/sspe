@@ -637,6 +637,7 @@ export const createGroupActions: StateCreator<
         state.paths,
         state.texts,
         state.groups,
+        state.images,
         allGradients,
         allFilters,
         state.precision || 2

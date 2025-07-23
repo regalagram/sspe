@@ -640,7 +640,24 @@ export const SVGComponent: React.FC = () => {
               case 'feFlood':
                 return `    <feFlood flood-color="${primitive.floodColor}" flood-opacity="${primitive.floodOpacity ?? 1}"${primitive.result ? ` result="${primitive.result}"` : ''} />`;
               case 'feComposite':
-                return `    <feComposite operator="${primitive.operator}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.in2 ? ` in2="${primitive.in2}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''} />`;
+                const compositeAttrs = [
+                  `operator="${primitive.operator}"`,
+                  primitive.in ? `in="${primitive.in}"` : '',
+                  primitive.in2 ? `in2="${primitive.in2}"` : '',
+                  primitive.result ? `result="${primitive.result}"` : ''
+                ];
+                
+                // Add arithmetic coefficients if operator is arithmetic
+                if (primitive.operator === 'arithmetic') {
+                  compositeAttrs.push(
+                    `k1="${primitive.k1 ?? 0}"`,
+                    `k2="${primitive.k2 ?? 1}"`,
+                    `k3="${primitive.k3 ?? 1}"`,
+                    `k4="${primitive.k4 ?? 0}"`
+                  );
+                }
+                
+                return `    <feComposite ${compositeAttrs.filter(Boolean).join(' ')} />`;
               case 'feColorMatrix':
                 return `    <feColorMatrix type="${primitive.colorMatrixType}" values="${primitive.values}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''} />`;
               case 'feDropShadow':

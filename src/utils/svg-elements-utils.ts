@@ -387,7 +387,7 @@ export const createVintageFilter = (): Omit<SVGFilter, 'id'> => ({
 
 export const createChromaticAberrationFilter = (): Omit<SVGFilter, 'id'> => ({
   type: 'filter',
-  filterUnits: 'objectBoundingBox',
+  filterUnits: 'userSpaceOnUse',
   primitiveUnits: 'userSpaceOnUse',
   primitives: [
     // Red channel offset

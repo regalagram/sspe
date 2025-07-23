@@ -2,7 +2,7 @@
  * Utilities for generating SVG exports specific to groups
  */
 
-import { SVGGroup, SVGPath, TextElementType, GradientOrPattern, SVGFilter } from '../types';
+import { SVGGroup, SVGPath, TextElementType, GradientOrPattern, SVGFilter, SVGImage } from '../types';
 import { subPathToString } from './path-utils';
 import { extractGradientsFromPaths } from './gradient-utils';
 
@@ -14,6 +14,7 @@ export function generateGroupSVG(
   allPaths: SVGPath[],
   allTexts: TextElementType[],
   allGroups: SVGGroup[],
+  allImages: SVGImage[],
   allGradients: GradientOrPattern[] = [],
   allFilters: SVGFilter[] = [],
   precision: number = 2
@@ -33,14 +34,16 @@ export function generateGroupSVG(
   const collectGroupElements = (groupId: string): {
     paths: SVGPath[];
     texts: TextElementType[];
+    images: SVGImage[];
     usedGradients: Set<string>;
     usedFilters: Set<string>;
   } => {
     const targetGroup = allGroups.find(g => g.id === groupId);
-    if (!targetGroup) return { paths: [], texts: [], usedGradients: new Set(), usedFilters: new Set() };
+    if (!targetGroup) return { paths: [], texts: [], images: [], usedGradients: new Set(), usedFilters: new Set() };
 
     const paths: SVGPath[] = [];
     const texts: TextElementType[] = [];
+    const images: SVGImage[] = [];
     const usedGradients = new Set<string>();
     const usedFilters = new Set<string>();
 
@@ -92,24 +95,40 @@ export function generateGroupSVG(
           }
           break;
           
+        case 'image':
+          const image = allImages.find(i => i.id === child.id);
+          if (image) {
+            images.push(image);
+            
+            // Track filters used in this image
+            if (image.style?.filter) {
+              const filterMatch = image.style.filter.match(/url\(#([^)]+)\)/);
+              if (filterMatch) {
+                usedFilters.add(filterMatch[1]);
+              }
+            }
+          }
+          break;
+          
         case 'group':
           // Recursively collect from nested groups
           const nestedElements = collectGroupElements(child.id);
           paths.push(...nestedElements.paths);
           texts.push(...nestedElements.texts);
+          images.push(...nestedElements.images);
           nestedElements.usedGradients.forEach(id => usedGradients.add(id));
           nestedElements.usedFilters.forEach(id => usedFilters.add(id));
           break;
       }
     });
 
-    return { paths, texts, usedGradients, usedFilters };
+    return { paths, texts, images, usedGradients, usedFilters };
   };
 
-  const { paths: groupPaths, texts: groupTexts, usedGradients, usedFilters } = collectGroupElements(group.id);
+  const { paths: groupPaths, texts: groupTexts, images: groupImages, usedGradients, usedFilters } = collectGroupElements(group.id);
 
   // If no elements, return empty SVG
-  if (groupPaths.length === 0 && groupTexts.length === 0) {
+  if (groupPaths.length === 0 && groupTexts.length === 0 && groupImages.length === 0) {
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <!-- Empty group: ${group.name || group.id} -->
 </svg>`;
@@ -162,6 +181,14 @@ export function generateGroupSVG(
     minY = Math.min(minY, text.y);
     maxX = Math.max(maxX, text.x + textWidth);
     maxY = Math.max(maxY, text.y + textHeight);
+  });
+
+  // Calculate bounds from images
+  groupImages.forEach(image => {
+    minX = Math.min(minX, image.x);
+    minY = Math.min(minY, image.y);
+    maxX = Math.max(maxX, image.x + image.width);
+    maxY = Math.max(maxY, image.y + image.height);
   });
 
   // Add padding and create viewBox
@@ -217,7 +244,24 @@ export function generateGroupSVG(
         case 'feFlood':
           return `    <feFlood flood-color="${primitive.floodColor}" flood-opacity="${primitive.floodOpacity ?? 1}"${primitive.result ? ` result="${primitive.result}"` : ''} />`;
         case 'feComposite':
-          return `    <feComposite operator="${primitive.operator}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.in2 ? ` in2="${primitive.in2}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''} />`;
+          const compositeAttrs = [
+            `operator="${primitive.operator}"`,
+            primitive.in ? `in="${primitive.in}"` : '',
+            primitive.in2 ? `in2="${primitive.in2}"` : '',
+            primitive.result ? `result="${primitive.result}"` : ''
+          ];
+          
+          // Add arithmetic coefficients if operator is arithmetic
+          if (primitive.operator === 'arithmetic') {
+            compositeAttrs.push(
+              `k1="${primitive.k1 ?? 0}"`,
+              `k2="${primitive.k2 ?? 1}"`, 
+              `k3="${primitive.k3 ?? 1}"`,
+              `k4="${primitive.k4 ?? 0}"`
+            );
+          }
+          
+          return `    <feComposite ${compositeAttrs.filter(Boolean).join(' ')} />`;
         case 'feColorMatrix':
           return `    <feColorMatrix type="${primitive.colorMatrixType}" values="${primitive.values}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''} />`;
         case 'feDropShadow':
@@ -297,6 +341,10 @@ export function generateGroupSVG(
       style.strokeLinejoin ? `stroke-linejoin="${style.strokeLinejoin}"` : '',
       style.fillOpacity !== undefined && style.fillOpacity !== 1 ? `fill-opacity="${style.fillOpacity}"` : '',
       style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${style.strokeOpacity}"` : '',
+      style.opacity !== undefined && style.opacity !== 1 ? `opacity="${style.opacity}"` : '',
+      style.filter ? `filter="${style.filter}"` : '',
+      style.clipPath ? `clip-path="${style.clipPath}"` : '',
+      style.mask ? `mask="${style.mask}"` : '',
     ].filter(Boolean).join(' ');
     
     return `  <path ${attributes} />`;
@@ -367,8 +415,28 @@ export function generateGroupSVG(
     }
   }).join('\n');
 
+  // Generate image elements
+  const imageElements = groupImages.map(image => {
+    const style = image.style || {};
+    
+    const attributes = [
+      `x="${image.x}"`,
+      `y="${image.y}"`,
+      `width="${image.width}"`,
+      `height="${image.height}"`,
+      `href="${image.href}"`,
+      image.transform ? `transform="${image.transform}"` : '',
+      style.opacity !== undefined && style.opacity !== 1 ? `opacity="${style.opacity}"` : '',
+      style.filter ? `filter="${style.filter}"` : '',
+      style.clipPath ? `clip-path="${style.clipPath}"` : '',
+      style.mask ? `mask="${style.mask}"` : '',
+    ].filter(Boolean).join(' ');
+    
+    return `  <image ${attributes} />`;
+  }).join('\n');
+
   // Combine all elements
-  const allElements = [pathElements, textElements].filter(Boolean).join('\n');
+  const allElements = [pathElements, textElements, imageElements].filter(Boolean).join('\n');
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${finalViewBox}">
 ${defsSection}${allElements}
