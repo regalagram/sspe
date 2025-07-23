@@ -496,6 +496,11 @@ export function parsePathStyle(element: Element, useComputedStyles = false): Pat
       style.strokeDasharray = strokeDasharray;
     }
     
+    const filter = getStyleProp('filter');
+    if (filter && filter !== 'none' && filter !== 'inherit') {
+      style.filter = filter;
+    }
+    
   } else {
     // Fallback to attribute-based parsing
     const fill = element.getAttribute('fill');
@@ -507,6 +512,7 @@ export function parsePathStyle(element: Element, useComputedStyles = false): Pat
     const fillOpacity = element.getAttribute('fill-opacity');
     const strokeOpacity = element.getAttribute('stroke-opacity');
     const fillRule = element.getAttribute('fill-rule');
+    const filter = element.getAttribute('filter');
     
     // Parse fill color and extract opacity if present
     const fillResult = normalizeColorWithOpacity(fill);
@@ -535,6 +541,10 @@ export function parsePathStyle(element: Element, useComputedStyles = false): Pat
     else if (strokeResult.opacity !== undefined) style.strokeOpacity = strokeResult.opacity;
     
     if (fillRule && fillRule !== 'inherit') style.fillRule = fillRule as any;
+    if (filter) {
+      style.filter = filter;
+      console.log('🎯 PATH FILTER PARSED:', { elementTag: element.tagName, filter });
+    }
     
     // Parse inline style attribute (this should override attributes)
     const styleAttr = element.getAttribute('style');
@@ -594,6 +604,10 @@ export function parsePathStyle(element: Element, useComputedStyles = false): Pat
           }
           case 'fill-rule':
             if (value !== 'inherit') style.fillRule = value as any;
+            break;
+          case 'filter':
+            style.filter = value;
+            console.log('🎯 PATH FILTER PARSED (inline style):', { elementTag: element.tagName, filter: value });
             break;
         }
       }
@@ -875,6 +889,14 @@ export function parseSVGToSubPaths(svgString: string, useComputedStyles = false)
       try {
         const commands = parsePathData(pathData);
         const style = parsePathStyle(pathElement, useComputedStyles);
+        
+        if (style.filter) {
+          console.log('🎯 PATH WITH FILTER FOUND:', { 
+            pathData: pathData.substring(0, 50) + '...', 
+            filter: style.filter,
+            fullStyle: style
+          });
+        }
         
         if (commands.length > 0) {
           // Decompose the path into sub-paths
@@ -1717,13 +1739,23 @@ export function parseFilters(svgElement: Element): SVGFilter[] {
     // Parse feComposite
     const compositeElements = filterNode.querySelectorAll('feComposite');
     compositeElements.forEach((element) => {
-      primitives.push({
+      const primitive: any = {
         type: 'feComposite',
         operator: (element.getAttribute('operator') || 'over') as 'over' | 'in' | 'out' | 'atop' | 'xor' | 'arithmetic',
         in: element.getAttribute('in') || undefined,
         in2: element.getAttribute('in2') || undefined,
         result: element.getAttribute('result') || undefined,
-      });
+      };
+
+      // Parse arithmetic coefficients for arithmetic operator
+      if (primitive.operator === 'arithmetic') {
+        primitive.k1 = element.getAttribute('k1') ? parseFloat(element.getAttribute('k1')!) : 0;
+        primitive.k2 = element.getAttribute('k2') ? parseFloat(element.getAttribute('k2')!) : 1;
+        primitive.k3 = element.getAttribute('k3') ? parseFloat(element.getAttribute('k3')!) : 1;
+        primitive.k4 = element.getAttribute('k4') ? parseFloat(element.getAttribute('k4')!) : 0;
+      }
+
+      primitives.push(primitive);
     });
     
     // Parse feColorMatrix

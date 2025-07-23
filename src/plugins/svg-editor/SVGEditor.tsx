@@ -173,7 +173,7 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
 };
 
 export const SVGComponent: React.FC = () => {
-  const { paths, texts, textPaths, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, viewport, replacePaths, replaceTexts, replaceTextPaths, replaceGroups, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients, addText, addGradient, addImage, addSymbol, addMarker, addClipPath, addMask, addFilter, addUse } = useEditorStore();
+  const { paths, texts, textPaths, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, viewport, replacePaths, replaceTexts, replaceTextPaths, replaceGroups, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients, addText, addGradient, addImage, addSymbol, addMarker, addClipPath, addMask, addFilter, removeFilter, clearAllSVGElements, addUse, updateImage } = useEditorStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Import settings state
@@ -807,10 +807,37 @@ ${definitions}${allElements}
         }
       }
 
-      // Parse the complete SVG including paths, texts, textPaths, gradients, patterns, and groups
-      const { paths: newPaths, texts: newTexts, textPaths: newTextPaths, gradients: newGradients, groups: newGroups } = parseCompleteSVG(svgCode);
+      // Parse the complete SVG including paths, texts, textPaths, gradients, patterns, filters, and groups
+      const { paths: newPaths, texts: newTexts, textPaths: newTextPaths, gradients: newGradients, filters: newFilters, groups: newGroups } = parseCompleteSVG(svgCode);
       
-      const totalElements = newPaths.length + newTexts.length + newTextPaths.length + newGradients.length + newGroups.length;
+      // Create a mapping of original filter IDs to new IDs for reference updates
+      const filterIdMapping: Record<string, string> = {};
+      
+      // Helper function to update filter references in elements
+      const updateFilterReferences = <T extends { style?: { filter?: string } }>(elements: T[]): T[] => {
+        return elements.map(element => {
+          if (element.style?.filter) {
+            // Extract filter ID from url(#filterId) format
+            const match = element.style.filter.match(/^url\(#(.+)\)$/);
+            if (match && match[1]) {
+              const originalId = match[1];
+              const newId = filterIdMapping[originalId];
+              if (newId) {
+                return {
+                  ...element,
+                  style: {
+                    ...element.style,
+                    filter: `url(#${newId})`
+                  }
+                };
+              }
+            }
+          }
+          return element;
+        });
+      };
+      
+      const totalElements = newPaths.length + newTexts.length + newTextPaths.length + newGradients.length + newFilters.length + newGroups.length;
       
       if (totalElements === 0) {
         alert('No valid elements found in the SVG code. Make sure your SVG contains paths, text, textPaths, gradients, patterns, or groups.');
@@ -824,6 +851,7 @@ ${definitions}${allElements}
           newTexts.length > 0 ? `${newTexts.length} text element(s)` : '',
           newTextPaths.length > 0 ? `${newTextPaths.length} textPath element(s)` : '',
           newGradients.length > 0 ? `${newGradients.length} gradient(s)/pattern(s)` : '',
+          newFilters.length > 0 ? `${newFilters.length} filter(s)` : '',
           newGroups.length > 0 ? `${newGroups.length} group(s)` : ''
         ].filter(Boolean).join(', ');
         
@@ -837,35 +865,94 @@ ${definitions}${allElements}
       
       // Update the store based on import mode
       if (importSettings.mode === 'replace') {
-        // Replace existing content
-        replacePaths(newPaths);
-        replaceTexts(newTexts);
+        // Clear existing filters first and add new ones to create ID mapping
+        const currentFilters = [...filters];
+        currentFilters.forEach(filter => removeFilter(filter.id));
+        
+        // Add new filters and create ID mapping
+        newFilters.forEach(filter => {
+          const originalId = filter.id;
+          const newFilter = addFilter(filter);
+          // Get the new filter ID from the store
+          const storeState = useEditorStore.getState();
+          const addedFilter = storeState.filters[storeState.filters.length - 1];
+          if (addedFilter && addedFilter.id) {
+            filterIdMapping[originalId] = addedFilter.id;
+            console.log(`Filter ID mapping: ${originalId} -> ${addedFilter.id}`);
+          }
+        });
+        
+        console.log('Filter ID mapping:', filterIdMapping);
+        
+        // Update filter references in all elements before importing
+        const updatedPaths = updateFilterReferences(newPaths);
+        const updatedTexts = updateFilterReferences(newTexts);
+        const updatedGroups = updateFilterReferences(newGroups);
+        
+        // Also update filter references in existing images if any filters were remapped
+        const currentImages = [...images];
+        const updatedImages = updateFilterReferences(currentImages);
+        
+        // Replace existing content with updated references
+        replacePaths(updatedPaths);
+        replaceTexts(updatedTexts);
         replaceTextPaths(newTextPaths);
         setGradients(newGradients);
-        replaceGroups(newGroups);
+        replaceGroups(updatedGroups);
+        
+        // Update images if filter references changed
+        if (JSON.stringify(currentImages) !== JSON.stringify(updatedImages)) {
+          // Update images that have filter references
+          updatedImages.forEach(image => {
+            updateImage(image.id, image);
+          });
+        }
       } else {
         // Append to existing content
+        // First add new filters and create ID mapping
+        newFilters.forEach(filter => {
+          const originalId = filter.id;
+          const newFilter = addFilter(filter);
+          // Get the new filter ID from the store
+          const storeState = useEditorStore.getState();
+          const addedFilter = storeState.filters[storeState.filters.length - 1];
+          if (addedFilter && addedFilter.id) {
+            filterIdMapping[originalId] = addedFilter.id;
+            console.log(`Filter ID mapping (append): ${originalId} -> ${addedFilter.id}`);
+          }
+        });
+        
+        console.log('Filter ID mapping (append):', filterIdMapping);
+        
+        // Update filter references in all elements before merging
+        const updatedPaths = updateFilterReferences(newPaths);
+        const updatedTexts = updateFilterReferences(newTexts);
+        const updatedGroups = updateFilterReferences(newGroups);
+        
         // For append mode, we need to merge the new content with existing content
         const currentPaths = [...paths];
         const currentTexts = [...texts];
         const currentTextPaths = [...textPaths];
         const currentGradients = [...gradients];
         const currentGroups = [...groups];
+        const currentImages = [...images];
         
-        // Merge paths
-        replacePaths([...currentPaths, ...newPaths]);
+        // Also update filter references in existing images
+        const updatedImages = updateFilterReferences(currentImages);
         
-        // Merge texts
-        replaceTexts([...currentTexts, ...newTexts]);
-        
-        // Merge textPaths
+        // Merge with updated references
+        replacePaths([...currentPaths, ...updatedPaths]);
+        replaceTexts([...currentTexts, ...updatedTexts]);
         replaceTextPaths([...currentTextPaths, ...newTextPaths]);
-        
-        // Merge gradients  
         setGradients([...currentGradients, ...newGradients]);
+        replaceGroups([...currentGroups, ...updatedGroups]);
         
-        // Merge groups
-        replaceGroups([...currentGroups, ...newGroups]);
+        // Update images if filter references changed
+        if (JSON.stringify(currentImages) !== JSON.stringify(updatedImages)) {
+          updatedImages.forEach(image => {
+            updateImage(image.id, image);
+          });
+        }
       }
       
       // Auto-adjust viewport if enabled
@@ -873,7 +960,7 @@ ${definitions}${allElements}
         resetViewportCompletely();
       }
       
-      console.log(`Imported (${importSettings.mode}): ${newPaths.length} paths, ${newTexts.length} texts, ${newTextPaths.length} textPaths, ${newGradients.length} gradients/patterns, ${newGroups.length} groups`);
+      console.log(`Imported (${importSettings.mode}): ${newPaths.length} paths, ${newTexts.length} texts, ${newTextPaths.length} textPaths, ${newGradients.length} gradients/patterns, ${newFilters.length} filters, ${newGroups.length} groups`);
       
     } catch (error) {
       console.error('Error parsing SVG:', error);

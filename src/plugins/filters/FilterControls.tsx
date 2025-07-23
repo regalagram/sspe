@@ -67,6 +67,14 @@ export const FilterControls: React.FC = () => {
   } = store;
   
   const [editingFilter, setEditingFilter] = useState<string | null>(null);
+  
+  // States for collapsible filter groups
+  const [basicFiltersExpanded, setBasicFiltersExpanded] = useState(true);
+  const [colorEffectsExpanded, setColorEffectsExpanded] = useState(true);
+  const [specialEffectsExpanded, setSpecialEffectsExpanded] = useState(false);
+  const [artisticFiltersExpanded, setArtisticFiltersExpanded] = useState(false);
+  const [artisticPresetsExpanded, setArtisticPresetsExpanded] = useState(false);
+  const [customFiltersExpanded, setCustomFiltersExpanded] = useState(false);
 
   const selectedFilter = selection.selectedFilters.length === 1 
     ? filters.find(filter => filter.id === selection.selectedFilters[0])
@@ -1451,461 +1459,577 @@ export const FilterControls: React.FC = () => {
           })()}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {/* Filtros Básicos */}
-          <div style={{ fontSize: '10px', color: '#666', fontWeight: '500', marginBottom: '2px' }}>Basic Filters:</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
-            <PluginButton
-              icon={<Droplets size={12} />}
-              text="Drop Shadow"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('drop-shadow')}
-            />
-            <PluginButton
-              icon={<Zap size={12} />}
-              text="Blur"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('blur')}
-            />
+          {/* Basic Filters Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div 
+              style={{ 
+                fontSize: '12px', 
+                color: '#666', 
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                userSelect: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              onPointerDown={() => setBasicFiltersExpanded(!basicFiltersExpanded)}
+            >
+              <span style={{ transform: basicFiltersExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
+              Basic Filters
+            </div>
+            
+            {basicFiltersExpanded && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
+                <PluginButton
+                  icon={<Droplets size={12} />}
+                  text="Drop Shadow"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('drop-shadow')}
+                />
+                <PluginButton
+                  icon={<Zap size={12} />}
+                  text="Blur"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('blur')}
+                />
+              </div>
+            )}
           </div>
           
-          {/* Filtros de Color */}
-          <div style={{ fontSize: '10px', color: '#666', fontWeight: '500', marginTop: '8px', marginBottom: '2px' }}>Color Effects:</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
-            <PluginButton
-              icon={<Eye size={12} />}
-              text="Grayscale"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('grayscale')}
-            />
-            <PluginButton
-              icon={<Palette size={12} />}
-              text="Sepia"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('sepia')}
-            />
-            <PluginButton
-              icon={<RotateCcw size={12} />}
-              text="Invert"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('invert')}
-            />
-            <PluginButton
-              icon={<Sun size={12} />}
-              text="Brightness"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('brightness')}
-            />
-            <PluginButton
-              icon={<Contrast size={12} />}
-              text="Contrast"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('contrast')}
-            />
-            <PluginButton
-              icon={<Sparkles size={12} />}
-              text="Saturate"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('saturate')}
-            />
-            <PluginButton
-              icon={<RotateCcw size={12} />}
-              text="Hue Rotate"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('hue-rotate')}
-            />
-            <PluginButton
-              icon={<Grid size={12} />}
-              text="Posterize"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('posterize')}
-            />
+          {/* Color Effects Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div 
+              style={{ 
+                fontSize: '12px', 
+                color: '#666', 
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                userSelect: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              onPointerDown={() => setColorEffectsExpanded(!colorEffectsExpanded)}
+            >
+              <span style={{ transform: colorEffectsExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
+              Color Effects
+            </div>
+            
+            {colorEffectsExpanded && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
+                <PluginButton
+                  icon={<Eye size={12} />}
+                  text="Grayscale"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('grayscale')}
+                />
+                <PluginButton
+                  icon={<Palette size={12} />}
+                  text="Sepia"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('sepia')}
+                />
+                <PluginButton
+                  icon={<RotateCcw size={12} />}
+                  text="Invert"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('invert')}
+                />
+                <PluginButton
+                  icon={<Sun size={12} />}
+                  text="Brightness"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('brightness')}
+                />
+                <PluginButton
+                  icon={<Contrast size={12} />}
+                  text="Contrast"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('contrast')}
+                />
+                <PluginButton
+                  icon={<Sparkles size={12} />}
+                  text="Saturate"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('saturate')}
+                />
+                <PluginButton
+                  icon={<RotateCcw size={12} />}
+                  text="Hue Rotate"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('hue-rotate')}
+                />
+                <PluginButton
+                  icon={<Grid size={12} />}
+                  text="Posterize"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('posterize')}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Filtros de Efectos Especiales */}
-          <div style={{ fontSize: '10px', color: '#666', fontWeight: '500', marginTop: '8px', marginBottom: '2px' }}>Special Effects:</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
-            <PluginButton
-              icon={<Layers size={12} />}
-              text="Emboss"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('emboss')}
-            />
-            <PluginButton
-              icon={<Zap size={12} />}
-              text="Sharpen"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('sharpen')}
-            />
-            <PluginButton
-              icon={<Edit size={12} />}
-              text="Edge Detect"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('edge-detect')}
-            />
-            <PluginButton
-              icon={<Sparkles size={12} />}
-              text="Glow"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('glow')}
-            />
-            <PluginButton
-              icon={<Layers size={12} />}
-              text="Bevel"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('bevel')}
-            />
-            <PluginButton
-              icon={<Move size={12} />}
-              text="Motion Blur"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('motion-blur')}
-            />
-            <PluginButton
-              icon={<Volume2 size={12} />}
-              text="Noise"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('noise')}
-            />
-            <PluginButton
-              icon={<Waves size={12} />}
-              text="Wave Distort"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('wave-distortion')}
-            />
+          {/* Special Effects Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div 
+              style={{ 
+                fontSize: '12px', 
+                color: '#666', 
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                userSelect: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              onPointerDown={() => setSpecialEffectsExpanded(!specialEffectsExpanded)}
+            >
+              <span style={{ transform: specialEffectsExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
+              Special Effects
+            </div>
+            
+            {specialEffectsExpanded && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
+                <PluginButton
+                  icon={<Layers size={12} />}
+                  text="Emboss"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('emboss')}
+                />
+                <PluginButton
+                  icon={<Zap size={12} />}
+                  text="Sharpen"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('sharpen')}
+                />
+                <PluginButton
+                  icon={<Edit size={12} />}
+                  text="Edge Detect"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('edge-detect')}
+                />
+                <PluginButton
+                  icon={<Sparkles size={12} />}
+                  text="Glow"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('glow')}
+                />
+                <PluginButton
+                  icon={<Layers size={12} />}
+                  text="Bevel"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('bevel')}
+                />
+                <PluginButton
+                  icon={<Move size={12} />}
+                  text="Motion Blur"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('motion-blur')}
+                />
+                <PluginButton
+                  icon={<Volume2 size={12} />}
+                  text="Noise"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('noise')}
+                />
+                <PluginButton
+                  icon={<Waves size={12} />}
+                  text="Wave Distort"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('wave-distortion')}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Filtros Artísticos */}
-          <div style={{ fontSize: '10px', color: '#666', fontWeight: '500', marginTop: '8px', marginBottom: '2px' }}>Artistic Filters:</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
-            <PluginButton
-              icon={<Brush size={12} />}
-              text="Oil Painting"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('oil-painting')}
-            />
-            <PluginButton
-              icon={<Droplets size={12} />}
-              text="Watercolor"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('watercolor')}
-            />
-            <PluginButton
-              icon={<Camera size={12} />}
-              text="Vintage"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('vintage')}
-            />
-            <PluginButton
-              icon={<Zap size={12} />}
-              text="Neon Glow"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('neon-glow')}
-            />
-            <PluginButton
-              icon={<Grid size={12} />}
-              text="Mosaic"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('mosaic')}
-            />
-            <PluginButton
-              icon={<Shuffle size={12} />}
-              text="Glitch"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('glitch')}
-            />
-            <PluginButton
-              icon={<Monitor size={12} />}
-              text="Pixelate"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('pixelate')}
-            />
-            <PluginButton
-              icon={<Clock size={12} />}
-              text="Chromatic"
-              color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('chromatic-aberration')}
-            />
+          {/* Artistic Filters Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div 
+              style={{ 
+                fontSize: '12px', 
+                color: '#666', 
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                userSelect: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              onPointerDown={() => setArtisticFiltersExpanded(!artisticFiltersExpanded)}
+            >
+              <span style={{ transform: artisticFiltersExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
+              Artistic Filters
+            </div>
+            
+            {artisticFiltersExpanded && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
+                <PluginButton
+                  icon={<Brush size={12} />}
+                  text="Oil Painting"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('oil-painting')}
+                />
+                <PluginButton
+                  icon={<Droplets size={12} />}
+                  text="Watercolor"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('watercolor')}
+                />
+                <PluginButton
+                  icon={<Camera size={12} />}
+                  text="Vintage"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('vintage')}
+                />
+                <PluginButton
+                  icon={<Zap size={12} />}
+                  text="Neon Glow"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('neon-glow')}
+                />
+                <PluginButton
+                  icon={<Grid size={12} />}
+                  text="Mosaic"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('mosaic')}
+                />
+                <PluginButton
+                  icon={<Shuffle size={12} />}
+                  text="Glitch"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('glitch')}
+                />
+                <PluginButton
+                  icon={<Monitor size={12} />}
+                  text="Pixelate"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('pixelate')}
+                />
+                <PluginButton
+                  icon={<Clock size={12} />}
+                  text="Chromatic"
+                  color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('chromatic-aberration')}
+                />
+              </div>
+            )}
           </div>
 
-          {/* New Artistic Filters Inspired by SVG Filters Website */}
-          <div style={{ fontSize: '10px', color: '#666', fontWeight: '500', marginTop: '8px', marginBottom: '2px' }}>Artistic Presets (Inspired):</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
-            <PluginButton
-              icon={<Activity size={12} />}
-              text="Dancing Stroke"
-              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('dancing-stroke')}
-            />
-            <PluginButton
-              icon={<Cloud size={12} />}
-              text="Smoke"
-              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('smoke')}
-            />
-            <PluginButton
-              icon={<Waves size={12} />}
-              text="Waves"
-              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('waves')}
-            />
-            <PluginButton
-              icon={<FileText size={12} />}
-              text="Paper"
-              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('paper-texture')}
-            />
-            <PluginButton
-              icon={<Sparkle size={12} />}
-              text="Zebra"
-              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('zebra')}
-            />
-            <PluginButton
-              icon={<Network size={12} />}
-              text="Net"
-              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('net')}
-            />
-            <PluginButton
-              icon={<Wind size={12} />}
-              text="Dust"
-              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('dust')}
-            />
-            <PluginButton
-              icon={<Layers size={12} />}
-              text="Stripes"
-              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('colored-stripes')}
-            />
-            <PluginButton
-              icon={<Sparkles size={12} />}
-              text="Spots"
-              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('colored-spots')}
-            />
-            <PluginButton
-              icon={<Flame size={12} />}
-              text="Flame"
-              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('colored-flame')}
-            />
-            <PluginButton
-              icon={<Droplets size={12} />}
-              text="Advanced Watercolor"
-              color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
-              disabled={!hasAnyElementsSelected}
-              onPointerDown={() => handleQuickApplyFilter('advanced-watercolor')}
-            />
+          {/* Artistic Presets Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div 
+              style={{ 
+                fontSize: '12px', 
+                color: '#666', 
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                userSelect: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              onPointerDown={() => setArtisticPresetsExpanded(!artisticPresetsExpanded)}
+            >
+              <span style={{ transform: artisticPresetsExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
+              Artistic Presets (Inspired)
+            </div>
+            
+            {artisticPresetsExpanded && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
+                <PluginButton
+                  icon={<Activity size={12} />}
+                  text="Dancing Stroke"
+                  color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('dancing-stroke')}
+                />
+                <PluginButton
+                  icon={<Cloud size={12} />}
+                  text="Smoke"
+                  color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('smoke')}
+                />
+                <PluginButton
+                  icon={<Waves size={12} />}
+                  text="Waves"
+                  color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('waves')}
+                />
+                <PluginButton
+                  icon={<FileText size={12} />}
+                  text="Paper"
+                  color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('paper-texture')}
+                />
+                <PluginButton
+                  icon={<Sparkle size={12} />}
+                  text="Zebra"
+                  color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('zebra')}
+                />
+                <PluginButton
+                  icon={<Network size={12} />}
+                  text="Net"
+                  color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('net')}
+                />
+                <PluginButton
+                  icon={<Wind size={12} />}
+                  text="Dust"
+                  color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('dust')}
+                />
+                <PluginButton
+                  icon={<Layers size={12} />}
+                  text="Stripes"
+                  color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('colored-stripes')}
+                />
+                <PluginButton
+                  icon={<Sparkles size={12} />}
+                  text="Spots"
+                  color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('colored-spots')}
+                />
+                <PluginButton
+                  icon={<Flame size={12} />}
+                  text="Flame"
+                  color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('colored-flame')}
+                />
+                <PluginButton
+                  icon={<Droplets size={12} />}
+                  text="Advanced Watercolor"
+                  color={hasAnyElementsSelected ? '#ff6b35' : '#6c757d'}
+                  disabled={!hasAnyElementsSelected}
+                  onPointerDown={() => handleQuickApplyFilter('advanced-watercolor')}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Create Custom Filters */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
-          Create Custom Filter:
-        </span>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
-          <PluginButton
-            icon={<Droplets size={12} />}
-            text="Drop Shadow"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('drop-shadow')}
-          />
-          <PluginButton
-            icon={<Zap size={12} />}
-            text="Blur"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('blur')}
-          />
-          <PluginButton
-            icon={<Eye size={12} />}
-            text="Grayscale"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('grayscale')}
-          />
-          <PluginButton
-            icon={<Palette size={12} />}
-            text="Sepia"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('sepia')}
-          />
-          <PluginButton
-            icon={<RotateCcw size={12} />}
-            text="Invert"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('invert')}
-          />
-          <PluginButton
-            icon={<Sun size={12} />}
-            text="Brightness"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('brightness')}
-          />
-          <PluginButton
-            icon={<Contrast size={12} />}
-            text="Contrast"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('contrast')}
-          />
-          <PluginButton
-            icon={<Sparkles size={12} />}
-            text="Saturate"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('saturate')}
-          />
-          <PluginButton
-            icon={<RotateCcw size={12} />}
-            text="Hue Rotate"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('hue-rotate')}
-          />
-          <PluginButton
-            icon={<Layers size={12} />}
-            text="Emboss"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('emboss')}
-          />
-          <PluginButton
-            icon={<Zap size={12} />}
-            text="Sharpen"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('sharpen')}
-          />
-          <PluginButton
-            icon={<Edit size={12} />}
-            text="Edge Detect"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('edge-detect')}
-          />
-          <PluginButton
-            icon={<Sparkles size={12} />}
-            text="Glow"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('glow')}
-          />
-          <PluginButton
-            icon={<Layers size={12} />}
-            text="Bevel"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('bevel')}
-          />
-          <PluginButton
-            icon={<Move size={12} />}
-            text="Motion Blur"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('motion-blur')}
-          />
-          <PluginButton
-            icon={<Volume2 size={12} />}
-            text="Noise"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('noise')}
-          />
-          <PluginButton
-            icon={<Waves size={12} />}
-            text="Wave Distort"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('wave-distortion')}
-          />
-          <PluginButton
-            icon={<Grid size={12} />}
-            text="Posterize"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('posterize')}
-          />
-          <PluginButton
-            icon={<Brush size={12} />}
-            text="Oil Painting"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('oil-painting')}
-          />
-          <PluginButton
-            icon={<Droplets size={12} />}
-            text="Watercolor"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('watercolor')}
-          />
-          <PluginButton
-            icon={<Camera size={12} />}
-            text="Vintage"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('vintage')}
-          />
-          <PluginButton
-            icon={<Zap size={12} />}
-            text="Neon Glow"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('neon-glow')}
-          />
-          <PluginButton
-            icon={<Grid size={12} />}
-            text="Mosaic"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('mosaic')}
-          />
-          <PluginButton
-            icon={<Shuffle size={12} />}
-            text="Glitch"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('glitch')}
-          />
-          <PluginButton
-            icon={<Monitor size={12} />}
-            text="Pixelate"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('pixelate')}
-          />
-          <PluginButton
-            icon={<Clock size={12} />}
-            text="Chromatic"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('chromatic-aberration')}
-          />
-          <PluginButton
-            icon={<Palette size={12} />}
-            text="Custom"
-            color="#28a745"
-            onPointerDown={() => handleCreateFilter('custom')}
-          />
+        <div 
+          style={{ 
+            fontSize: '12px', 
+            color: '#666', 
+            fontWeight: 'bold',
+            cursor: 'pointer',
+            userSelect: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}
+          onPointerDown={() => setCustomFiltersExpanded(!customFiltersExpanded)}
+        >
+          <span style={{ transform: customFiltersExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
+          Create Custom Filter
         </div>
+        
+        {customFiltersExpanded && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px' }}>
+            <PluginButton
+              icon={<Droplets size={12} />}
+              text="Drop Shadow"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('drop-shadow')}
+            />
+            <PluginButton
+              icon={<Zap size={12} />}
+              text="Blur"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('blur')}
+            />
+            <PluginButton
+              icon={<Eye size={12} />}
+              text="Grayscale"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('grayscale')}
+            />
+            <PluginButton
+              icon={<Palette size={12} />}
+              text="Sepia"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('sepia')}
+            />
+            <PluginButton
+              icon={<RotateCcw size={12} />}
+              text="Invert"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('invert')}
+            />
+            <PluginButton
+              icon={<Sun size={12} />}
+              text="Brightness"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('brightness')}
+            />
+            <PluginButton
+              icon={<Contrast size={12} />}
+              text="Contrast"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('contrast')}
+            />
+            <PluginButton
+              icon={<Sparkles size={12} />}
+              text="Saturate"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('saturate')}
+            />
+            <PluginButton
+              icon={<RotateCcw size={12} />}
+              text="Hue Rotate"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('hue-rotate')}
+            />
+            <PluginButton
+              icon={<Layers size={12} />}
+              text="Emboss"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('emboss')}
+            />
+            <PluginButton
+              icon={<Zap size={12} />}
+              text="Sharpen"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('sharpen')}
+            />
+            <PluginButton
+              icon={<Edit size={12} />}
+              text="Edge Detect"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('edge-detect')}
+            />
+            <PluginButton
+              icon={<Sparkles size={12} />}
+              text="Glow"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('glow')}
+            />
+            <PluginButton
+              icon={<Layers size={12} />}
+              text="Bevel"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('bevel')}
+            />
+            <PluginButton
+              icon={<Move size={12} />}
+              text="Motion Blur"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('motion-blur')}
+            />
+            <PluginButton
+              icon={<Volume2 size={12} />}
+              text="Noise"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('noise')}
+            />
+            <PluginButton
+              icon={<Waves size={12} />}
+              text="Wave Distort"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('wave-distortion')}
+            />
+            <PluginButton
+              icon={<Grid size={12} />}
+              text="Posterize"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('posterize')}
+            />
+            <PluginButton
+              icon={<Brush size={12} />}
+              text="Oil Painting"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('oil-painting')}
+            />
+            <PluginButton
+              icon={<Droplets size={12} />}
+              text="Watercolor"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('watercolor')}
+            />
+            <PluginButton
+              icon={<Camera size={12} />}
+              text="Vintage"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('vintage')}
+            />
+            <PluginButton
+              icon={<Zap size={12} />}
+              text="Neon Glow"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('neon-glow')}
+            />
+            <PluginButton
+              icon={<Grid size={12} />}
+              text="Mosaic"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('mosaic')}
+            />
+            <PluginButton
+              icon={<Shuffle size={12} />}
+              text="Glitch"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('glitch')}
+            />
+            <PluginButton
+              icon={<Monitor size={12} />}
+              text="Pixelate"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('pixelate')}
+            />
+            <PluginButton
+              icon={<Clock size={12} />}
+              text="Chromatic"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('chromatic-aberration')}
+            />
+            <PluginButton
+              icon={<Palette size={12} />}
+              text="Custom"
+              color="#28a745"
+              onPointerDown={() => handleCreateFilter('custom')}
+            />
+          </div>
+        )}
       </div>
 
       {/* Apply to Selected Elements */}

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
+  <defs>
+    <filter id="blur-filter">
+      <feGaussianBlur stdDeviation="2"/>
+    </filter>
+    <filter id="shadow-filter">
+      <feDropShadow dx="2" dy="2" stdDeviation="1"/>
+    </filter>
+  </defs>
+  
+  <!-- Path with blur filter -->
+  <path d="M 50 50 L 100 50 L 100 100 L 50 100 Z" 
+        fill="red" 
+        filter="url(#blur-filter)" 
+        stroke="black" 
+        stroke-width="2"/>
+  
+  <!-- Path with shadow filter via style attribute -->
+  <path d="M 120 50 L 170 50 L 170 100 L 120 100 Z" 
+        fill="blue" 
+        stroke="black" 
+        stroke-width="2"
+        style="filter: url(#shadow-filter)"/>
+        
+  <!-- Path without filter for comparison -->
+  <path d="M 85 120 L 135 120 L 135 170 L 85 170 Z" 
+        fill="green" 
+        stroke="black" 
+        stroke-width="2"/>
+</svg>
