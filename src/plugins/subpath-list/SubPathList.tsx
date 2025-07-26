@@ -3,8 +3,228 @@ import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { getAllSubPaths } from '../../utils/subpath-utils';
 import { subPathToString } from '../../utils/path-utils';
-import { Lock, Unlock } from 'lucide-react';
-import { SVGPath, SVGSubPath } from '../../types';
+import { Lock, Unlock, Edit3, Plus, Trash2, X, Check } from 'lucide-react';
+import { SVGPath, SVGSubPath, SVGCommand, SVGCommandType } from '../../types';
+import { generateId } from '../../utils/id-utils';
+
+interface CommandEditorProps {
+  command: SVGCommand;
+  onSave: (updatedCommand: SVGCommand) => void;
+  onCancel: () => void;
+  onDelete: () => void;
+}
+
+const CommandEditor: React.FC<CommandEditorProps> = ({ command, onSave, onCancel, onDelete }) => {
+  const [editCommand, setEditCommand] = useState<SVGCommand>({ ...command });
+
+  const handleSave = () => {
+    onSave(editCommand);
+  };
+
+  const inputStyle = {
+    width: '50px',
+    padding: '1px 3px',
+    fontSize: '9px',
+    border: '1px solid #ccc',
+    borderRadius: '2px',
+    fontFamily: 'monospace'
+  };
+
+  return (
+    <div style={{
+      backgroundColor: '#fff3cd',
+      border: '1px solid #ffeaa7',
+      borderRadius: '3px',
+      padding: '4px',
+      margin: '1px 0',
+      fontSize: '9px'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+        <select
+          value={editCommand.command}
+          onChange={(e) => setEditCommand({ ...editCommand, command: e.target.value as SVGCommandType })}
+          style={{ fontSize: '9px', padding: '1px' }}
+        >
+          <option value="M">M - Move To</option>
+          <option value="L">L - Line To</option>
+          <option value="C">C - Curve To</option>
+          <option value="Z">Z - Close Path</option>
+        </select>
+        <button onClick={handleSave} style={{ padding: '2px', fontSize: '8px', background: '#28a745', color: 'white', border: 'none', borderRadius: '2px' }}>
+          <Check size={10} />
+        </button>
+        <button onClick={onCancel} style={{ padding: '2px', fontSize: '8px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '2px' }}>
+          <X size={10} />
+        </button>
+        <button onClick={onDelete} style={{ padding: '2px', fontSize: '8px', background: '#dc3545', color: 'white', border: 'none', borderRadius: '2px' }}>
+          <Trash2 size={10} />
+        </button>
+      </div>
+      
+      <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap' }}>
+        {(editCommand.command === 'M' || editCommand.command === 'L' || editCommand.command === 'C') && (
+          <>
+            <label style={{ fontSize: '8px' }}>x:</label>
+            <input
+              type="number"
+              value={editCommand.x || 0}
+              onChange={(e) => setEditCommand({ ...editCommand, x: parseFloat(e.target.value) || 0 })}
+              style={inputStyle}
+            />
+            <label style={{ fontSize: '8px' }}>y:</label>
+            <input
+              type="number"
+              value={editCommand.y || 0}
+              onChange={(e) => setEditCommand({ ...editCommand, y: parseFloat(e.target.value) || 0 })}
+              style={inputStyle}
+            />
+          </>
+        )}
+        {editCommand.command === 'C' && (
+          <>
+            <label style={{ fontSize: '8px' }}>x1:</label>
+            <input
+              type="number"
+              value={editCommand.x1 || 0}
+              onChange={(e) => setEditCommand({ ...editCommand, x1: parseFloat(e.target.value) || 0 })}
+              style={inputStyle}
+            />
+            <label style={{ fontSize: '8px' }}>y1:</label>
+            <input
+              type="number"
+              value={editCommand.y1 || 0}
+              onChange={(e) => setEditCommand({ ...editCommand, y1: parseFloat(e.target.value) || 0 })}
+              style={inputStyle}
+            />
+            <label style={{ fontSize: '8px' }}>x2:</label>
+            <input
+              type="number"
+              value={editCommand.x2 || 0}
+              onChange={(e) => setEditCommand({ ...editCommand, x2: parseFloat(e.target.value) || 0 })}
+              style={inputStyle}
+            />
+            <label style={{ fontSize: '8px' }}>y2:</label>
+            <input
+              type="number"
+              value={editCommand.y2 || 0}
+              onChange={(e) => setEditCommand({ ...editCommand, y2: parseFloat(e.target.value) || 0 })}
+              style={inputStyle}
+            />
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+interface NewCommandCreatorProps {
+  onSave: (newCommand: Omit<SVGCommand, 'id'>) => void;
+  onCancel: () => void;
+}
+
+const NewCommandCreator: React.FC<NewCommandCreatorProps> = ({ onSave, onCancel }) => {
+  const [newCommand, setNewCommand] = useState<Omit<SVGCommand, 'id'>>({
+    command: 'L',
+    x: 0,
+    y: 0
+  });
+
+  const handleSave = () => {
+    onSave(newCommand);
+  };
+
+  const inputStyle = {
+    width: '50px',
+    padding: '1px 3px',
+    fontSize: '9px',
+    border: '1px solid #ccc',
+    borderRadius: '2px',
+    fontFamily: 'monospace'
+  };
+
+  return (
+    <div style={{
+      backgroundColor: '#d1ecf1',
+      border: '1px solid #bee5eb',
+      borderRadius: '3px',
+      padding: '4px',
+      margin: '1px 0',
+      fontSize: '9px'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+        <select
+          value={newCommand.command}
+          onChange={(e) => setNewCommand({ ...newCommand, command: e.target.value as SVGCommandType })}
+          style={{ fontSize: '9px', padding: '1px' }}
+        >
+          <option value="M">M - Move To</option>
+          <option value="L">L - Line To</option>
+          <option value="C">C - Curve To</option>
+          <option value="Z">Z - Close Path</option>
+        </select>
+        <button onClick={handleSave} style={{ padding: '2px', fontSize: '8px', background: '#28a745', color: 'white', border: 'none', borderRadius: '2px' }}>
+          <Check size={10} />
+        </button>
+        <button onClick={onCancel} style={{ padding: '2px', fontSize: '8px', background: '#6c757d', color: 'white', border: 'none', borderRadius: '2px' }}>
+          <X size={10} />
+        </button>
+      </div>
+      
+      <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap' }}>
+        {(newCommand.command === 'M' || newCommand.command === 'L' || newCommand.command === 'C') && (
+          <>
+            <label style={{ fontSize: '8px' }}>x:</label>
+            <input
+              type="number"
+              value={newCommand.x || 0}
+              onChange={(e) => setNewCommand({ ...newCommand, x: parseFloat(e.target.value) || 0 })}
+              style={inputStyle}
+            />
+            <label style={{ fontSize: '8px' }}>y:</label>
+            <input
+              type="number"
+              value={newCommand.y || 0}
+              onChange={(e) => setNewCommand({ ...newCommand, y: parseFloat(e.target.value) || 0 })}
+              style={inputStyle}
+            />
+          </>
+        )}
+        {newCommand.command === 'C' && (
+          <>
+            <label style={{ fontSize: '8px' }}>x1:</label>
+            <input
+              type="number"
+              value={newCommand.x1 || 0}
+              onChange={(e) => setNewCommand({ ...newCommand, x1: parseFloat(e.target.value) || 0 })}
+              style={inputStyle}
+            />
+            <label style={{ fontSize: '8px' }}>y1:</label>
+            <input
+              type="number"
+              value={newCommand.y1 || 0}
+              onChange={(e) => setNewCommand({ ...newCommand, y1: parseFloat(e.target.value) || 0 })}
+              style={inputStyle}
+            />
+            <label style={{ fontSize: '8px' }}>x2:</label>
+            <input
+              type="number"
+              value={newCommand.x2 || 0}
+              onChange={(e) => setNewCommand({ ...newCommand, x2: parseFloat(e.target.value) || 0 })}
+              style={inputStyle}
+            />
+            <label style={{ fontSize: '8px' }}>y2:</label>
+            <input
+              type="number"
+              value={newCommand.y2 || 0}
+              onChange={(e) => setNewCommand({ ...newCommand, y2: parseFloat(e.target.value) || 0 })}
+              style={inputStyle}
+            />
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
 
 interface SubPathWireframeProps {
   subPath: SVGSubPath;
@@ -160,7 +380,10 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
   isSelected,
   onSelect,
 }) => {
-  const updateSubPath = useEditorStore(s => s.updateSubPath);
+  const { updateSubPath, replaceSubPathCommands, removeSubPath, pushToHistory } = useEditorStore();
+  const [editingCommandId, setEditingCommandId] = useState<string | null>(null);
+  const [addingCommandAfter, setAddingCommandAfter] = useState<number | null>(null);
+  
   // Get first command for display info
   const firstCommand = subPath.commands[0];
   const commandCount = subPath.commands.length;
@@ -168,6 +391,58 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
   const handleLockToggle = (e: React.PointerEvent) => {
     e.stopPropagation();
     updateSubPath(subPath.id, { locked: !subPath.locked });
+  };
+
+  const handleDeleteSubPath = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    if (window.confirm(`Are you sure you want to delete sub-path ${subPath.id.slice(-6)}?`)) {
+      pushToHistory();
+      removeSubPath(subPath.id);
+    }
+  };
+
+  const handleCommandEdit = (commandId: string) => {
+    setEditingCommandId(commandId);
+  };
+
+  const handleCommandSave = (updatedCommand: SVGCommand) => {
+    pushToHistory();
+    const updatedCommands = subPath.commands.map(cmd => 
+      cmd.id === updatedCommand.id ? updatedCommand : cmd
+    );
+    replaceSubPathCommands(subPath.id, updatedCommands);
+    setEditingCommandId(null);
+  };
+
+  const handleCommandDelete = (commandId: string) => {
+    if (window.confirm('Are you sure you want to delete this command?')) {
+      pushToHistory();
+      const updatedCommands = subPath.commands.filter(cmd => cmd.id !== commandId);
+      if (updatedCommands.length === 0) {
+        // If no commands left, delete the entire subpath
+        removeSubPath(subPath.id);
+      } else {
+        replaceSubPathCommands(subPath.id, updatedCommands);
+      }
+    }
+    setEditingCommandId(null);
+  };
+
+  const handleAddCommand = (afterIndex: number) => {
+    setAddingCommandAfter(afterIndex);
+  };
+
+  const handleNewCommandSave = (newCommand: Omit<SVGCommand, 'id'>) => {
+    pushToHistory();
+    const commandWithId: SVGCommand = { ...newCommand, id: generateId() };
+    const updatedCommands = [...subPath.commands];
+    updatedCommands.splice(addingCommandAfter! + 1, 0, commandWithId);
+    replaceSubPathCommands(subPath.id, updatedCommands);
+    setAddingCommandAfter(null);
+  };
+
+  const handleNewCommandCancel = () => {
+    setAddingCommandAfter(null);
   };
 
   return (
@@ -183,7 +458,7 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
         fontSize: '12px',
         transition: 'all 0.2s ease',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         gap: 8,
       }}
       onPointerEnter={(e) => {
@@ -197,24 +472,6 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
         }
       }}
     >
-      <button
-        onPointerDown={handleLockToggle}
-        title={subPath.locked ? 'Desbloquear subpath' : 'Bloquear subpath'}
-        style={{
-          background: 'none',
-          border: 'none',
-          padding: 0,
-          marginRight: 6,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-        }}
-        tabIndex={-1}
-      >
-        {subPath.locked
-          ? <Lock size={20} strokeWidth={3.2} color="#111" style={{ filter: 'drop-shadow(0 1px 0 #888)' }} />
-          : <Unlock size={20} strokeWidth={2.2} color="#bbb" />}
-      </button>
       <div style={{ flex: 1 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
           <SubPathWireframe subPath={subPath} isSelected={isSelected} />
@@ -228,10 +485,175 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
                 Sub-Path {subPath.id.slice(-6)}
               </span>
             </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '4px' }}>
+              <button
+                onPointerDown={handleLockToggle}
+                title={subPath.locked ? 'Unlock subpath' : 'Lock subpath'}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+                tabIndex={-1}
+              >
+                {subPath.locked
+                  ? <Lock size={16} strokeWidth={3.2} color="#111" style={{ filter: 'drop-shadow(0 1px 0 #888)' }} />
+                  : <Unlock size={16} strokeWidth={2.2} color="#bbb" />}
+              </button>
+              <button
+                onPointerDown={handleDeleteSubPath}
+                title="Delete subpath"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+                tabIndex={-1}
+              >
+                <Trash2 size={16} strokeWidth={2.2} color="#dc3545" />
+              </button>
+            </div>
             <div style={{ color: '#666', fontSize: '10px', lineHeight: '1.3' }}>
-              <div>Start: {firstCommand?.command} {firstCommand?.x?.toFixed(0)},{firstCommand?.y?.toFixed(0)}</div>
               <div>{commandCount} command{commandCount !== 1 ? 's' : ''}</div>
-              <div style={{ color: '#999' }}>Path: {path.id.slice(-6)}</div>
+              <div style={{ color: '#999', marginBottom: '6px' }}>Path: {path.id.slice(-6)}</div>
+              
+              {/* Commands List */}
+              <div style={{ 
+                marginTop: '6px', 
+                padding: '4px 6px', 
+                backgroundColor: '#f8f9fa', 
+                borderRadius: '3px',
+                border: '1px solid #e9ecef',
+                maxHeight: '120px',
+                overflowY: 'auto',
+                fontSize: '9px',
+                fontFamily: 'monospace'
+              }}>
+                <div style={{ fontWeight: '600', marginBottom: '2px', color: '#555' }}>Commands:</div>
+                {subPath.commands.map((cmd, index) => {
+                  const isEditing = editingCommandId === cmd.id;
+                  
+                  if (isEditing) {
+                    return (
+                      <CommandEditor
+                        key={cmd.id}
+                        command={cmd}
+                        onSave={handleCommandSave}
+                        onCancel={() => setEditingCommandId(null)}
+                        onDelete={() => handleCommandDelete(cmd.id)}
+                      />
+                    );
+                  }
+
+                  const cmdString = (() => {
+                    switch (cmd.command) {
+                      case 'M':
+                      case 'L':
+                        return `${cmd.command} ${cmd.x?.toFixed(1)} ${cmd.y?.toFixed(1)}`;
+                      case 'C':
+                        return `${cmd.command} ${cmd.x1?.toFixed(1)} ${cmd.y1?.toFixed(1)} ${cmd.x2?.toFixed(1)} ${cmd.y2?.toFixed(1)} ${cmd.x?.toFixed(1)} ${cmd.y?.toFixed(1)}`;
+                      case 'Z':
+                        return cmd.command;
+                      default:
+                        return '';
+                    }
+                  })();
+                  
+                  return (
+                    <div key={cmd.id}>
+                      <div 
+                        style={{ 
+                          marginBottom: '1px',
+                          color: index === 0 ? '#22c55e' : index === subPath.commands.length - 1 ? '#ef4444' : '#333',
+                          fontWeight: index === 0 || index === subPath.commands.length - 1 ? '600' : '400',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '4px'
+                        }}
+                      >
+                        <span>{index + 1}. {cmdString}</span>
+                        <div style={{ display: 'flex', gap: '2px' }}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCommandEdit(cmd.id);
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: '1px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                            title="Edit command"
+                          >
+                            <Edit3 size={10} color="#007acc" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddCommand(index);
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: '1px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                            title="Add command after this"
+                          >
+                            <Plus size={10} color="#28a745" />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {/* Show new command creator after this command */}
+                      {addingCommandAfter === index && (
+                        <NewCommandCreator
+                          onSave={handleNewCommandSave}
+                          onCancel={handleNewCommandCancel}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+                
+                {/* Add command at the end */}
+                <div style={{ marginTop: '4px', paddingTop: '4px', borderTop: '1px solid #e9ecef' }}>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAddCommand(subPath.commands.length - 1);
+                    }}
+                    style={{
+                      background: '#28a745',
+                      color: 'white',
+                      border: 'none',
+                      padding: '2px 4px',
+                      borderRadius: '2px',
+                      cursor: 'pointer',
+                      fontSize: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '2px'
+                    }}
+                    title="Add command at the end"
+                  >
+                    <Plus size={8} />
+                    Add Command
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
