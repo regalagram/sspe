@@ -573,13 +573,20 @@ const SubPathListItem: React.FC<SubPathListItemProps> = ({
                           color: index === 0 ? '#22c55e' : index === subPath.commands.length - 1 ? '#ef4444' : '#333',
                           fontWeight: index === 0 || index === subPath.commands.length - 1 ? '600' : '400',
                           display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
                           gap: '4px'
                         }}
                       >
-                        <span>{index + 1}. {cmdString}</span>
-                        <div style={{ display: 'flex', gap: '2px' }}>
+                        <span style={{ flex: 1, wordBreak: 'break-word', lineHeight: '1.2', textAlign: 'left' }}>
+                          {index + 1}. {cmdString}
+                        </span>
+                        <div style={{ 
+                          display: 'flex', 
+                          gap: '2px', 
+                          flexShrink: 0,
+                          alignItems: 'flex-start',
+                          marginTop: '1px'
+                        }}>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
