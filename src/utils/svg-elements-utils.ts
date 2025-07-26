@@ -1,4 +1,7 @@
-import { SVGImage, SVGClipPath, SVGMask, SVGFilter, SVGMarker, SVGSymbol, SVGUse, FilterPrimitiveType, Point } from '../types';
+import { SVGImage, SVGClipPath, SVGMask, SVGFilter, SVGMarker, SVGSymbol, SVGUse, FilterPrimitiveType, Point, SVGPath } from '../types';
+import { generateId } from './id-utils';
+import { parsePathData } from './svg-parser';
+import { decomposeIntoSubPaths } from './subpath-utils';
 
 // File handling utilities
 export const readFileAsDataURL = (file: File): Promise<string> => {
@@ -672,6 +675,48 @@ export const createArrowMarker = (): Omit<SVGMarker, 'id'> => ({
   },
   locked: false,
 });
+
+// Create a marker with a custom editable path
+export const createCustomMarkerWithPath = (pathData: string = 'M 0 0 L 10 2.5 L 0 5 Z'): { marker: Omit<SVGMarker, 'id'>, path: Omit<SVGPath, 'id'> } => {
+  const pathId = generateId();
+  
+  // Parse the path data into commands
+  const commands = parsePathData(pathData);
+  const subPaths = decomposeIntoSubPaths(commands);
+  
+  const path: Omit<SVGPath, 'id'> = {
+    subPaths,
+    style: {
+      fill: '#000000',
+      stroke: 'none',
+      fillOpacity: 1,
+      strokeOpacity: 1,
+      strokeWidth: 0,
+    }
+  };
+
+  const marker: Omit<SVGMarker, 'id'> = {
+    type: 'marker',
+    markerUnits: 'strokeWidth',
+    refX: 0,
+    refY: 2.5,
+    markerWidth: 1,
+    markerHeight: 1,
+    orient: 'auto',
+    viewBox: '0 0 10 5',
+    children: [{ type: 'path', id: pathId }],
+    style: {
+      fill: '#000000',
+      stroke: 'none',
+      fillOpacity: 1,
+      strokeOpacity: 1,
+      strokeWidth: 0,
+    },
+    locked: false,
+  };
+
+  return { marker, path };
+};
 
 // Symbol utilities
 export const createDefaultSymbol = (): Omit<SVGSymbol, 'id'> => ({

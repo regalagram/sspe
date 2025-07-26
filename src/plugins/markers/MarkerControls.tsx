@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { createDefaultMarker, createArrowMarker, formatSVGReference, parseSVGReference } from '../../utils/svg-elements-utils';
+import { createDefaultMarker, createArrowMarker, createCustomMarkerWithPath, formatSVGReference, parseSVGReference } from '../../utils/svg-elements-utils';
 import { PluginButton } from '../../components/PluginButton';
 import { ElementPreview } from '../../components/ElementPreview';
-import { ArrowUp, ArrowDown, Plus, Trash2, Target } from 'lucide-react';
+import { ArrowUp, ArrowDown, Plus, Trash2, Target, Edit3 } from 'lucide-react';
 
 export const MarkerControls: React.FC = () => {
   const { 
@@ -14,7 +14,9 @@ export const MarkerControls: React.FC = () => {
     addMarker, 
     updateMarker, 
     removeMarker,
-    updatePathStyle
+    updatePathStyle,
+    addPath,
+    replacePaths
   } = useEditorStore();
 
   const selectedPath = selection.selectedPaths.length === 1 
@@ -38,9 +40,34 @@ export const MarkerControls: React.FC = () => {
     return parentPaths;
   };
 
-  const handleCreateMarker = (type: 'default' | 'arrow') => {
-    const markerData = type === 'arrow' ? createArrowMarker() : createDefaultMarker();
-    addMarker(markerData);
+  const handleCreateMarker = (type: 'default' | 'arrow' | 'custom') => {
+    if (type === 'custom') {
+      // Create a custom marker with an editable path
+      const { marker, path } = createCustomMarkerWithPath();
+      
+      // First add the path
+      const pathId = addPath(path.style);
+      
+      // Update the path with the correct structure by getting current state and replacing
+      const state = useEditorStore.getState();
+      const updatedPaths = state.paths.map(p => 
+        p.id === pathId 
+          ? { ...path, id: pathId }
+          : p
+      );
+      replacePaths(updatedPaths);
+      
+      // Create marker with reference to the path
+      const markerWithPath = {
+        ...marker,
+        children: [{ type: 'path' as const, id: pathId }]
+      };
+      
+      addMarker(markerWithPath);
+    } else {
+      const markerData = type === 'arrow' ? createArrowMarker() : createDefaultMarker();
+      addMarker(markerData);
+    }
   };
 
   const handleQuickApplyArrow = (position: 'start' | 'end') => {
@@ -184,6 +211,12 @@ export const MarkerControls: React.FC = () => {
             text="Custom"
             color="#28a745"
             onPointerDown={() => handleCreateMarker('default')}
+          />
+          <PluginButton
+            icon={<Edit3 size={12} />}
+            text="Custom Path"
+            color="#ffc107"
+            onPointerDown={() => handleCreateMarker('custom')}
           />
       </div>
 
@@ -615,6 +648,83 @@ export const MarkerControls: React.FC = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* Path Editor for Custom Markers */}
+                  {marker.children.length > 0 && marker.children.some(child => child.type === 'path') && (
+                    <div style={{ paddingTop: '6px', borderTop: '1px solid #e9ecef' }}>
+                      <span style={{ fontSize: '11px', color: '#666', fontWeight: '500', marginBottom: '6px', display: 'block' }}>
+                        Custom Path:
+                      </span>
+                      
+                      {marker.children
+                        .filter(child => child.type === 'path')
+                        .map(child => {
+                          const markerPath = paths.find(p => p.id === child.id);
+                          if (!markerPath) return null;
+                          
+                          // Convert path to SVG path string for editing
+                          const pathData = markerPath.subPaths.map(subPath => 
+                            subPath.commands.map(cmd => {
+                              switch (cmd.command) {
+                                case 'M':
+                                  return `M ${cmd.x} ${cmd.y}`;
+                                case 'L':
+                                  return `L ${cmd.x} ${cmd.y}`;
+                                case 'C':
+                                  return `C ${cmd.x1} ${cmd.y1} ${cmd.x2} ${cmd.y2} ${cmd.x} ${cmd.y}`;
+                                case 'Z':
+                                  return 'Z';
+                                default:
+                                  return '';
+                              }
+                            }).join(' ')
+                          ).join(' ');
+
+                          const handlePathDataChange = (newPathData: string) => {
+                            try {
+                              // Parse the new path data and update the path
+                              const { marker: newMarkerData, path: newPathData_parsed } = createCustomMarkerWithPath(newPathData);
+                              
+                              // Update the existing path with new data
+                              const updatedPaths = paths.map(p => 
+                                p.id === child.id 
+                                  ? { ...newPathData_parsed, id: child.id }
+                                  : p
+                              );
+                              replacePaths(updatedPaths);
+                            } catch (error) {
+                              console.warn('Invalid path data:', error);
+                            }
+                          };
+
+                          return (
+                            <div key={child.id} style={{ marginBottom: '6px' }}>
+                              <label style={{ fontSize: '10px', color: '#666', marginBottom: '4px', display: 'block' }}>
+                                Path Data (SVG d attribute):
+                              </label>
+                              <textarea
+                                value={pathData}
+                                onChange={(e) => handlePathDataChange(e.target.value)}
+                                placeholder="M 0 0 L 10 2.5 L 0 5 Z"
+                                style={{
+                                  width: '100%',
+                                  padding: '4px',
+                                  fontSize: '10px',
+                                  border: '1px solid #ddd',
+                                  borderRadius: '3px',
+                                  minHeight: '60px',
+                                  fontFamily: 'monospace',
+                                  resize: 'vertical'
+                                }}
+                              />
+                              <div style={{ fontSize: '9px', color: '#999', marginTop: '2px' }}>
+                                Enter SVG path commands. Example: M 0 0 L 10 2.5 L 0 5 Z
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -698,6 +808,8 @@ export const MarkerControls: React.FC = () => {
         <div>• Edit marker dimensions, orientation, and colors in the marker list</div>
         <div>• Use solid colors or gradients for marker styling</div>
         <div>• Markers automatically scale with zoom for consistent visual size</div>
+        <div>• <strong>Custom Path:</strong> Create markers with editable SVG path data</div>
+        <div>• Edit the path data directly to create custom arrow shapes and symbols</div>
       </div>
     </div>
   );
