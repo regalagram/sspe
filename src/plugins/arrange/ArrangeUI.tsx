@@ -23,9 +23,22 @@ interface ArrangeUIProps {
 
 export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
   const selection = useEditorStore((state) => state.selection);
-  const hasSelection = selection.selectedSubPaths.length > 0;
-  const hasMultipleSelection = selection.selectedSubPaths.length > 1;
-  const hasThreeOrMore = selection.selectedSubPaths.length >= 3;
+  const hasSelection = (
+    selection.selectedSubPaths.length > 0 ||
+    selection.selectedTexts.length > 0 ||
+    selection.selectedImages.length > 0 ||
+    selection.selectedUses.length > 0 ||
+    selection.selectedGroups.length > 0
+  );
+  const totalSelected = (
+    selection.selectedSubPaths.length +
+    selection.selectedTexts.length +
+    selection.selectedImages.length +
+    selection.selectedUses.length +
+    selection.selectedGroups.length
+  );
+  const hasMultipleSelection = totalSelected > 1;
+  const hasThreeOrMore = totalSelected >= 3;
 
   const handleAlign = (type: string) => {
     if (!hasMultipleSelection) return;
@@ -258,51 +271,55 @@ export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
           </div>
         </div>
 
-        {/* Stretch Section */}
-        <div style={sectionStyle}>
-          <h3 style={titleStyle}>Stretch</h3>
-          <div style={gridStyle}>
-            <Button
-              onPointerDown={() => handleStretch('horizontal')}
-              disabled={!hasMultipleSelection}
-              title="Stretch Horizontally"
-            >
-              <ArrowLeftRight size={12} />
-            </Button>
-            <Button
-              onPointerDown={() => handleStretch('vertical')}
-              disabled={!hasMultipleSelection}
-              title="Stretch Vertically"
-            >
-              <ArrowUpDown size={12} />
-            </Button>
-            <div></div>
-            <div></div>
+        {/* Stretch Section - Only for SubPaths */}
+        {selection.selectedSubPaths.length > 1 && (
+          <div style={sectionStyle}>
+            <h3 style={titleStyle}>Stretch</h3>
+            <div style={gridStyle}>
+              <Button
+                onPointerDown={() => handleStretch('horizontal')}
+                disabled={!hasMultipleSelection}
+                title="Stretch Horizontally"
+              >
+                <ArrowLeftRight size={12} />
+              </Button>
+              <Button
+                onPointerDown={() => handleStretch('vertical')}
+                disabled={!hasMultipleSelection}
+                title="Stretch Vertically"
+              >
+                <ArrowUpDown size={12} />
+              </Button>
+              <div></div>
+              <div></div>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Flip Section */}
-        <div style={sectionStyle}>
-          <h3 style={titleStyle}>Flip</h3>
-          <div style={gridStyle}>
-            <Button
-              onPointerDown={() => handleFlip('horizontal')}
-              disabled={!hasSelection}
-              title="Flip Horizontally"
-            >
-              <FlipHorizontal size={12} />
-            </Button>
-            <Button
-              onPointerDown={() => handleFlip('vertical')}
-              disabled={!hasSelection}
-              title="Flip Vertically"
-            >
-              <FlipVertical size={12} />
-            </Button>
-            <div></div>
-            <div></div>
+        {/* Flip Section - Only for SubPaths */}
+        {selection.selectedSubPaths.length > 0 && (
+          <div style={sectionStyle}>
+            <h3 style={titleStyle}>Flip</h3>
+            <div style={gridStyle}>
+              <Button
+                onPointerDown={() => handleFlip('horizontal')}
+                disabled={!hasSelection}
+                title="Flip Horizontally"
+              >
+                <FlipHorizontal size={12} />
+              </Button>
+              <Button
+                onPointerDown={() => handleFlip('vertical')}
+                disabled={!hasSelection}
+                title="Flip Vertically"
+              >
+                <FlipVertical size={12} />
+              </Button>
+              <div></div>
+              <div></div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Stack Section */}
         <div style={sectionStyle}>

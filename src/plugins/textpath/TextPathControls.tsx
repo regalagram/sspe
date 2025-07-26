@@ -66,10 +66,7 @@ export const TextPathControls: React.FC = () => {
   };
 
   const containerStyle: React.CSSProperties = {
-    padding: '16px',
-    backgroundColor: '#ffffff',
-    borderRadius: '8px',
-    border: '1px solid #e0e0e0'
+
   };
 
   const sectionStyle: React.CSSProperties = {
@@ -131,24 +128,28 @@ export const TextPathControls: React.FC = () => {
             TextPath ({textPaths.length})
           </span>
         </div>
-        <div style={{ display: 'flex', gap: '4px' }}>
-          <PluginButton
-            icon={<Plus size={14} />}
-            text=""
-            color="#28a745"
-            active={showCreateForm}
-            disabled={availablePaths.length === 0}
-            onPointerDown={() => setShowCreateForm(!showCreateForm)}
-          />
-          <PluginButton
-            icon={<Trash2 size={14} />}
-            text=""
-            color="#dc3545"
-            active={false}
-            disabled={selectedTextPaths.length === 0}
-            onPointerDown={handleDeleteSelected}
-          />
-        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div style={{ ...sectionStyle, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <PluginButton
+          icon={<Plus size={14} />}
+          text="Add TextPath"
+          color="#28a745"
+          active={showCreateForm}
+          disabled={availablePaths.length === 0}
+          onPointerDown={() => setShowCreateForm(!showCreateForm)}
+          fullWidth={true}
+        />
+        <PluginButton
+          icon={<Trash2 size={14} />}
+          text="Delete Selected"
+          color="#dc3545"
+          active={false}
+          disabled={selectedTextPaths.length === 0}
+          onPointerDown={handleDeleteSelected}
+          fullWidth={true}
+        />
       </div>
 
       {/* Create Form */}

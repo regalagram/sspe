@@ -7,7 +7,13 @@ import { arrangeManager } from './ArrangeManager';
 const ArrangeComponent: React.FC = () => {
   const [showPanel, setShowPanel] = useState(false);
   const selection = useEditorStore((state) => state.selection);
-  const hasSelection = selection.selectedSubPaths.length > 0;
+  const hasSelection = (
+    selection.selectedSubPaths.length > 0 ||
+    selection.selectedTexts.length > 0 ||
+    selection.selectedImages.length > 0 ||
+    selection.selectedUses.length > 0 ||
+    selection.selectedGroups.length > 0
+  );
 
   // Initialize arrange manager with editor store
   useEffect(() => {
@@ -56,12 +62,22 @@ export const ArrangePlugin: Plugin = {
     {
       key: 'a',
       modifiers: ['shift'],
-      description: 'Focus First SubPath (shows Arrange panel)',
+      description: 'Focus First Element (shows Arrange panel)',
       action: () => {
-        // Focus first available subpath to trigger arrange panel
+        // Focus first available element to trigger arrange panel
         const store = useEditorStore.getState();
+        const { selectSubPath, selectText, selectImage, selectUse, selectGroup } = store;
+        
         if (store.paths.length > 0 && store.paths[0].subPaths.length > 0) {
-          store.selectSubPath(store.paths[0].subPaths[0].id);
+          selectSubPath(store.paths[0].subPaths[0].id);
+        } else if (store.texts.length > 0) {
+          selectText(store.texts[0].id);
+        } else if (store.images.length > 0) {
+          selectImage(store.images[0].id);
+        } else if (store.uses.length > 0) {
+          selectUse(store.uses[0].id);
+        } else if (store.groups.length > 0) {
+          selectGroup(store.groups[0].id);
         }
       }
     },

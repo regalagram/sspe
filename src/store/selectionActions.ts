@@ -69,6 +69,16 @@ export const createSelectionActions: StateCreator<
             selectedSubPaths: [],
             selectedPaths: [],
             selectedCommands: [],
+            selectedTexts: [],
+            selectedTextSpans: [],
+            selectedGroups: [],
+            selectedImages: [],
+            selectedClipPaths: [],
+            selectedMasks: [],
+            selectedFilters: [],
+            selectedMarkers: [],
+            selectedSymbols: [],
+            selectedUses: [],
           },
         };
       }
@@ -78,6 +88,16 @@ export const createSelectionActions: StateCreator<
           selectedSubPaths: [subPathId],
           selectedPaths: [],
           selectedCommands: [],
+          selectedTexts: [],
+          selectedTextSpans: [],
+          selectedGroups: [],
+          selectedImages: [],
+          selectedClipPaths: [],
+          selectedMasks: [],
+          selectedFilters: [],
+          selectedMarkers: [],
+          selectedSymbols: [],
+          selectedUses: [],
         },
       };
     }),
@@ -99,6 +119,16 @@ export const createSelectionActions: StateCreator<
               selectedSubPaths: currentSelection.filter(id => id !== subPathId),
               selectedPaths: [],
               selectedCommands: [],
+              selectedTexts: [],
+              selectedTextSpans: [],
+              selectedGroups: [],
+              selectedImages: [],
+              selectedClipPaths: [],
+              selectedMasks: [],
+              selectedFilters: [],
+              selectedMarkers: [],
+              selectedSymbols: [],
+              selectedUses: [],
             },
           };
         } else {
@@ -108,6 +138,16 @@ export const createSelectionActions: StateCreator<
               selectedSubPaths: [...currentSelection, subPathId],
               selectedPaths: [],
               selectedCommands: [],
+              selectedTexts: [],
+              selectedTextSpans: [],
+              selectedGroups: [],
+              selectedImages: [],
+              selectedClipPaths: [],
+              selectedMasks: [],
+              selectedFilters: [],
+              selectedMarkers: [],
+              selectedSymbols: [],
+              selectedUses: [],
             },
           };
         }
@@ -118,6 +158,16 @@ export const createSelectionActions: StateCreator<
             selectedSubPaths: [subPathId],
             selectedPaths: [],
             selectedCommands: [],
+            selectedTexts: [],
+            selectedTextSpans: [],
+            selectedGroups: [],
+            selectedImages: [],
+            selectedClipPaths: [],
+            selectedMasks: [],
+            selectedFilters: [],
+            selectedMarkers: [],
+            selectedSymbols: [],
+            selectedUses: [],
           },
         };
       }
@@ -144,6 +194,16 @@ export const createSelectionActions: StateCreator<
             selectedCommands: [],
             selectedPaths: [],
             selectedSubPaths: [],
+            selectedTexts: [],
+            selectedTextSpans: [],
+            selectedGroups: [],
+            selectedImages: [],
+            selectedClipPaths: [],
+            selectedMasks: [],
+            selectedFilters: [],
+            selectedMarkers: [],
+            selectedSymbols: [],
+            selectedUses: [],
           },
         };
       }
@@ -153,6 +213,16 @@ export const createSelectionActions: StateCreator<
           selectedCommands: [commandId],
           selectedPaths: [],
           selectedSubPaths: [],
+          selectedTexts: [],
+          selectedTextSpans: [],
+          selectedGroups: [],
+          selectedImages: [],
+          selectedClipPaths: [],
+          selectedMasks: [],
+          selectedFilters: [],
+          selectedMarkers: [],
+          selectedSymbols: [],
+          selectedUses: [],
         },
       };
     }),
@@ -164,6 +234,16 @@ export const createSelectionActions: StateCreator<
         newSelection.selectedPaths = ids;
         newSelection.selectedSubPaths = [];
         newSelection.selectedCommands = [];
+        newSelection.selectedTexts = [];
+        newSelection.selectedTextSpans = [];
+        newSelection.selectedGroups = [];
+        newSelection.selectedImages = [];
+        newSelection.selectedClipPaths = [];
+        newSelection.selectedMasks = [];
+        newSelection.selectedFilters = [];
+        newSelection.selectedMarkers = [];
+        newSelection.selectedSymbols = [];
+        newSelection.selectedUses = [];
       } else if (type === 'subpaths') {
         const allowed = ids.filter(id =>
           !state.paths.some(path =>
@@ -173,6 +253,16 @@ export const createSelectionActions: StateCreator<
         newSelection.selectedSubPaths = allowed;
         newSelection.selectedPaths = [];
         newSelection.selectedCommands = [];
+        newSelection.selectedTexts = [];
+        newSelection.selectedTextSpans = [];
+        newSelection.selectedGroups = [];
+        newSelection.selectedImages = [];
+        newSelection.selectedClipPaths = [];
+        newSelection.selectedMasks = [];
+        newSelection.selectedFilters = [];
+        newSelection.selectedMarkers = [];
+        newSelection.selectedSymbols = [];
+        newSelection.selectedUses = [];
       } else if (type === 'commands') {
         const allowed = ids.filter(cmdId => {
           for (const path of state.paths) {
@@ -188,6 +278,16 @@ export const createSelectionActions: StateCreator<
         newSelection.selectedCommands = allowed;
         newSelection.selectedPaths = [];
         newSelection.selectedSubPaths = [];
+        newSelection.selectedTexts = [];
+        newSelection.selectedTextSpans = [];
+        newSelection.selectedGroups = [];
+        newSelection.selectedImages = [];
+        newSelection.selectedClipPaths = [];
+        newSelection.selectedMasks = [];
+        newSelection.selectedFilters = [];
+        newSelection.selectedMarkers = [];
+        newSelection.selectedSymbols = [];
+        newSelection.selectedUses = [];
       }
       return { selection: newSelection };
     }),
@@ -202,6 +302,14 @@ export const createSelectionActions: StateCreator<
         selectedControlPoints: [],
         selectedTexts: [],
         selectedTextSpans: [],
+        selectedGroups: [],
+        selectedImages: [],
+        selectedClipPaths: [],
+        selectedMasks: [],
+        selectedFilters: [],
+        selectedMarkers: [],
+        selectedSymbols: [],
+        selectedUses: [],
       },
     })),
 
@@ -234,6 +342,14 @@ export const createSelectionActions: StateCreator<
           selectedPaths: [],
           selectedSubPaths: [],
           selectedCommands: [],
+          selectedGroups: [],
+          selectedImages: [],
+          selectedClipPaths: [],
+          selectedMasks: [],
+          selectedFilters: [],
+          selectedMarkers: [],
+          selectedSymbols: [],
+          selectedUses: [],
         },
       };
     }),
@@ -261,6 +377,14 @@ export const createSelectionActions: StateCreator<
               selectedPaths: [],
               selectedSubPaths: [],
               selectedCommands: [],
+              selectedGroups: [],
+              selectedImages: [],
+              selectedClipPaths: [],
+              selectedMasks: [],
+              selectedFilters: [],
+              selectedMarkers: [],
+              selectedSymbols: [],
+              selectedUses: [],
             },
           };
         }
@@ -273,6 +397,14 @@ export const createSelectionActions: StateCreator<
             selectedPaths: [],
             selectedSubPaths: [],
             selectedCommands: [],
+            selectedGroups: [],
+            selectedImages: [],
+            selectedClipPaths: [],
+            selectedMasks: [],
+            selectedFilters: [],
+            selectedMarkers: [],
+            selectedSymbols: [],
+            selectedUses: [],
           },
         };
       }
@@ -292,6 +424,14 @@ export const createSelectionActions: StateCreator<
           selectedPaths: [],
           selectedSubPaths: [],
           selectedCommands: [],
+          selectedGroups: [],
+          selectedImages: [],
+          selectedClipPaths: [],
+          selectedMasks: [],
+          selectedFilters: [],
+          selectedMarkers: [],
+          selectedSymbols: [],
+          selectedUses: [],
         },
       };
     }),

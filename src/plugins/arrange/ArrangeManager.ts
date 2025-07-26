@@ -1,5 +1,7 @@
-import { SVGSubPath } from '../../types';
+import { SVGSubPath, TextElementType, SVGImage, SVGUse, SVGGroup } from '../../types';
 import { getSubPathBounds } from '../../utils/path-utils';
+import { calculateTextBoundsDOM } from '../../utils/text-utils';
+import { getElementBounds } from '../../utils/svg-elements-utils';
 
 interface ArrangeBounds {
   x: number;
@@ -10,6 +12,13 @@ interface ArrangeBounds {
   centerY: number;
 }
 
+interface ArrangeElement {
+  id: string;
+  type: 'subpath' | 'text' | 'image' | 'use' | 'group';
+  element: SVGSubPath | TextElementType | SVGImage | SVGUse | SVGGroup;
+  bounds: ArrangeBounds;
+}
+
 export class ArrangeManager {
   private editorStore: any = null;
 
@@ -17,25 +26,28 @@ export class ArrangeManager {
     this.editorStore = store;
   }
 
-  private getSelectedElements(): { subPaths: SVGSubPath[]; bounds: ArrangeBounds[] } {
-    if (!this.editorStore) return { subPaths: [], bounds: [] };
+  private getSelectedElements(): ArrangeElement[] {
+    if (!this.editorStore) return [];
 
-    const { paths, selection } = this.editorStore;
-    const selectedSubPaths: SVGSubPath[] = [];
-    const bounds: ArrangeBounds[] = [];
+    const { paths, texts, images, uses, groups, selection } = this.editorStore;
+    const elements: ArrangeElement[] = [];
 
     // Get selected subpaths
     for (const subPathId of selection.selectedSubPaths) {
       for (const path of paths) {
         const subPath = path.subPaths.find((sp: SVGSubPath) => sp.id === subPathId);
         if (subPath) {
-          selectedSubPaths.push(subPath);
           const subPathBounds = getSubPathBounds(subPath);
           if (subPathBounds) {
-            bounds.push({
-              ...subPathBounds,
-              centerX: subPathBounds.x + subPathBounds.width / 2,
-              centerY: subPathBounds.y + subPathBounds.height / 2,
+            elements.push({
+              id: subPathId,
+              type: 'subpath',
+              element: subPath,
+              bounds: {
+                ...subPathBounds,
+                centerX: subPathBounds.x + subPathBounds.width / 2,
+                centerY: subPathBounds.y + subPathBounds.height / 2,
+              }
             });
           }
           break;
@@ -43,12 +55,120 @@ export class ArrangeManager {
       }
     }
 
-    return { subPaths: selectedSubPaths, bounds };
+    // Get selected texts
+    for (const textId of selection.selectedTexts) {
+      const text = texts.find((t: TextElementType) => t.id === textId);
+      if (text) {
+        const textBounds = calculateTextBoundsDOM(text);
+        if (textBounds) {
+          elements.push({
+            id: textId,
+            type: 'text',
+            element: text,
+            bounds: {
+              x: textBounds.x,
+              y: textBounds.y,
+              width: textBounds.width,
+              height: textBounds.height,
+              centerX: textBounds.x + textBounds.width / 2,
+              centerY: textBounds.y + textBounds.height / 2,
+            }
+          });
+        }
+      }
+    }
+
+    // Get selected images
+    for (const imageId of selection.selectedImages) {
+      const image = images.find((img: SVGImage) => img.id === imageId);
+      if (image) {
+        const imageBounds = getElementBounds(image);
+        elements.push({
+          id: imageId,
+          type: 'image',
+          element: image,
+          bounds: {
+            x: imageBounds.x,
+            y: imageBounds.y,
+            width: imageBounds.width,
+            height: imageBounds.height,
+            centerX: imageBounds.x + imageBounds.width / 2,
+            centerY: imageBounds.y + imageBounds.height / 2,
+          }
+        });
+      }
+    }
+
+    // Get selected uses
+    for (const useId of selection.selectedUses) {
+      const use = uses.find((u: SVGUse) => u.id === useId);
+      if (use) {
+        const useBounds = getElementBounds(use);
+        elements.push({
+          id: useId,
+          type: 'use',
+          element: use,
+          bounds: {
+            x: useBounds.x,
+            y: useBounds.y,
+            width: useBounds.width,
+            height: useBounds.height,
+            centerX: useBounds.x + useBounds.width / 2,
+            centerY: useBounds.y + useBounds.height / 2,
+          }
+        });
+      }
+    }
+
+    // Get selected groups
+    for (const groupId of selection.selectedGroups) {
+      const group = groups.find((g: SVGGroup) => g.id === groupId);
+      if (group && group.bounds) {
+        elements.push({
+          id: groupId,
+          type: 'group',
+          element: group,
+          bounds: {
+            x: group.bounds.x,
+            y: group.bounds.y,
+            width: group.bounds.width,
+            height: group.bounds.height,
+            centerX: group.bounds.x + group.bounds.width / 2,
+            centerY: group.bounds.y + group.bounds.height / 2,
+          }
+        });
+      }
+    }
+
+    return elements;
   }
 
-  private getOverallBounds(bounds: ArrangeBounds[]): ArrangeBounds | null {
-    if (bounds.length === 0) return null;
+  private moveElement(element: ArrangeElement, delta: { x: number; y: number }) {
+    if (Math.abs(delta.x) < 0.01 && Math.abs(delta.y) < 0.01) return;
 
+    switch (element.type) {
+      case 'subpath':
+        this.editorStore.translateSubPath(element.id, delta);
+        break;
+      case 'text':
+        this.editorStore.moveText(element.id, delta);
+        break;
+      case 'image':
+        this.editorStore.moveImage(element.id, delta);
+        break;
+      case 'use':
+        this.editorStore.moveUse(element.id, delta);
+        break;
+      case 'group':
+        this.editorStore.moveGroup(element.id, delta);
+        break;
+    }
+  }
+
+  private getOverallBounds(elements: ArrangeElement[]): ArrangeBounds | null {
+    if (elements.length === 0) return null;
+
+    const bounds = elements.map(el => el.bounds);
     const minX = Math.min(...bounds.map(b => b.x));
     const minY = Math.min(...bounds.map(b => b.y));
     const maxX = Math.max(...bounds.map(b => b.x + b.width));
@@ -66,104 +186,86 @@ export class ArrangeManager {
 
   // Alignment operations
   alignLeft() {
-    const { subPaths, bounds } = this.getSelectedElements();
-    if (subPaths.length < 2) return;
+    const elements = this.getSelectedElements();
+    if (elements.length < 2) return;
 
-    const leftmostX = Math.min(...bounds.map(b => b.x));
+    const leftmostX = Math.min(...elements.map(el => el.bounds.x));
     
-    subPaths.forEach((subPath, index) => {
-      const currentBounds = bounds[index];
-      const deltaX = leftmostX - currentBounds.x;
-      if (deltaX !== 0) {
-        this.editorStore.translateSubPath(subPath.id, { x: deltaX, y: 0 });
-      }
+    elements.forEach((element) => {
+      const deltaX = leftmostX - element.bounds.x;
+      this.moveElement(element, { x: deltaX, y: 0 });
     });
 
     this.editorStore.pushToHistory();
   }
 
   alignCenter() {
-    const { subPaths, bounds } = this.getSelectedElements();
-    if (subPaths.length < 2) return;
+    const elements = this.getSelectedElements();
+    if (elements.length < 2) return;
 
-    const overallBounds = this.getOverallBounds(bounds);
+    const overallBounds = this.getOverallBounds(elements);
     if (!overallBounds) return;
 
-    subPaths.forEach((subPath, index) => {
-      const currentBounds = bounds[index];
-      const deltaX = overallBounds.centerX - currentBounds.centerX;
-      if (deltaX !== 0) {
-        this.editorStore.translateSubPath(subPath.id, { x: deltaX, y: 0 });
-      }
+    elements.forEach((element) => {
+      const deltaX = overallBounds.centerX - element.bounds.centerX;
+      this.moveElement(element, { x: deltaX, y: 0 });
     });
 
     this.editorStore.pushToHistory();
   }
 
   alignRight() {
-    const { subPaths, bounds } = this.getSelectedElements();
-    if (subPaths.length < 2) return;
+    const elements = this.getSelectedElements();
+    if (elements.length < 2) return;
 
-    const rightmostX = Math.max(...bounds.map(b => b.x + b.width));
+    const rightmostX = Math.max(...elements.map(el => el.bounds.x + el.bounds.width));
     
-    subPaths.forEach((subPath, index) => {
-      const currentBounds = bounds[index];
-      const deltaX = rightmostX - (currentBounds.x + currentBounds.width);
-      if (deltaX !== 0) {
-        this.editorStore.translateSubPath(subPath.id, { x: deltaX, y: 0 });
-      }
+    elements.forEach((element) => {
+      const deltaX = rightmostX - (element.bounds.x + element.bounds.width);
+      this.moveElement(element, { x: deltaX, y: 0 });
     });
 
     this.editorStore.pushToHistory();
   }
 
   alignTop() {
-    const { subPaths, bounds } = this.getSelectedElements();
-    if (subPaths.length < 2) return;
+    const elements = this.getSelectedElements();
+    if (elements.length < 2) return;
 
-    const topmostY = Math.min(...bounds.map(b => b.y));
+    const topmostY = Math.min(...elements.map(el => el.bounds.y));
     
-    subPaths.forEach((subPath, index) => {
-      const currentBounds = bounds[index];
-      const deltaY = topmostY - currentBounds.y;
-      if (deltaY !== 0) {
-        this.editorStore.translateSubPath(subPath.id, { x: 0, y: deltaY });
-      }
+    elements.forEach((element) => {
+      const deltaY = topmostY - element.bounds.y;
+      this.moveElement(element, { x: 0, y: deltaY });
     });
 
     this.editorStore.pushToHistory();
   }
 
   alignMiddle() {
-    const { subPaths, bounds } = this.getSelectedElements();
-    if (subPaths.length < 2) return;
+    const elements = this.getSelectedElements();
+    if (elements.length < 2) return;
 
-    const overallBounds = this.getOverallBounds(bounds);
+    const overallBounds = this.getOverallBounds(elements);
     if (!overallBounds) return;
 
-    subPaths.forEach((subPath, index) => {
-      const currentBounds = bounds[index];
-      const deltaY = overallBounds.centerY - currentBounds.centerY;
-      if (deltaY !== 0) {
-        this.editorStore.translateSubPath(subPath.id, { x: 0, y: deltaY });
-      }
+    elements.forEach((element) => {
+      const deltaY = overallBounds.centerY - element.bounds.centerY;
+      this.moveElement(element, { x: 0, y: deltaY });
     });
 
     this.editorStore.pushToHistory();
   }
 
   alignBottom() {
-    const { subPaths, bounds } = this.getSelectedElements();
-    if (subPaths.length < 2) return;
+    const elements = this.getSelectedElements();
+    if (elements.length < 2) return;
 
-    const bottommostY = Math.max(...bounds.map(b => b.y + b.height));
+    const bottommostY = Math.max(...elements.map(el => el.bounds.y + el.bounds.height));
     
-    subPaths.forEach((subPath, index) => {
-      const currentBounds = bounds[index];
-      const deltaY = bottommostY - (currentBounds.y + currentBounds.height);
-      if (deltaY !== 0) {
-        this.editorStore.translateSubPath(subPath.id, { x: 0, y: deltaY });
-      }
+    elements.forEach((element) => {
+      const deltaY = bottommostY - (element.bounds.y + element.bounds.height);
+      this.moveElement(element, { x: 0, y: deltaY });
     });
 
     this.editorStore.pushToHistory();
@@ -171,71 +273,63 @@ export class ArrangeManager {
 
   // Distribution operations
   distributeHorizontally() {
-    const { subPaths, bounds } = this.getSelectedElements();
-    if (subPaths.length < 3) return;
+    const elements = this.getSelectedElements();
+    if (elements.length < 3) return;
 
     // Sort by current X position
-    const sortedIndices = Array.from(Array(subPaths.length).keys())
-      .sort((a, b) => bounds[a].centerX - bounds[b].centerX);
+    const sortedElements = [...elements].sort((a, b) => a.bounds.centerX - b.bounds.centerX);
 
-    const leftmostX = bounds[sortedIndices[0]].centerX;
-    const rightmostX = bounds[sortedIndices[sortedIndices.length - 1]].centerX;
+    const leftmostX = sortedElements[0].bounds.centerX;
+    const rightmostX = sortedElements[sortedElements.length - 1].bounds.centerX;
     const totalDistance = rightmostX - leftmostX;
-    const spacing = totalDistance / (sortedIndices.length - 1);
+    const spacing = totalDistance / (sortedElements.length - 1);
 
-    sortedIndices.forEach((originalIndex, sortedPosition) => {
-      if (sortedPosition === 0 || sortedPosition === sortedIndices.length - 1) return; // Skip first and last
+    sortedElements.forEach((element, sortedPosition) => {
+      if (sortedPosition === 0 || sortedPosition === sortedElements.length - 1) return; // Skip first and last
       
       const targetX = leftmostX + (spacing * sortedPosition);
-      const currentBounds = bounds[originalIndex];
-      const deltaX = targetX - currentBounds.centerX;
+      const deltaX = targetX - element.bounds.centerX;
       
-      if (Math.abs(deltaX) > 0.01) {
-        this.editorStore.translateSubPath(subPaths[originalIndex].id, { x: deltaX, y: 0 });
-      }
+      this.moveElement(element, { x: deltaX, y: 0 });
     });
 
     this.editorStore.pushToHistory();
   }
 
   distributeVertically() {
-    const { subPaths, bounds } = this.getSelectedElements();
-    if (subPaths.length < 3) return;
+    const elements = this.getSelectedElements();
+    if (elements.length < 3) return;
 
     // Sort by current Y position
-    const sortedIndices = Array.from(Array(subPaths.length).keys())
-      .sort((a, b) => bounds[a].centerY - bounds[b].centerY);
+    const sortedElements = [...elements].sort((a, b) => a.bounds.centerY - b.bounds.centerY);
 
-    const topmostY = bounds[sortedIndices[0]].centerY;
-    const bottommostY = bounds[sortedIndices[sortedIndices.length - 1]].centerY;
+    const topmostY = sortedElements[0].bounds.centerY;
+    const bottommostY = sortedElements[sortedElements.length - 1].bounds.centerY;
     const totalDistance = bottommostY - topmostY;
-    const spacing = totalDistance / (sortedIndices.length - 1);
+    const spacing = totalDistance / (sortedElements.length - 1);
 
-    sortedIndices.forEach((originalIndex, sortedPosition) => {
-      if (sortedPosition === 0 || sortedPosition === sortedIndices.length - 1) return; // Skip first and last
+    sortedElements.forEach((element, sortedPosition) => {
+      if (sortedPosition === 0 || sortedPosition === sortedElements.length - 1) return; // Skip first and last
       
       const targetY = topmostY + (spacing * sortedPosition);
-      const currentBounds = bounds[originalIndex];
-      const deltaY = targetY - currentBounds.centerY;
+      const deltaY = targetY - element.bounds.centerY;
       
-      if (Math.abs(deltaY) > 0.01) {
-        this.editorStore.translateSubPath(subPaths[originalIndex].id, { x: 0, y: deltaY });
-      }
+      this.moveElement(element, { x: 0, y: deltaY });
     });
 
     this.editorStore.pushToHistory();
   }
 
-  // Stretch operations
+  // Stretch operations - Only available for subpaths as other elements don't support scaling
   stretchHorizontally() {
-    const { subPaths, bounds } = this.getSelectedElements();
-    if (subPaths.length < 2) return;
+    const elements = this.getSelectedElements().filter(el => el.type === 'subpath');
+    if (elements.length < 2) return;
 
-    const overallBounds = this.getOverallBounds(bounds);
+    const overallBounds = this.getOverallBounds(elements);
     if (!overallBounds) return;
 
-    subPaths.forEach((subPath, index) => {
-      const currentBounds = bounds[index];
+    elements.forEach((element) => {
+      const currentBounds = element.bounds;
       
       // Calculate scale factor to match overall width
       const scaleX = overallBounds.width / currentBounds.width;
@@ -246,24 +340,22 @@ export class ArrangeManager {
       const deltaX = newX - currentBounds.x;
       
       // Apply scaling and translation
-      this.editorStore.scaleSubPath(subPath.id, scaleX, 1, { x: currentBounds.centerX, y: currentBounds.centerY });
-      if (Math.abs(deltaX) > 0.01) {
-        this.editorStore.translateSubPath(subPath.id, { x: deltaX, y: 0 });
-      }
+      this.editorStore.scaleSubPath(element.id, scaleX, 1, { x: currentBounds.centerX, y: currentBounds.centerY });
+      this.moveElement(element, { x: deltaX, y: 0 });
     });
 
     this.editorStore.pushToHistory();
   }
 
   stretchVertically() {
-    const { subPaths, bounds } = this.getSelectedElements();
-    if (subPaths.length < 2) return;
+    const elements = this.getSelectedElements().filter(el => el.type === 'subpath');
+    if (elements.length < 2) return;
 
-    const overallBounds = this.getOverallBounds(bounds);
+    const overallBounds = this.getOverallBounds(elements);
     if (!overallBounds) return;
 
-    subPaths.forEach((subPath, index) => {
-      const currentBounds = bounds[index];
+    elements.forEach((element) => {
+      const currentBounds = element.bounds;
       
       // Calculate scale factor to match overall height
       const scaleY = overallBounds.height / currentBounds.height;
@@ -274,68 +366,62 @@ export class ArrangeManager {
       const deltaY = newY - currentBounds.y;
       
       // Apply scaling and translation
-      this.editorStore.scaleSubPath(subPath.id, 1, scaleY, { x: currentBounds.centerX, y: currentBounds.centerY });
-      if (Math.abs(deltaY) > 0.01) {
-        this.editorStore.translateSubPath(subPath.id, { x: 0, y: deltaY });
-      }
+      this.editorStore.scaleSubPath(element.id, 1, scaleY, { x: currentBounds.centerX, y: currentBounds.centerY });
+      this.moveElement(element, { x: 0, y: deltaY });
     });
 
     this.editorStore.pushToHistory();
   }
 
-  // Flip operations
+  // Flip operations - Only available for subpaths as other elements don't support mirroring
   flipHorizontally() {
-    const { subPaths, bounds } = this.getSelectedElements();
-    if (subPaths.length === 0) return;
+    const elements = this.getSelectedElements().filter(el => el.type === 'subpath');
+    if (elements.length === 0) return;
 
-    const overallBounds = this.getOverallBounds(bounds);
+    const overallBounds = this.getOverallBounds(elements);
     if (!overallBounds) return;
 
-    subPaths.forEach((subPath) => {
-      this.editorStore.mirrorSubPathHorizontal(subPath.id, { x: overallBounds.centerX, y: overallBounds.centerY });
+    elements.forEach((element) => {
+      this.editorStore.mirrorSubPathHorizontal(element.id, { x: overallBounds.centerX, y: overallBounds.centerY });
     });
 
     this.editorStore.pushToHistory();
   }
 
   flipVertically() {
-    const { subPaths, bounds } = this.getSelectedElements();
-    if (subPaths.length === 0) return;
+    const elements = this.getSelectedElements().filter(el => el.type === 'subpath');
+    if (elements.length === 0) return;
 
-    const overallBounds = this.getOverallBounds(bounds);
+    const overallBounds = this.getOverallBounds(elements);
     if (!overallBounds) return;
 
-    subPaths.forEach((subPath) => {
-      this.editorStore.mirrorSubPathVertical(subPath.id, { x: overallBounds.centerX, y: overallBounds.centerY });
+    elements.forEach((element) => {
+      this.editorStore.mirrorSubPathVertical(element.id, { x: overallBounds.centerX, y: overallBounds.centerY });
     });
 
     this.editorStore.pushToHistory();
   }
 
   pack() {
-    const { subPaths, bounds } = this.getSelectedElements();
-    if (subPaths.length < 2) return;
+    const elements = this.getSelectedElements();
+    if (elements.length < 2) return;
 
     // Sort by X position
-    const sortedIndices = Array.from(Array(subPaths.length).keys())
-      .sort((a, b) => bounds[a].x - bounds[b].x);
+    const sortedElements = [...elements].sort((a, b) => a.bounds.x - b.bounds.x);
 
-    let currentX = bounds[sortedIndices[0]].x;
+    let currentX = sortedElements[0].bounds.x;
 
-    sortedIndices.forEach((originalIndex, sortedPosition) => {
+    sortedElements.forEach((element, sortedPosition) => {
       if (sortedPosition === 0) {
-        currentX = bounds[originalIndex].x + bounds[originalIndex].width;
+        currentX = element.bounds.x + element.bounds.width;
         return;
       }
 
-      const currentBounds = bounds[originalIndex];
-      const deltaX = currentX - currentBounds.x;
+      const deltaX = currentX - element.bounds.x;
       
-      if (Math.abs(deltaX) > 0.01) {
-        this.editorStore.translateSubPath(subPaths[originalIndex].id, { x: deltaX, y: 0 });
-      }
+      this.moveElement(element, { x: deltaX, y: 0 });
       
-      currentX += bounds[originalIndex].width;
+      currentX += element.bounds.width;
     });
 
     this.editorStore.pushToHistory();
@@ -343,56 +429,48 @@ export class ArrangeManager {
 
   // Stack operations
   stackHorizontally() {
-    const { subPaths, bounds } = this.getSelectedElements();
-    if (subPaths.length < 2) return;
+    const elements = this.getSelectedElements();
+    if (elements.length < 2) return;
 
     // Sort by X position and align their Y positions
-    const sortedIndices = Array.from(Array(subPaths.length).keys())
-      .sort((a, b) => bounds[a].x - bounds[b].x);
+    const sortedElements = [...elements].sort((a, b) => a.bounds.x - b.bounds.x);
 
-    const baseY = bounds[sortedIndices[0]].y;
-    let currentX = bounds[sortedIndices[0]].x + bounds[sortedIndices[0]].width;
+    const baseY = sortedElements[0].bounds.y;
+    let currentX = sortedElements[0].bounds.x + sortedElements[0].bounds.width;
 
-    sortedIndices.forEach((originalIndex, sortedPosition) => {
+    sortedElements.forEach((element, sortedPosition) => {
       if (sortedPosition === 0) return;
 
-      const currentBounds = bounds[originalIndex];
-      const deltaX = currentX - currentBounds.x;
-      const deltaY = baseY - currentBounds.y;
+      const deltaX = currentX - element.bounds.x;
+      const deltaY = baseY - element.bounds.y;
       
-      if (Math.abs(deltaX) > 0.01 || Math.abs(deltaY) > 0.01) {
-        this.editorStore.translateSubPath(subPaths[originalIndex].id, { x: deltaX, y: deltaY });
-      }
+      this.moveElement(element, { x: deltaX, y: deltaY });
       
-      currentX += bounds[originalIndex].width;
+      currentX += element.bounds.width;
     });
 
     this.editorStore.pushToHistory();
   }
 
   stackVertically() {
-    const { subPaths, bounds } = this.getSelectedElements();
-    if (subPaths.length < 2) return;
+    const elements = this.getSelectedElements();
+    if (elements.length < 2) return;
 
     // Sort by Y position and align their X positions
-    const sortedIndices = Array.from(Array(subPaths.length).keys())
-      .sort((a, b) => bounds[a].y - bounds[b].y);
+    const sortedElements = [...elements].sort((a, b) => a.bounds.y - b.bounds.y);
 
-    const baseX = bounds[sortedIndices[0]].x;
-    let currentY = bounds[sortedIndices[0]].y + bounds[sortedIndices[0]].height;
+    const baseX = sortedElements[0].bounds.x;
+    let currentY = sortedElements[0].bounds.y + sortedElements[0].bounds.height;
 
-    sortedIndices.forEach((originalIndex, sortedPosition) => {
+    sortedElements.forEach((element, sortedPosition) => {
       if (sortedPosition === 0) return;
 
-      const currentBounds = bounds[originalIndex];
-      const deltaX = baseX - currentBounds.x;
-      const deltaY = currentY - currentBounds.y;
+      const deltaX = baseX - element.bounds.x;
+      const deltaY = currentY - element.bounds.y;
       
-      if (Math.abs(deltaX) > 0.01 || Math.abs(deltaY) > 0.01) {
-        this.editorStore.translateSubPath(subPaths[originalIndex].id, { x: deltaX, y: deltaY });
-      }
+      this.moveElement(element, { x: deltaX, y: deltaY });
       
-      currentY += bounds[originalIndex].height;
+      currentY += element.bounds.height;
     });
 
     this.editorStore.pushToHistory();
@@ -400,7 +478,14 @@ export class ArrangeManager {
 
   hasValidSelection(): boolean {
     if (!this.editorStore) return false;
-    return this.editorStore.selection.selectedSubPaths.length > 0;
+    const selection = this.editorStore.selection;
+    return (
+      selection.selectedSubPaths.length > 0 ||
+      selection.selectedTexts.length > 0 ||
+      selection.selectedImages.length > 0 ||
+      selection.selectedUses.length > 0 ||
+      selection.selectedGroups.length > 0
+    );
   }
 }
 

@@ -589,23 +589,18 @@ export const FilterControls: React.FC = () => {
   };
 
   const handleRemoveFilter = (filterId: string) => {
-    if (confirm('Are you sure you want to remove this filter?')) {
-      removeFilter(filterId);
-    }
+    removeFilter(filterId);
   };
 
   const handleClearAllFilters = () => {
     if (filters.length === 0) {
-      alert('No filters to remove');
       return;
     }
     
-    if (confirm(`Are you sure you want to remove all ${filters.length} filter${filters.length > 1 ? 's' : ''}? This action cannot be undone.`)) {
-      // Remove all filters one by one
-      filters.forEach(filter => {
-        removeFilter(filter.id);
-      });
-    }
+    // Remove all filters one by one
+    filters.forEach(filter => {
+      removeFilter(filter.id);
+    });
   };
 
   const renderPrimitiveEditor = (primitive: FilterPrimitiveType, filterId: string, index: number) => {

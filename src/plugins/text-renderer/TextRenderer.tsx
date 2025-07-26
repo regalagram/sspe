@@ -170,6 +170,9 @@ export const TextRenderer: React.FC = () => {
           lengthAdjust={text.style.lengthAdjust}
           opacity={text.style.opacity}
           transform={text.transform}
+          filter={text.style.filter}
+          clipPath={text.style.clipPath}
+          mask={text.style.mask}
           style={{
             cursor: text.locked ? 'default' : 'grab',
             pointerEvents: text.locked ? 'none' : 'all',
