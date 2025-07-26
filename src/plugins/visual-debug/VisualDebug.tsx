@@ -261,7 +261,7 @@ export const CommandPointsRenderer: React.FC = () => {
           // Si hidePointsInSelect está activo y el subpath está seleccionado, no mostrar puntos
           if (enabledFeatures.hidePointsInSelect && isSubPathSelected) return null;
           const shouldShowSubPath = enabledFeatures.commandPointsEnabled || isSubPathSelected;
-          return subPath.commands.map((command) => {
+          return subPath.commands.map((command, commandIndex) => {
             const position = getAbsoluteCommandPosition(command, subPath, path.subPaths);
             if (!position) return null;
             const isCommandSelected = selection.selectedCommands.includes(command.id);
@@ -269,16 +269,48 @@ export const CommandPointsRenderer: React.FC = () => {
             if (enabledFeatures.hidePointsInSelect && isCommandSelected) return null;
             const shouldShowCommand = shouldShowSubPath || isCommandSelected;
             if (!shouldShowCommand) return null;
+            
+            // Determine if this is the first or last command in the subpath
+            const isFirstCommand = commandIndex === 0;
+            const isLastCommand = commandIndex === subPath.commands.length - 1;
+            
             const baseRadius = getControlPointSize(isMobile, isTablet);
-            const radius = (baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.commandPointsFactor) / viewport.zoom;
+            let radius = (baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.commandPointsFactor) / viewport.zoom;
+            
+            // Make initial point 30% larger
+            if (isFirstCommand) {
+              radius *= 1.3;
+            }
+            
+            // Determine colors based on position and selection
+            let fill: string, stroke: string;
+            
+            if (isCommandSelected) {
+              // Selected commands keep their blue color
+              fill = '#007acc';
+              stroke = '#005299';
+            } else if (isFirstCommand) {
+              // Initial point is green
+              fill = '#22c55e';
+              stroke = '#16a34a';
+            } else if (isLastCommand) {
+              // Final point is red
+              fill = '#ef4444';
+              stroke = '#dc2626';
+            } else {
+              // All other points are white with black outline
+              fill = '#ffffff';
+              stroke = '#000000';
+            }
+            
             return (
               <circle
                 key={`command-${command.id}-v${renderVersion}`}
                 cx={position.x}
                 cy={position.y}
                 r={radius}
-                fill={isCommandSelected ? '#007acc' : '#ff4444'}
-                stroke={isCommandSelected ? '#005299' : '#cc0000'}
+                fill={fill}
+                stroke={stroke}
                 strokeWidth={1 / viewport.zoom}
                 style={{ 
                   cursor: 'grab',
