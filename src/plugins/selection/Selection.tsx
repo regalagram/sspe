@@ -316,23 +316,59 @@ export const SelectionPlugin: Plugin = {
       action: () => {
         const store = useEditorStore.getState();
         
-        // Collect all element IDs, filtering out locked elements
-        const allPaths = store.paths.filter(p => !p.style?.filter?.includes('locked')).map(p => p.id);
-        const allSubPaths = store.paths.flatMap(path => 
-          path.subPaths.filter(subPath => !subPath.locked).map(subPath => subPath.id)
-        );
-        const allTexts = store.texts.filter(t => !t.locked).map(t => t.id);
-        const allTextPaths = store.textPaths.filter(tp => !tp.locked).map(tp => tp.id);
-        const allGroups = store.groups.filter(g => !g.locked).map(g => g.id);
-        const allImages = store.images.filter(i => !i.locked).map(i => i.id);
-        const allClipPaths = store.clipPaths.filter(cp => !cp.locked).map(cp => cp.id);
-        const allMasks = store.masks.filter(m => !m.locked).map(m => m.id);
-        const allFilters = store.filters.filter(f => !f.locked).map(f => f.id);
-        const allMarkers = store.markers.filter(m => !m.locked).map(m => m.id);
-        const allSymbols = store.symbols.filter(s => !s.locked).map(s => s.id);
-        const allUses = store.uses.filter(u => !u.locked).map(u => u.id);
+        // Get all element IDs that are children of groups (we want to select these instead of the groups)
+        const groupChildrenIds = new Set<string>();
+        store.groups.forEach(group => {
+          if (!group.locked) {
+            group.children.forEach(child => {
+              groupChildrenIds.add(child.id);
+            });
+          }
+        });
         
-        // Build complete selection state with all elements including sub-paths
+        // Collect all element IDs, filtering out locked elements
+        // Include group children but exclude the groups themselves
+        const allPaths = store.paths
+          .filter(p => !p.style?.filter?.includes('locked'))
+          .map(p => p.id);
+        
+        // For sub-paths, include all from all paths (including those in groups)
+        const allSubPaths = store.paths
+          .flatMap(path => 
+            path.subPaths
+              .filter(subPath => !subPath.locked)
+              .map(subPath => subPath.id)
+          );
+        
+        const allTexts = store.texts
+          .filter(t => !t.locked)
+          .map(t => t.id);
+        const allTextPaths = store.textPaths
+          .filter(tp => !tp.locked)
+          .map(tp => tp.id);
+        const allImages = store.images
+          .filter(i => !i.locked)
+          .map(i => i.id);
+        const allClipPaths = store.clipPaths
+          .filter(cp => !cp.locked)
+          .map(cp => cp.id);
+        const allMasks = store.masks
+          .filter(m => !m.locked)
+          .map(m => m.id);
+        const allFilters = store.filters
+          .filter(f => !f.locked)
+          .map(f => f.id);
+        const allMarkers = store.markers
+          .filter(m => !m.locked)
+          .map(m => m.id);
+        const allSymbols = store.symbols
+          .filter(s => !s.locked)
+          .map(s => s.id);
+        const allUses = store.uses
+          .filter(u => !u.locked)
+          .map(u => u.id);
+        
+        // Build complete selection state with all individual elements, NO groups
         useEditorStore.setState({
           selection: {
             ...store.selection,
@@ -343,7 +379,7 @@ export const SelectionPlugin: Plugin = {
             selectedTexts: allTexts,
             selectedTextSpans: [],
             selectedTextPaths: allTextPaths,
-            selectedGroups: allGroups,
+            selectedGroups: [], // Empty - we don't select groups, only their contents
             selectedImages: allImages,
             selectedClipPaths: allClipPaths,
             selectedMasks: allMasks,
