@@ -315,12 +315,44 @@ export const SelectionPlugin: Plugin = {
       description: 'Select All',
       action: () => {
         const store = useEditorStore.getState();
-        const allCommandIds = store.paths.flatMap(path => 
-          path.subPaths.flatMap(subPath => 
-            subPath.commands.map(cmd => cmd.id)
-          )
+        
+        // Collect all element IDs, filtering out locked elements
+        const allPaths = store.paths.filter(p => !p.style?.filter?.includes('locked')).map(p => p.id);
+        const allSubPaths = store.paths.flatMap(path => 
+          path.subPaths.filter(subPath => !subPath.locked).map(subPath => subPath.id)
         );
-        store.selectMultiple(allCommandIds, 'commands');
+        const allTexts = store.texts.filter(t => !t.locked).map(t => t.id);
+        const allTextPaths = store.textPaths.filter(tp => !tp.locked).map(tp => tp.id);
+        const allGroups = store.groups.filter(g => !g.locked).map(g => g.id);
+        const allImages = store.images.filter(i => !i.locked).map(i => i.id);
+        const allClipPaths = store.clipPaths.filter(cp => !cp.locked).map(cp => cp.id);
+        const allMasks = store.masks.filter(m => !m.locked).map(m => m.id);
+        const allFilters = store.filters.filter(f => !f.locked).map(f => f.id);
+        const allMarkers = store.markers.filter(m => !m.locked).map(m => m.id);
+        const allSymbols = store.symbols.filter(s => !s.locked).map(s => s.id);
+        const allUses = store.uses.filter(u => !u.locked).map(u => u.id);
+        
+        // Build complete selection state with all elements including sub-paths
+        useEditorStore.setState({
+          selection: {
+            ...store.selection,
+            selectedPaths: allPaths,
+            selectedSubPaths: allSubPaths,
+            selectedCommands: [],
+            selectedControlPoints: [],
+            selectedTexts: allTexts,
+            selectedTextSpans: [],
+            selectedTextPaths: allTextPaths,
+            selectedGroups: allGroups,
+            selectedImages: allImages,
+            selectedClipPaths: allClipPaths,
+            selectedMasks: allMasks,
+            selectedFilters: allFilters,
+            selectedMarkers: allMarkers,
+            selectedSymbols: allSymbols,
+            selectedUses: allUses,
+          }
+        });
       }
     },
     {
