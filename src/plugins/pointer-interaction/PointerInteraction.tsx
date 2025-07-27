@@ -511,26 +511,39 @@ class PointerInteractionManager {
           }
           
           // Apply guidelines snapping if enabled
-          const { enabledFeatures, paths, texts, groups, viewport } = this.editorStore;
+          const { enabledFeatures, texts: allTexts } = this.editorStore;
           if (enabledFeatures.guidelinesEnabled) {
-            const snappedPoint = guidelinesManager.updateSnap(
-              { x: newX, y: newY },
-              paths,
-              texts,
-              groups,
-              viewport.viewBox,
-              textId,
-              'text'
-            );
-            newX = snappedPoint.x;
-            newY = snappedPoint.y;
+            // Find the text element being dragged
+            const currentText = allTexts.find((t: any) => t.id === textId);
+            if (currentText) {
+              const fontSize = currentText.style?.fontSize || 16;
+              const textWidth = 100; // Simplified text width calculation
+              
+              const textBounds = {
+                x: currentText.x,
+                y: currentText.y - fontSize * 0.8,
+                width: textWidth,
+                height: fontSize,
+                centerX: currentText.x + textWidth / 2,
+                centerY: currentText.y - fontSize * 0.3
+              };
+              
+              const snappedPoint = guidelinesManager.handleElementMoving(
+                textId,
+                'text',
+                textBounds,
+                { x: newX, y: newY }
+              );
+              newX = snappedPoint.x;
+              newY = snappedPoint.y;
+            }
           }
           
           // Calculate delta from current position to apply movement
-          const currentText = texts.find((t: any) => t.id === textId);
-          if (currentText) {
-            const deltaX = newX - currentText.x;
-            const deltaY = newY - currentText.y;
+          const finalText = allTexts.find((t: any) => t.id === textId);
+          if (finalText) {
+            const deltaX = newX - finalText.x;
+            const deltaY = newY - finalText.y;
             if (Math.abs(deltaX) > 0.001 || Math.abs(deltaY) > 0.001) {
               moveText(textId, { x: deltaX, y: deltaY });
             }

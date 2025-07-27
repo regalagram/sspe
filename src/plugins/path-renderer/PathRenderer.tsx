@@ -159,15 +159,41 @@ export const PathRenderer: React.FC = () => {
       const draggedSubPathId = dragState.subPathId;
       const draggedPath = paths.find(p => p.subPaths.some(sp => sp.id === draggedSubPathId));
       
-      snappedPoint = guidelinesManager.updateSnap(
-        currentPoint,
-        paths,
-        texts,
-        groups,
-        viewport.viewBox,
-        draggedPath?.id,
-        'path'
-      );
+      if (draggedPath) {
+        // Calculate simple bounds for the path (for guideline snapping)
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        let hasPoints = false;
+        
+        draggedPath.subPaths.forEach((subPath: any) => {
+          subPath.commands.forEach((cmd: any) => {
+            if (cmd.x !== undefined && cmd.y !== undefined) {
+              minX = Math.min(minX, cmd.x);
+              minY = Math.min(minY, cmd.y);
+              maxX = Math.max(maxX, cmd.x);
+              maxY = Math.max(maxY, cmd.y);
+              hasPoints = true;
+            }
+          });
+        });
+        
+        if (hasPoints) {
+          const pathBounds = {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY,
+            centerX: minX + (maxX - minX) / 2,
+            centerY: minY + (maxY - minY) / 2
+          };
+          
+          snappedPoint = guidelinesManager.handleElementMoving(
+            draggedPath.id,
+            'path',
+            pathBounds,
+            currentPoint
+          );
+        }
+      }
     }
     
     const delta = {
