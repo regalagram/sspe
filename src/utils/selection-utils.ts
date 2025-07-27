@@ -31,12 +31,22 @@ export function findSubPathById(paths: SVGPath[], subPathId: string): { pathId: 
 /**
  * Get the insertion context for creation commands based on current selection
  */
-export function getCreationInsertionContext(state: EditorState): {
+export function getCreationInsertionContext(
+  state: EditorState, 
+  commandType?: string
+): {
   type: 'after-command' | 'end-of-subpath' | 'new-path';
   commandId?: string;
   subPathId?: string;
 } {
   const { selection } = state;
+  
+  // Special case: NEW_PATH always creates a new path regardless of selection
+  if (commandType === 'NEW_PATH') {
+    return {
+      type: 'new-path',
+    };
+  }
   
   // Priority 1: If exactly one command is selected, insert after it
   if (selection.selectedCommands.length === 1) {
