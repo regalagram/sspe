@@ -133,11 +133,12 @@ const textRendererPlugin: Plugin = {
   name: 'Text Renderer',
   version: '1.0.0',
   enabled: true,
-  pointerHandlers: {
-    onPointerDown: handleTextPointerDown,
-    onPointerMove: handleTextPointerMove,
-    onPointerUp: handleTextPointerUp,
-  },
+  // Note: Pointer handling is now done by pointer-interaction plugin to avoid conflicts
+  // pointerHandlers: {
+  //   onPointerDown: handleTextPointerDown,
+  //   onPointerMove: handleTextPointerMove,
+  //   onPointerUp: handleTextPointerUp,
+  // },
   ui: [
     {
       id: 'text-renderer-ui',

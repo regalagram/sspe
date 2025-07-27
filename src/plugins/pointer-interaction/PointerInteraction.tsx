@@ -128,7 +128,6 @@ class PointerInteractionManager {
       }
     });
     this.state.dragStartImagePositions = imagePositions;
-    //console.log('captureAllSelectedPositions - Images captured:', Object.keys(imagePositions).length, selection.selectedImages?.length);
 
     // Capture use positions
     const usePositions: { [id: string]: { x: number; y: number; width?: number; height?: number } } = {};
@@ -229,8 +228,24 @@ class PointerInteractionManager {
     
     // Only handle specific cases, don't block all pointer events
     const target = e.target as SVGElement;
-    const elementType = target.dataset.elementType;
-    const elementId = target.dataset.elementId;
+    
+    // Helper function to find element with data attributes by traversing up the DOM
+    const findElementWithData = (element: SVGElement): { elementType: string | null, elementId: string | null } => {
+      let current: Element | null = element;
+      while (current && current !== context.svgRef.current) {
+        const elementType = current.getAttribute('data-element-type');
+        const elementId = current.getAttribute('data-element-id');
+        if (elementType && elementId) {
+          return { elementType, elementId };
+        }
+        current = current.parentElement;
+      }
+      return { elementType: null, elementId: null };
+    };
+    
+    const { elementType, elementId } = findElementWithData(target);
+    
+        
     const isEmptySpaceClick = !commandId && !controlPoint && !elementType && !this.state.isSpacePressed && e.button === 0;
     if (this.state.draggingControlPoint && !controlPoint && !this.state.isSpacePressed) {
       figmaHandleManager.endDragHandle();
@@ -319,7 +334,7 @@ class PointerInteractionManager {
         return true;
       }
     } else if ((elementType === 'text' || elementType === 'multiline-text') && elementId && !this.state.isSpacePressed) {
-      e.stopPropagation();
+            e.stopPropagation();
       // Handle text selection and dragging
       if (e.shiftKey) {
         if (selection.selectedTexts?.includes(elementId)) {
@@ -345,7 +360,7 @@ class PointerInteractionManager {
         return true;
       }
     } else if (elementType === 'textPath' && elementId && !this.state.isSpacePressed) {
-      e.stopPropagation();
+            e.stopPropagation();
       // Handle textPath selection and dragging
       if (e.shiftKey) {
         if (selection.selectedTextPaths?.includes(elementId)) {
@@ -523,8 +538,6 @@ class PointerInteractionManager {
         }
       });
       
-      // Move selected images
-      //console.log('handlePointerMove - Attempting to move images:', Object.keys(this.state.dragStartImagePositions).length);
       Object.keys(this.state.dragStartImagePositions).forEach((imageId: string) => {
         const start = this.state.dragStartImagePositions[imageId];
         if (start) {

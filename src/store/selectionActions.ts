@@ -15,8 +15,8 @@ export interface SelectionActions {
   selectImage: (imageId: string, addToSelection?: boolean) => void;
   selectUse: (useId: string, addToSelection?: boolean) => void;
   selectMultiple: (ids: string[], type: 'paths' | 'subpaths' | 'commands' | 'texts' | 'textspans' | 'groups' | 'images' | 'uses') => void;
-  addToSelection: (id: string, type: 'path' | 'subpath' | 'command' | 'text' | 'textspan' | 'group' | 'image' | 'use') => void;
-  removeFromSelection: (id: string, type: 'path' | 'subpath' | 'command' | 'text' | 'textspan' | 'group' | 'image' | 'use') => void;
+  addToSelection: (id: string, type: 'path' | 'subpath' | 'command' | 'text' | 'textspan' | 'textPath' | 'group' | 'image' | 'use') => void;
+  removeFromSelection: (id: string, type: 'path' | 'subpath' | 'command' | 'text' | 'textspan' | 'textPath' | 'group' | 'image' | 'use') => void;
   clearSelection: () => void;
   selectSubPathByPoint: (pathId: string, point: Point, isShiftPressed?: boolean) => void;
   selectTextByPoint: (point: Point, isShiftPressed?: boolean) => void;
@@ -494,6 +494,11 @@ export const createSelectionActions: StateCreator<
             selection.selectedTextSpans = [...selection.selectedTextSpans, id];
           }
           break;
+        case 'textPath':
+          if (!selection.selectedTextPaths.includes(id)) {
+            selection.selectedTextPaths = [...selection.selectedTextPaths, id];
+          }
+          break;
         case 'group':
           if (!selection.selectedGroups.includes(id)) {
             selection.selectedGroups = [...selection.selectedGroups, id];
@@ -533,6 +538,9 @@ export const createSelectionActions: StateCreator<
           break;
         case 'textspan':
           selection.selectedTextSpans = selection.selectedTextSpans.filter(spanId => spanId !== id);
+          break;
+        case 'textPath':
+          selection.selectedTextPaths = selection.selectedTextPaths.filter(textPathId => textPathId !== id);
           break;
         case 'group':
           selection.selectedGroups = selection.selectedGroups.filter(groupId => groupId !== id);

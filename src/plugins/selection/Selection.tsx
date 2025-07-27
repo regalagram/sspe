@@ -65,7 +65,21 @@ class RectSelectionManager {
 
     // Check if we're clicking on an element that should be handled by other plugins
     const elementType = target.getAttribute('data-element-type');
-    const isSpecificElement = elementType && (elementType === 'image' || elementType === 'use' || elementType === 'text');
+    const elementId = target.getAttribute('data-element-id');
+    const isSpecificElement = elementType && (
+      elementType === 'image' || 
+      elementType === 'use' || 
+      elementType === 'text' || 
+      elementType === 'multiline-text' || 
+      elementType === 'textPath'
+    );
+    
+    // Handle individual element selection first
+    if (mode.current === 'select' && e.button === 0 && elementId && isSpecificElement) {
+      // Let the element-specific selection logic handle this
+      // (pointer-interaction plugin will handle the actual selection)
+      return false;
+    }
     
     // Allow rectangle selection to start if:
     // - We're in select mode

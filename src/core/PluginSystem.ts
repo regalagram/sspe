@@ -133,34 +133,43 @@ export class PluginManager {
       if (transformPlugin) {
         pluginsToProcess = [transformPlugin, ...otherPlugins];
       }
-    } else if (commandId && eventType === 'pointerDown') {
-      // Check if this is a text element
+    } else if (eventType === 'pointerDown') {
+      // Check if this is a text or textPath element
       const target = e.target as SVGElement;
       const elementType = target && typeof target.getAttribute === 'function'
         ? target.getAttribute('data-element-type')
         : null;
       
       if (elementType === 'text' || elementType === 'multiline-text') {
-        // When clicking on text, prioritize text-renderer plugin
-        const textRendererPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'text-renderer');
-        const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'text-renderer');
-        if (textRendererPlugin) {
-          pluginsToProcess = [textRendererPlugin, ...otherPlugins];
-        }
-      } else {
-        // When clicking on a command, process PointerInteraction first, then others
+        console.log('PluginSystem: Prioritizing pointer-interaction for text element', elementType);
+        // When clicking on text, prioritize pointer-interaction plugin for selection logic
         const pointerInteractionPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'pointer-interaction');
         const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'pointer-interaction');
         if (pointerInteractionPlugin) {
           pluginsToProcess = [pointerInteractionPlugin, ...otherPlugins];
         }
-      }
-    } else if (!commandId && eventType === 'pointerDown') {
-      // When clicking on empty canvas, prioritize shapes plugin if it's in creation mode
-      const shapesPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'shapes');
-      if (shapesPlugin && this.isShapeCreationMode) {
-        const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'shapes');
-        pluginsToProcess = [shapesPlugin, ...otherPlugins];
+      } else if (elementType === 'textPath') {
+        console.log('PluginSystem: Prioritizing pointer-interaction for textPath element');
+        // When clicking on textPath, prioritize pointer-interaction plugin for selection logic
+        const pointerInteractionPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'pointer-interaction');
+        const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'pointer-interaction');
+        if (pointerInteractionPlugin) {
+          pluginsToProcess = [pointerInteractionPlugin, ...otherPlugins];
+        }
+      } else if (commandId && !elementType) {
+        // When clicking on a command (path commands), process PointerInteraction first
+        const pointerInteractionPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'pointer-interaction');
+        const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'pointer-interaction');
+        if (pointerInteractionPlugin) {
+          pluginsToProcess = [pointerInteractionPlugin, ...otherPlugins];
+        }
+      } else if (!commandId && !elementType) {
+        // When clicking on empty canvas, prioritize shapes plugin if it's in creation mode
+        const shapesPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'shapes');
+        if (shapesPlugin && this.isShapeCreationMode) {
+          const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'shapes');
+          pluginsToProcess = [shapesPlugin, ...otherPlugins];
+        }
       }
     }
 
