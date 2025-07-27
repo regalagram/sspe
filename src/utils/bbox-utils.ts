@@ -238,3 +238,122 @@ export function getDraggedElementBoundingBox(
     height: originalBbox.height
   };
 }
+
+/**
+ * Calculate bounding box for an image element
+ */
+export function getImageBoundingBox(image: any): BoundingBox {
+  return {
+    x: image.x,
+    y: image.y,
+    width: image.width,
+    height: image.height
+  };
+}
+
+/**
+ * Calculate bounding box for a clipPath element
+ */
+export function getClipPathBoundingBox(clipPath: any): BoundingBox | null {
+  if (!clipPath.children || clipPath.children.length === 0) {
+    return null;
+  }
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+
+  clipPath.children.forEach((child: any) => {
+    if (child.type === 'path' && child.subPaths) {
+      child.subPaths.forEach((subPath: any) => {
+        subPath.commands.forEach((cmd: any) => {
+          if (cmd.x !== undefined) {
+            minX = Math.min(minX, cmd.x);
+            maxX = Math.max(maxX, cmd.x);
+          }
+          if (cmd.y !== undefined) {
+            minY = Math.min(minY, cmd.y);
+            maxY = Math.max(maxY, cmd.y);
+          }
+          if (cmd.x1 !== undefined) {
+            minX = Math.min(minX, cmd.x1);
+            maxX = Math.max(maxX, cmd.x1);
+          }
+          if (cmd.y1 !== undefined) {
+            minY = Math.min(minY, cmd.y1);
+            maxY = Math.max(maxY, cmd.y1);
+          }
+          if (cmd.x2 !== undefined) {
+            minX = Math.min(minX, cmd.x2);
+            maxX = Math.max(maxX, cmd.x2);
+          }
+          if (cmd.y2 !== undefined) {
+            minY = Math.min(minY, cmd.y2);
+            maxY = Math.max(maxY, cmd.y2);
+          }
+        });
+      });
+    }
+  });
+
+  if (minX === Infinity) {
+    return null;
+  }
+
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY
+  };
+}
+
+/**
+ * Calculate position adjustment to make element overlap with clipPath
+ */
+export function calculateClipPathAlignment(
+  elementBbox: BoundingBox,
+  clipPathBbox: BoundingBox,
+  alignmentMode: 'center' | 'top-left' | 'fit' = 'center'
+): { x: number; y: number; scaleX?: number; scaleY?: number } {
+  switch (alignmentMode) {
+    case 'top-left':
+      // Align top-left corner of element with top-left corner of clipPath
+      return {
+        x: clipPathBbox.x - elementBbox.x,
+        y: clipPathBbox.y - elementBbox.y
+      };
+    
+    case 'center':
+      // Center element within clipPath
+      const centerX = clipPathBbox.x + clipPathBbox.width / 2 - elementBbox.width / 2;
+      const centerY = clipPathBbox.y + clipPathBbox.height / 2 - elementBbox.height / 2;
+      return {
+        x: centerX - elementBbox.x,
+        y: centerY - elementBbox.y
+      };
+    
+    case 'fit':
+      // Scale and center element to fit within clipPath
+      const scaleX = clipPathBbox.width / elementBbox.width;
+      const scaleY = clipPathBbox.height / elementBbox.height;
+      const scale = Math.min(scaleX, scaleY);
+      
+      const scaledWidth = elementBbox.width * scale;
+      const scaledHeight = elementBbox.height * scale;
+      
+      const fitCenterX = clipPathBbox.x + clipPathBbox.width / 2 - scaledWidth / 2;
+      const fitCenterY = clipPathBbox.y + clipPathBbox.height / 2 - scaledHeight / 2;
+      
+      return {
+        x: fitCenterX - elementBbox.x,
+        y: fitCenterY - elementBbox.y,
+        scaleX: scale,
+        scaleY: scale
+      };
+    
+    default:
+      return { x: 0, y: 0 };
+  }
+}

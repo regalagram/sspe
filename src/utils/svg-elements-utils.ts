@@ -639,12 +639,12 @@ export const createAdvancedWatercolorFilter = (): Omit<SVGFilter, 'id'> => ({
 export const createDefaultMarker = (): Omit<SVGMarker, 'id'> => ({
   type: 'marker',
   markerUnits: 'strokeWidth',
-  refX: 0,
-  refY: 2,
-  markerWidth: 1,
-  markerHeight: 1,
+  refX: 4,
+  refY: 4,
+  markerWidth: 8,
+  markerHeight: 8,
   orient: 'auto',
-  viewBox: '0 0 10 5',
+  viewBox: '0 0 8 8',
   children: [], // Empty children so MarkerRenderer will use default arrow path
   style: {
     fill: '#000000',
@@ -659,12 +659,12 @@ export const createDefaultMarker = (): Omit<SVGMarker, 'id'> => ({
 export const createArrowMarker = (): Omit<SVGMarker, 'id'> => ({
   type: 'marker',
   markerUnits: 'strokeWidth',
-  refX: 0,
-  refY: 2,
-  markerWidth: 1,
-  markerHeight: 1,
+  refX: 4,
+  refY: 4,
+  markerWidth: 8,
+  markerHeight: 8,
   orient: 'auto',
-  viewBox: '0 0 10 5',
+  viewBox: '0 0 8 8',
   children: [], // Empty children so MarkerRenderer will use default arrow path
   style: {
     fill: '#000000',
@@ -677,7 +677,7 @@ export const createArrowMarker = (): Omit<SVGMarker, 'id'> => ({
 });
 
 // Create a marker with a custom editable path
-export const createCustomMarkerWithPath = (pathData: string = 'M 0 0 L 10 2.5 L 0 5 Z'): { marker: Omit<SVGMarker, 'id'>, path: Omit<SVGPath, 'id'> } => {
+export const createCustomMarkerWithPath = (pathData: string = 'M 0 0 L 6 4 L 0 8 Z'): { marker: Omit<SVGMarker, 'id'>, path: Omit<SVGPath, 'id'> } => {
   const pathId = generateId();
   
   // Parse the path data into commands
@@ -698,12 +698,12 @@ export const createCustomMarkerWithPath = (pathData: string = 'M 0 0 L 10 2.5 L 
   const marker: Omit<SVGMarker, 'id'> = {
     type: 'marker',
     markerUnits: 'strokeWidth',
-    refX: 0,
-    refY: 2.5,
-    markerWidth: 1,
-    markerHeight: 1,
+    refX: 4,
+    refY: 4,
+    markerWidth: 8,
+    markerHeight: 8,
     orient: 'auto',
-    viewBox: '0 0 10 5',
+    viewBox: '0 0 8 8',
     children: [{ type: 'path', id: pathId }],
     style: {
       fill: '#000000',

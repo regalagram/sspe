@@ -83,7 +83,7 @@ export const MarkerRenderer: React.FC = () => {
     
     return (
       <path
-        d="M 0 0 L 10 2.5 L 0 5 z"
+        d="M 0 0 L 6 4 L 0 8 Z"
         fill={fill}
         stroke={stroke}
         strokeWidth={strokeWidth}

@@ -471,24 +471,76 @@ export const SVGComponent: React.FC = () => {
       return [];
     };
 
+    // Helper function to extract marker IDs from marker references
+    const extractMarkerIds = (value: any): string[] => {
+      if (!value) return [];
+      // Check for string format url(#id)
+      if (typeof value === 'string' && value.startsWith('url(#')) {
+        const match = value.match(/url\(#([^)]+)\)/);
+        return match ? [match[1]] : [];
+      }
+      // Check for object format
+      if (typeof value === 'object' && value.id) {
+        return [value.id];
+      }
+      return [];
+    };
+
+    // Helper function to extract clipPath/mask/filter IDs from references
+    const extractEffectIds = (value: any): string[] => {
+      if (!value) return [];
+      // Check for string format url(#id)
+      if (typeof value === 'string' && value.startsWith('url(#')) {
+        const match = value.match(/url\(#([^)]+)\)/);
+        return match ? [match[1]] : [];
+      }
+      // Check for object format
+      if (typeof value === 'object' && value.id) {
+        return [value.id];
+      }
+      return [];
+    };
+
     // Collect all gradient IDs that are actually used
     const usedGradientIds = new Set<string>();
+    // Collect all marker IDs that are actually used
+    const usedMarkerIds = new Set<string>();
+    // Collect all clipPath, mask, and filter IDs that are actually used
+    const usedClipPathIds = new Set<string>();
+    const usedMaskIds = new Set<string>();
+    const usedFilterIds = new Set<string>();
 
     // Check standalone paths
     standalonePaths.forEach(path => {
       extractGradientIds(path.style.fill).forEach(id => usedGradientIds.add(id));
       extractGradientIds(path.style.stroke).forEach(id => usedGradientIds.add(id));
+      // Extract marker IDs
+      extractMarkerIds(path.style.markerStart).forEach(id => usedMarkerIds.add(id));
+      extractMarkerIds(path.style.markerMid).forEach(id => usedMarkerIds.add(id));
+      extractMarkerIds(path.style.markerEnd).forEach(id => usedMarkerIds.add(id));
+      // Extract effect IDs
+      extractEffectIds(path.style.clipPath).forEach(id => usedClipPathIds.add(id));
+      extractEffectIds(path.style.mask).forEach(id => usedMaskIds.add(id));
+      extractEffectIds(path.style.filter).forEach(id => usedFilterIds.add(id));
     });
 
     // Check standalone texts
     standaloneTexts.forEach(text => {
       extractGradientIds(text.style?.fill).forEach(id => usedGradientIds.add(id));
       extractGradientIds(text.style?.stroke).forEach(id => usedGradientIds.add(id));
+      // Extract effect IDs
+      extractEffectIds(text.style?.clipPath).forEach(id => usedClipPathIds.add(id));
+      extractEffectIds(text.style?.mask).forEach(id => usedMaskIds.add(id));
+      extractEffectIds(text.style?.filter).forEach(id => usedFilterIds.add(id));
       // Check multiline text spans
       if (text.type === 'multiline-text') {
         text.spans.forEach(span => {
           extractGradientIds(span.style?.fill).forEach(id => usedGradientIds.add(id));
           extractGradientIds(span.style?.stroke).forEach(id => usedGradientIds.add(id));
+          // Extract effect IDs from spans
+          extractEffectIds(span.style?.clipPath).forEach(id => usedClipPathIds.add(id));
+          extractEffectIds(span.style?.mask).forEach(id => usedMaskIds.add(id));
+          extractEffectIds(span.style?.filter).forEach(id => usedFilterIds.add(id));
         });
       }
     });
@@ -501,25 +553,74 @@ export const SVGComponent: React.FC = () => {
           if (path) {
             extractGradientIds(path.style.fill).forEach(id => usedGradientIds.add(id));
             extractGradientIds(path.style.stroke).forEach(id => usedGradientIds.add(id));
+            // Extract marker IDs
+            extractMarkerIds(path.style.markerStart).forEach(id => usedMarkerIds.add(id));
+            extractMarkerIds(path.style.markerMid).forEach(id => usedMarkerIds.add(id));
+            extractMarkerIds(path.style.markerEnd).forEach(id => usedMarkerIds.add(id));
+            // Extract effect IDs
+            extractEffectIds(path.style.clipPath).forEach(id => usedClipPathIds.add(id));
+            extractEffectIds(path.style.mask).forEach(id => usedMaskIds.add(id));
+            extractEffectIds(path.style.filter).forEach(id => usedFilterIds.add(id));
           }
         } else if (child.type === 'text') {
           const text = texts.find(t => t.id === child.id);
           if (text) {
             extractGradientIds(text.style?.fill).forEach(id => usedGradientIds.add(id));
             extractGradientIds(text.style?.stroke).forEach(id => usedGradientIds.add(id));
+            // Extract effect IDs
+            extractEffectIds(text.style?.clipPath).forEach(id => usedClipPathIds.add(id));
+            extractEffectIds(text.style?.mask).forEach(id => usedMaskIds.add(id));
+            extractEffectIds(text.style?.filter).forEach(id => usedFilterIds.add(id));
             if (text.type === 'multiline-text') {
               text.spans.forEach(span => {
                 extractGradientIds(span.style?.fill).forEach(id => usedGradientIds.add(id));
                 extractGradientIds(span.style?.stroke).forEach(id => usedGradientIds.add(id));
+                // Extract effect IDs from spans
+                extractEffectIds(span.style?.clipPath).forEach(id => usedClipPathIds.add(id));
+                extractEffectIds(span.style?.mask).forEach(id => usedMaskIds.add(id));
+                extractEffectIds(span.style?.filter).forEach(id => usedFilterIds.add(id));
               });
             }
+          }
+        } else if (child.type === 'image') {
+          const image = images.find(i => i.id === child.id);
+          if (image) {
+            // Extract effect IDs from images
+            extractEffectIds(image.style?.clipPath).forEach(id => usedClipPathIds.add(id));
+            extractEffectIds(image.style?.mask).forEach(id => usedMaskIds.add(id));
+            extractEffectIds(image.style?.filter).forEach(id => usedFilterIds.add(id));
+          }
+        } else if (child.type === 'use') {
+          const use = uses.find(u => u.id === child.id);
+          if (use) {
+            // Extract effect IDs from uses
+            extractEffectIds(use.style?.clipPath).forEach(id => usedClipPathIds.add(id));
+            extractEffectIds(use.style?.mask).forEach(id => usedMaskIds.add(id));
+            extractEffectIds(use.style?.filter).forEach(id => usedFilterIds.add(id));
           }
         }
       });
     });
 
-    // Only include gradients that are actually used
+    // Check standalone images and uses
+    images.filter(image => !elementsInGroups.has(image.id)).forEach(image => {
+      extractEffectIds(image.style?.clipPath).forEach(id => usedClipPathIds.add(id));
+      extractEffectIds(image.style?.mask).forEach(id => usedMaskIds.add(id));
+      extractEffectIds(image.style?.filter).forEach(id => usedFilterIds.add(id));
+    });
+
+    uses.filter(use => !elementsInGroups.has(use.id)).forEach(use => {
+      extractEffectIds(use.style?.clipPath).forEach(id => usedClipPathIds.add(id));
+      extractEffectIds(use.style?.mask).forEach(id => usedMaskIds.add(id));
+      extractEffectIds(use.style?.filter).forEach(id => usedFilterIds.add(id));
+    });
+
+    // TEMPORARY: Include ALL markers and clipPaths (bypass filtering for debugging)
     const allGradients = gradients.filter(gradient => usedGradientIds.has(gradient.id));
+    const allMarkers = markers; // Include ALL markers temporarily
+    const allClipPaths = clipPaths; // Include ALL clipPaths temporarily
+    const allMasks = masks.filter(mask => usedMaskIds.has(mask.id));
+    const allFilters = filters.filter(filter => usedFilterIds.has(filter.id));
 
     // Generate all definitions (gradients, symbols, markers, filters, clip paths, masks)
     const generateDefinitions = () => {
@@ -589,8 +690,8 @@ export const SVGComponent: React.FC = () => {
       }
       
       // Add markers
-      if (markers.length > 0) {
-        const markerDefs = markers.map(marker => {
+      if (allMarkers.length > 0) {
+        const markerDefs = allMarkers.map(marker => {
           const markerContent = marker.children.length > 0 
             ? marker.children.map((child: any) => {
                 if (child.type === 'path') {
@@ -629,8 +730,8 @@ export const SVGComponent: React.FC = () => {
       }
       
       // Add filters
-      if (filters.length > 0) {
-        const filterDefs = filters.map(filter => {
+      if (allFilters.length > 0) {
+        const filterDefs = allFilters.map(filter => {
           const primitiveContent = filter.primitives.map((primitive: any) => {
             switch (primitive.type) {
               case 'feGaussianBlur':
@@ -712,8 +813,8 @@ export const SVGComponent: React.FC = () => {
       }
       
       // Add clip paths
-      if (clipPaths.length > 0) {
-        const clipPathDefs = clipPaths.map(clipPath => {
+      if (allClipPaths.length > 0) {
+        const clipPathDefs = allClipPaths.map(clipPath => {
           const clipContent = clipPath.children.map((child: any) => {
             if (child.type === 'path') {
               const pathData = child.subPaths.map((subPath: any) => subPathToString(subPath)).join(' ');
@@ -733,8 +834,8 @@ export const SVGComponent: React.FC = () => {
       }
       
       // Add masks
-      if (masks.length > 0) {
-        const maskDefs = masks.map(mask => {
+      if (allMasks.length > 0) {
+        const maskDefs = allMasks.map(mask => {
           const maskContent = mask.children.map((child: any) => {
             if (child.type === 'path') {
               const pathData = child.subPaths.map((subPath: any) => subPathToString(subPath)).join(' ');
@@ -787,9 +888,11 @@ ${definitions}${allElements}
     // Use calculated viewBox or fallback to default
     const viewBoxString = viewBoxData ? viewBoxData.viewBox : "0 0 800 600";
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBoxString}">
+    const finalSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBoxString}">
 ${definitions}${allElements}
 </svg>`;
+
+    return finalSVG;
   };
 
   const handleSVGChange = (svgCode: string) => {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { formatSVGReference } from '../../utils/svg-elements-utils';
+import { getClipPathBoundingBox, calculateClipPathAlignment, getImageBoundingBox, getPathBoundingBox, getTextBoundingBox, getGroupBoundingBox } from '../../utils/bbox-utils';
 import { PluginButton } from '../../components/PluginButton';
 import { ElementPreview } from '../../components/ElementPreview';
 import { Plus, Scissors, Eye } from 'lucide-react';
@@ -22,7 +23,7 @@ export const ClippingControls: React.FC = () => {
     removeSubPath
   } = useEditorStore();
   const [activeTab, setActiveTab] = useState<'clips' | 'masks'>('clips');
-  const [scaleToFit, setScaleToFit] = useState(false);
+  const [alignmentMode, setAlignmentMode] = useState<'center' | 'top-left' | 'fit'>('center');
   const selectedSubPaths = selection.selectedSubPaths;
   const hasPathSelection = selectedSubPaths.length > 0;
   const selectedPath = selection.selectedPaths.length === 1 
@@ -202,18 +203,147 @@ export const ClippingControls: React.FC = () => {
   };
   const handleApplyClipToPath = (clipId: string) => {
     if (selectedPath) {
-      updatePathStyle(selectedPath.id, {
-        clipPath: formatSVGReference(clipId)
-      });
+      const currentClipPath = clipPaths.find(cp => cp.id === clipId);
+      
+      if (!currentClipPath) {
+        updatePathStyle(selectedPath.id, {
+          clipPath: formatSVGReference(clipId)
+        });
+        return;
+      }
+
+      // Get bounding boxes
+      const pathBbox = getPathBoundingBox(selectedPath);
+      const clipPathBbox = getClipPathBoundingBox(currentClipPath);
+      
+      if (!pathBbox || !clipPathBbox) {
+        // If no bbox calculation possible, just apply clipPath without repositioning
+        updatePathStyle(selectedPath.id, {
+          clipPath: formatSVGReference(clipId)
+        });
+        return;
+      }
+
+      // Calculate positioning adjustment
+      const adjustment = calculateClipPathAlignment(pathBbox, clipPathBbox, alignmentMode);
+      
+      // Apply transform to move path to align with clipPath
+      if (adjustment.x !== 0 || adjustment.y !== 0) {
+        // Transform all subpaths
+        const transformedSubPaths = selectedPath.subPaths.map(subPath => ({
+          ...subPath,
+          commands: subPath.commands.map(cmd => ({
+            ...cmd,
+            x: cmd.x !== undefined ? cmd.x + adjustment.x : cmd.x,
+            y: cmd.y !== undefined ? cmd.y + adjustment.y : cmd.y,
+            x1: cmd.x1 !== undefined ? cmd.x1 + adjustment.x : cmd.x1,
+            y1: cmd.y1 !== undefined ? cmd.y1 + adjustment.y : cmd.y1,
+            x2: cmd.x2 !== undefined ? cmd.x2 + adjustment.x : cmd.x2,
+            y2: cmd.y2 !== undefined ? cmd.y2 + adjustment.y : cmd.y2,
+          }))
+        }));
+
+        // Update path with new positions and clipPath
+        const { paths: currentPaths, replacePaths } = useEditorStore.getState();
+        const updatedPaths = currentPaths.map(path => 
+          path.id === selectedPath.id 
+            ? {
+                ...path,
+                subPaths: transformedSubPaths,
+                style: {
+                  ...path.style,
+                  clipPath: formatSVGReference(clipId)
+                }
+              }
+            : path
+        );
+        replacePaths(updatedPaths);
+      } else {
+        // Just apply clipPath
+        updatePathStyle(selectedPath.id, {
+          clipPath: formatSVGReference(clipId)
+        });
+      }
     }
   };
   const handleApplyClipToSubPaths = (clipId: string) => {
     const parentPaths = getParentPathsOfSelectedSubPaths();
-    parentPaths.forEach(pathId => {
-      updatePathStyle(pathId, {
-        clipPath: formatSVGReference(clipId)
+    const currentClipPath = clipPaths.find(cp => cp.id === clipId);
+    
+    if (!currentClipPath) {
+      parentPaths.forEach(pathId => {
+        updatePathStyle(pathId, {
+          clipPath: formatSVGReference(clipId)
+        });
       });
+      return;
+    }
+
+    const clipPathBbox = getClipPathBoundingBox(currentClipPath);
+    if (!clipPathBbox) {
+      // If no clipPath bbox, just apply clipPath without repositioning
+      parentPaths.forEach(pathId => {
+        updatePathStyle(pathId, {
+          clipPath: formatSVGReference(clipId)
+        });
+      });
+      return;
+    }
+
+    // Update each parent path
+    const { paths: currentPaths, replacePaths } = useEditorStore.getState();
+    const updatedPaths = currentPaths.map(path => {
+      if (!parentPaths.includes(path.id)) return path;
+
+      const pathBbox = getPathBoundingBox(path);
+      if (!pathBbox) {
+        return {
+          ...path,
+          style: {
+            ...path.style,
+            clipPath: formatSVGReference(clipId)
+          }
+        };
+      }
+
+      // Calculate positioning adjustment
+      const adjustment = calculateClipPathAlignment(pathBbox, clipPathBbox, alignmentMode);
+      
+      if (adjustment.x === 0 && adjustment.y === 0) {
+        return {
+          ...path,
+          style: {
+            ...path.style,
+            clipPath: formatSVGReference(clipId)
+          }
+        };
+      }
+
+      // Transform path
+      const transformedSubPaths = path.subPaths.map(subPath => ({
+        ...subPath,
+        commands: subPath.commands.map(cmd => ({
+          ...cmd,
+          x: cmd.x !== undefined ? cmd.x + adjustment.x : cmd.x,
+          y: cmd.y !== undefined ? cmd.y + adjustment.y : cmd.y,
+          x1: cmd.x1 !== undefined ? cmd.x1 + adjustment.x : cmd.x1,
+          y1: cmd.y1 !== undefined ? cmd.y1 + adjustment.y : cmd.y1,
+          x2: cmd.x2 !== undefined ? cmd.x2 + adjustment.x : cmd.x2,
+          y2: cmd.y2 !== undefined ? cmd.y2 + adjustment.y : cmd.y2,
+        }))
+      }));
+
+      return {
+        ...path,
+        subPaths: transformedSubPaths,
+        style: {
+          ...path.style,
+          clipPath: formatSVGReference(clipId)
+        }
+      };
     });
+
+    replacePaths(updatedPaths);
   };
   const handleApplyMaskToPath = (maskId: string) => {
     if (selectedPath) {
@@ -231,11 +361,48 @@ export const ClippingControls: React.FC = () => {
     });
   };
   const handleApplyClipToText = (clipId: string) => {
-    selection.selectedTexts.forEach(textId => {
-      updateTextStyle(textId, {
-        clipPath: formatSVGReference(clipId)
+    const currentClipPath = clipPaths.find(cp => cp.id === clipId);
+    
+    if (!currentClipPath) {
+      selection.selectedTexts.forEach(textId => {
+        updateTextStyle(textId, {
+          clipPath: formatSVGReference(clipId)
+        });
       });
+      return;
+    }
+
+    const clipPathBbox = getClipPathBoundingBox(currentClipPath);
+    if (!clipPathBbox) {
+      // If no clipPath bbox, just apply clipPath without repositioning
+      selection.selectedTexts.forEach(textId => {
+        updateTextStyle(textId, {
+          clipPath: formatSVGReference(clipId)
+        });
+      });
+      return;
+    }
+
+    // Update each selected text
+    const { texts: currentTexts, replaceTexts } = useEditorStore.getState();
+    const updatedTexts = currentTexts.map(text => {
+      if (!selection.selectedTexts.includes(text.id)) return text;
+
+      const textBbox = getTextBoundingBox(text);
+      const adjustment = calculateClipPathAlignment(textBbox, clipPathBbox, alignmentMode);
+      
+      return {
+        ...text,
+        x: text.x + adjustment.x,
+        y: text.y + adjustment.y,
+        style: {
+          ...text.style,
+          clipPath: formatSVGReference(clipId)
+        }
+      };
     });
+
+    replaceTexts(updatedTexts);
   };
   const handleApplyMaskToText = (maskId: string) => {
     selection.selectedTexts.forEach(textId => {
@@ -245,11 +412,52 @@ export const ClippingControls: React.FC = () => {
     });
   };
   const handleApplyClipToGroup = (clipId: string) => {
+    const currentClipPath = clipPaths.find(cp => cp.id === clipId);
+    
+    if (!currentClipPath) {
+      selection.selectedGroups.forEach(groupId => {
+        const currentGroup = useEditorStore.getState().groups.find(group => group.id === groupId);
+        updateGroup(groupId, {
+          style: {
+            ...currentGroup?.style,
+            clipPath: formatSVGReference(clipId)
+          }
+        });
+      });
+      return;
+    }
+
+    const clipPathBbox = getClipPathBoundingBox(currentClipPath);
+    if (!clipPathBbox) {
+      // If no clipPath bbox, just apply clipPath without repositioning
+      selection.selectedGroups.forEach(groupId => {
+        const currentGroup = useEditorStore.getState().groups.find(group => group.id === groupId);
+        updateGroup(groupId, {
+          style: {
+            ...currentGroup?.style,
+            clipPath: formatSVGReference(clipId)
+          }
+        });
+      });
+      return;
+    }
+
+    // Update each selected group
     selection.selectedGroups.forEach(groupId => {
       const currentGroup = useEditorStore.getState().groups.find(group => group.id === groupId);
+      if (!currentGroup) return;
+
+      const groupBbox = getGroupBoundingBox(currentGroup);
+      const adjustment = calculateClipPathAlignment(groupBbox, clipPathBbox, alignmentMode);
+      
+      // Apply transform to move the group
+      const existingTransform = currentGroup.transform || '';
+      const newTransform = `translate(${adjustment.x}, ${adjustment.y}) ${existingTransform}`.trim();
+      
       updateGroup(groupId, {
+        transform: newTransform,
         style: {
-          ...currentGroup?.style,
+          ...currentGroup.style,
           clipPath: formatSVGReference(clipId)
         }
       });
@@ -267,65 +475,46 @@ export const ClippingControls: React.FC = () => {
     });
   };
   const handleApplyClipToImage = (clipId: string) => {
-        selection.selectedImages.forEach(imageId => {
+    selection.selectedImages.forEach(imageId => {
       const currentImage = useEditorStore.getState().images.find(img => img.id === imageId);
       const currentClipPath = clipPaths.find(cp => cp.id === clipId);
+      
       if (!currentImage || !currentClipPath) return;
-      const imageX = currentImage.x;
-      const imageY = currentImage.y;
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      currentClipPath.children.forEach(child => {
-        if (child.type === 'path' && (child as any).subPaths) {
-          (child as any).subPaths.forEach((subPath: any) => {
-            subPath.commands.forEach((cmd: any) => {
-              if (cmd.x !== undefined) {
-                minX = Math.min(minX, cmd.x);
-                maxX = Math.max(maxX, cmd.x);
-              }
-              if (cmd.y !== undefined) {
-                minY = Math.min(minY, cmd.y);
-                maxY = Math.max(maxY, cmd.y);
-              }
-            });
-          });
+
+      // Get bounding boxes
+      const imageBbox = getImageBoundingBox(currentImage);
+      const clipPathBbox = getClipPathBoundingBox(currentClipPath);
+      
+      if (!clipPathBbox) {
+        // If no clipPath bbox, just apply clipPath without repositioning
+        updateImage(imageId, {
+          style: {
+            ...currentImage.style,
+            clipPath: formatSVGReference(clipId)
+          }
+        });
+        return;
+      }
+
+      // Calculate positioning adjustment
+      const adjustment = calculateClipPathAlignment(imageBbox, clipPathBbox, alignmentMode);
+      
+      // Apply clipPath and reposition image
+      const newX = currentImage.x + adjustment.x;
+      const newY = currentImage.y + adjustment.y;
+      const newWidth = adjustment.scaleX ? currentImage.width * adjustment.scaleX : currentImage.width;
+      const newHeight = adjustment.scaleY ? currentImage.height * adjustment.scaleY : currentImage.height;
+
+      updateImage(imageId, {
+        x: newX,
+        y: newY,
+        width: newWidth,
+        height: newHeight,
+        style: {
+          ...currentImage.style,
+          clipPath: formatSVGReference(clipId)
         }
       });
-      const clipPathX = minX !== Infinity ? minX : 0;
-      const clipPathY = minY !== Infinity ? minY : 0;
-      const translateX = imageX - clipPathX;
-      const translateY = imageY - clipPathY;
-            let transform = `translate(${translateX}, ${translateY})`;
-      if (scaleToFit) {
-        const clipWidth = maxX - minX;
-        const clipHeight = maxY - minY;
-        const imageWidth = currentImage.width;
-        const imageHeight = currentImage.height;
-        if (clipWidth > 0 && clipHeight > 0) {
-          const scaleX = imageWidth / clipWidth;
-          const scaleY = imageHeight / clipHeight;
-          const scale = Math.min(scaleX, scaleY);
-          const scaledWidth = clipWidth * scale;
-          const scaledHeight = clipHeight * scale;
-          const centerOffsetX = (imageWidth - scaledWidth) / 2;
-          const centerOffsetY = (imageHeight - scaledHeight) / 2;
-          transform = `translate(${imageX + centerOffsetX}, ${imageY + centerOffsetY}) scale(${scale}) translate(${-clipPathX}, ${-clipPathY})`;
-                  }
-      }
-      const updatedClipPath = {
-        ...currentClipPath,
-        transform
-      };
-      updateClipPath(clipId, updatedClipPath);
-            const newStyle = {
-        ...currentImage?.style,
-        clipPath: formatSVGReference(clipId)
-      };
-            updateImage(imageId, {
-        style: newStyle
-      });
-      setTimeout(() => {
-        const updatedImage = useEditorStore.getState().images.find(img => img.id === imageId);
-              }, 100);
     });
   };
   const handleApplyMaskToImage = (maskId: string) => {
@@ -483,14 +672,46 @@ export const ClippingControls: React.FC = () => {
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
-                    checked={scaleToFit}
-                    onChange={(e) => setScaleToFit(e.target.checked)}
+                    checked={alignmentMode === 'fit'}
+                    onChange={(e) => setAlignmentMode(e.target.checked ? 'fit' : 'center')}
                     style={{ margin: 0 }}
                   />
                   <span style={{ fontWeight: '500' }}>Scale to fit destination</span>
                 </label>
                 <div style={{ color: '#666', fontSize: '10px', marginTop: '2px', marginLeft: '18px' }}>
-                  {scaleToFit ? 'Clip will scale to fit the target size' : 'Clip will keep original size and position'}
+                  {alignmentMode === 'fit' ? 'Clip will scale to fit the target size' : 'Clip will keep original size and position'}
+                </div>
+              </div>
+              
+              <div style={{ 
+                padding: '6px', 
+                backgroundColor: '#f0f8ff', 
+                borderRadius: '3px',
+                fontSize: '11px',
+                border: '1px solid #e0e0e0'
+              }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span style={{ fontWeight: '500' }}>Auto-Alignment Mode:</span>
+                  <select
+                    value={alignmentMode}
+                    onChange={(e) => setAlignmentMode(e.target.value as 'center' | 'top-left' | 'fit')}
+                    style={{
+                      padding: '4px 6px',
+                      border: '1px solid #ccc',
+                      borderRadius: '3px',
+                      fontSize: '11px',
+                      backgroundColor: 'white'
+                    }}
+                  >
+                    <option value="center">Center in clipPath</option>
+                    <option value="top-left">Align to top-left</option>
+                    <option value="fit">Scale to fit</option>
+                  </select>
+                </label>
+                <div style={{ color: '#666', fontSize: '10px', marginTop: '2px' }}>
+                  {alignmentMode === 'center' && 'Element centered within clipPath area'}
+                  {alignmentMode === 'top-left' && 'Element aligned with clipPath top-left'}
+                  {alignmentMode === 'fit' && 'Element scaled and centered to fit'}
                 </div>
               </div>
               <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
@@ -748,14 +969,46 @@ export const ClippingControls: React.FC = () => {
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
-                    checked={scaleToFit}
-                    onChange={(e) => setScaleToFit(e.target.checked)}
+                    checked={alignmentMode === 'fit'}
+                    onChange={(e) => setAlignmentMode(e.target.checked ? 'fit' : 'center')}
                     style={{ margin: 0 }}
                   />
                   <span style={{ fontWeight: '500' }}>Scale to fit destination</span>
                 </label>
                 <div style={{ color: '#666', fontSize: '10px', marginTop: '2px', marginLeft: '18px' }}>
-                  {scaleToFit ? 'Mask will scale to fit the target size' : 'Mask will keep original size and position'}
+                  {alignmentMode === 'fit' ? 'Mask will scale to fit the target size' : 'Mask will keep original size and position'}
+                </div>
+              </div>
+              
+              <div style={{ 
+                padding: '6px', 
+                backgroundColor: '#f0f8ff', 
+                borderRadius: '3px',
+                fontSize: '11px',
+                border: '1px solid #e0e0e0'
+              }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <span style={{ fontWeight: '500' }}>Auto-Alignment Mode:</span>
+                  <select
+                    value={alignmentMode}
+                    onChange={(e) => setAlignmentMode(e.target.value as 'center' | 'top-left' | 'fit')}
+                    style={{
+                      padding: '4px 6px',
+                      border: '1px solid #ccc',
+                      borderRadius: '3px',
+                      fontSize: '11px',
+                      backgroundColor: 'white'
+                    }}
+                  >
+                    <option value="center">Center in mask</option>
+                    <option value="top-left">Align to top-left</option>
+                    <option value="fit">Scale to fit</option>
+                  </select>
+                </label>
+                <div style={{ color: '#666', fontSize: '10px', marginTop: '2px' }}>
+                  {alignmentMode === 'center' && 'Element centered within mask area'}
+                  {alignmentMode === 'top-left' && 'Element aligned with mask top-left'}
+                  {alignmentMode === 'fit' && 'Element scaled and centered to fit'}
                 </div>
               </div>
               <div style={{ 
