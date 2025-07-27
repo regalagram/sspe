@@ -96,19 +96,13 @@ export const MarkerRenderer: React.FC = () => {
   return (
     <defs>
       {markers.map((marker) => {
-        // Calculate zoom-responsive dimensions
-        const baseWidth = marker.markerWidth || 3;
-        const baseHeight = marker.markerHeight || 3;
-        const baseRefX = marker.refX || 0;
-        const baseRefY = marker.refY || 1.5;
-        
-        // Scale marker dimensions inversely to zoom for consistent visual size
-        // Use a scaling factor to keep markers appropriately sized at different zoom levels
-        const zoomFactor = Math.max(0.5, Math.min(2, 1 / Math.sqrt(viewport.zoom)));
-        const markerWidth = baseWidth * zoomFactor;
-        const markerHeight = baseHeight * zoomFactor;
-        const refX = baseRefX * zoomFactor;
-        const refY = baseRefY * zoomFactor;
+        // Use marker dimensions directly without zoom adjustments
+        // Since markerUnits="strokeWidth", markers will be proportional to stroke width
+        // and won't scale with zoom, which is the desired behavior
+        const markerWidth = marker.markerWidth || 3;
+        const markerHeight = marker.markerHeight || 3;
+        const refX = marker.refX || 0;
+        const refY = marker.refY || 1.5;
         
         return (
           <marker

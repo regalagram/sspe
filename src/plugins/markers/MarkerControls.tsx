@@ -807,7 +807,7 @@ export const MarkerControls: React.FC = () => {
         <div>• Markers automatically orient to path direction</div>
         <div>• Edit marker dimensions, orientation, and colors in the marker list</div>
         <div>• Use solid colors or gradients for marker styling</div>
-        <div>• Markers automatically scale with zoom for consistent visual size</div>
+        <div>• Markers are proportional to stroke width and maintain consistent size relative to paths</div>
         <div>• <strong>Custom Path:</strong> Create markers with editable SVG path data</div>
         <div>• Edit the path data directly to create custom arrow shapes and symbols</div>
       </div>
