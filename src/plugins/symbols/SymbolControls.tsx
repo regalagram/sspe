@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { createDefaultSymbol, createDefaultUse } from '../../utils/svg-elements-utils';
+import { symbolManager } from './SymbolManager';
 import { PluginButton } from '../../components/PluginButton';
 import { ElementPreview } from '../../components/ElementPreview';
-import { Plus, Copy, Trash2, Box, Users } from 'lucide-react';
+import { Plus, Copy, Trash2, Box, Users, MousePointer2 } from 'lucide-react';
 
 export const SymbolControls: React.FC = () => {
   const { 
@@ -11,6 +12,7 @@ export const SymbolControls: React.FC = () => {
     uses,
     selection, 
     paths,
+    viewport,
     addSymbol, 
     updateSymbol, 
     removeSymbol,
@@ -169,8 +171,19 @@ export const SymbolControls: React.FC = () => {
   };
 
   const handleCreateInstance = (symbolId: string) => {
-    const instanceData = createDefaultUse(`#${symbolId}`, 100, 100);
+    // Calculate viewport center position for better initial placement
+    const viewportCenter = {
+      x: viewport.viewBox.x + viewport.viewBox.width / 2,
+      y: viewport.viewBox.y + viewport.viewBox.height / 2
+    };
+    
+    const instanceData = createDefaultUse(`#${symbolId}`, viewportCenter.x, viewportCenter.y);
     addUse(instanceData);
+  };
+
+  const handleInteractivePlace = (symbolId: string) => {
+    symbolManager.setSelectedSymbolForPlacement(symbolId);
+    // Visual feedback could be added here to show placement mode is active
   };
 
   const handleRemoveSymbol = (id: string) => {
@@ -276,6 +289,21 @@ export const SymbolControls: React.FC = () => {
                           </div>
                           <div style={{ display: 'flex', gap: '4px' }}>
                             <button
+                              onClick={() => handleInteractivePlace(symbol.id)}
+                              style={{
+                                padding: '4px 6px',
+                                fontSize: '10px',
+                                border: '1px solid #28a745',
+                                backgroundColor: '#fff',
+                                color: '#28a745',
+                                borderRadius: '3px',
+                                cursor: 'pointer'
+                              }}
+                              title="Click to place interactively"
+                            >
+                              <MousePointer2 size={10} />
+                            </button>
+                            <button
                               onClick={() => handleCreateInstance(symbol.id)}
                               style={{
                                 padding: '4px 8px',
@@ -286,7 +314,7 @@ export const SymbolControls: React.FC = () => {
                                 borderRadius: '3px',
                                 cursor: 'pointer'
                               }}
-                              title="Create instance"
+                              title="Create instance at center"
                             >
                               Use
                             </button>

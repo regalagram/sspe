@@ -733,6 +733,7 @@ export const createDefaultUse = (href: string, x: number = 0, y: number = 0): Om
   href,
   x,
   y,
+  // Don't specify width/height by default - let the symbol render at its natural size
   locked: false,
 });
 

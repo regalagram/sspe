@@ -1,6 +1,7 @@
 import { Plugin } from '../../core/PluginSystem';
 import { SymbolControls } from './SymbolControls';
 import { SymbolRenderer } from './SymbolRenderer';
+import { symbolManager } from './SymbolManager';
 import { useEditorStore } from '../../store/editorStore';
 
 export const SymbolPlugin: Plugin = {
@@ -8,6 +9,16 @@ export const SymbolPlugin: Plugin = {
   name: 'Symbols & Library',
   version: '1.0.0',
   enabled: true,
+  
+  initialize: (editor) => {
+    symbolManager.setEditorStore(editor);
+  },
+  
+  pointerHandlers: {
+    onPointerDown: symbolManager.handlePointerDown,
+    onPointerMove: symbolManager.handlePointerMove,
+    onPointerUp: symbolManager.handlePointerUp,
+  },
   
   ui: [
     {
