@@ -1,7 +1,7 @@
 export type SVGCommandType = 'M' | 'L' | 'C' | 'Z';
 
 // Extended command types for editor modes (not actual SVG commands)
-export type EditorCommandType = SVGCommandType | 'PENCIL';
+export type EditorCommandType = SVGCommandType | 'PENCIL' | 'NEW_PATH';
 
 export interface SVGCommand {
   id: string;

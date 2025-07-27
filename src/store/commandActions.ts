@@ -4,6 +4,7 @@ import { generateId } from '../utils/id-utils.js';
 
 export interface CommandActions {
   addCommand: (subPathId: string, command: Omit<SVGCommand, 'id'>) => string;
+  insertCommandAfter: (commandId: string, command: Omit<SVGCommand, 'id'>) => string;
   updateCommand: (commandId: string, updates: Partial<SVGCommand>) => void;
   removeCommand: (commandId: string) => void;
   moveCommand: (commandId: string, position: Point) => void;
@@ -80,6 +81,39 @@ export const createCommandActions: StateCreator<
       })),
     }));
     return commandId;
+  },
+
+  insertCommandAfter: (commandId, command) => {
+    const newCommandId = generateId();
+    const precision = get().precision;
+    set((state) => ({
+      paths: state.paths.map((path) => ({
+        ...path,
+        subPaths: path.subPaths.map((subPath) => {
+          const commandIndex = subPath.commands.findIndex(cmd => cmd.id === commandId);
+          if (commandIndex !== -1) {
+            // Insert after the found command
+            const newCommands = [...subPath.commands];
+            newCommands.splice(commandIndex + 1, 0, {
+              ...command,
+              id: newCommandId,
+              x: roundToPrecision(command.x, precision),
+              y: roundToPrecision(command.y, precision),
+              x1: roundToPrecision(command.x1, precision),
+              y1: roundToPrecision(command.y1, precision),
+              x2: roundToPrecision(command.x2, precision),
+              y2: roundToPrecision(command.y2, precision),
+            });
+            return {
+              ...subPath,
+              commands: newCommands,
+            };
+          }
+          return subPath;
+        }),
+      })),
+    }));
+    return newCommandId;
   },
 
   updateCommand: (commandId, updates) =>

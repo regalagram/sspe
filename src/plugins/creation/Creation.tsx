@@ -29,6 +29,13 @@ export const CreationPlugin: Plugin = {
       }
     },
     {
+      key: 'shift+m',
+      description: 'New Path Tool',
+      action: () => {
+        toolModeManager.setMode('creation', { commandType: 'NEW_PATH' });
+      }
+    },
+    {
       key: 'l',
       description: 'Line To Tool',
       action: () => {
@@ -67,6 +74,16 @@ export const CreationPlugin: Plugin = {
       onActivate: () => {
         const store = useEditorStore.getState();
         store.setCreateMode('M');
+      }
+    },
+    {
+      id: 'new-path',
+      name: 'New Path',
+      category: 'create',
+      shortcut: 'Shift+M',
+      onActivate: () => {
+        const store = useEditorStore.getState();
+        store.setCreateMode('NEW_PATH');
       }
     },
     {

@@ -13,7 +13,7 @@ interface CreationToolsProps {
     commandType: EditorCommandType;
     isDrawing: boolean;
   };
-  onSelectTool: (commandType: SVGCommandType) => void;
+  onSelectTool: (commandType: SVGCommandType | 'NEW_PATH') => void;
   onExitCreateMode: () => void;
 }
 
@@ -23,8 +23,9 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
   onSelectTool,
   onExitCreateMode,
 }) => {
-  const tools: Array<{ command: SVGCommandType; label: string; description: string }> = [
+  const tools: Array<{ command: SVGCommandType | 'NEW_PATH'; label: string; description: string }> = [
     { command: 'M', label: 'M', description: 'Start' },
+    { command: 'NEW_PATH', label: 'M+', description: 'New Path' },
     { command: 'L', label: 'L', description: 'Line' },
     { command: 'C', label: 'C', description: 'Curve' },
     { command: 'Z', label: 'Z', description: 'End' },
@@ -47,10 +48,14 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
         {tools.map(tool => (
           <PluginButton
             key={tool.command}
-            icon={<SVGCommandIcon command={tool.command} size={14} color={currentMode === 'create' && createMode?.commandType === tool.command ? 'white' : '#333'} />}
+            icon={<SVGCommandIcon command={tool.command === 'NEW_PATH' ? 'M' : tool.command} size={14} color={currentMode === 'create' && createMode?.commandType === tool.command ? 'white' : '#333'} />}
             text={`${tool.label} - ${tool.description}`}
             color={toolColor}
-            active={currentMode === 'create' && createMode?.commandType === tool.command}
+            active={currentMode === 'create' && (
+              tool.command === 'NEW_PATH' 
+                ? createMode?.commandType === 'NEW_PATH' 
+                : createMode?.commandType === tool.command
+            )}
             disabled={false}
             onPointerDown={() => onSelectTool(tool.command)}
           />
@@ -73,8 +78,12 @@ export const CreationTools: React.FC<CreationToolsProps> = ({
 export const CreationUI: React.FC = () => {
   const { mode } = useEditorStore();
 
-  const handleSelectTool = (commandType: SVGCommandType) => {
-    toolModeManager.setMode('creation', { commandType: commandType as EditorCommandType });
+  const handleSelectTool = (commandType: SVGCommandType | 'NEW_PATH') => {
+    if (commandType === 'NEW_PATH') {
+      toolModeManager.setMode('creation', { commandType: 'NEW_PATH' as EditorCommandType });
+    } else {
+      toolModeManager.setMode('creation', { commandType: commandType as EditorCommandType });
+    }
   };
 
   const handleExitCreateMode = () => {
