@@ -60,6 +60,7 @@ export const TextPathRenderer: React.FC = () => {
     if (style.textDecoration) textAttributes.textDecoration = style.textDecoration;
     if (style.letterSpacing) textAttributes.letterSpacing = style.letterSpacing;
     if (style.wordSpacing) textAttributes.wordSpacing = style.wordSpacing;
+    if (style.filter) textAttributes.filter = style.filter;
 
     // Build textPath attributes
     const textPathAttributes: Record<string, any> = {

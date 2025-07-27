@@ -54,6 +54,7 @@ export const FilterControls: React.FC = () => {
     selection, 
     paths,
     texts,
+    textPaths,
     groups,
     images,
     addFilter, 
@@ -62,6 +63,7 @@ export const FilterControls: React.FC = () => {
     duplicateFilter,
     updatePathStyle,
     updateTextStyle,
+    updateTextPathStyle,
     updateGroup,
     updateImage
   } = store;
@@ -91,6 +93,7 @@ export const FilterControls: React.FC = () => {
   const hasAnyElementsSelected = hasPathSelection || 
                                 selectedPath !== null || 
                                 selection.selectedTexts.length > 0 || 
+                                selection.selectedTextPaths.length > 0 ||
                                 selection.selectedGroups.length > 0 || 
                                 selection.selectedImages.length > 0;
 
@@ -232,12 +235,13 @@ export const FilterControls: React.FC = () => {
     // Check if any elements are selected
     const hasSubPaths = selectedSubPaths.length > 0;
     const hasTexts = selection.selectedTexts.length > 0;
+    const hasTextPaths = selection.selectedTextPaths.length > 0;
     const hasGroups = selection.selectedGroups.length > 0;
     const hasImages = selection.selectedImages.length > 0;
     const hasSelectedPath = selectedPath !== null;
 
-    if (!hasSubPaths && !hasTexts && !hasGroups && !hasImages && !hasSelectedPath) {
-      alert('Please select one or more elements (sub-paths, texts, groups, images, or paths) first');
+    if (!hasSubPaths && !hasTexts && !hasTextPaths && !hasGroups && !hasImages && !hasSelectedPath) {
+      alert('Please select one or more elements (sub-paths, texts, textPaths, groups, images, or paths) first');
       return;
     }
 
@@ -342,6 +346,15 @@ export const FilterControls: React.FC = () => {
             });
           }
           
+          // Apply to selected textPaths
+          if (hasTextPaths) {
+            selection.selectedTextPaths.forEach(textPathId => {
+              updateTextPathStyle(textPathId, {
+                filter: filterRef
+              });
+            });
+          }
+          
           // Apply to selected groups
           if (hasGroups) {
             selection.selectedGroups.forEach(groupId => {
@@ -396,6 +409,15 @@ export const FilterControls: React.FC = () => {
     if (hasTexts) {
       selection.selectedTexts.forEach(textId => {
         updateTextStyle(textId, {
+          filter: filterRef
+        });
+      });
+    }
+    
+    // Apply to selected textPaths
+    if (hasTextPaths) {
+      selection.selectedTextPaths.forEach(textPathId => {
+        updateTextPathStyle(textPathId, {
           filter: filterRef
         });
       });
@@ -463,6 +485,18 @@ export const FilterControls: React.FC = () => {
     });
   };
 
+  const handleApplyFilterToTextPath = (filterId: string) => {
+    const selectedTexts = textPaths.filter(textPath => 
+      selection.selectedTextPaths.includes(textPath.id)
+    );
+    
+    selectedTexts.forEach(textPath => {
+      updateTextPathStyle(textPath.id, {
+        filter: formatSVGReference(filterId)
+      });
+    });
+  };
+
   const handleApplyFilterToGroup = (filterId: string) => {
     const selectedGroups = groups.filter(group => 
       selection.selectedGroups.includes(group.id)
@@ -522,6 +556,18 @@ export const FilterControls: React.FC = () => {
     
     selectedTexts.forEach(text => {
       updateTextStyle(text.id, {
+        filter: undefined
+      });
+    });
+  };
+
+  const handleRemoveFilterFromTextPath = () => {
+    const selectedTexts = textPaths.filter(textPath => 
+      selection.selectedTextPaths.includes(textPath.id)
+    );
+    
+    selectedTexts.forEach(textPath => {
+      updateTextPathStyle(textPath.id, {
         filter: undefined
       });
     });
@@ -1443,11 +1489,12 @@ export const FilterControls: React.FC = () => {
             if (selectedSubPaths.length > 0) selectedElements.push(`${selectedSubPaths.length} sub-path${selectedSubPaths.length > 1 ? 's' : ''}`);
             if (selectedPath) selectedElements.push('1 path');
             if (selection.selectedTexts.length > 0) selectedElements.push(`${selection.selectedTexts.length} text${selection.selectedTexts.length > 1 ? 's' : ''}`);
+            if (selection.selectedTextPaths.length > 0) selectedElements.push(`${selection.selectedTextPaths.length} textPath${selection.selectedTextPaths.length > 1 ? 's' : ''}`);
             if (selection.selectedGroups.length > 0) selectedElements.push(`${selection.selectedGroups.length} group${selection.selectedGroups.length > 1 ? 's' : ''}`);
             if (selection.selectedImages.length > 0) selectedElements.push(`${selection.selectedImages.length} image${selection.selectedImages.length > 1 ? 's' : ''}`);
             
             if (selectedElements.length === 0) {
-              return 'Select elements (sub-paths, paths, texts, groups, or images) first to apply filters';
+              return 'Select elements (sub-paths, paths, texts, textPaths, groups, or images) first to apply filters';
             }
             
             return `Apply to ${selectedElements.join(', ')}`;
@@ -2028,7 +2075,7 @@ export const FilterControls: React.FC = () => {
       </div>
 
       {/* Apply to Selected Elements */}
-      {(selectedPath || selectedSubPaths.length > 0 || selection.selectedTexts.length > 0 || selection.selectedGroups.length > 0 || selection.selectedImages.length > 0) && (
+      {(selectedPath || selectedSubPaths.length > 0 || selection.selectedTexts.length > 0 || selection.selectedTextPaths.length > 0 || selection.selectedGroups.length > 0 || selection.selectedImages.length > 0) && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '8px', borderTop: '1px solid #e9ecef' }}>
           <span style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
             Apply to Selected Elements:
@@ -2087,6 +2134,22 @@ export const FilterControls: React.FC = () => {
                         }}
                       >
                         Apply to Text ({selection.selectedTexts.length})
+                      </button>
+                    )}
+                    {selection.selectedTextPaths.length > 0 && (
+                      <button
+                        onClick={() => handleApplyFilterToTextPath(filter.id)}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '10px',
+                          border: '1px solid #007bff',
+                          backgroundColor: '#fff',
+                          color: '#007bff',
+                          borderRadius: '3px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Apply to TextPath ({selection.selectedTextPaths.length})
                       </button>
                     )}
                     {selection.selectedGroups.length > 0 && (
@@ -2174,6 +2237,22 @@ export const FilterControls: React.FC = () => {
                       }}
                     >
                       Remove from Text
+                    </button>
+                  )}
+                  {selection.selectedTextPaths.length > 0 && (
+                    <button
+                      onClick={handleRemoveFilterFromTextPath}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        border: '1px solid #dc3545',
+                        backgroundColor: '#fff',
+                        color: '#dc3545',
+                        borderRadius: '3px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Remove from TextPath
                     </button>
                   )}
                   {selection.selectedGroups.length > 0 && (
