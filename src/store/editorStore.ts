@@ -109,6 +109,16 @@ const loadInitialState = (): EditorState => {
       playbackRate: 1.0,
       loop: false,
       startTime: undefined,
+      // Advanced animation state
+      activeAnimations: [],
+      pausedAnimations: [],
+      completedAnimations: [],
+      // Event system
+      pendingEvents: [],
+      eventListeners: new Map(),
+      // Synchronization
+      syncGroups: new Map(),
+      timeline: [],
     },
     selection: {
       selectedPaths: [],
@@ -123,10 +133,13 @@ const loadInitialState = (): EditorState => {
       selectedClipPaths: [],
       selectedMasks: [],
       selectedFilters: [],
+      selectedFilterPrimitives: [],
       selectedMarkers: [],
       selectedSymbols: [],
       selectedUses: [],
       selectedAnimations: [],
+      selectedGradients: [],
+      selectedGradientStops: [],
     },
     viewport: {
       zoom: 1,
@@ -169,6 +182,11 @@ const loadInitialState = (): EditorState => {
       controlPointsFactor: 1.0,
       transformResizeFactor: 1.0,
       transformRotateFactor: 1.0,
+    },
+    // Animation synchronization support
+    animationSync: {
+      chains: [],
+      events: [],
     },
   };
   

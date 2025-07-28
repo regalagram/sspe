@@ -8,7 +8,8 @@ import { extractGradientsFromPaths } from '../../utils/gradient-utils';
 import { PluginButton } from '../../components/PluginButton';
 import { SVGDropZone } from '../../components/SVGDropZone';
 import { SVGImportOptions, ImportSettings } from '../../components/SVGImportOptions';
-import { RotateCcw, CheckCircle2, Trash2, Upload, Download } from 'lucide-react';
+import { RotateCcw, CheckCircle2, Trash2, Upload, Download, Zap } from 'lucide-react';
+import { prepareAnimationExportData, validateAnimationImportData, sanitizeAnimationImportData, generateAnimationSummary } from '../../utils/animation-export-utils';
 
 interface PrecisionControlProps {
   precision: number;
@@ -173,7 +174,7 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
 };
 
 export const SVGComponent: React.FC = () => {
-  const { paths, texts, textPaths, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, viewport, replacePaths, replaceTexts, replaceTextPaths, replaceGroups, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients, addText, addGradient, addImage, addSymbol, addMarker, addClipPath, addMask, addFilter, removeFilter, clearAllSVGElements, addUse, updateImage } = useEditorStore();
+  const { paths, texts, textPaths, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, viewport, replacePaths, replaceTexts, replaceTextPaths, replaceGroups, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients, addText, addGradient, addImage, addSymbol, addMarker, addClipPath, addMask, addFilter, removeFilter, clearAllSVGElements, addUse, updateImage, animations, animationState, animationSync, addAnimation, removeAnimation } = useEditorStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Import settings state
@@ -777,14 +778,14 @@ export const SVGComponent: React.FC = () => {
                   : primitive.lightSource.type === 'fePointLight'
                   ? `<fePointLight x="${primitive.lightSource.x || 0}" y="${primitive.lightSource.y || 0}" z="${primitive.lightSource.z || 1}" />`
                   : `<feSpotLight x="${primitive.lightSource.x || 0}" y="${primitive.lightSource.y || 0}" z="${primitive.lightSource.z || 1}" pointsAtX="${primitive.lightSource.pointsAtX || 0}" pointsAtY="${primitive.lightSource.pointsAtY || 0}" pointsAtZ="${primitive.lightSource.pointsAtZ || 0}" />`;
-                return `    <feDiffuseLighting surface-scale="${primitive.surfaceScale || 1}" diffuse-constant="${primitive.diffuseConstant || 1}" lighting-color="${primitive.lightColor || '#ffffff'}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''}>\n      ${diffuseLightSource}\n    </feDiffuseLighting>`;
+                return `    <feDiffuseLighting surface-scale="${primitive.surfaceScale || 1}" diffuse-constant="${primitive.diffuseConstant || 1}" lighting-color="${primitive.lightingColor || '#ffffff'}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''}>\n      ${diffuseLightSource}\n    </feDiffuseLighting>`;
               case 'feSpecularLighting':
                 const specularLightSource = primitive.lightSource.type === 'feDistantLight' 
                   ? `<feDistantLight azimuth="${primitive.lightSource.azimuth || 45}" elevation="${primitive.lightSource.elevation || 45}" />`
                   : primitive.lightSource.type === 'fePointLight'
                   ? `<fePointLight x="${primitive.lightSource.x || 0}" y="${primitive.lightSource.y || 0}" z="${primitive.lightSource.z || 1}" />`
                   : `<feSpotLight x="${primitive.lightSource.x || 0}" y="${primitive.lightSource.y || 0}" z="${primitive.lightSource.z || 1}" pointsAtX="${primitive.lightSource.pointsAtX || 0}" pointsAtY="${primitive.lightSource.pointsAtY || 0}" pointsAtZ="${primitive.lightSource.pointsAtZ || 0}" />`;
-                return `    <feSpecularLighting surface-scale="${primitive.surfaceScale || 1}" specular-constant="${primitive.specularConstant || 1}" specular-exponent="${primitive.specularExponent || 1}" lighting-color="${primitive.lightColor || '#ffffff'}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''}>\n      ${specularLightSource}\n    </feSpecularLighting>`;
+                return `    <feSpecularLighting surface-scale="${primitive.surfaceScale || 1}" specular-constant="${primitive.specularConstant || 1}" specular-exponent="${primitive.specularExponent || 1}" lighting-color="${primitive.lightingColor || '#ffffff'}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''}>\n      ${specularLightSource}\n    </feSpecularLighting>`;
               case 'feDisplacementMap':
                 return `    <feDisplacementMap scale="${primitive.scale || 0}" xChannelSelector="${primitive.xChannelSelector || 'A'}" yChannelSelector="${primitive.yChannelSelector || 'A'}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.in2 ? ` in2="${primitive.in2}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''} />`;
               case 'feTurbulence':
@@ -1146,6 +1147,117 @@ ${definitions}${allElements}
     URL.revokeObjectURL(url);
   };
 
+  // Animation export/import functions
+  const handleExportAnimations = () => {
+    const animationData = prepareAnimationExportData(animations, animationState, animationSync);
+    const summary = generateAnimationSummary(animationData);
+    
+    const jsonContent = JSON.stringify(animationData, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'svg-animations-export.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Clean up the object URL
+    URL.revokeObjectURL(url);
+    
+    console.log(`Exported: ${summary}`);
+    alert(`Successfully exported: ${summary}`);
+  };
+
+  const handleImportAnimations = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,application/json';
+    
+    input.onchange = (event: Event) => {
+      const target = event.target as HTMLInputElement;
+      const file = target.files?.[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const jsonContent = e.target?.result as string;
+          const rawData = JSON.parse(jsonContent);
+          
+          // Validate the imported data structure
+          const validation = validateAnimationImportData(rawData);
+          if (!validation.valid) {
+            throw new Error(validation.error);
+          }
+          
+          // Show warnings if any
+          if (validation.warnings && validation.warnings.length > 0) {
+            const warningsMsg = validation.warnings.join('\n');
+            console.warn('Animation import warnings:', warningsMsg);
+            if (!confirm(`Warnings found:\n${warningsMsg}\n\nContinue with import?`)) {
+              return;
+            }
+          }
+          
+          // Sanitize and prepare data
+          const { animations: importedAnimations, animationSync: importedAnimationSync } = sanitizeAnimationImportData(rawData);
+          
+          // Generate summary for confirmation
+          const summary = generateAnimationSummary({
+            animations: importedAnimations,
+            animationState: { isPlaying: false, currentTime: 0, startTime: 0 } as any,
+            animationSync: importedAnimationSync,
+            exportTimestamp: Date.now(),
+            version: '1.0.0'
+          });
+          
+          const confirmMessage = `Import ${summary}? This will replace all current animations.`;
+          
+          if (!confirm(confirmMessage)) {
+            return;
+          }
+          
+          // Clear existing animations
+          const currentAnimations = [...animations];
+          currentAnimations.forEach(animation => removeAnimation(animation.id));
+          
+          // Import new animations
+          importedAnimations.forEach((animation: any) => {
+            addAnimation(animation);
+          });
+          
+          // Update animation sync data in store
+          useEditorStore.setState((state: any) => ({
+            animationSync: importedAnimationSync,
+            animationState: {
+              ...state.animationState,
+              isPlaying: false,
+              currentTime: 0,
+              startTime: 0
+            }
+          }));
+          
+          console.log(`Imported: ${summary}`);
+          alert(`Successfully imported: ${summary}`);
+          
+        } catch (error) {
+          console.error('Error importing animations:', error);
+          alert(`Error importing animations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      };
+      
+      reader.onerror = () => {
+        alert('Error reading the animation file.');
+      };
+      
+      reader.readAsText(file);
+    };
+    
+    input.click();
+  };
+
   const currentSVG = generateSVGCode();
 
   return (
@@ -1190,6 +1302,33 @@ ${definitions}${allElements}
           disabled={paths.length === 0 && texts.length === 0 && groups.length === 0}
         >
           <Download size={16} style={{ verticalAlign: 'middle' }} /> Download
+        </button>
+      </div>
+
+      {/* Animation export/import buttons */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+        <button
+          type="button"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '8px', fontSize: '13px', fontWeight: 500,
+            background: '#ffc107', color: '#212529', border: 'none', borderRadius: '4px', cursor: animations.length === 0 ? 'not-allowed' : 'pointer', width: '100%', opacity: animations.length === 0 ? 0.6 : 1
+          }}
+          onClick={handleExportAnimations}
+          disabled={animations.length === 0}
+          title={`Export ${animations.length} animation(s), ${animationSync.chains.length} chain(s), ${animationSync.events.length} event(s)`}
+        >
+          <Zap size={16} style={{ verticalAlign: 'middle' }} /> Export Animations
+        </button>
+        <button
+          type="button"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '8px', fontSize: '13px', fontWeight: 500,
+            background: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', width: '100%'
+          }}
+          onClick={handleImportAnimations}
+          title="Import animation data from JSON file"
+        >
+          <Zap size={16} style={{ verticalAlign: 'middle' }} /> Import Animations
         </button>
       </div>
       

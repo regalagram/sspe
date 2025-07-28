@@ -1275,8 +1275,8 @@ export const FilterControls: React.FC = () => {
               <label style={{ fontSize: '10px', color: '#666' }}>Light Color:</label>
               <input
                 type="color"
-                value={primitive.lightColor || '#ffffff'}
-                onChange={(e) => updatePrimitive({ lightColor: e.target.value })}
+                value={primitive.lightingColor || '#ffffff'}
+                onChange={(e) => updatePrimitive({ lightingColor: e.target.value })}
                 style={{ width: '100%', padding: '2px', border: '1px solid #ddd', borderRadius: '3px' }}
               />
             </div>
@@ -1335,8 +1335,8 @@ export const FilterControls: React.FC = () => {
               <label style={{ fontSize: '10px', color: '#666' }}>Light Color:</label>
               <input
                 type="color"
-                value={primitive.lightColor || '#ffffff'}
-                onChange={(e) => updatePrimitive({ lightColor: e.target.value })}
+                value={primitive.lightingColor || '#ffffff'}
+                onChange={(e) => updatePrimitive({ lightingColor: e.target.value })}
                 style={{ width: '100%', padding: '2px', border: '1px solid #ddd', borderRadius: '3px' }}
               />
             </div>

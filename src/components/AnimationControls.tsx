@@ -7,6 +7,9 @@ export const AnimationControls: React.FC = () => {
     animations, 
     animationState, 
     selection,
+    filters,
+    gradients,
+    paths,
     playAnimations, 
     pauseAnimations, 
     stopAnimations,
@@ -16,7 +19,29 @@ export const AnimationControls: React.FC = () => {
     createFadeAnimation,
     createMoveAnimation,
     createRotateAnimation,
-    createScaleAnimation
+    createScaleAnimation,
+    createFilterBlurAnimation,
+    createFilterOffsetAnimation,
+    createFilterColorMatrixAnimation,
+    createFilterFloodAnimation,
+    createSetAnimation,
+    createViewBoxAnimation,
+    createGradientStopAnimation,
+    createGradientPositionAnimation,
+    createAnimateMotionWithMPath,
+    createAnimationChain,
+    createPositionAnimation,
+    createSizeAnimation,
+    createCircleAnimation,
+    createPathDataAnimation,
+    createLineAnimation,
+    createLinearGradientAnimation,
+    createRadialGradientAnimation,
+    createGradientStopOffsetAnimation,
+    createPatternAnimation,
+    createPatternTransformAnimation,
+    createViewBoxZoomAnimation,
+    createViewBoxPanAnimation
   } = useEditorStore();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -24,7 +49,7 @@ export const AnimationControls: React.FC = () => {
   const [editingAnimation, setEditingAnimation] = useState<any>(null);
   
   // Core animation properties
-  const [animationType, setAnimationType] = useState<'animate' | 'animateMotion' | 'animateTransform'>('animate');
+  const [animationType, setAnimationType] = useState<'animate' | 'animateMotion' | 'animateTransform' | 'set'>('animate');
   const [duration, setDuration] = useState(2);
   const [attributeName, setAttributeName] = useState('opacity');
   
@@ -54,6 +79,26 @@ export const AnimationControls: React.FC = () => {
   // Motion-specific
   const [pathData, setPathData] = useState('M 0,0 L 100,0');
   const [rotate, setRotate] = useState<'auto' | 'auto-reverse' | string>('auto');
+  const [mpathRef, setMpathRef] = useState(''); // For mpath reference
+  
+  // Advanced properties
+  const [attributeType, setAttributeType] = useState<'CSS' | 'XML' | 'auto'>('auto');
+  const [byValue, setByValue] = useState('');
+  const [minDuration, setMinDuration] = useState('');
+  const [maxDuration, setMaxDuration] = useState('');
+  const [restartMode, setRestartMode] = useState<'always' | 'whenNotActive' | 'never'>('always');
+  const [keyPoints, setKeyPoints] = useState(''); // For animateMotion
+  
+  // Set animation specific
+  const [setToValueState, setSetToValueState] = useState('');
+  
+  // ViewBox animation
+  const [fromViewBox, setFromViewBox] = useState('0 0 100 100');
+  const [toViewBox, setToViewBox] = useState('0 0 200 200');
+  
+  // Synchronization
+  const [chainName, setChainName] = useState('');
+  const [selectedAnimationsForChain, setSelectedAnimationsForChain] = useState<string[]>([]);
 
   const handlePlayPause = () => {
     if (animationState.isPlaying) {
@@ -124,26 +169,62 @@ export const AnimationControls: React.FC = () => {
     return null;
   };
 
-  const handleQuickAnimation = (type: 'fade' | 'move' | 'rotate' | 'scale') => {
+  const handleQuickAnimation = (type: 'fade' | 'move' | 'rotate' | 'scale' | 'blur' | 'offset' | 'colorMatrix' | 'viewBox' | 'position' | 'size' | 'circle' | 'line' | 'gradient' | 'pattern' | 'zoom' | 'pan') => {
     const targetId = getAnimationTargetId();
     
-    if (!targetId) {
+    if (type !== 'viewBox' && !targetId) {
       alert('Please select an element to animate');
       return;
     }
 
     switch (type) {
       case 'fade':
-        createFadeAnimation(targetId, '2s');
+        createFadeAnimation(targetId!, '2s');
         break;
       case 'move':
-        createMoveAnimation(targetId, '2s', 0, 0, 100, 0);
+        createMoveAnimation(targetId!, '2s', 0, 0, 100, 0);
         break;
       case 'rotate':
-        createRotateAnimation(targetId, '2s', '360');
+        createRotateAnimation(targetId!, '2s', '360');
         break;
       case 'scale':
-        createScaleAnimation(targetId, '2s');
+        createScaleAnimation(targetId!, '2s');
+        break;
+      case 'blur':
+        createFilterBlurAnimation(targetId!, '2s', 0, 5);
+        break;
+      case 'offset':
+        createFilterOffsetAnimation(targetId!, '2s', 0, 0, 10, 10);
+        break;
+      case 'colorMatrix':
+        createFilterColorMatrixAnimation(targetId!, '2s');
+        break;
+      case 'viewBox':
+        createViewBoxAnimation('3s', '0 0 100 100', '0 0 200 200');
+        break;
+      case 'position':
+        createPositionAnimation(targetId!, '2s', 0, 0, 100, 100);
+        break;
+      case 'size':
+        createSizeAnimation(targetId!, '2s', 50, 50, 100, 100);
+        break;
+      case 'circle':
+        createCircleAnimation(targetId!, '2s', 10, 50);
+        break;
+      case 'line':
+        createLineAnimation(targetId!, '2s', 0, 0, 50, 50, 100, 100, 150, 150);
+        break;
+      case 'gradient':
+        createLinearGradientAnimation(targetId!, '3s', 0, 0, 100, 0, 100, 100, 0, 100);
+        break;
+      case 'pattern':
+        createPatternAnimation(targetId!, '2s', 10, 10, 50, 50);
+        break;
+      case 'zoom':
+        createViewBoxZoomAnimation('3s', 1, 2, 50, 50);
+        break;
+      case 'pan':
+        createViewBoxPanAnimation('3s', 0, 0, 100, 100);
         break;
     }
   };
@@ -367,6 +448,42 @@ export const AnimationControls: React.FC = () => {
           <button style={buttonStyle} onClick={() => handleQuickAnimation('scale')}>
             Scale
           </button>
+          <button style={buttonStyle} onClick={() => handleQuickAnimation('blur')}>
+            Blur
+          </button>
+          <button style={buttonStyle} onClick={() => handleQuickAnimation('offset')}>
+            Shadow
+          </button>
+          <button style={buttonStyle} onClick={() => handleQuickAnimation('colorMatrix')}>
+            Color Shift
+          </button>
+          <button style={buttonStyle} onClick={() => handleQuickAnimation('viewBox')}>
+            Zoom
+          </button>
+          <button style={buttonStyle} onClick={() => handleQuickAnimation('position')}>
+            Position
+          </button>
+          <button style={buttonStyle} onClick={() => handleQuickAnimation('size')}>
+            Size
+          </button>
+          <button style={buttonStyle} onClick={() => handleQuickAnimation('circle')}>
+            Circle
+          </button>
+          <button style={buttonStyle} onClick={() => handleQuickAnimation('line')}>
+            Line
+          </button>
+          <button style={buttonStyle} onClick={() => handleQuickAnimation('gradient')}>
+            Gradient
+          </button>
+          <button style={buttonStyle} onClick={() => handleQuickAnimation('pattern')}>
+            Pattern
+          </button>
+          <button style={buttonStyle} onClick={() => handleQuickAnimation('zoom')}>
+            Zoom
+          </button>
+          <button style={buttonStyle} onClick={() => handleQuickAnimation('pan')}>
+            Pan
+          </button>
         </div>
       </div>
 
@@ -396,6 +513,7 @@ export const AnimationControls: React.FC = () => {
                 <option value="animate">Animate</option>
                 <option value="animateMotion">Animate Motion</option>
                 <option value="animateTransform">Animate Transform</option>
+                <option value="set">Set (discrete)</option>
               </select>
             </div>
 
@@ -416,19 +534,35 @@ export const AnimationControls: React.FC = () => {
             {animationType !== 'animateMotion' && (
               <div style={{ marginBottom: '8px' }}>
                 <label style={{ display: 'block', marginBottom: '4px', fontSize: '10px', fontWeight: 'bold' }}>
-                  Attribute:
+                  {animationType === 'animateTransform' ? 'Transform Type:' : 'Attribute:'}
                 </label>
                 <select 
-                  value={attributeName} 
-                  onChange={(e) => setAttributeName(e.target.value)}
+                  value={animationType === 'animateTransform' ? transformType : attributeName} 
+                  onChange={(e) => animationType === 'animateTransform' ? setTransformType(e.target.value as any) : setAttributeName(e.target.value)}
                   style={{ width: '100%', padding: '4px', fontSize: '10px' }}
                 >
-                  {animationType === 'animate' && (
+                  {(animationType === 'animate' || animationType === 'set') && (
                     <>
                       <option value="opacity">Opacity</option>
                       <option value="fill">Fill</option>
                       <option value="stroke">Stroke</option>
                       <option value="stroke-width">Stroke Width</option>
+                      <option value="cx">Center X (circle)</option>
+                      <option value="cy">Center Y (circle)</option>
+                      <option value="r">Radius (circle)</option>
+                      <option value="rx">Radius X (ellipse/rect)</option>
+                      <option value="ry">Radius Y (ellipse/rect)</option>
+                      <option value="x">X Position</option>
+                      <option value="y">Y Position</option>
+                      <option value="width">Width</option>
+                      <option value="height">Height</option>
+                      <option value="x1">X1 (line)</option>
+                      <option value="y1">Y1 (line)</option>
+                      <option value="x2">X2 (line)</option>
+                      <option value="y2">Y2 (line)</option>
+                      <option value="d">Path Data</option>
+                      <option value="pathLength">Path Length</option>
+                      <option value="transform">Transform</option>
                     </>
                   )}
                   {animationType === 'animateTransform' && (
@@ -436,6 +570,8 @@ export const AnimationControls: React.FC = () => {
                       <option value="translate">Translate</option>
                       <option value="rotate">Rotate</option>
                       <option value="scale">Scale</option>
+                      <option value="skewX">Skew X</option>
+                      <option value="skewY">Skew Y</option>
                     </>
                   )}
                 </select>

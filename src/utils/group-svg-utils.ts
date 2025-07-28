@@ -280,14 +280,14 @@ export function generateGroupSVG(
             : primitive.lightSource.type === 'fePointLight'
             ? `<fePointLight x="${primitive.lightSource.x || 0}" y="${primitive.lightSource.y || 0}" z="${primitive.lightSource.z || 1}" />`
             : `<feSpotLight x="${primitive.lightSource.x || 0}" y="${primitive.lightSource.y || 0}" z="${primitive.lightSource.z || 1}" pointsAtX="${primitive.lightSource.pointsAtX || 0}" pointsAtY="${primitive.lightSource.pointsAtY || 0}" pointsAtZ="${primitive.lightSource.pointsAtZ || 0}" />`;
-          return `    <feDiffuseLighting surface-scale="${primitive.surfaceScale || 1}" diffuse-constant="${primitive.diffuseConstant || 1}" lighting-color="${primitive.lightColor || '#ffffff'}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''}>\n      ${diffuseLightSource}\n    </feDiffuseLighting>`;
+          return `    <feDiffuseLighting surface-scale="${primitive.surfaceScale || 1}" diffuse-constant="${primitive.diffuseConstant || 1}" lighting-color="${primitive.lightingColor || '#ffffff'}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''}>\n      ${diffuseLightSource}\n    </feDiffuseLighting>`;
         case 'feSpecularLighting':
           const specularLightSource = primitive.lightSource.type === 'feDistantLight' 
             ? `<feDistantLight azimuth="${primitive.lightSource.azimuth || 45}" elevation="${primitive.lightSource.elevation || 45}" />`
             : primitive.lightSource.type === 'fePointLight'
             ? `<fePointLight x="${primitive.lightSource.x || 0}" y="${primitive.lightSource.y || 0}" z="${primitive.lightSource.z || 1}" />`
             : `<feSpotLight x="${primitive.lightSource.x || 0}" y="${primitive.lightSource.y || 0}" z="${primitive.lightSource.z || 1}" pointsAtX="${primitive.lightSource.pointsAtX || 0}" pointsAtY="${primitive.lightSource.pointsAtY || 0}" pointsAtZ="${primitive.lightSource.pointsAtZ || 0}" />`;
-          return `    <feSpecularLighting surface-scale="${primitive.surfaceScale || 1}" specular-constant="${primitive.specularConstant || 1}" specular-exponent="${primitive.specularExponent || 1}" lighting-color="${primitive.lightColor || '#ffffff'}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''}>\n      ${specularLightSource}\n    </feSpecularLighting>`;
+          return `    <feSpecularLighting surface-scale="${primitive.surfaceScale || 1}" specular-constant="${primitive.specularConstant || 1}" specular-exponent="${primitive.specularExponent || 1}" lighting-color="${primitive.lightingColor || '#ffffff'}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''}>\n      ${specularLightSource}\n    </feSpecularLighting>`;
         case 'feDisplacementMap':
           return `    <feDisplacementMap scale="${primitive.scale || 0}" xChannelSelector="${primitive.xChannelSelector || 'A'}" yChannelSelector="${primitive.yChannelSelector || 'A'}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.in2 ? ` in2="${primitive.in2}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''} />`;
         case 'feTurbulence':

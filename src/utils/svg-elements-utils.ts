@@ -101,7 +101,7 @@ export const createFilterPrimitive = (type: FilterPrimitiveType['type']): Filter
         type: 'feDiffuseLighting', 
         surfaceScale: 1, 
         diffuseConstant: 1, 
-        lightColor: '#ffffff',
+        lightingColor: '#ffffff',
         lightSource: { type: 'feDistantLight', azimuth: 45, elevation: 45 }
       };
     case 'feSpecularLighting':
@@ -110,7 +110,7 @@ export const createFilterPrimitive = (type: FilterPrimitiveType['type']): Filter
         surfaceScale: 1, 
         specularConstant: 1, 
         specularExponent: 20, 
-        lightColor: '#ffffff',
+        lightingColor: '#ffffff',
         lightSource: { type: 'feDistantLight', azimuth: 45, elevation: 45 }
       };
     case 'feDisplacementMap':
@@ -281,7 +281,7 @@ export const createBevelFilter = (): Omit<SVGFilter, 'id'> => ({
       surfaceScale: 5, 
       specularConstant: 0.75, 
       specularExponent: 20, 
-      lightColor: '#bbbbbb',
+      lightingColor: '#bbbbbb',
       in: 'blur',
       result: 'specOut',
       lightSource: { type: 'feDistantLight', azimuth: 45, elevation: 45 }
@@ -620,7 +620,7 @@ export const createAdvancedWatercolorFilter = (): Omit<SVGFilter, 'id'> => ({
     // Base turbulence for texture
     { type: 'feTurbulence', turbulenceType: 'fractalNoise', baseFrequency: '0.05 0.05', numOctaves: 5, seed: 1, stitchTiles: 'stitch', result: 'turbulence' },
     // Diffuse lighting for 3D effect
-    { type: 'feDiffuseLighting', surfaceScale: 0.5, diffuseConstant: 3.2, lightColor: '#ffffff', in: 'turbulence', result: 'diffuseLighting', lightSource: {
+    { type: 'feDiffuseLighting', surfaceScale: 0.5, diffuseConstant: 3.2, lightingColor: '#ffffff', in: 'turbulence', result: 'diffuseLighting', lightSource: {
       type: 'feDistantLight',
       azimuth: 150,
       elevation: 16

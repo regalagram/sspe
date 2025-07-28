@@ -20,7 +20,7 @@ export const AnimationTimeline: React.FC = () => {
 
   // Calculate timeline width and position
   const timelineWidth = 180; // pixels
-  const maxDuration = Math.max(5, ...animations.map(anim => parseFloat(anim.dur) || 2)); // minimum 5 seconds
+  const maxDuration = Math.max(5, ...animations.map(anim => parseFloat(anim.dur || '2s') || 2)); // minimum 5 seconds
   const currentTimePosition = (animationState.currentTime / maxDuration) * timelineWidth;
 
   const handleTimelineClick = (e: React.MouseEvent) => {
@@ -155,7 +155,7 @@ export const AnimationTimeline: React.FC = () => {
         >
           {/* Animation Bars */}
           {animations.map((anim, index) => {
-            const duration = parseFloat(anim.dur) || 2;
+            const duration = parseFloat(anim.dur || '2s') || 2;
             const width = (duration / maxDuration) * timelineWidth;
             const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57'];
             
@@ -172,7 +172,7 @@ export const AnimationTimeline: React.FC = () => {
                   borderRadius: '1px',
                   opacity: 0.7
                 }}
-                title={`${anim.type} - ${(anim as any).targetElementId} (${anim.dur})`}
+                title={`${anim.type} - ${(anim as any).targetElementId} (${anim.dur || '2s'})`}
               />
             );
           })}
@@ -252,7 +252,7 @@ export const AnimationTimeline: React.FC = () => {
                     </div>
                   </div>
                   <div style={{ fontSize: '8px', color: '#666' }}>
-                    {anim.dur}
+                    {anim.dur || '2s'}
                   </div>
                   <button
                     style={{

@@ -3,6 +3,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { AnimationControls } from '../../components/AnimationControls';
 import { AnimationTimeline } from '../../components/AnimationTimeline';
 import { AnimationRenderer, AnimationTimer } from '../../components/AnimationRenderer';
+import { AnimationSynchronizer } from '../../components/AnimationSynchronizer';
 
 export const AnimationSystemPlugin: Plugin = {
   id: 'animation-system',
@@ -34,6 +35,12 @@ export const AnimationSystemPlugin: Plugin = {
       component: AnimationTimer,
       position: 'svg-content',
       order: 26
+    },
+    {
+      id: 'animation-synchronizer',
+      component: AnimationSynchronizer,
+      position: 'sidebar',
+      order: 17
     }
   ],
   

@@ -290,10 +290,13 @@ export const createPathActions: StateCreator<
           selectedClipPaths: [],
           selectedMasks: [],
           selectedFilters: [],
+          selectedFilterPrimitives: [],
           selectedMarkers: [],
           selectedSymbols: [],
           selectedUses: [],
           selectedAnimations: [],
+          selectedGradients: [],
+          selectedGradientStops: [],
         },
       };
     }),
@@ -367,10 +370,13 @@ export const createPathActions: StateCreator<
           selectedClipPaths: [],
           selectedMasks: [],
           selectedFilters: [],
+          selectedFilterPrimitives: [],
           selectedMarkers: [],
           selectedSymbols: [],
           selectedUses: [],
           selectedAnimations: [],
+          selectedGradients: [],
+          selectedGradientStops: [],
         };
       } else if (selection.selectedSubPaths.length > 0) {
         let newSubPathIds: string[] = [];
@@ -400,10 +406,13 @@ export const createPathActions: StateCreator<
           selectedClipPaths: [],
           selectedMasks: [],
           selectedFilters: [],
+          selectedFilterPrimitives: [],
           selectedMarkers: [],
           selectedSymbols: [],
           selectedUses: [],
           selectedAnimations: [],
+          selectedGradients: [],
+          selectedGradientStops: [],
         };
       } else if (selection.selectedCommands.length > 0) {
         let newCmdIds: string[] = [];
@@ -436,10 +445,13 @@ export const createPathActions: StateCreator<
           selectedClipPaths: [],
           selectedMasks: [],
           selectedFilters: [],
+          selectedFilterPrimitives: [],
           selectedMarkers: [],
           selectedSymbols: [],
           selectedUses: [],
           selectedAnimations: [],
+          selectedGradients: [],
+          selectedGradientStops: [],
         };
       }
       return {

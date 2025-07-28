@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { EditorState, SVGAnimation, SVGAnimate, SVGAnimateMotion, SVGAnimateTransform, AnimationState } from '../types';
+import { EditorState, SVGAnimation, SVGAnimate, SVGAnimateMotion, SVGAnimateTransform, SVGSet, AnimationState, AnimationChain, AnimationEvent, FilterPrimitiveType, SVGFilter } from '../types';
 import { generateId } from '../utils/id-utils';
 
 export interface AnimationActions {
@@ -33,6 +33,46 @@ export interface AnimationActions {
   createRotateAnimation: (elementId: string, duration: string, degrees: string) => void;
   createScaleAnimation: (elementId: string, duration: string, fromScale?: string, toScale?: string) => void;
   createMoveAnimation: (elementId: string, duration: string, fromX: number, fromY: number, toX: number, toY: number) => void;
+  
+  // Filter animation creators
+  createFilterBlurAnimation: (elementId: string, duration: string, fromStdDev?: number, toStdDev?: number) => void;
+  createFilterOffsetAnimation: (elementId: string, duration: string, fromDx?: number, fromDy?: number, toDx?: number, toDy?: number) => void;
+  createFilterColorMatrixAnimation: (elementId: string, duration: string, fromValues?: string, toValues?: string) => void;
+  createFilterFloodAnimation: (elementId: string, duration: string, fromColor?: string, toColor?: string) => void;
+  
+  // Set animation creator
+  createSetAnimation: (elementId: string, attributeName: string, toValue: string, beginTime?: string) => void;
+  
+  // ViewBox animation creator
+  createViewBoxAnimation: (duration: string, fromViewBox?: string, toViewBox?: string) => void;
+  createViewBoxZoomAnimation: (duration: string, fromScale?: number, toScale?: number, centerX?: number, centerY?: number) => void;
+  createViewBoxPanAnimation: (duration: string, fromX?: number, fromY?: number, toX?: number, toY?: number) => void;
+  
+  // Gradient animation creators
+  createGradientStopAnimation: (stopId: string, duration: string, fromColor?: string, toColor?: string) => void;
+  createGradientPositionAnimation: (gradientId: string, duration: string, attribute: string, fromValue: string, toValue: string) => void;
+  createLinearGradientAnimation: (gradientId: string, duration: string, fromX1?: number, fromY1?: number, fromX2?: number, fromY2?: number, toX1?: number, toY1?: number, toX2?: number, toY2?: number) => void;
+  createRadialGradientAnimation: (gradientId: string, duration: string, fromCx?: number, fromCy?: number, fromR?: number, toCx?: number, toCy?: number, toR?: number) => void;
+  createGradientStopOffsetAnimation: (stopId: string, duration: string, fromOffset?: number, toOffset?: number) => void;
+  createPatternAnimation: (patternId: string, duration: string, fromWidth?: number, fromHeight?: number, toWidth?: number, toHeight?: number) => void;
+  createPatternTransformAnimation: (patternId: string, duration: string, fromTransform?: string, toTransform?: string) => void;
+  
+  // Synchronized animation support
+  createAnimationChain: (name: string, animations: { animationId: string; delay?: number; trigger?: 'start' | 'end' | 'repeat'; dependsOn?: string }[]) => void;
+  removeAnimationChain: (chainId: string) => void;
+  addAnimationEvent: (event: AnimationEvent) => void;
+  processAnimationEvents: () => void;
+  
+  // mpath support for animateMotion
+  createAnimateMotionWithMPath: (elementId: string, pathElementId: string, duration: string, rotate?: 'auto' | 'auto-reverse' | number) => void;
+  updateAnimationMPath: (animationId: string, pathElementId: string) => void;
+  
+  // Geometric animation creators
+  createPositionAnimation: (elementId: string, duration: string, fromX?: number, fromY?: number, toX?: number, toY?: number) => void;
+  createSizeAnimation: (elementId: string, duration: string, fromWidth?: number, fromHeight?: number, toWidth?: number, toHeight?: number) => void;
+  createCircleAnimation: (elementId: string, duration: string, fromRadius?: number, toRadius?: number) => void;
+  createPathDataAnimation: (elementId: string, duration: string, fromPath: string, toPath: string) => void;
+  createLineAnimation: (elementId: string, duration: string, fromX1?: number, fromY1?: number, fromX2?: number, fromY2?: number, toX1?: number, toY1?: number, toX2?: number, toY2?: number) => void;
 }
 
 export const createAnimationActions = (set: any, get: any): AnimationActions => ({
@@ -198,7 +238,7 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
     if (state.animations.length === 0) return 0;
     
     const durations = state.animations.map((animation: any) => {
-      const durMatch = animation.dur.match(/^(\d+(?:\.\d+)?)(s|ms)?$/);
+      const durMatch = (animation.dur || '2s').match(/^(\d+(?:\.\d+)?)(s|ms)?$/);
       if (!durMatch) return 0;
       
       const value = parseFloat(durMatch[1]);
@@ -263,6 +303,409 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
       to: `${toX} ${toY}`,
       dur: duration,
       fill: 'freeze',
+    });
+  },
+  
+  // Filter animation creators
+  createFilterBlurAnimation: (elementId: string, duration: string, fromStdDev = 0, toStdDev = 5) => {
+    const addAnimation = get().addAnimation;
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'stdDeviation',
+      from: fromStdDev.toString(),
+      to: toStdDev.toString(),
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  createFilterOffsetAnimation: (elementId: string, duration: string, fromDx = 0, fromDy = 0, toDx = 10, toDy = 10) => {
+    const addAnimation = get().addAnimation;
+    // Create animation for dx
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'dx',
+      from: fromDx.toString(),
+      to: toDx.toString(),
+      dur: duration,
+      fill: 'freeze',
+    });
+    // Create animation for dy
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'dy',
+      from: fromDy.toString(),
+      to: toDy.toString(),
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  createFilterColorMatrixAnimation: (elementId: string, duration: string, fromValues = '1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0', toValues = '0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0') => {
+    const addAnimation = get().addAnimation;
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'values',
+      from: fromValues,
+      to: toValues,
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  createFilterFloodAnimation: (elementId: string, duration: string, fromColor = '#ff0000', toColor = '#0000ff') => {
+    const addAnimation = get().addAnimation;
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'flood-color',
+      from: fromColor,
+      to: toColor,
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  // Set animation creator
+  createSetAnimation: (elementId: string, attributeName: string, toValue: string, beginTime = '0s') => {
+    const addAnimation = get().addAnimation;
+    addAnimation({
+      type: 'set',
+      targetElementId: elementId,
+      attributeName,
+      to: toValue,
+      begin: beginTime,
+      fill: 'freeze',
+    });
+  },
+  
+  // ViewBox animation creator
+  createViewBoxAnimation: (duration: string, fromViewBox = '0 0 100 100', toViewBox = '0 0 200 200') => {
+    const addAnimation = get().addAnimation;
+    addAnimation({
+      type: 'animate',
+      targetElementId: 'svg-root', // Special target for SVG root
+      attributeName: 'viewBox',
+      from: fromViewBox,
+      to: toViewBox,
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  // Enhanced ViewBox animations
+  createViewBoxZoomAnimation: (duration: string, fromScale = 1, toScale = 2, centerX = 50, centerY = 50) => {
+    const addAnimation = get().addAnimation;
+    const baseViewBox = get().viewport.viewBox;
+    const fromViewBox = `${centerX - (baseViewBox.width * fromScale) / 2} ${centerY - (baseViewBox.height * fromScale) / 2} ${baseViewBox.width * fromScale} ${baseViewBox.height * fromScale}`;
+    const toViewBox = `${centerX - (baseViewBox.width * toScale) / 2} ${centerY - (baseViewBox.height * toScale) / 2} ${baseViewBox.width * toScale} ${baseViewBox.height * toScale}`;
+    
+    addAnimation({
+      type: 'animate',
+      targetElementId: 'svg-root',
+      attributeName: 'viewBox',
+      from: fromViewBox,
+      to: toViewBox,
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  createViewBoxPanAnimation: (duration: string, fromX = 0, fromY = 0, toX = 100, toY = 100) => {
+    const addAnimation = get().addAnimation;
+    const baseViewBox = get().viewport.viewBox;
+    const fromViewBox = `${fromX} ${fromY} ${baseViewBox.width} ${baseViewBox.height}`;
+    const toViewBox = `${toX} ${toY} ${baseViewBox.width} ${baseViewBox.height}`;
+    
+    addAnimation({
+      type: 'animate',
+      targetElementId: 'svg-root',
+      attributeName: 'viewBox',
+      from: fromViewBox,
+      to: toViewBox,
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  // Gradient animation creators
+  createGradientStopAnimation: (stopId: string, duration: string, fromColor = '#ff0000', toColor = '#0000ff') => {
+    const addAnimation = get().addAnimation;
+    addAnimation({
+      type: 'animate',
+      targetElementId: stopId,
+      attributeName: 'stop-color',
+      from: fromColor,
+      to: toColor,
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  createGradientPositionAnimation: (gradientId: string, duration: string, attribute: string, fromValue: string, toValue: string) => {
+    const addAnimation = get().addAnimation;
+    addAnimation({
+      type: 'animate',
+      targetElementId: gradientId,
+      attributeName: attribute,
+      from: fromValue,
+      to: toValue,
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  // Enhanced gradient and pattern animations
+  createLinearGradientAnimation: (gradientId: string, duration: string, fromX1 = 0, fromY1 = 0, fromX2 = 100, fromY2 = 0, toX1 = 100, toY1 = 100, toX2 = 0, toY2 = 100) => {
+    const addAnimation = get().addAnimation;
+    // Animate all gradient coordinates
+    ['x1', 'y1', 'x2', 'y2'].forEach((attr, index) => {
+      const fromValues = [fromX1, fromY1, fromX2, fromY2];
+      const toValues = [toX1, toY1, toX2, toY2];
+      
+      addAnimation({
+        type: 'animate',
+        targetElementId: gradientId,
+        attributeName: attr,
+        from: `${fromValues[index]}%`,
+        to: `${toValues[index]}%`,
+        dur: duration,
+        fill: 'freeze',
+      });
+    });
+  },
+  
+  createRadialGradientAnimation: (gradientId: string, duration: string, fromCx = 50, fromCy = 50, fromR = 25, toCx = 25, toCy = 25, toR = 75) => {
+    const addAnimation = get().addAnimation;
+    // Animate radial gradient properties
+    const props = [{ attr: 'cx', from: fromCx, to: toCx }, { attr: 'cy', from: fromCy, to: toCy }, { attr: 'r', from: fromR, to: toR }];
+    
+    props.forEach(({ attr, from, to }) => {
+      addAnimation({
+        type: 'animate',
+        targetElementId: gradientId,
+        attributeName: attr,
+        from: `${from}%`,
+        to: `${to}%`,
+        dur: duration,
+        fill: 'freeze',
+      });
+    });
+  },
+  
+  createGradientStopOffsetAnimation: (stopId: string, duration: string, fromOffset = 0, toOffset = 100) => {
+    const addAnimation = get().addAnimation;
+    addAnimation({
+      type: 'animate',
+      targetElementId: stopId,
+      attributeName: 'offset',
+      from: `${fromOffset}%`,
+      to: `${toOffset}%`,
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  createPatternAnimation: (patternId: string, duration: string, fromWidth = 10, fromHeight = 10, toWidth = 50, toHeight = 50) => {
+    const addAnimation = get().addAnimation;
+    // Animate pattern size
+    ['width', 'height'].forEach((attr, index) => {
+      const fromValues = [fromWidth, fromHeight];
+      const toValues = [toWidth, toHeight];
+      
+      addAnimation({
+        type: 'animate',
+        targetElementId: patternId,
+        attributeName: attr,
+        from: fromValues[index].toString(),
+        to: toValues[index].toString(),
+        dur: duration,
+        fill: 'freeze',
+      });
+    });
+  },
+  
+  createPatternTransformAnimation: (patternId: string, duration: string, fromTransform = 'rotate(0)', toTransform = 'rotate(360)') => {
+    const addAnimation = get().addAnimation;
+    addAnimation({
+      type: 'animateTransform',
+      targetElementId: patternId,
+      attributeName: 'patternTransform',
+      transformType: 'rotate',
+      from: '0',
+      to: '360',
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  // Synchronized animation support
+  createAnimationChain: (name: string, animations: { animationId: string; delay?: number; trigger?: 'start' | 'end' | 'repeat'; dependsOn?: string }[]) => {
+    const chainId = generateId();
+    set((state: any) => ({
+      animationSync: {
+        ...state.animationSync,
+        chains: [...state.animationSync.chains, {
+          id: chainId,
+          name,
+          animations,
+        }],
+      },
+    }));
+  },
+  
+  removeAnimationChain: (chainId: string) => {
+    set((state: any) => ({
+      animationSync: {
+        ...state.animationSync,
+        chains: state.animationSync.chains.filter((chain: any) => chain.id !== chainId),
+      },
+    }));
+  },
+  
+  addAnimationEvent: (event: AnimationEvent) => {
+    set((state: any) => ({
+      animationSync: {
+        ...state.animationSync,
+        events: [...state.animationSync.events, event],
+      },
+    }));
+  },
+  
+  processAnimationEvents: () => {
+    const state = get();
+    const unhandledEvents = state.animationSync.events.filter((event: any) => !event.handled);
+    
+    // Process each unhandled event
+    unhandledEvents.forEach((event: any) => {
+      // Mark event as handled
+      set((state: any) => ({
+        animationSync: {
+          ...state.animationSync,
+          events: state.animationSync.events.map((e: any) => 
+            e.id === event.id ? { ...e, handled: true } : e
+          ),
+        },
+      }));
+    });
+  },
+  
+  // mpath support for animateMotion
+  createAnimateMotionWithMPath: (elementId: string, pathElementId: string, duration: string, rotate = 'auto') => {
+    const addAnimation = get().addAnimation;
+    addAnimation({
+      type: 'animateMotion',
+      targetElementId: elementId,
+      mpath: pathElementId,
+      dur: duration,
+      rotate,
+      fill: 'freeze',
+    });
+  },
+  
+  updateAnimationMPath: (animationId: string, pathElementId: string) => {
+    const updateAnimation = get().updateAnimation;
+    updateAnimation(animationId, {
+      mpath: pathElementId,
+      path: undefined, // Clear direct path data when using mpath
+    });
+  },
+  
+  // Geometric animation creators
+  createPositionAnimation: (elementId: string, duration: string, fromX = 0, fromY = 0, toX = 100, toY = 100) => {
+    const addAnimation = get().addAnimation;
+    // Create X animation
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'x',
+      from: fromX.toString(),
+      to: toX.toString(),
+      dur: duration,
+      fill: 'freeze',
+    });
+    // Create Y animation
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'y',
+      from: fromY.toString(),
+      to: toY.toString(),
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  createSizeAnimation: (elementId: string, duration: string, fromWidth = 50, fromHeight = 50, toWidth = 100, toHeight = 100) => {
+    const addAnimation = get().addAnimation;
+    // Create width animation
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'width',
+      from: fromWidth.toString(),
+      to: toWidth.toString(),
+      dur: duration,
+      fill: 'freeze',
+    });
+    // Create height animation
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'height',
+      from: fromHeight.toString(),
+      to: toHeight.toString(),
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  createCircleAnimation: (elementId: string, duration: string, fromRadius = 10, toRadius = 50) => {
+    const addAnimation = get().addAnimation;
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'r',
+      from: fromRadius.toString(),
+      to: toRadius.toString(),
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  createPathDataAnimation: (elementId: string, duration: string, fromPath: string, toPath: string) => {
+    const addAnimation = get().addAnimation;
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'd',
+      from: fromPath,
+      to: toPath,
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  createLineAnimation: (elementId: string, duration: string, fromX1 = 0, fromY1 = 0, fromX2 = 50, fromY2 = 50, toX1 = 100, toY1 = 100, toX2 = 150, toY2 = 150) => {
+    const addAnimation = get().addAnimation;
+    // Create animations for all line coordinates
+    ['x1', 'y1', 'x2', 'y2'].forEach((attr, index) => {
+      const fromValues = [fromX1, fromY1, fromX2, fromY2];
+      const toValues = [toX1, toY1, toX2, toY2];
+      
+      addAnimation({
+        type: 'animate',
+        targetElementId: elementId,
+        attributeName: attr,
+        from: fromValues[index].toString(),
+        to: toValues[index].toString(),
+        dur: duration,
+        fill: 'freeze',
+      });
     });
   },
 });

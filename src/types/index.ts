@@ -31,6 +31,9 @@ export interface GradientStop {
   offset: number; // 0-1
   color: string;
   opacity?: number;
+  // Additional animatable properties
+  stopColor?: string; // Alternative to color for animations
+  stopOpacity?: number; // Alternative to opacity for animations
 }
 
 export interface LinearGradient {
@@ -42,6 +45,9 @@ export interface LinearGradient {
   y2: number;
   stops: GradientStop[];
   gradientUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
+  gradientTransform?: string; // Animatable transform
+  spreadMethod?: 'pad' | 'reflect' | 'repeat';
+  href?: string; // Reference to another gradient
 }
 
 export interface RadialGradient {
@@ -52,41 +58,119 @@ export interface RadialGradient {
   r: number;
   fx?: number;
   fy?: number;
+  fr?: number; // Focal radius
   stops: GradientStop[];
   gradientUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
+  gradientTransform?: string; // Animatable transform
+  spreadMethod?: 'pad' | 'reflect' | 'repeat';
+  href?: string; // Reference to another gradient
 }
 
 export interface Pattern {
   type: 'pattern';
   id: string;
+  x?: number;
+  y?: number;
   width: number;
   height: number;
   patternUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
   patternContentUnits?: 'userSpaceOnUse' | 'objectBoundingBox';
-  patternTransform?: string;
+  patternTransform?: string; // Animatable transform
+  preserveAspectRatio?: string;
+  viewBox?: string; // Animatable viewBox
   content: string; // SVG content inside the pattern
+  href?: string; // Reference to another pattern
 }
 
 export type GradientOrPattern = LinearGradient | RadialGradient | Pattern;
 
 export interface PathStyle {
+  // Fill properties
   fill?: string | GradientOrPattern;
   fillOpacity?: number;
+  fillRule?: 'nonzero' | 'evenodd';
+  
+  // Stroke properties
   stroke?: string | GradientOrPattern;
   strokeWidth?: number;
   strokeOpacity?: number;
   strokeDasharray?: string;
+  strokeDashoffset?: number;
   strokeLinecap?: 'butt' | 'round' | 'square';
   strokeLinejoin?: 'miter' | 'round' | 'bevel';
-  fillRule?: 'nonzero' | 'evenodd';
+  strokeMiterlimit?: number;
+  
+  // Opacity and visibility
+  opacity?: number;
+  visibility?: 'visible' | 'hidden' | 'collapse';
+  
+  // Color and rendering
+  color?: string;
+  colorInterpolation?: 'auto' | 'sRGB' | 'linearRGB';
+  colorInterpolationFilters?: 'auto' | 'sRGB' | 'linearRGB';
+  colorProfile?: string;
+  colorRendering?: 'auto' | 'optimizeSpeed' | 'optimizeQuality';
+  
+  // Text and font properties
+  fontFamily?: string;
+  fontSize?: number | string;
+  fontSizeAdjust?: number | 'none';
+  fontStretch?: 'normal' | 'ultra-condensed' | 'extra-condensed' | 'condensed' | 'semi-condensed' | 'semi-expanded' | 'expanded' | 'extra-expanded' | 'ultra-expanded';
+  fontStyle?: 'normal' | 'italic' | 'oblique';
+  fontVariant?: 'normal' | 'small-caps';
+  fontWeight?: 'normal' | 'bold' | 'bolder' | 'lighter' | number;
+  
+  // Text layout and spacing
+  direction?: 'ltr' | 'rtl';
+  letterSpacing?: number | 'normal';
+  textDecoration?: 'none' | 'underline' | 'overline' | 'line-through';
+  textRendering?: 'auto' | 'optimizeSpeed' | 'optimizeLegibility' | 'geometricPrecision';
+  unicodeBidi?: 'normal' | 'embed' | 'bidi-override';
+  wordSpacing?: number | 'normal';
+  writingMode?: 'lr-tb' | 'rl-tb' | 'tb-rl' | 'lr' | 'rl' | 'tb';
+  
+  // Baseline and alignment
+  alignmentBaseline?: 'auto' | 'baseline' | 'before-edge' | 'text-before-edge' | 'middle' | 'central' | 'after-edge' | 'text-after-edge' | 'ideographic' | 'alphabetic' | 'hanging' | 'mathematical';
+  baselineShift?: 'baseline' | 'sub' | 'super' | number | string;
+  dominantBaseline?: 'auto' | 'text-bottom' | 'alphabetic' | 'ideographic' | 'middle' | 'central' | 'mathematical' | 'hanging' | 'text-top';
+  
+  // Shape rendering
+  shapeRendering?: 'auto' | 'optimizeSpeed' | 'crispEdges' | 'geometricPrecision';
+  imageRendering?: 'auto' | 'optimizeSpeed' | 'optimizeQuality';
+  
+  // Pointer events and interaction
+  pointerEvents?: 'auto' | 'none' | 'visiblePainted' | 'visibleFill' | 'visibleStroke' | 'visible' | 'painted' | 'fill' | 'stroke' | 'all';
+  cursor?: 'auto' | 'crosshair' | 'default' | 'hand' | 'move' | 'pointer' | 'text' | 'wait' | string;
+  
+  // Display and overflow
+  display?: 'inline' | 'block' | 'list-item' | 'run-in' | 'compact' | 'marker' | 'table' | 'inline-table' | 'table-row-group' | 'table-header-group' | 'table-footer-group' | 'table-row' | 'table-column-group' | 'table-column' | 'table-cell' | 'table-caption' | 'none';
+  overflow?: 'visible' | 'hidden' | 'scroll' | 'auto';
+  
+  // Lighting and flood (for filters)
+  lightingColor?: string;
+  floodColor?: string;
+  floodOpacity?: number;
+  
+  // Stop properties (for gradients)
+  stopColor?: string;
+  stopOpacity?: number;
+  
+  // Kerning and glyph orientation
+  kerning?: 'auto' | number;
+  glyphOrientationHorizontal?: number | 'auto';
+  glyphOrientationVertical?: number | 'auto';
+  
+  // Enable background (for filters)
+  enableBackground?: 'accumulate' | 'new' | string;
+  
   // Referencias a elementos SVG adicionales
   clipPath?: string; // Referencia a SVGClipPath.id (e.g., "url(#clip1)")
+  clipRule?: 'nonzero' | 'evenodd';
   mask?: string; // Referencia a SVGMask.id (e.g., "url(#mask1)")
   filter?: string; // Referencia a SVGFilter.id (e.g., "url(#filter1)")
   markerStart?: string; // Referencia a SVGMarker.id (e.g., "url(#arrowStart)")
   markerMid?: string; // Para vértices intermedios
   markerEnd?: string; // Referencia a SVGMarker.id (e.g., "url(#arrowEnd)")
-  opacity?: number; // Opacidad general del elemento
 }
 
 export interface Point {
@@ -120,10 +204,13 @@ export interface SelectionState {
   selectedClipPaths: string[]; // Selected clip path IDs
   selectedMasks: string[]; // Selected mask IDs
   selectedFilters: string[]; // Selected filter IDs
+  selectedFilterPrimitives: string[]; // Selected filter primitive IDs
   selectedMarkers: string[]; // Selected marker IDs
   selectedSymbols: string[]; // Selected symbol IDs
   selectedUses: string[]; // Selected use element IDs
   selectedAnimations: string[]; // Selected animation IDs
+  selectedGradients: string[]; // Selected gradient IDs
+  selectedGradientStops: string[]; // Selected gradient stop IDs
   selectionBox?: BoundingBox;
 }
 
@@ -192,6 +279,31 @@ export interface EditorState {
     transformResizeFactor: number; // Factor específico para puntos de resize (transform)
     transformRotateFactor: number; // Factor específico para puntos de rotate (transform)
   };
+  // Animation synchronization support
+  animationSync: {
+    chains: AnimationChain[]; // Synchronized animation chains
+    events: AnimationEvent[]; // Custom animation events
+  };
+}
+
+// Animation synchronization types
+export interface AnimationChain {
+  id: string;
+  name?: string;
+  animations: {
+    animationId: string;
+    delay?: number; // Delay relative to chain start
+    trigger?: 'start' | 'end' | 'repeat'; // What triggers this animation
+    dependsOn?: string; // ID of animation this depends on
+  }[];
+}
+
+export interface AnimationEvent {
+  id: string;
+  type: 'beginEvent' | 'endEvent' | 'repeatEvent';
+  sourceAnimationId: string;
+  timestamp: number;
+  handled: boolean;
 }
 
 // Nuevos tipos para el sistema de puntos de control tipo Figma
@@ -454,32 +566,208 @@ export interface SVGMask {
   locked?: boolean;
 }
 
-// Primitivas de filtro completas (todos los filtros estándar SVG)
+// Primitivas de filtro completas (todos los filtros estándar SVG) - Ahora con soporte completo de animación
 export type FilterPrimitiveType =
   // Filtros básicos
-  | { type: 'feGaussianBlur'; stdDeviation: number; in?: string; result?: string; }
-  | { type: 'feOffset'; dx: number; dy: number; in?: string; result?: string; }
-  | { type: 'feFlood'; floodColor: string; floodOpacity?: number; result?: string; }
-  | { type: 'feComposite'; operator: 'over' | 'in' | 'out' | 'atop' | 'xor' | 'arithmetic'; k1?: number; k2?: number; k3?: number; k4?: number; in?: string; in2?: string; result?: string; }
-  | { type: 'feColorMatrix'; colorMatrixType?: 'matrix' | 'saturate' | 'hueRotate' | 'luminanceToAlpha'; values?: string; result?: string; in?: string; }
-  | { type: 'feDropShadow'; dx: number; dy: number; stdDeviation: number; floodColor: string; floodOpacity?: number; result?: string; }
-  | { type: 'feBlend'; mode: 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 'color-dodge' | 'color-burn' | 'hard-light' | 'soft-light' | 'difference' | 'exclusion'; in?: string; in2?: string; result?: string; }
-  | { type: 'feMorphology'; operator: 'erode' | 'dilate'; radius: number; in?: string; result?: string; }
+  | { 
+      type: 'feGaussianBlur'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      stdDeviation: number; 
+      in?: string; 
+      result?: string; 
+    }
+  | { 
+      type: 'feOffset'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      dx: number; 
+      dy: number; 
+      in?: string; 
+      result?: string; 
+    }
+  | { 
+      type: 'feFlood'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      floodColor: string; 
+      floodOpacity?: number; 
+      result?: string; 
+    }
+  | { 
+      type: 'feComposite'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      operator: 'over' | 'in' | 'out' | 'atop' | 'xor' | 'arithmetic'; 
+      k1?: number; k2?: number; k3?: number; k4?: number; 
+      in?: string; in2?: string; result?: string; 
+    }
+  | { 
+      type: 'feColorMatrix'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      colorMatrixType?: 'matrix' | 'saturate' | 'hueRotate' | 'luminanceToAlpha'; 
+      values?: string; 
+      result?: string; 
+      in?: string; 
+    }
+  | { 
+      type: 'feDropShadow'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      dx: number; dy: number; 
+      stdDeviation: number; 
+      floodColor: string; 
+      floodOpacity?: number; 
+      result?: string; 
+    }
+  | { 
+      type: 'feBlend'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      mode: 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 'color-dodge' | 'color-burn' | 'hard-light' | 'soft-light' | 'difference' | 'exclusion'; 
+      in?: string; in2?: string; result?: string; 
+    }
+  | { 
+      type: 'feMorphology'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      operator: 'erode' | 'dilate'; 
+      radius: number; 
+      in?: string; result?: string; 
+    }
   // Filtros de convolución y efectos especiales
-  | { type: 'feConvolveMatrix'; order: string; kernelMatrix: string; divisor?: number; bias?: number; targetX?: number; targetY?: number; edgeMode?: 'duplicate' | 'wrap' | 'none'; preserveAlpha?: boolean; in?: string; result?: string; }
-  | { type: 'feComponentTransfer'; in?: string; result?: string; funcR?: ComponentTransferFunction; funcG?: ComponentTransferFunction; funcB?: ComponentTransferFunction; funcA?: ComponentTransferFunction; }
-  | { type: 'feDiffuseLighting'; surfaceScale?: number; diffuseConstant?: number; lightColor?: string; in?: string; result?: string; lightSource: LightSource; }
-  | { type: 'feSpecularLighting'; surfaceScale?: number; specularConstant?: number; specularExponent?: number; lightColor?: string; in?: string; result?: string; lightSource: LightSource; }
-  | { type: 'feDisplacementMap'; scale?: number; xChannelSelector?: 'R' | 'G' | 'B' | 'A'; yChannelSelector?: 'R' | 'G' | 'B' | 'A'; in?: string; in2?: string; result?: string; }
-  | { type: 'feTurbulence'; baseFrequency: string; numOctaves?: number; seed?: number; stitchTiles?: 'stitch' | 'noStitch'; turbulenceType?: 'fractalNoise' | 'turbulence'; result?: string; }
-  | { type: 'feImage'; href?: string; preserveAspectRatio?: string; crossorigin?: 'anonymous' | 'use-credentials'; result?: string; }
-  | { type: 'feTile'; in?: string; result?: string; }
-  | { type: 'feMerge'; in?: string; result?: string; feMergeNodes?: { in: string }[]; }
-  // Filtro de transferencia de componentes
-  | { type: 'feFuncR'; funcType?: 'identity' | 'table' | 'discrete' | 'linear' | 'gamma'; tableValues?: string; slope?: number; intercept?: number; amplitude?: number; exponent?: number; offset?: number; }
-  | { type: 'feFuncG'; funcType?: 'identity' | 'table' | 'discrete' | 'linear' | 'gamma'; tableValues?: string; slope?: number; intercept?: number; amplitude?: number; exponent?: number; offset?: number; }
-  | { type: 'feFuncB'; funcType?: 'identity' | 'table' | 'discrete' | 'linear' | 'gamma'; tableValues?: string; slope?: number; intercept?: number; amplitude?: number; exponent?: number; offset?: number; }
-  | { type: 'feFuncA'; funcType?: 'identity' | 'table' | 'discrete' | 'linear' | 'gamma'; tableValues?: string; slope?: number; intercept?: number; amplitude?: number; exponent?: number; offset?: number; };
+  | { 
+      type: 'feConvolveMatrix'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      order: string; 
+      kernelMatrix: string; 
+      divisor?: number; bias?: number; 
+      targetX?: number; targetY?: number; 
+      edgeMode?: 'duplicate' | 'wrap' | 'none'; 
+      preserveAlpha?: boolean; 
+      in?: string; result?: string; 
+    }
+  | { 
+      type: 'feComponentTransfer'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      in?: string; result?: string; 
+      funcR?: ComponentTransferFunction; 
+      funcG?: ComponentTransferFunction; 
+      funcB?: ComponentTransferFunction; 
+      funcA?: ComponentTransferFunction; 
+    }
+  | { 
+      type: 'feDiffuseLighting'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      surfaceScale?: number; 
+      diffuseConstant?: number; 
+      lightingColor?: string; 
+      in?: string; result?: string; 
+      lightSource: LightSource; 
+    }
+  | { 
+      type: 'feSpecularLighting'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      surfaceScale?: number; 
+      specularConstant?: number; 
+      specularExponent?: number; 
+      lightingColor?: string; 
+      in?: string; result?: string; 
+      lightSource: LightSource; 
+    }
+  | { 
+      type: 'feDisplacementMap'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      scale?: number; 
+      xChannelSelector?: 'R' | 'G' | 'B' | 'A'; 
+      yChannelSelector?: 'R' | 'G' | 'B' | 'A'; 
+      in?: string; in2?: string; result?: string; 
+    }
+  | { 
+      type: 'feTurbulence'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      baseFrequency: string; 
+      numOctaves?: number; 
+      seed?: number; 
+      stitchTiles?: 'stitch' | 'noStitch'; 
+      turbulenceType?: 'fractalNoise' | 'turbulence'; 
+      result?: string; 
+    }
+  | { 
+      type: 'feImage'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      href?: string; 
+      preserveAspectRatio?: string; 
+      crossorigin?: 'anonymous' | 'use-credentials'; 
+      result?: string; 
+    }
+  | { 
+      type: 'feTile'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      in?: string; 
+      result?: string; 
+    }
+  | { 
+      type: 'feMerge'; 
+      id?: string;
+      x?: number; y?: number; width?: number; height?: number;
+      result?: string; 
+      feMergeNodes?: { in: string }[]; 
+    }
+  // Component transfer function primitives
+  | {
+      type: 'feFuncR';
+      id?: string;
+      funcType?: 'identity' | 'table' | 'discrete' | 'linear' | 'gamma';
+      tableValues?: string;
+      slope?: number;
+      intercept?: number;
+      amplitude?: number;
+      exponent?: number;
+      offset?: number;
+    }
+  | {
+      type: 'feFuncG';
+      id?: string;
+      funcType?: 'identity' | 'table' | 'discrete' | 'linear' | 'gamma';
+      tableValues?: string;
+      slope?: number;
+      intercept?: number;
+      amplitude?: number;
+      exponent?: number;
+      offset?: number;
+    }
+  | {
+      type: 'feFuncB';
+      id?: string;
+      funcType?: 'identity' | 'table' | 'discrete' | 'linear' | 'gamma';
+      tableValues?: string;
+      slope?: number;
+      intercept?: number;
+      amplitude?: number;
+      exponent?: number;
+      offset?: number;
+    }
+  | {
+      type: 'feFuncA';
+      id?: string;
+      funcType?: 'identity' | 'table' | 'discrete' | 'linear' | 'gamma';
+      tableValues?: string;
+      slope?: number;
+      intercept?: number;
+      amplitude?: number;
+      exponent?: number;
+      offset?: number;
+    };
 
 // Tipos auxiliares para filtros complejos
 export interface ComponentTransferFunction {
@@ -563,17 +851,25 @@ export interface SVGAnimate {
   type: 'animate';
   targetElementId: string; // ID of the element being animated
   attributeName: string; // e.g., 'fill', 'stroke-width', 'opacity'
+  attributeType?: 'CSS' | 'XML' | 'auto'; // Type of attribute being animated
   values?: string; // "red;blue;green" or from/to
   from?: string;
   to?: string;
+  by?: string; // Relative change value
   dur: string; // "2s", "1000ms"
-  begin?: string; // "0s", "click", "mouseover"
+  begin?: string; // "0s", "click", "mouseover", "element.event+offset"
   end?: string;
+  min?: string; // Minimum active duration
+  max?: string; // Maximum active duration
+  restart?: 'always' | 'whenNotActive' | 'never';
   fill?: 'freeze' | 'remove'; // Final state behavior
   repeatCount?: number | 'indefinite';
+  repeatDur?: string; // Total duration for all repetitions
   calcMode?: 'linear' | 'discrete' | 'paced' | 'spline';
   keyTimes?: string; // "0;0.5;1"
   keySplines?: string; // Bezier curves for spline interpolation
+  additive?: 'replace' | 'sum'; // Whether animation is additive
+  accumulate?: 'none' | 'sum'; // Whether values accumulate
   locked?: boolean;
 }
 
@@ -583,15 +879,22 @@ export interface SVGAnimateMotion {
   targetElementId: string; // ID of the element being animated
   path?: string; // SVG path data
   mpath?: string; // Reference to existing path element
+  keyPoints?: string; // Progress values along path (0-1 range)
   dur: string;
   begin?: string;
   end?: string;
+  min?: string;
+  max?: string;
+  restart?: 'always' | 'whenNotActive' | 'never';
   fill?: 'freeze' | 'remove';
   repeatCount?: number | 'indefinite';
+  repeatDur?: string;
   rotate?: 'auto' | 'auto-reverse' | number; // Rotation along path
   calcMode?: 'linear' | 'discrete' | 'paced' | 'spline';
   keyTimes?: string;
   keySplines?: string;
+  additive?: 'replace' | 'sum';
+  accumulate?: 'none' | 'sum';
   locked?: boolean;
 }
 
@@ -600,15 +903,21 @@ export interface SVGAnimateTransform {
   type: 'animateTransform';
   targetElementId: string; // ID of the element being animated
   attributeName: 'transform';
+  attributeType?: 'CSS' | 'XML' | 'auto';
   transformType: 'translate' | 'scale' | 'rotate' | 'skewX' | 'skewY';
   values?: string; // "0;360" for rotation
   from?: string;
   to?: string;
+  by?: string;
   dur: string;
   begin?: string;
   end?: string;
+  min?: string;
+  max?: string;
+  restart?: 'always' | 'whenNotActive' | 'never';
   fill?: 'freeze' | 'remove';
   repeatCount?: number | 'indefinite';
+  repeatDur?: string;
   additive?: 'replace' | 'sum'; // How to combine with existing transforms
   accumulate?: 'none' | 'sum'; // How to handle repeated animations
   calcMode?: 'linear' | 'discrete' | 'paced' | 'spline';
@@ -617,7 +926,29 @@ export interface SVGAnimateTransform {
   locked?: boolean;
 }
 
-export type SVGAnimation = SVGAnimate | SVGAnimateMotion | SVGAnimateTransform;
+// Set element for discrete value changes
+export interface SVGSet {
+  id: string;
+  type: 'set';
+  targetElementId: string;
+  attributeName: string;
+  attributeType?: 'CSS' | 'XML' | 'auto';
+  to: string; // Single target value
+  dur?: string; // Duration (usually not used for set, but for consistency)
+  begin?: string;
+  end?: string;
+  min?: string;
+  max?: string;
+  restart?: 'always' | 'whenNotActive' | 'never';
+  fill?: 'freeze' | 'remove';
+  repeatCount?: number | 'indefinite'; // For consistency with other animation types
+  calcMode?: 'linear' | 'discrete' | 'paced' | 'spline'; // For consistency
+  keyTimes?: string; // For consistency
+  keySplines?: string; // For consistency
+  locked?: boolean;
+}
+
+export type SVGAnimation = SVGAnimate | SVGAnimateMotion | SVGAnimateTransform | SVGSet;
 
 export interface AnimationState {
   isPlaying: boolean;
@@ -626,7 +957,125 @@ export interface AnimationState {
   playbackRate: number; // Playback speed multiplier
   loop: boolean; // Whether to loop animations
   startTime?: number; // Timestamp when playback started (for timer calculations)
+  
+  // Advanced animation state
+  activeAnimations: string[]; // Currently running animation IDs
+  pausedAnimations: string[]; // Paused animation IDs
+  completedAnimations: string[]; // Completed animation IDs
+  
+  // Event system
+  pendingEvents: AnimationEvent[]; // Events waiting to be processed
+  eventListeners: Map<string, ((event: AnimationEvent) => void)[]>; // Event listeners by animation ID
+  
+  // Synchronization
+  syncGroups: Map<string, string[]>; // Groups of synchronized animations
+  timeline: AnimationTimelineEntry[]; // Timeline of all animation events
 }
+
+export interface AnimationTimelineEntry {
+  id: string;
+  animationId: string;
+  type: 'start' | 'end' | 'repeat';
+  time: number; // Time in seconds from timeline start
+  processed: boolean;
+}
+
+// Geometric attributes for different SVG elements (animatable)
+export interface GeometricAttributes {
+  // Basic shapes
+  cx?: number; // circle, ellipse center x
+  cy?: number; // circle, ellipse center y
+  r?: number; // circle radius
+  rx?: number; // ellipse, rect radius x
+  ry?: number; // ellipse, rect radius y
+  x?: number; // rect, image, text x position
+  y?: number; // rect, image, text y position
+  width?: number; // rect, image width
+  height?: number; // rect, image height
+  
+  // Line coordinates
+  x1?: number; // line start x
+  y1?: number; // line start y
+  x2?: number; // line end x
+  y2?: number; // line end y
+  
+  // Path data
+  d?: string; // path data
+  pathLength?: number; // path length for animations
+  
+  // Text-specific
+  textLength?: number; // desired text length
+  lengthAdjust?: 'spacing' | 'spacingAndGlyphs'; // how to adjust text
+  startOffset?: number | string; // textPath start offset
+  
+  // Transform
+  transform?: string; // transformation matrix
+  
+  // ViewBox (for SVG root, symbols, etc.)
+  viewBox?: string; // "x y width height"
+}
+
+// Comprehensive list of all SVG animatable attributes
+export const ANIMATABLE_ATTRIBUTES = {
+  // Presentation attributes
+  PRESENTATION: [
+    'alignment-baseline', 'baseline-shift', 'clip', 'clip-path', 'clip-rule',
+    'color', 'color-interpolation', 'color-interpolation-filters', 'color-profile', 'color-rendering',
+    'cursor', 'direction', 'display', 'dominant-baseline', 'enable-background',
+    'fill', 'fill-opacity', 'fill-rule', 'filter',
+    'flood-color', 'flood-opacity',
+    'font-family', 'font-size', 'font-size-adjust', 'font-stretch', 'font-style', 'font-variant', 'font-weight',
+    'glyph-orientation-horizontal', 'glyph-orientation-vertical',
+    'image-rendering', 'kerning', 'letter-spacing', 'lighting-color',
+    'marker-end', 'marker-mid', 'marker-start', 'mask',
+    'opacity', 'overflow', 'pointer-events',
+    'shape-rendering', 'stop-color', 'stop-opacity',
+    'stroke', 'stroke-dasharray', 'stroke-dashoffset', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-opacity', 'stroke-width',
+    'text-anchor', 'text-decoration', 'text-rendering',
+    'unicode-bidi', 'visibility', 'word-spacing', 'writing-mode'
+  ],
+  
+  // Geometric attributes
+  GEOMETRIC: [
+    'cx', 'cy', 'r', 'rx', 'ry', 'x', 'y', 'width', 'height',
+    'x1', 'y1', 'x2', 'y2', 'd', 'pathLength',
+    'textLength', 'lengthAdjust', 'startOffset', 'transform', 'viewBox'
+  ],
+  
+  // Filter-specific attributes
+  FILTER: [
+    // feGaussianBlur
+    'stdDeviation',
+    // feOffset
+    'dx', 'dy',
+    // feFlood
+    'flood-color', 'flood-opacity',
+    // feTurbulence
+    'baseFrequency', 'numOctaves', 'seed',
+    // feColorMatrix
+    'values',
+    // feConvolveMatrix
+    'kernelMatrix', 'divisor', 'bias',
+    // feBlend
+    'mode',
+    // feComposite
+    'operator', 'k1', 'k2', 'k3', 'k4',
+    // feMorphology
+    'radius',
+    // feDisplacementMap
+    'scale', 'xChannelSelector', 'yChannelSelector',
+    // feDiffuseLighting, feSpecularLighting
+    'surfaceScale', 'diffuseConstant', 'specularConstant', 'specularExponent', 'lighting-color'
+  ],
+  
+  // Gradient and pattern attributes
+  GRADIENT: [
+    'x1', 'y1', 'x2', 'y2', // linearGradient
+    'cx', 'cy', 'r', 'fx', 'fy', // radialGradient
+    'offset', 'stop-color', 'stop-opacity', // stop
+    'patternTransform', 'patternUnits' // pattern
+  ]
+};
 
 // Tipo unión para todos los elementos SVG
 export type SVGElement = SVGPath | TextElementType | SVGGroup | SVGImage | SVGClipPath | SVGMask | SVGFilter | SVGMarker | SVGSymbol | SVGUse;

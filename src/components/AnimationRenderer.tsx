@@ -15,7 +15,7 @@ const useAnimationTimer = () => {
         const newTime = elapsed * animationState.playbackRate;
         
         // Calculate max duration from all animations
-        const maxDuration = Math.max(5, ...animations.map(anim => parseFloat(anim.dur) || 2));
+        const maxDuration = Math.max(5, ...animations.map(anim => parseFloat(anim.dur || '2s') || 2));
         
         if (newTime >= maxDuration && !animationState.loop) {
           // Animation finished
@@ -42,7 +42,7 @@ export const AnimationRenderer: React.FC = () => {
   const renderAnimationElement = (animation: SVGAnimation): React.ReactElement => {
     const commonProps = {
       key: animation.id,
-      dur: animation.dur,
+      dur: animation.dur || '2s',
       begin: animation.begin || '0s',
       end: animation.end,
       fill: animation.fill || 'freeze',
@@ -82,13 +82,26 @@ export const AnimationRenderer: React.FC = () => {
         return (
           <animateMotion
             {...commonProps}
-            path={animation.path}
+            path={animation.mpath ? undefined : animation.path} // Don't use path if mpath is specified
             rotate={animation.rotate || 'auto'}
+            keyPoints={animation.keyPoints}
           >
             {animation.mpath && (
               <mpath href={`#${animation.mpath}`} />
             )}
           </animateMotion>
+        );
+      
+      case 'set':
+        return (
+          <set
+            key={animation.id}
+            attributeName={animation.attributeName}
+            to={animation.to}
+            begin={animation.begin || '0s'}
+            end={animation.end}
+            fill={animation.fill || 'freeze'}
+          />
         );
 
       default:
@@ -127,7 +140,7 @@ export const renderAnimationsForElement = (elementId: string, animations: SVGAni
     
     const commonProps = {
       key: animation.id,
-      dur: animation.dur,
+      dur: animation.dur || '2s',
       begin: beginValue,
       end: animation.end,
       fill: animation.fill || 'freeze',
@@ -167,8 +180,9 @@ export const renderAnimationsForElement = (elementId: string, animations: SVGAni
         return (
           <animateMotion
             {...commonProps}
-            path={animation.path}
+            path={animation.mpath ? undefined : animation.path} // Don't use path if mpath is specified
             rotate={animation.rotate || 'auto'}
+            keyPoints={animation.keyPoints}
           >
             {animation.mpath && (
               <mpath href={`#${animation.mpath}`} />
@@ -211,7 +225,7 @@ export const useAnimationsForElement = (elementId: string) => {
     }
     
     const commonProps = {
-      dur: animation.dur,
+      dur: animation.dur || '2s',
       begin: beginValue,
       end: animation.end,
       fill: animation.fill || 'freeze',
@@ -254,13 +268,26 @@ export const useAnimationsForElement = (elementId: string) => {
           <animateMotion
             key={`${animation.id}-${animationKey}`}
             {...commonProps}
-            path={animation.path}
+            path={animation.mpath ? undefined : animation.path} // Don't use path if mpath is specified
             rotate={animation.rotate || 'auto'}
+            keyPoints={animation.keyPoints}
           >
             {animation.mpath && (
               <mpath href={`#${animation.mpath}`} />
             )}
           </animateMotion>
+        );
+        
+      case 'set':
+        return (
+          <set
+            key={`${animation.id}-${animationKey}`}
+            attributeName={animation.attributeName}
+            to={animation.to}
+            begin={beginValue}
+            end={animation.end}
+            fill={animation.fill || 'freeze'}
+          />
         );
 
       default:

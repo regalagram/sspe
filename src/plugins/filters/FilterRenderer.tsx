@@ -193,7 +193,7 @@ export const FilterRenderer: React.FC = () => {
             {...commonProps}
             surfaceScale={primitive.surfaceScale || 1}
             diffuseConstant={primitive.diffuseConstant || 1}
-            lightingColor={primitive.lightColor || '#ffffff'}
+            lightingColor={primitive.lightingColor || '#ffffff'}
           >
             {primitive.lightSource.type === 'feDistantLight' && (
               <feDistantLight
@@ -231,7 +231,7 @@ export const FilterRenderer: React.FC = () => {
             surfaceScale={primitive.surfaceScale || 1}
             specularConstant={primitive.specularConstant || 1}
             specularExponent={primitive.specularExponent || 20}
-            lightingColor={primitive.lightColor || '#ffffff'}
+            lightingColor={primitive.lightingColor || '#ffffff'}
           >
             {primitive.lightSource.type === 'feDistantLight' && (
               <feDistantLight
