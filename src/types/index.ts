@@ -123,6 +123,7 @@ export interface SelectionState {
   selectedMarkers: string[]; // Selected marker IDs
   selectedSymbols: string[]; // Selected symbol IDs
   selectedUses: string[]; // Selected use element IDs
+  selectedAnimations: string[]; // Selected animation IDs
   selectionBox?: BoundingBox;
 }
 
@@ -166,6 +167,8 @@ export interface EditorState {
   markers: SVGMarker[]; // Marcadores para paths
   symbols: SVGSymbol[]; // Símbolos reutilizables
   uses: SVGUse[]; // Instancias de use
+  animations: SVGAnimation[]; // Animaciones SVG
+  animationState: AnimationState; // Estado de reproducción de animaciones
   selection: SelectionState;
   viewport: ViewportState;
   grid: GridState;
@@ -549,6 +552,80 @@ export interface SVGUse {
   transform?: string;
   style?: Partial<PathStyle>; // Overrides locales
   locked?: boolean;
+}
+
+// ============================================
+// Animation Types
+// ============================================
+
+export interface SVGAnimate {
+  id: string;
+  type: 'animate';
+  targetElementId: string; // ID of the element being animated
+  attributeName: string; // e.g., 'fill', 'stroke-width', 'opacity'
+  values?: string; // "red;blue;green" or from/to
+  from?: string;
+  to?: string;
+  dur: string; // "2s", "1000ms"
+  begin?: string; // "0s", "click", "mouseover"
+  end?: string;
+  fill?: 'freeze' | 'remove'; // Final state behavior
+  repeatCount?: number | 'indefinite';
+  calcMode?: 'linear' | 'discrete' | 'paced' | 'spline';
+  keyTimes?: string; // "0;0.5;1"
+  keySplines?: string; // Bezier curves for spline interpolation
+  locked?: boolean;
+}
+
+export interface SVGAnimateMotion {
+  id: string;
+  type: 'animateMotion';
+  targetElementId: string; // ID of the element being animated
+  path?: string; // SVG path data
+  mpath?: string; // Reference to existing path element
+  dur: string;
+  begin?: string;
+  end?: string;
+  fill?: 'freeze' | 'remove';
+  repeatCount?: number | 'indefinite';
+  rotate?: 'auto' | 'auto-reverse' | number; // Rotation along path
+  calcMode?: 'linear' | 'discrete' | 'paced' | 'spline';
+  keyTimes?: string;
+  keySplines?: string;
+  locked?: boolean;
+}
+
+export interface SVGAnimateTransform {
+  id: string;
+  type: 'animateTransform';
+  targetElementId: string; // ID of the element being animated
+  attributeName: 'transform';
+  transformType: 'translate' | 'scale' | 'rotate' | 'skewX' | 'skewY';
+  values?: string; // "0;360" for rotation
+  from?: string;
+  to?: string;
+  dur: string;
+  begin?: string;
+  end?: string;
+  fill?: 'freeze' | 'remove';
+  repeatCount?: number | 'indefinite';
+  additive?: 'replace' | 'sum'; // How to combine with existing transforms
+  accumulate?: 'none' | 'sum'; // How to handle repeated animations
+  calcMode?: 'linear' | 'discrete' | 'paced' | 'spline';
+  keyTimes?: string;
+  keySplines?: string;
+  locked?: boolean;
+}
+
+export type SVGAnimation = SVGAnimate | SVGAnimateMotion | SVGAnimateTransform;
+
+export interface AnimationState {
+  isPlaying: boolean;
+  currentTime: number; // Current playback time in seconds
+  duration: number; // Total duration of all animations
+  playbackRate: number; // Playback speed multiplier
+  loop: boolean; // Whether to loop animations
+  startTime?: number; // Timestamp when playback started (for timer calculations)
 }
 
 // Tipo unión para todos los elementos SVG

@@ -38,6 +38,7 @@ import { ClippingPlugin } from '../plugins/clipping';
 import { MarkerPlugin } from '../plugins/markers';
 import { SymbolPlugin } from '../plugins/symbols';
 import { TextPathPlugin } from '../plugins/textpath';
+import { AnimationSystemPlugin } from '../plugins/animation-system';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -94,4 +95,5 @@ export const initializePlugins = (): void => {
   
   // Register sandbox plugins (experimental features)
   pluginManager.registerPlugin(TextPathPlugin);
+  pluginManager.registerPlugin(AnimationSystemPlugin);
 };

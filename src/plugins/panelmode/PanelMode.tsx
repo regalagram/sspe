@@ -52,6 +52,8 @@ const formatPanelName = (id: string): string => {
     'marker-controls': 'Markers',
     'symbol-controls': 'Symbols',
     'image-controls': 'Images',
+    'animation-controls': 'Animations',
+    'animation-timeline': 'Timeline',
   };
 
   // Return mapped name if available
@@ -91,7 +93,7 @@ const PanelModeManager: React.FC = () => {
       currentPanels.forEach(panel => {
         registerPanel(panel);
       });
-    }, 10000); // Check every 10 seconds instead of 2 seconds
+    }, 10000); // Check every 10 seconds
 
     return () => clearInterval(interval);
   }, [registerPanel]);

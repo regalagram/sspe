@@ -8,6 +8,7 @@ import { getStyleValue } from '../../utils/gradient-utils';
 import { guidelinesManager } from '../guidelines/GuidelinesManager';
 import { Point } from '../../types';
 import { captureAllSelectedElementsPositions, moveAllCapturedElementsByDelta, DraggedElementsData } from '../../utils/drag-utils';
+import { useAnimationsForElement } from '../../components/AnimationRenderer';
 
 // Global path drag manager to handle pointer events from plugin system
 import { PointerEventContext } from '../../core/PluginSystem';
@@ -35,6 +36,84 @@ class PathDragManager {
 }
 
 const pathDragManager = new PathDragManager();
+
+// Component wrapper for path with animations
+interface PathWithAnimationsProps {
+  pathId: string;
+  d: string;
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
+  strokeDasharray?: string;
+  strokeLinecap?: "butt" | "round" | "square" | "inherit";
+  strokeLinejoin?: "round" | "miter" | "bevel" | "inherit";
+  fillOpacity?: number;
+  strokeOpacity?: number;
+  fillRule?: "nonzero" | "evenodd" | "inherit";
+  markerStart?: string;
+  markerMid?: string;
+  markerEnd?: string;
+  style?: React.CSSProperties;
+}
+
+const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
+  const animations = useAnimationsForElement(props.pathId);
+  
+  return (
+    <path
+      d={props.d}
+      fill={props.fill}
+      stroke={props.stroke}
+      strokeWidth={props.strokeWidth}
+      strokeDasharray={props.strokeDasharray}
+      strokeLinecap={props.strokeLinecap}
+      strokeLinejoin={props.strokeLinejoin}
+      fillOpacity={props.fillOpacity}
+      strokeOpacity={props.strokeOpacity}
+      fillRule={props.fillRule}
+      markerStart={props.markerStart}
+      markerMid={props.markerMid}
+      markerEnd={props.markerEnd}
+      style={props.style}
+    >
+      {animations}
+    </path>
+  );
+};
+
+// Component wrapper for subpath with animations
+interface SubPathWithAnimationsProps {
+  subPathId: string;
+  d: string;
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
+  markerStart?: string;
+  markerMid?: string;
+  markerEnd?: string;
+  style?: React.CSSProperties;
+  onPointerDown?: (e: React.PointerEvent<SVGPathElement>) => void;
+}
+
+const SubPathWithAnimations: React.FC<SubPathWithAnimationsProps> = (props) => {
+  const animations = useAnimationsForElement(props.subPathId);
+  
+  return (
+    <path
+      d={props.d}
+      fill={props.fill}
+      stroke={props.stroke}
+      strokeWidth={props.strokeWidth}
+      markerStart={props.markerStart}
+      markerMid={props.markerMid}
+      markerEnd={props.markerEnd}
+      style={props.style}
+      onPointerDown={props.onPointerDown}
+    >
+      {animations}
+    </path>
+  );
+};
 
 export const PathRenderer: React.FC = () => {
   const { 
@@ -287,11 +366,12 @@ export const PathRenderer: React.FC = () => {
         const d = path.subPaths.map(subPathToString).join(' ');
         const isWireframeMode = enabledFeatures.wireframeEnabled;
         const wireframeStrokeWidth = 2 / viewport.zoom;
+        
         return (
           <g key={`path-group-${path.id}`}>
             {/* Main visible path */}
-            <path
-              key={`path-${path.id}`}
+            <PathWithAnimations
+              pathId={path.id}
               d={d}
               fill={isWireframeMode ? 'none' : (path.style.fill ? getStyleValue(path.style.fill) : 'none')}
               stroke={isWireframeMode ? '#000000' : (path.style.stroke ? getStyleValue(path.style.stroke) : undefined)}
@@ -336,8 +416,9 @@ export const PathRenderer: React.FC = () => {
               if (subPath.locked) return null;
               const dSub = subPathToStringInContext(subPath, path.subPaths);
               return (
-                <path
+                <SubPathWithAnimations
                   key={`subpath-interact-${subPath.id}`}
+                  subPathId={subPath.id}
                   d={dSub}
                   fill="none"
                   stroke="transparent"

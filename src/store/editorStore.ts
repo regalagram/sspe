@@ -16,6 +16,7 @@ import { TextPathActions, createTextPathActions } from './textPathActions';
 import { GradientActions, createGradientActions } from './gradientActions';
 import { GroupActions, createGroupActions } from './groupActions';
 import { SVGElementActions, createSVGElementActions } from './svgElementActions';
+import { AnimationActions, createAnimationActions } from './animationActions';
 // Combined actions interface
 interface EditorActions extends 
   ViewportActions, 
@@ -29,7 +30,8 @@ interface EditorActions extends
   TextPathActions,
   GradientActions,
   GroupActions,
-  SVGElementActions {}
+  SVGElementActions,
+  AnimationActions {}
 
 const loadInitialState = (): EditorState => {
   const savedState = loadEditorState();
@@ -99,6 +101,15 @@ const loadInitialState = (): EditorState => {
     markers: [],
     symbols: [],
     uses: [],
+    animations: [],
+    animationState: {
+      isPlaying: false,
+      currentTime: 0,
+      duration: 0,
+      playbackRate: 1.0,
+      loop: false,
+      startTime: undefined,
+    },
     selection: {
       selectedPaths: [],
       selectedSubPaths: [],
@@ -115,6 +126,7 @@ const loadInitialState = (): EditorState => {
       selectedMarkers: [],
       selectedSymbols: [],
       selectedUses: [],
+      selectedAnimations: [],
     },
     viewport: {
       zoom: 1,
@@ -188,6 +200,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     ...createGradientActions(set, get, api),
     ...createGroupActions(set, get, api),
     ...createSVGElementActions(set, get, api),
+    ...createAnimationActions(set, get),
   }))
 );
 

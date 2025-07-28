@@ -14,9 +14,11 @@ export interface SelectionActions {
   selectGroup: (groupId: string, addToSelection?: boolean) => void;
   selectImage: (imageId: string, addToSelection?: boolean) => void;
   selectUse: (useId: string, addToSelection?: boolean) => void;
-  selectMultiple: (ids: string[], type: 'paths' | 'subpaths' | 'commands' | 'texts' | 'textspans' | 'groups' | 'images' | 'uses') => void;
-  addToSelection: (id: string, type: 'path' | 'subpath' | 'command' | 'text' | 'textspan' | 'textPath' | 'group' | 'image' | 'use') => void;
-  removeFromSelection: (id: string, type: 'path' | 'subpath' | 'command' | 'text' | 'textspan' | 'textPath' | 'group' | 'image' | 'use') => void;
+  selectMultiple: (ids: string[], type: 'paths' | 'subpaths' | 'commands' | 'texts' | 'textspans' | 'groups' | 'images' | 'uses' | 'animations') => void;
+  addToSelection: (id: string, type: 'path' | 'subpath' | 'command' | 'text' | 'textspan' | 'textPath' | 'group' | 'image' | 'use' | 'animation') => void;
+  removeFromSelection: (id: string, type: 'path' | 'subpath' | 'command' | 'text' | 'textspan' | 'textPath' | 'group' | 'image' | 'use' | 'animation') => void;
+  selectAnimation: (animationId: string, addToSelection?: boolean) => void;
+  selectAnimationMultiple: (animationId: string, isShiftPressed?: boolean) => void;
   clearSelection: () => void;
   selectSubPathByPoint: (pathId: string, point: Point, isShiftPressed?: boolean) => void;
   selectTextByPoint: (point: Point, isShiftPressed?: boolean) => void;
@@ -54,6 +56,7 @@ export const createSelectionActions: StateCreator<
         selectedMarkers: [],
         selectedSymbols: [],
         selectedUses: [],
+        selectedAnimations: [],
       },
     })),
 
@@ -244,6 +247,7 @@ export const createSelectionActions: StateCreator<
         newSelection.selectedMarkers = [];
         newSelection.selectedSymbols = [];
         newSelection.selectedUses = [];
+        newSelection.selectedAnimations = [];
       } else if (type === 'subpaths') {
         const allowed = ids.filter(id =>
           !state.paths.some(path =>
@@ -263,6 +267,7 @@ export const createSelectionActions: StateCreator<
         newSelection.selectedMarkers = [];
         newSelection.selectedSymbols = [];
         newSelection.selectedUses = [];
+        newSelection.selectedAnimations = [];
       } else if (type === 'commands') {
         const allowed = ids.filter(cmdId => {
           for (const path of state.paths) {
@@ -288,6 +293,23 @@ export const createSelectionActions: StateCreator<
         newSelection.selectedMarkers = [];
         newSelection.selectedSymbols = [];
         newSelection.selectedUses = [];
+        newSelection.selectedAnimations = [];
+      } else if (type === 'animations') {
+        newSelection.selectedAnimations = ids;
+        newSelection.selectedPaths = [];
+        newSelection.selectedSubPaths = [];
+        newSelection.selectedCommands = [];
+        newSelection.selectedTexts = [];
+        newSelection.selectedTextSpans = [];
+        newSelection.selectedGroups = [];
+        newSelection.selectedImages = [];
+        newSelection.selectedClipPaths = [];
+        newSelection.selectedMasks = [];
+        newSelection.selectedFilters = [];
+        newSelection.selectedMarkers = [];
+        newSelection.selectedSymbols = [];
+        newSelection.selectedUses = [];
+        newSelection.selectedAnimations = [];
       }
       return { selection: newSelection };
     }),
@@ -310,6 +332,7 @@ export const createSelectionActions: StateCreator<
         selectedMarkers: [],
         selectedSymbols: [],
         selectedUses: [],
+        selectedAnimations: [],
       },
     })),
 
@@ -514,6 +537,11 @@ export const createSelectionActions: StateCreator<
             selection.selectedUses = [...selection.selectedUses, id];
           }
           break;
+        case 'animation':
+          if (!selection.selectedAnimations.includes(id)) {
+            selection.selectedAnimations = [...selection.selectedAnimations, id];
+          }
+          break;
       }
       
       return { selection };
@@ -550,6 +578,9 @@ export const createSelectionActions: StateCreator<
           break;
         case 'use':
           selection.selectedUses = selection.selectedUses.filter(useId => useId !== id);
+          break;
+        case 'animation':
+          selection.selectedAnimations = selection.selectedAnimations.filter(animationId => animationId !== id);
           break;
       }
       
@@ -745,6 +776,7 @@ export const createSelectionActions: StateCreator<
         selectedMarkers: [],
         selectedSymbols: [],
         selectedUses: [],
+        selectedAnimations: [],
       },
     })),
 
@@ -870,4 +902,86 @@ export const createSelectionActions: StateCreator<
       if (state.selection.selectedSubPaths.length > 0) break;
     }
   },
+
+  selectAnimation: (animationId, addToSelection = false) =>
+    set((state) => ({
+      selection: addToSelection ? {
+        ...state.selection,
+        selectedAnimations: state.selection.selectedAnimations.includes(animationId) 
+          ? state.selection.selectedAnimations 
+          : [...state.selection.selectedAnimations, animationId],
+      } : {
+        ...state.selection,
+        selectedPaths: [],
+        selectedSubPaths: [],
+        selectedCommands: [],
+        selectedTexts: [],
+        selectedTextSpans: [],
+        selectedGroups: [],
+        selectedImages: [],
+        selectedClipPaths: [],
+        selectedMasks: [],
+        selectedFilters: [],
+        selectedMarkers: [],
+        selectedSymbols: [],
+        selectedUses: [],
+        selectedAnimations: [animationId],
+      },
+    })),
+
+  selectAnimationMultiple: (animationId, isShiftPressed = false) =>
+    set((state) => {
+      const currentSelection = state.selection.selectedAnimations;
+      
+      if (isShiftPressed) {
+        if (currentSelection.includes(animationId)) {
+          return {
+            selection: {
+              ...state.selection,
+              selectedAnimations: currentSelection.filter(id => id !== animationId),
+            },
+          };
+        } else {
+          return {
+            selection: {
+              ...state.selection,
+              selectedAnimations: [...currentSelection, animationId],
+              selectedPaths: [],
+              selectedSubPaths: [],
+              selectedCommands: [],
+              selectedTexts: [],
+              selectedTextSpans: [],
+              selectedGroups: [],
+              selectedImages: [],
+              selectedClipPaths: [],
+              selectedMasks: [],
+              selectedFilters: [],
+              selectedMarkers: [],
+              selectedSymbols: [],
+              selectedUses: [],
+            },
+          };
+        }
+      } else {
+        return {
+          selection: {
+            ...state.selection,
+            selectedAnimations: [animationId],
+            selectedPaths: [],
+            selectedSubPaths: [],
+            selectedCommands: [],
+            selectedTexts: [],
+            selectedTextSpans: [],
+            selectedGroups: [],
+            selectedImages: [],
+            selectedClipPaths: [],
+            selectedMasks: [],
+            selectedFilters: [],
+            selectedMarkers: [],
+            selectedSymbols: [],
+            selectedUses: [],
+          },
+        };
+      }
+    }),
 });

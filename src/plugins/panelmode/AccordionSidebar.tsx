@@ -67,6 +67,8 @@ export const AccordionSidebar: React.FC<AccordionSidebarProps> = ({ plugins }) =
     'text-controls',
     'text-style-controls',
     'textpath-controls',
+    'animation-controls',
+    'animation-timeline',
   ];
 
   // Filtrar plugins visibles
