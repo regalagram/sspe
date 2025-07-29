@@ -1,4 +1,4 @@
-import { SVGCommand, PathStyle, SVGCommandType, SVGPath, TextElement, MultilineTextElement, TextElementType, SVGGroup, SVGGroupChild, SVGFilter, FilterPrimitiveType, SVGTextPath } from '../types';
+import { SVGCommand, PathStyle, SVGCommandType, SVGPath, TextElement, MultilineTextElement, TextElementType, SVGGroup, SVGGroupChild, SVGFilter, FilterPrimitiveType, SVGTextPath, SVGAnimation } from '../types';
 import { parsePath, absolutize, normalize, serialize } from 'path-data-parser';
 import { generateId } from './id-utils';
 import { decomposeIntoSubPaths } from './subpath-utils';
@@ -2359,6 +2359,160 @@ export function parseTextPaths(svgElement: Element, allPaths?: SVGPath[]): SVGTe
 /**
  * Enhanced SVG parser that handles paths, texts, gradients, patterns, and groups
  */
+/**
+ * Parse SVG animation elements from SVG content
+ */
+function parseAnimations(svgElement: Element): SVGAnimation[] {
+  const animations: SVGAnimation[] = [];
+  
+  // Function to extract animation from element
+  const extractAnimationFromElement = (element: Element, targetElementId: string): SVGAnimation[] => {
+    const elementAnimations: SVGAnimation[] = [];
+    
+    // Find all animation elements within this element
+    const animationElements = element.querySelectorAll('animate, animateTransform, animateMotion, set');
+    
+    animationElements.forEach(animElement => {
+      const tagName = animElement.tagName.toLowerCase();
+      
+      // Common attributes
+      const id = animElement.getAttribute('id') || generateId();
+      const dur = animElement.getAttribute('dur') || '2s';
+      const begin = animElement.getAttribute('begin') || undefined;
+      const end = animElement.getAttribute('end') || undefined;
+      const repeatCount = animElement.getAttribute('repeatCount') || undefined;
+      const repeatDur = animElement.getAttribute('repeatDur') || undefined;
+      const fill = animElement.getAttribute('fill') || undefined;
+      const restart = animElement.getAttribute('restart') || undefined;
+      const calcMode = animElement.getAttribute('calcMode') || undefined;
+      const keyTimes = animElement.getAttribute('keyTimes') || undefined;
+      const keySplines = animElement.getAttribute('keySplines') || undefined;
+      const values = animElement.getAttribute('values') || undefined;
+      const additive = animElement.getAttribute('additive') || undefined;
+      const accumulate = animElement.getAttribute('accumulate') || undefined;
+      
+      const baseAnimation = {
+        id,
+        targetElementId,
+        dur,
+        begin,
+        end,
+        repeatCount,
+        repeatDur,
+        fill,
+        restart,
+        calcMode,
+        keyTimes,
+        keySplines,
+        values,
+        additive,
+        accumulate
+      };
+      
+      switch (tagName) {
+        case 'animate': {
+          const attributeName = animElement.getAttribute('attributeName');
+          const attributeType = animElement.getAttribute('attributeType');
+          const from = animElement.getAttribute('from');
+          const to = animElement.getAttribute('to');
+          const by = animElement.getAttribute('by');
+          
+          if (attributeName) {
+            elementAnimations.push({
+              ...baseAnimation,
+              type: 'animate',
+              attributeName,
+              attributeType: attributeType as any,
+              from,
+              to,
+              by
+            } as SVGAnimation);
+          }
+          break;
+        }
+        
+        case 'animatetransform': {
+          const attributeName = animElement.getAttribute('attributeName');
+          const attributeType = animElement.getAttribute('attributeType');
+          const transformType = animElement.getAttribute('type');
+          const from = animElement.getAttribute('from');
+          const to = animElement.getAttribute('to');
+          const by = animElement.getAttribute('by');
+          
+          if (attributeName && transformType) {
+            elementAnimations.push({
+              ...baseAnimation,
+              type: 'animateTransform',
+              attributeName,
+              attributeType: attributeType as any,
+              transformType: transformType as any,
+              from,
+              to,
+              by
+            } as SVGAnimation);
+          }
+          break;
+        }
+        
+        case 'animatemotion': {
+          const path = animElement.getAttribute('path');
+          const keyPoints = animElement.getAttribute('keyPoints');
+          const rotate = animElement.getAttribute('rotate');
+          
+          // Check for mpath child element
+          const mpathElement = animElement.querySelector('mpath');
+          const mpath = mpathElement?.getAttribute('href')?.replace('#', '') || undefined;
+          
+          elementAnimations.push({
+            ...baseAnimation,
+            type: 'animateMotion',
+            path,
+            keyPoints,
+            rotate: rotate === 'auto' || rotate === 'auto-reverse' ? rotate : rotate ? parseFloat(rotate) : undefined,
+            mpath
+          } as SVGAnimation);
+          break;
+        }
+        
+        case 'set': {
+          const attributeName = animElement.getAttribute('attributeName');
+          const attributeType = animElement.getAttribute('attributeType');
+          const to = animElement.getAttribute('to');
+          
+          if (attributeName && to) {
+            elementAnimations.push({
+              ...baseAnimation,
+              type: 'set',
+              attributeName,
+              attributeType: attributeType as any,
+              to
+            } as SVGAnimation);
+          }
+          break;
+        }
+      }
+    });
+    
+    return elementAnimations;
+  };
+  
+  // Parse animations from SVG root
+  const svgRootAnimations = extractAnimationFromElement(svgElement, 'svg-root');
+  animations.push(...svgRootAnimations);
+  
+  // Find all elements with IDs and check for embedded animations
+  const elementsWithIds = svgElement.querySelectorAll('[id]');
+  elementsWithIds.forEach(element => {
+    const elementId = element.getAttribute('id');
+    if (elementId) {
+      const elementAnimations = extractAnimationFromElement(element, elementId);
+      animations.push(...elementAnimations);
+    }
+  });
+  
+  return animations;
+}
+
 export function parseCompleteSVG(svgString: string): {
   paths: SVGPath[];
   texts: TextElementType[];
@@ -2366,6 +2520,7 @@ export function parseCompleteSVG(svgString: string): {
   gradients: GradientOrPattern[];
   filters: SVGFilter[];
   groups: SVGGroup[];
+  animations: SVGAnimation[];
 } {
   try {
     const { svgElement } = processSvgContent(svgString);
@@ -2388,13 +2543,17 @@ export function parseCompleteSVG(svgString: string): {
     // Parse groups
     const groups = parseGroups(svgElement, paths, texts);
     
+    // Parse animations
+    const animations = parseAnimations(svgElement);
+    
     return {
       paths,
       texts,
       textPaths,
       gradients,
       filters,
-      groups
+      groups,
+      animations
     };
   } catch (error) {
     console.error('Failed to parse complete SVG:', error);

@@ -1,26 +1,28 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { FilterPrimitiveType } from '../../types';
+import { useAnimationsForElement } from '../../components/AnimationRenderer';
 
-export const FilterRenderer: React.FC = () => {
-  const { filters } = useEditorStore();
+// Component for individual filter primitives that can use hooks
+const FilterPrimitive: React.FC<{ primitive: FilterPrimitiveType; index: number }> = ({ primitive, index }) => {
+  // Get animations for this primitive if it has an ID
+  const animations = (primitive as any).id ? useAnimationsForElement((primitive as any).id) : [];
+  
+  const commonProps = {
+    result: 'result' in primitive ? primitive.result || `effect${index}` : `effect${index}`,
+    in: 'in' in primitive ? primitive.in || (index === 0 ? 'SourceGraphic' : `effect${index - 1}`) : (index === 0 ? 'SourceGraphic' : `effect${index - 1}`),
+  };
 
-  if (filters.length === 0) return null;
-
-  const renderFilterPrimitive = (primitive: FilterPrimitiveType, index: number) => {
-    const commonProps = {
-      result: 'result' in primitive ? primitive.result || `effect${index}` : `effect${index}`,
-      in: 'in' in primitive ? primitive.in || (index === 0 ? 'SourceGraphic' : `effect${index - 1}`) : (index === 0 ? 'SourceGraphic' : `effect${index - 1}`),
-    };
-
-    switch (primitive.type) {
+  switch (primitive.type) {
       case 'feGaussianBlur':
         return (
           <feGaussianBlur
             key={index}
             {...commonProps}
             stdDeviation={primitive.stdDeviation}
-          />
+          >
+            {animations}
+          </feGaussianBlur>
         );
 
       case 'feOffset':
@@ -30,7 +32,9 @@ export const FilterRenderer: React.FC = () => {
             {...commonProps}
             dx={primitive.dx}
             dy={primitive.dy}
-          />
+          >
+            {animations}
+          </feOffset>
         );
 
       case 'feFlood':
@@ -40,7 +44,9 @@ export const FilterRenderer: React.FC = () => {
             {...commonProps}
             floodColor={primitive.floodColor}
             floodOpacity={primitive.floodOpacity}
-          />
+          >
+            {animations}
+          </feFlood>
         );
 
       case 'feComposite':
@@ -59,7 +65,9 @@ export const FilterRenderer: React.FC = () => {
               k2={primitive.k2 || 0}
               k3={primitive.k3 || 0}
               k4={primitive.k4 || 0}
-            />
+            >
+              {animations}
+            </feComposite>
           );
         }
         
@@ -67,7 +75,9 @@ export const FilterRenderer: React.FC = () => {
           <feComposite
             key={index}
             {...compositeProps}
-          />
+          >
+            {animations}
+          </feComposite>
         );
 
       case 'feColorMatrix':
@@ -81,7 +91,9 @@ export const FilterRenderer: React.FC = () => {
           <feColorMatrix
             key={index}
             {...colorMatrixProps}
-          />
+          >
+            {animations}
+          </feColorMatrix>
         );
 
       case 'feDropShadow':
@@ -94,7 +106,9 @@ export const FilterRenderer: React.FC = () => {
             stdDeviation={primitive.stdDeviation}
             floodColor={primitive.floodColor}
             floodOpacity={primitive.floodOpacity}
-          />
+          >
+            {animations}
+          </feDropShadow>
         );
 
       case 'feBlend':
@@ -104,7 +118,9 @@ export const FilterRenderer: React.FC = () => {
             {...commonProps}
             mode={primitive.mode}
             in2={primitive.in2 || 'SourceGraphic'}
-          />
+          >
+            {animations}
+          </feBlend>
         );
 
       case 'feMorphology':
@@ -114,7 +130,9 @@ export const FilterRenderer: React.FC = () => {
             {...commonProps}
             operator={primitive.operator}
             radius={primitive.radius}
-          />
+          >
+            {animations}
+          </feMorphology>
         );
 
       case 'feConvolveMatrix':
@@ -376,7 +394,12 @@ export const FilterRenderer: React.FC = () => {
       default:
         return null;
     }
-  };
+};
+
+export const FilterRenderer: React.FC = () => {
+  const { filters } = useEditorStore();
+
+  if (filters.length === 0) return null;
 
   return (
     <defs>
@@ -392,7 +415,9 @@ export const FilterRenderer: React.FC = () => {
           primitiveUnits={filter.primitiveUnits || 'userSpaceOnUse'}
           colorInterpolationFilters={filter.colorInterpolationFilters || 'linearRGB'}
         >
-          {filter.primitives.map((primitive, index) => renderFilterPrimitive(primitive, index))}
+          {filter.primitives.map((primitive, index) => (
+            <FilterPrimitive key={index} primitive={primitive} index={index} />
+          ))}
         </filter>
       ))}
     </defs>

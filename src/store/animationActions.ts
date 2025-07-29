@@ -43,10 +43,8 @@ export interface AnimationActions {
   // Set animation creator
   createSetAnimation: (elementId: string, attributeName: string, toValue: string, beginTime?: string) => void;
   
-  // ViewBox animation creator
+  // ViewBox animation creator (deprecated - poor browser support)
   createViewBoxAnimation: (duration: string, fromViewBox?: string, toViewBox?: string) => void;
-  createViewBoxZoomAnimation: (duration: string, fromScale?: number, toScale?: number, centerX?: number, centerY?: number) => void;
-  createViewBoxPanAnimation: (duration: string, fromX?: number, fromY?: number, toX?: number, toY?: number) => void;
   
   // Gradient animation creators
   createGradientStopAnimation: (stopId: string, duration: string, fromColor?: string, toColor?: string) => void;
@@ -73,6 +71,12 @@ export interface AnimationActions {
   createCircleAnimation: (elementId: string, duration: string, fromRadius?: number, toRadius?: number) => void;
   createPathDataAnimation: (elementId: string, duration: string, fromPath: string, toPath: string) => void;
   createLineAnimation: (elementId: string, duration: string, fromX1?: number, fromY1?: number, fromX2?: number, fromY2?: number, toX1?: number, toY1?: number, toX2?: number, toY2?: number) => void;
+  
+  // Text animation creators
+  createFontSizeAnimation: (elementId: string, duration: string, fromSize?: number, toSize?: number) => void;
+  createTextPositionAnimation: (elementId: string, duration: string, fromX?: number, fromY?: number, toX?: number, toY?: number) => void;
+  createFontWeightAnimation: (elementId: string, duration: string, fromWeight?: string, toWeight?: string) => void;
+  createLetterSpacingAnimation: (elementId: string, duration: string, fromSpacing?: number, toSpacing?: number) => void;
 }
 
 export const createAnimationActions = (set: any, get: any): AnimationActions => ({
@@ -308,66 +312,259 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
   
   // Filter animation creators
   createFilterBlurAnimation: (elementId: string, duration: string, fromStdDev = 0, toStdDev = 5) => {
+    const { texts, addFilter, updateTextStyle, updatePathStyle } = get();
     const addAnimation = get().addAnimation;
-    addAnimation({
-      type: 'animate',
-      targetElementId: elementId,
-      attributeName: 'stdDeviation',
-      from: fromStdDev.toString(),
-      to: toStdDev.toString(),
-      dur: duration,
-      fill: 'freeze',
-    });
+    
+    // Check if the target is a text element
+    const isTextElement = texts.some((text: any) => text.id === elementId);
+    
+    if (isTextElement) {
+      // For text elements, create a filter and apply it to the text
+      const primitiveId = `blur-primitive-${elementId}`;
+      
+      // Create the blur filter (addFilter will generate the ID)
+      const blurFilter = {
+        primitives: [{
+          id: primitiveId,
+          type: 'feGaussianBlur' as const,
+          stdDeviation: fromStdDev,
+          in: 'SourceGraphic',
+          result: 'blur'
+        }]
+      };
+      
+      // Add the filter to the editor and get the generated ID
+      const state = get();
+      addFilter(blurFilter);
+      
+      // Get the newly created filter (it will be the last one added)
+      const newState = get();
+      const newFilter = newState.filters[newState.filters.length - 1];
+      const filterId = newFilter.id;
+      
+      // Apply the filter to the text element
+      updateTextStyle(elementId, {
+        filter: `url(#${filterId})`
+      });
+      
+      // Create animation for the filter primitive
+      addAnimation({
+        type: 'animate',
+        targetElementId: primitiveId,
+        attributeName: 'stdDeviation',
+        from: fromStdDev.toString(),
+        to: toStdDev.toString(),
+        dur: duration,
+        fill: 'freeze',
+      });
+    } else {
+      // For non-text elements (filter primitives), animate directly
+      addAnimation({
+        type: 'animate',
+        targetElementId: elementId,
+        attributeName: 'stdDeviation',
+        from: fromStdDev.toString(),
+        to: toStdDev.toString(),
+        dur: duration,
+        fill: 'freeze',
+      });
+    }
   },
   
   createFilterOffsetAnimation: (elementId: string, duration: string, fromDx = 0, fromDy = 0, toDx = 10, toDy = 10) => {
+    const { texts, addFilter, updateTextStyle } = get();
     const addAnimation = get().addAnimation;
-    // Create animation for dx
-    addAnimation({
-      type: 'animate',
-      targetElementId: elementId,
-      attributeName: 'dx',
-      from: fromDx.toString(),
-      to: toDx.toString(),
-      dur: duration,
-      fill: 'freeze',
-    });
-    // Create animation for dy
-    addAnimation({
-      type: 'animate',
-      targetElementId: elementId,
-      attributeName: 'dy',
-      from: fromDy.toString(),
-      to: toDy.toString(),
-      dur: duration,
-      fill: 'freeze',
-    });
+    
+    // Check if the target is a text element
+    const isTextElement = texts.some((text: any) => text.id === elementId);
+    
+    if (isTextElement) {
+      // For text elements, create a filter and apply it to the text
+      const primitiveId = `offset-primitive-${elementId}`;
+      
+      // Create the offset filter (addFilter will generate the ID)
+      const offsetFilter = {
+        primitives: [{
+          id: primitiveId,
+          type: 'feOffset' as const,
+          dx: fromDx,
+          dy: fromDy,
+          in: 'SourceGraphic',
+          result: 'offset'
+        }]
+      };
+      
+      // Add the filter to the editor and get the generated ID
+      addFilter(offsetFilter);
+      
+      // Get the newly created filter (it will be the last one added)
+      const newState = get();
+      const newFilter = newState.filters[newState.filters.length - 1];
+      const filterId = newFilter.id;
+      
+      // Apply the filter to the text element
+      updateTextStyle(elementId, {
+        filter: `url(#${filterId})`
+      });
+      
+      // Create animations for the filter primitive
+      addAnimation({
+        type: 'animate',
+        targetElementId: primitiveId,
+        attributeName: 'dx',
+        from: fromDx.toString(),
+        to: toDx.toString(),
+        dur: duration,
+        fill: 'freeze',
+      });
+      addAnimation({
+        type: 'animate',
+        targetElementId: primitiveId,
+        attributeName: 'dy',
+        from: fromDy.toString(),
+        to: toDy.toString(),
+        dur: duration,
+        fill: 'freeze',
+      });
+    } else {
+      // For non-text elements (filter primitives), animate directly
+      addAnimation({
+        type: 'animate',
+        targetElementId: elementId,
+        attributeName: 'dx',
+        from: fromDx.toString(),
+        to: toDx.toString(),
+        dur: duration,
+        fill: 'freeze',
+      });
+      addAnimation({
+        type: 'animate',
+        targetElementId: elementId,
+        attributeName: 'dy',
+        from: fromDy.toString(),
+        to: toDy.toString(),
+        dur: duration,
+        fill: 'freeze',
+      });
+    }
   },
   
   createFilterColorMatrixAnimation: (elementId: string, duration: string, fromValues = '1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0', toValues = '0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0') => {
+    const { texts, addFilter, updateTextStyle } = get();
     const addAnimation = get().addAnimation;
-    addAnimation({
-      type: 'animate',
-      targetElementId: elementId,
-      attributeName: 'values',
-      from: fromValues,
-      to: toValues,
-      dur: duration,
-      fill: 'freeze',
-    });
+    
+    // Check if the target is a text element
+    const isTextElement = texts.some((text: any) => text.id === elementId);
+    
+    if (isTextElement) {
+      // For text elements, create a filter and apply it to the text
+      const primitiveId = `colorMatrix-primitive-${elementId}`;
+      
+      // Create the colorMatrix filter (addFilter will generate the ID)
+      const colorMatrixFilter = {
+        primitives: [{
+          id: primitiveId,
+          type: 'feColorMatrix' as const,
+          values: fromValues,
+          in: 'SourceGraphic',
+          result: 'colorMatrix'
+        }]
+      };
+      
+      // Add the filter to the editor and get the generated ID
+      addFilter(colorMatrixFilter);
+      
+      // Get the newly created filter (it will be the last one added)
+      const newState = get();
+      const newFilter = newState.filters[newState.filters.length - 1];
+      const filterId = newFilter.id;
+      
+      // Apply the filter to the text element
+      updateTextStyle(elementId, {
+        filter: `url(#${filterId})`
+      });
+      
+      // Create animation for the filter primitive
+      addAnimation({
+        type: 'animate',
+        targetElementId: primitiveId,
+        attributeName: 'values',
+        from: fromValues,
+        to: toValues,
+        dur: duration,
+        fill: 'freeze',
+      });
+    } else {
+      // For non-text elements (filter primitives), animate directly
+      addAnimation({
+        type: 'animate',
+        targetElementId: elementId,
+        attributeName: 'values',
+        from: fromValues,
+        to: toValues,
+        dur: duration,
+        fill: 'freeze',
+      });
+    }
   },
   
   createFilterFloodAnimation: (elementId: string, duration: string, fromColor = '#ff0000', toColor = '#0000ff') => {
+    const { texts, addFilter, updateTextStyle } = get();
     const addAnimation = get().addAnimation;
-    addAnimation({
-      type: 'animate',
-      targetElementId: elementId,
-      attributeName: 'flood-color',
-      from: fromColor,
-      to: toColor,
-      dur: duration,
-      fill: 'freeze',
-    });
+    
+    // Check if the target is a text element
+    const isTextElement = texts.some((text: any) => text.id === elementId);
+    
+    if (isTextElement) {
+      // For text elements, create a filter and apply it to the text
+      const primitiveId = `flood-primitive-${elementId}`;
+      
+      // Create the flood filter (addFilter will generate the ID)
+      const floodFilter = {
+        primitives: [{
+          id: primitiveId,
+          type: 'feFlood' as const,
+          floodColor: fromColor,
+          in: 'SourceGraphic',
+          result: 'flood'
+        }]
+      };
+      
+      // Add the filter to the editor and get the generated ID
+      addFilter(floodFilter);
+      
+      // Get the newly created filter (it will be the last one added)
+      const newState = get();
+      const newFilter = newState.filters[newState.filters.length - 1];
+      const filterId = newFilter.id;
+      
+      // Apply the filter to the text element
+      updateTextStyle(elementId, {
+        filter: `url(#${filterId})`
+      });
+      
+      // Create animation for the filter primitive
+      addAnimation({
+        type: 'animate',
+        targetElementId: primitiveId,
+        attributeName: 'flood-color',
+        from: fromColor,
+        to: toColor,
+        dur: duration,
+        fill: 'freeze',
+      });
+    } else {
+      // For non-text elements (filter primitives), animate directly
+      addAnimation({
+        type: 'animate',
+        targetElementId: elementId,
+        attributeName: 'flood-color',
+        from: fromColor,
+        to: toColor,
+        dur: duration,
+        fill: 'freeze',
+      });
+    }
   },
   
   // Set animation creator
@@ -383,47 +580,13 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
     });
   },
   
-  // ViewBox animation creator
+  // ViewBox animation creator (deprecated - poor browser support)
   createViewBoxAnimation: (duration: string, fromViewBox = '0 0 100 100', toViewBox = '0 0 200 200') => {
+    console.warn('ViewBox animations have poor browser support and are deprecated. Consider using transform animations instead.');
     const addAnimation = get().addAnimation;
     addAnimation({
       type: 'animate',
       targetElementId: 'svg-root', // Special target for SVG root
-      attributeName: 'viewBox',
-      from: fromViewBox,
-      to: toViewBox,
-      dur: duration,
-      fill: 'freeze',
-    });
-  },
-  
-  // Enhanced ViewBox animations
-  createViewBoxZoomAnimation: (duration: string, fromScale = 1, toScale = 2, centerX = 50, centerY = 50) => {
-    const addAnimation = get().addAnimation;
-    const baseViewBox = get().viewport.viewBox;
-    const fromViewBox = `${centerX - (baseViewBox.width * fromScale) / 2} ${centerY - (baseViewBox.height * fromScale) / 2} ${baseViewBox.width * fromScale} ${baseViewBox.height * fromScale}`;
-    const toViewBox = `${centerX - (baseViewBox.width * toScale) / 2} ${centerY - (baseViewBox.height * toScale) / 2} ${baseViewBox.width * toScale} ${baseViewBox.height * toScale}`;
-    
-    addAnimation({
-      type: 'animate',
-      targetElementId: 'svg-root',
-      attributeName: 'viewBox',
-      from: fromViewBox,
-      to: toViewBox,
-      dur: duration,
-      fill: 'freeze',
-    });
-  },
-  
-  createViewBoxPanAnimation: (duration: string, fromX = 0, fromY = 0, toX = 100, toY = 100) => {
-    const addAnimation = get().addAnimation;
-    const baseViewBox = get().viewport.viewBox;
-    const fromViewBox = `${fromX} ${fromY} ${baseViewBox.width} ${baseViewBox.height}`;
-    const toViewBox = `${toX} ${toY} ${baseViewBox.width} ${baseViewBox.height}`;
-    
-    addAnimation({
-      type: 'animate',
-      targetElementId: 'svg-root',
       attributeName: 'viewBox',
       from: fromViewBox,
       to: toViewBox,
@@ -706,6 +869,70 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
         dur: duration,
         fill: 'freeze',
       });
+    });
+  },
+  
+  // Text animation creators
+  createFontSizeAnimation: (elementId: string, duration: string, fromSize = 16, toSize = 32) => {
+    const addAnimation = get().addAnimation;
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'font-size',
+      from: fromSize.toString(),
+      to: toSize.toString(),
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  createTextPositionAnimation: (elementId: string, duration: string, fromX = 0, fromY = 0, toX = 100, toY = 100) => {
+    const addAnimation = get().addAnimation;
+    // Create X animation
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'x',
+      from: fromX.toString(),
+      to: toX.toString(),
+      dur: duration,
+      fill: 'freeze',
+    });
+    // Create Y animation
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'y',
+      from: fromY.toString(),
+      to: toY.toString(),
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  createFontWeightAnimation: (elementId: string, duration: string, fromWeight = 'normal', toWeight = 'bold') => {
+    const addAnimation = get().addAnimation;
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'font-weight',
+      from: fromWeight,
+      to: toWeight,
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+  
+  createLetterSpacingAnimation: (elementId: string, duration: string, fromSpacing = 0, toSpacing = 5) => {
+    const addAnimation = get().addAnimation;
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'letter-spacing',
+      from: `${fromSpacing}px`,
+      to: `${toSpacing}px`,
+      dur: duration,
+      fill: 'freeze',
     });
   },
 });

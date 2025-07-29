@@ -2,6 +2,7 @@ import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { SVGTextPath } from '../../types';
 import { subPathToString } from '../../utils/path-utils';
+import { useAnimationsForElement } from '../../components/AnimationRenderer';
 
 export const TextPathRenderer: React.FC = () => {
   const { textPaths, paths, selection, renderVersion } = useEditorStore();
@@ -22,6 +23,7 @@ export const TextPathRenderer: React.FC = () => {
 
     // Determine selection state
     const isSelected = selection.selectedTextPaths.includes(textPath.id);
+    const animations = useAnimationsForElement(textPath.id);
 
     // Style processing
     const style = textPath.style || {};
@@ -100,6 +102,7 @@ export const TextPathRenderer: React.FC = () => {
           <textPath {...textPathAttributes}>
             {textPath.content}
           </textPath>
+          {animations}
         </text>
 
         {/* Selection indicator */}

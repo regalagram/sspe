@@ -4,6 +4,7 @@ import { TextElementType, TextElement, MultilineTextElement } from '../../types'
 import { getStyleValue } from '../../utils/gradient-utils';
 import { getContrastColor } from '../../utils/path-utils';
 import { calculateTextBoundsDOM } from '../../utils/text-utils';
+import { useAnimationsForElement } from '../../components/AnimationRenderer';
 
 export const TextRenderer: React.FC = () => {
   const { 
@@ -18,6 +19,7 @@ export const TextRenderer: React.FC = () => {
   const renderTextElement = (text: TextElement) => {
     const isSelected = selection.selectedTexts.includes(text.id);
     const isWireframeMode = enabledFeatures.wireframeEnabled;
+    const animations = useAnimationsForElement(text.id);
     
     return (
       <g key={`text-group-${text.id}`}>
@@ -69,6 +71,7 @@ export const TextRenderer: React.FC = () => {
           data-element-id={text.id}
         >
           {text.content}
+          {animations}
         </text>
 
         {/* Selection indicator */}
@@ -131,6 +134,7 @@ export const TextRenderer: React.FC = () => {
   const renderMultilineTextElement = (text: MultilineTextElement) => {
     const isSelected = selection.selectedTexts.includes(text.id);
     const isWireframeMode = enabledFeatures.wireframeEnabled;
+    const animations = useAnimationsForElement(text.id);
     
     return (
       <g key={`multiline-text-group-${text.id}`}>
@@ -199,6 +203,7 @@ export const TextRenderer: React.FC = () => {
               </tspan>
             );
           })}
+          {animations}
         </text>
 
         {/* Selection indicator for multiline text */}

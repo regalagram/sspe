@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../store/editorStore';
 import { Play, Pause, RotateCcw, Plus } from 'lucide-react';
+import { createLinearGradient } from '../utils/gradient-utils';
 
 export const AnimationControls: React.FC = () => {
   const { 
@@ -10,6 +11,7 @@ export const AnimationControls: React.FC = () => {
     filters,
     gradients,
     paths,
+    texts,
     playAnimations, 
     pauseAnimations, 
     stopAnimations,
@@ -25,7 +27,6 @@ export const AnimationControls: React.FC = () => {
     createFilterColorMatrixAnimation,
     createFilterFloodAnimation,
     createSetAnimation,
-    createViewBoxAnimation,
     createGradientStopAnimation,
     createGradientPositionAnimation,
     createAnimateMotionWithMPath,
@@ -40,8 +41,14 @@ export const AnimationControls: React.FC = () => {
     createGradientStopOffsetAnimation,
     createPatternAnimation,
     createPatternTransformAnimation,
-    createViewBoxZoomAnimation,
-    createViewBoxPanAnimation
+    createFontSizeAnimation,
+    createTextPositionAnimation,
+    createFontWeightAnimation,
+    createLetterSpacingAnimation,
+    createViewBoxAnimation,
+    addGradient,
+    updateTextStyle,
+    updatePathStyle,
   } = useEditorStore();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -92,9 +99,6 @@ export const AnimationControls: React.FC = () => {
   // Set animation specific
   const [setToValueState, setSetToValueState] = useState('');
   
-  // ViewBox animation
-  const [fromViewBox, setFromViewBox] = useState('0 0 100 100');
-  const [toViewBox, setToViewBox] = useState('0 0 200 200');
   
   // Synchronization
   const [chainName, setChainName] = useState('');
@@ -138,7 +142,12 @@ export const AnimationControls: React.FC = () => {
   };
 
   const getAnimationTargetId = () => {
-    const { paths } = useEditorStore.getState();
+    const { paths, texts } = useEditorStore.getState();
+    
+    // If a text is directly selected, use it
+    if (selection.selectedTexts.length > 0) {
+      return selection.selectedTexts[0];
+    }
     
     // If a path is directly selected, use it
     if (selection.selectedPaths.length > 0) {
@@ -169,7 +178,87 @@ export const AnimationControls: React.FC = () => {
     return null;
   };
 
-  const handleQuickAnimation = (type: 'fade' | 'move' | 'rotate' | 'scale' | 'blur' | 'offset' | 'colorMatrix' | 'viewBox' | 'position' | 'size' | 'circle' | 'line' | 'gradient' | 'pattern' | 'zoom' | 'pan') => {
+  const handleGradientAnimation = (elementId: string) => {
+    // Create a new gradient for the element
+    const timestamp = Date.now();
+    const stop1Id = `stop-1-${timestamp}`;
+    const stop2Id = `stop-2-${timestamp}`;
+    
+    const gradient = createLinearGradient(0, 0, 100, 0, [
+      { id: stop1Id, offset: 0, color: '#0000ff', opacity: 1 },
+      { id: stop2Id, offset: 100, color: '#00ffff', opacity: 1 }
+    ]);
+    
+    // Add the gradient to the store
+    addGradient(gradient);
+    
+    // Apply the gradient to the element
+    const isText = texts.some(text => text.id === elementId);
+    if (isText) {
+      updateTextStyle(elementId, { fill: gradient });
+    } else {
+      updatePathStyle(elementId, { fill: gradient });
+    }
+    
+    // Create enhanced gradient animations with color changes and movement
+    // Animate stop colors
+    addAnimation({
+      type: 'animate',
+      targetElementId: stop1Id,
+      attributeName: 'stop-color',
+      values: '#00f;#0ff;#00f',
+      dur: '3s',
+      repeatCount: 'indefinite',
+    });
+    
+    addAnimation({
+      type: 'animate',
+      targetElementId: stop2Id,
+      attributeName: 'stop-color',
+      values: '#0ff;#00f;#0ff',
+      dur: '3s',
+      repeatCount: 'indefinite',
+    });
+    
+    // Animate gradient position
+    addAnimation({
+      type: 'animate',
+      targetElementId: gradient.id,
+      attributeName: 'x1',
+      values: '0%;100%;0%',
+      dur: '3s',
+      repeatCount: 'indefinite',
+    });
+    
+    addAnimation({
+      type: 'animate',
+      targetElementId: gradient.id,
+      attributeName: 'y1',
+      values: '0%;100%;0%',
+      dur: '3s',
+      repeatCount: 'indefinite',
+    });
+    
+    addAnimation({
+      type: 'animate',
+      targetElementId: gradient.id,
+      attributeName: 'x2',
+      values: '100%;0%;100%',
+      dur: '3s',
+      repeatCount: 'indefinite',
+    });
+    
+    addAnimation({
+      type: 'animate',
+      targetElementId: gradient.id,
+      attributeName: 'y2',
+      values: '0%;100%;0%',
+      dur: '3s',
+      repeatCount: 'indefinite',
+    });
+  };
+
+  const handleQuickAnimation = (type: 'fade' | 'move' | 'rotate' | 'scale' | 'blur' | 'offset' | 'colorMatrix' | 'viewBox' | 'position' | 'size' | 'circle' | 'line' | 'gradient' | 'pattern' | 'textPosition' | 'fontSize' | 'fontWeight' | 'letterSpacing') => {
     const targetId = getAnimationTargetId();
     
     if (type !== 'viewBox' && !targetId) {
@@ -215,16 +304,24 @@ export const AnimationControls: React.FC = () => {
         createLineAnimation(targetId!, '2s', 0, 0, 50, 50, 100, 100, 150, 150);
         break;
       case 'gradient':
-        createLinearGradientAnimation(targetId!, '3s', 0, 0, 100, 0, 100, 100, 0, 100);
+        // For gradient animation, we need to create/find a gradient for the element
+        // and animate the gradient, not the element itself
+        handleGradientAnimation(targetId!);
         break;
       case 'pattern':
         createPatternAnimation(targetId!, '2s', 10, 10, 50, 50);
         break;
-      case 'zoom':
-        createViewBoxZoomAnimation('3s', 1, 2, 50, 50);
+      case 'textPosition':
+        createTextPositionAnimation(targetId!, '2s', 0, 0, 100, 100);
         break;
-      case 'pan':
-        createViewBoxPanAnimation('3s', 0, 0, 100, 100);
+      case 'fontSize':
+        createFontSizeAnimation(targetId!, '2s', 16, 32);
+        break;
+      case 'fontWeight':
+        createFontWeightAnimation(targetId!, '2s', 'normal', 'bold');
+        break;
+      case 'letterSpacing':
+        createLetterSpacingAnimation(targetId!, '2s', 0, 5);
         break;
     }
   };
@@ -344,11 +441,14 @@ export const AnimationControls: React.FC = () => {
     setEditingAnimation(null);
   };
 
-  // Get available attributes based on animation type
+  // Get available attributes based on animation type and selected element
   const getAvailableAttributes = (type: string) => {
+    const targetId = getAnimationTargetId();
+    const isTextElement = targetId && texts.some(text => text.id === targetId);
+    
     switch (type) {
       case 'animate':
-        return [
+        const baseAttributes = [
           { value: 'opacity', label: 'Opacity' },
           { value: 'fill', label: 'Fill Color' },
           { value: 'fill-opacity', label: 'Fill Opacity' },
@@ -357,22 +457,46 @@ export const AnimationControls: React.FC = () => {
           { value: 'stroke-opacity', label: 'Stroke Opacity' },
           { value: 'stroke-dasharray', label: 'Stroke Dash Array' },
           { value: 'stroke-dashoffset', label: 'Stroke Dash Offset' },
-          { value: 'cx', label: 'Center X (circle/ellipse)' },
-          { value: 'cy', label: 'Center Y (circle/ellipse)' },
-          { value: 'r', label: 'Radius (circle)' },
-          { value: 'rx', label: 'Radius X (ellipse/rect)' },
-          { value: 'ry', label: 'Radius Y (ellipse/rect)' },
-          { value: 'x', label: 'X Position (rect/text)' },
-          { value: 'y', label: 'Y Position (rect/text)' },
-          { value: 'width', label: 'Width (rect)' },
-          { value: 'height', label: 'Height (rect)' },
-          { value: 'x1', label: 'X1 (line)' },
-          { value: 'y1', label: 'Y1 (line)' },
-          { value: 'x2', label: 'X2 (line)' },
-          { value: 'y2', label: 'Y2 (line)' },
-          { value: 'font-size', label: 'Font Size (text)' },
-          { value: 'd', label: 'Path Data (path)' },
         ];
+        
+        if (isTextElement) {
+          // Text-specific attributes
+          return [
+            ...baseAttributes,
+            { value: 'x', label: 'X Position' },
+            { value: 'y', label: 'Y Position' },
+            { value: 'font-size', label: 'Font Size' },
+            { value: 'font-family', label: 'Font Family' },
+            { value: 'font-weight', label: 'Font Weight' },
+            { value: 'font-style', label: 'Font Style' },
+            { value: 'text-anchor', label: 'Text Anchor' },
+            { value: 'dominant-baseline', label: 'Dominant Baseline' },
+            { value: 'alignment-baseline', label: 'Alignment Baseline' },
+            { value: 'baseline-shift', label: 'Baseline Shift' },
+            { value: 'letter-spacing', label: 'Letter Spacing' },
+            { value: 'word-spacing', label: 'Word Spacing' },
+            { value: 'text-decoration', label: 'Text Decoration' },
+          ];
+        } else {
+          // Non-text elements (paths, shapes, etc.)
+          return [
+            ...baseAttributes,
+            { value: 'cx', label: 'Center X (circle/ellipse)' },
+            { value: 'cy', label: 'Center Y (circle/ellipse)' },
+            { value: 'r', label: 'Radius (circle)' },
+            { value: 'rx', label: 'Radius X (ellipse/rect)' },
+            { value: 'ry', label: 'Radius Y (ellipse/rect)' },
+            { value: 'x', label: 'X Position (rect)' },
+            { value: 'y', label: 'Y Position (rect)' },
+            { value: 'width', label: 'Width (rect)' },
+            { value: 'height', label: 'Height (rect)' },
+            { value: 'x1', label: 'X1 (line)' },
+            { value: 'y1', label: 'Y1 (line)' },
+            { value: 'x2', label: 'X2 (line)' },
+            { value: 'y2', label: 'Y2 (line)' },
+            { value: 'd', label: 'Path Data (path)' },
+          ];
+        }
       case 'animateTransform':
         return [
           { value: 'translate', label: 'Translate (move)' },
@@ -478,11 +602,17 @@ export const AnimationControls: React.FC = () => {
           <button style={buttonStyle} onClick={() => handleQuickAnimation('pattern')}>
             Pattern
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('zoom')}>
-            Zoom
+          <button style={buttonStyle} onClick={() => handleQuickAnimation('textPosition')}>
+            Text Position
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('pan')}>
-            Pan
+          <button style={buttonStyle} onClick={() => handleQuickAnimation('fontSize')}>
+            Font Size
+          </button>
+          <button style={buttonStyle} onClick={() => handleQuickAnimation('fontWeight')}>
+            Font Weight
+          </button>
+          <button style={buttonStyle} onClick={() => handleQuickAnimation('letterSpacing')}>
+            Letter Spacing
           </button>
         </div>
       </div>

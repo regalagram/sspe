@@ -3,13 +3,13 @@ import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { subPathToString } from '../../utils/path-utils';
 import { parseSVGToSubPaths, parseCompleteSVG } from '../../utils/svg-parser';
+import { SVGAnimation } from '../../types';
 import { calculateViewBoxFromSVGString } from '../../utils/viewbox-utils';
 import { extractGradientsFromPaths } from '../../utils/gradient-utils';
 import { PluginButton } from '../../components/PluginButton';
 import { SVGDropZone } from '../../components/SVGDropZone';
 import { SVGImportOptions, ImportSettings } from '../../components/SVGImportOptions';
-import { RotateCcw, CheckCircle2, Trash2, Upload, Download, Zap } from 'lucide-react';
-import { prepareAnimationExportData, validateAnimationImportData, sanitizeAnimationImportData, generateAnimationSummary } from '../../utils/animation-export-utils';
+import { RotateCcw, CheckCircle2, Trash2, Upload, Download } from 'lucide-react';
 
 interface PrecisionControlProps {
   precision: number;
@@ -249,6 +249,7 @@ export const SVGComponent: React.FC = () => {
       const textStrokeValue = convertStyleValue(style.stroke);
       
       const attributes = [
+        `id="${text.id}"`,
         `x="${text.x}"`,
         `y="${text.y}"`,
         text.transform ? `transform="${text.transform}"` : '',
@@ -329,6 +330,7 @@ export const SVGComponent: React.FC = () => {
       const textStrokeValue = convertStyleValue(style.stroke);
       
       const textAttributes = [
+        `id="${textPath.id}"`,
         style.fontSize ? `font-size="${style.fontSize}"` : '',
         style.fontFamily ? `font-family="${style.fontFamily}"` : '',
         style.fontWeight ? `font-weight="${style.fontWeight}"` : '',
@@ -630,23 +632,118 @@ export const SVGComponent: React.FC = () => {
       // Add gradients and patterns
       if (allGradients.length > 0) {
         const gradientDefs = allGradients.map(gradient => {
+          // Find animations that target this gradient
+          const gradientAnimations = animations.filter(anim => 
+            anim.targetElementId === gradient.id
+          );
+          
+          const gradientAnimationsHtml = gradientAnimations.length > 0 ? gradientAnimations.map(animation => {
+            const commonAttrs = [
+              animation.dur ? `dur="${animation.dur}"` : 'dur="2s"',
+              getAnimationProperty(animation, 'begin') ? `begin="${getAnimationProperty(animation, 'begin')}"` : '',
+              getAnimationProperty(animation, 'end') ? `end="${getAnimationProperty(animation, 'end')}"` : '',
+              getAnimationProperty(animation, 'repeatCount') ? `repeatCount="${getAnimationProperty(animation, 'repeatCount')}"` : '',
+              getAnimationProperty(animation, 'fill') ? `fill="${getAnimationProperty(animation, 'fill')}"` : '',
+            ].filter(Boolean).join(' ');
+
+            switch ((animation as any).type) {
+              case 'animate':
+                const animateAttrs = [
+                  `attributeName="${(animation as any).attributeName}"`,
+                  (animation as any).from ? `from="${(animation as any).from}"` : '',
+                  (animation as any).to ? `to="${(animation as any).to}"` : '',
+                  (animation as any).values ? `values="${(animation as any).values}"` : '',
+                  commonAttrs
+                ].filter(Boolean).join(' ');
+                return `    <animate ${animateAttrs} />`;
+              case 'animateTransform':
+                const transformAttrs = [
+                  `attributeName="${(animation as any).attributeName}"`,
+                  `type="${(animation as any).transformType}"`,
+                  (animation as any).from ? `from="${(animation as any).from}"` : '',
+                  (animation as any).to ? `to="${(animation as any).to}"` : '',
+                  (animation as any).values ? `values="${(animation as any).values}"` : '',
+                  commonAttrs
+                ].filter(Boolean).join(' ');
+                return `    <animateTransform ${transformAttrs} />`;
+              default:
+                return '';
+            }
+          }).join('\n') : '';
+          
           switch (gradient.type) {
             case 'linear':
-              const linearStops = gradient.stops.map(stop => 
-                `    <stop offset="${stop.offset}%" stop-color="${stop.color}" stop-opacity="${stop.opacity ?? 1}" />`
-              ).join('\n');
-              return `  <linearGradient id="${gradient.id}" x1="${gradient.x1}%" y1="${gradient.y1}%" x2="${gradient.x2}%" y2="${gradient.y2}%" gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">\n${linearStops}\n  </linearGradient>`;
+              // Handle stop animations
+              const linearStops = gradient.stops.map(stop => {
+                const stopAnimations = animations.filter(anim => anim.targetElementId === stop.id);
+                const stopAnimationsHtml = stopAnimations.length > 0 ? stopAnimations.map(animation => {
+                  const commonAttrs = [
+                    animation.dur ? `dur="${animation.dur}"` : 'dur="2s"',
+                    getAnimationProperty(animation, 'fill') ? `fill="${getAnimationProperty(animation, 'fill')}"` : '',
+                  ].filter(Boolean).join(' ');
+                  const animateAttrs = [
+                    `attributeName="${(animation as any).attributeName}"`,
+                    (animation as any).from ? `from="${(animation as any).from}"` : '',
+                    (animation as any).to ? `to="${(animation as any).to}"` : '',
+                    commonAttrs
+                  ].filter(Boolean).join(' ');
+                  return `      <animate ${animateAttrs} />`;
+                }).join('\n') : '';
+                
+                return stopAnimationsHtml
+                  ? `    <stop offset="${stop.offset}%" stop-color="${stop.color}" stop-opacity="${stop.opacity ?? 1}">\n${stopAnimationsHtml}\n    </stop>`
+                  : `    <stop offset="${stop.offset}%" stop-color="${stop.color}" stop-opacity="${stop.opacity ?? 1}" />`;
+              }).join('\n');
+              
+              const linearContent = gradientAnimationsHtml ? `\n${linearStops}\n${gradientAnimationsHtml}\n  ` : `\n${linearStops}\n  `;
+              return `  <linearGradient id="${gradient.id}" x1="${gradient.x1}%" y1="${gradient.y1}%" x2="${gradient.x2}%" y2="${gradient.y2}%" gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">${linearContent}</linearGradient>`;
             
             case 'radial':
-              const radialStops = gradient.stops.map(stop => 
-                `    <stop offset="${stop.offset}%" stop-color="${stop.color}" stop-opacity="${stop.opacity ?? 1}" />`
-              ).join('\n');
+              // Handle stop animations for radial gradient
+              const radialStops = gradient.stops.map(stop => {
+                const stopAnimations = animations.filter(anim => anim.targetElementId === stop.id);
+                const stopAnimationsHtml = stopAnimations.length > 0 ? stopAnimations.map(animation => {
+                  const commonAttrs = [
+                    animation.dur ? `dur="${animation.dur}"` : 'dur="2s"',
+                    getAnimationProperty(animation, 'fill') ? `fill="${getAnimationProperty(animation, 'fill')}"` : '',
+                  ].filter(Boolean).join(' ');
+                  const animateAttrs = [
+                    `attributeName="${(animation as any).attributeName}"`,
+                    (animation as any).from ? `from="${(animation as any).from}"` : '',
+                    (animation as any).to ? `to="${(animation as any).to}"` : '',
+                    commonAttrs
+                  ].filter(Boolean).join(' ');
+                  return `      <animate ${animateAttrs} />`;
+                }).join('\n') : '';
+                
+                return stopAnimationsHtml
+                  ? `    <stop offset="${stop.offset}%" stop-color="${stop.color}" stop-opacity="${stop.opacity ?? 1}">\n${stopAnimationsHtml}\n    </stop>`
+                  : `    <stop offset="${stop.offset}%" stop-color="${stop.color}" stop-opacity="${stop.opacity ?? 1}" />`;
+              }).join('\n');
+              
               const fxAttr = (gradient.fx !== undefined && gradient.fx !== gradient.cx) ? ` fx="${gradient.fx}%"` : '';
               const fyAttr = (gradient.fy !== undefined && gradient.fy !== gradient.cy) ? ` fy="${gradient.fy}%"` : '';
-              return `  <radialGradient id="${gradient.id}" cx="${gradient.cx}%" cy="${gradient.cy}%" r="${gradient.r}%"${fxAttr}${fyAttr} gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">\n${radialStops}\n  </radialGradient>`;
+              const radialContent = gradientAnimationsHtml ? `\n${radialStops}\n${gradientAnimationsHtml}\n  ` : `\n${radialStops}\n  `;
+              return `  <radialGradient id="${gradient.id}" cx="${gradient.cx}%" cy="${gradient.cy}%" r="${gradient.r}%"${fxAttr}${fyAttr} gradientUnits="${gradient.gradientUnits || 'objectBoundingBox'}">${radialContent}</radialGradient>`;
             
             case 'pattern':
-              return `  <pattern id="${gradient.id}" width="${gradient.width}" height="${gradient.height}" patternUnits="${gradient.patternUnits || 'userSpaceOnUse'}"${gradient.patternContentUnits ? ` patternContentUnits="${gradient.patternContentUnits}"` : ''}${gradient.patternTransform ? ` patternTransform="${gradient.patternTransform}"` : ''}>\n    ${gradient.content}\n  </pattern>`;
+              const patternAnimations = animations.filter(anim => anim.targetElementId === gradient.id);
+              const patternAnimationsHtml = patternAnimations.length > 0 ? patternAnimations.map(animation => {
+                const commonAttrs = [
+                  animation.dur ? `dur="${animation.dur}"` : 'dur="2s"',
+                  getAnimationProperty(animation, 'fill') ? `fill="${getAnimationProperty(animation, 'fill')}"` : '',
+                ].filter(Boolean).join(' ');
+                const animateAttrs = [
+                  `attributeName="${(animation as any).attributeName}"`,
+                  (animation as any).from ? `from="${(animation as any).from}"` : '',
+                  (animation as any).to ? `to="${(animation as any).to}"` : '',
+                  commonAttrs
+                ].filter(Boolean).join(' ');
+                return `    <animate ${animateAttrs} />`;
+              }).join('\n') : '';
+              
+              const patternContent = patternAnimationsHtml ? `\n    ${gradient.content}\n${patternAnimationsHtml}\n  ` : `\n    ${gradient.content}\n  `;
+              return `  <pattern id="${gradient.id}" width="${gradient.width}" height="${gradient.height}" patternUnits="${gradient.patternUnits || 'userSpaceOnUse'}"${gradient.patternContentUnits ? ` patternContentUnits="${gradient.patternContentUnits}"` : ''}${gradient.patternTransform ? ` patternTransform="${gradient.patternTransform}"` : ''}>${patternContent}</pattern>`;
             
             default:
               return '';
@@ -734,13 +831,51 @@ export const SVGComponent: React.FC = () => {
       if (allFilters.length > 0) {
         const filterDefs = allFilters.map(filter => {
           const primitiveContent = filter.primitives.map((primitive: any) => {
+            // Find animations that target this primitive
+            const primitiveAnimations = animations.filter(anim => 
+              anim.targetElementId === primitive.id || 
+              anim.targetElementId === filter.id
+            );
+            
+            const primitiveAnimationsHtml = primitiveAnimations.length > 0 ? primitiveAnimations.map(animation => {
+              const commonAttrs = [
+                animation.dur ? `dur="${animation.dur}"` : 'dur="2s"',
+                getAnimationProperty(animation, 'begin') ? `begin="${getAnimationProperty(animation, 'begin')}"` : '',
+                getAnimationProperty(animation, 'end') ? `end="${getAnimationProperty(animation, 'end')}"` : '',
+                getAnimationProperty(animation, 'repeatCount') ? `repeatCount="${getAnimationProperty(animation, 'repeatCount')}"` : '',
+                getAnimationProperty(animation, 'fill') ? `fill="${getAnimationProperty(animation, 'fill')}"` : '',
+              ].filter(Boolean).join(' ');
+
+              switch ((animation as any).type) {
+                case 'animate':
+                  const animateAttrs = [
+                    `attributeName="${(animation as any).attributeName}"`,
+                    (animation as any).from ? `from="${(animation as any).from}"` : '',
+                    (animation as any).to ? `to="${(animation as any).to}"` : '',
+                    commonAttrs
+                  ].filter(Boolean).join(' ');
+                  return `      <animate ${animateAttrs} />`;
+                default:
+                  return '';
+              }
+            }).join('\n') : '';
+            
             switch (primitive.type) {
               case 'feGaussianBlur':
-                return `    <feGaussianBlur stdDeviation="${primitive.stdDeviation}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''} />`;
+                const blurContent = primitiveAnimationsHtml ? `\n${primitiveAnimationsHtml}\n    ` : '';
+                return primitiveAnimationsHtml
+                  ? `    <feGaussianBlur stdDeviation="${primitive.stdDeviation}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''}>${blurContent}</feGaussianBlur>`
+                  : `    <feGaussianBlur stdDeviation="${primitive.stdDeviation}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''} />`;
               case 'feOffset':
-                return `    <feOffset dx="${primitive.dx}" dy="${primitive.dy}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''} />`;
+                const offsetContent = primitiveAnimationsHtml ? `\n${primitiveAnimationsHtml}\n    ` : '';
+                return primitiveAnimationsHtml
+                  ? `    <feOffset dx="${primitive.dx}" dy="${primitive.dy}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''}>${offsetContent}</feOffset>`
+                  : `    <feOffset dx="${primitive.dx}" dy="${primitive.dy}"${primitive.in ? ` in="${primitive.in}"` : ''}${primitive.result ? ` result="${primitive.result}"` : ''} />`;
               case 'feFlood':
-                return `    <feFlood flood-color="${primitive.floodColor}" flood-opacity="${primitive.floodOpacity ?? 1}"${primitive.result ? ` result="${primitive.result}"` : ''} />`;
+                const floodContent = primitiveAnimationsHtml ? `\n${primitiveAnimationsHtml}\n    ` : '';
+                return primitiveAnimationsHtml
+                  ? `    <feFlood flood-color="${primitive.floodColor}" flood-opacity="${primitive.floodOpacity ?? 1}"${primitive.result ? ` result="${primitive.result}"` : ''}>${floodContent}</feFlood>`
+                  : `    <feFlood flood-color="${primitive.floodColor}" flood-opacity="${primitive.floodOpacity ?? 1}"${primitive.result ? ` result="${primitive.result}"` : ''} />`;
               case 'feComposite':
                 const compositeAttrs = [
                   `operator="${primitive.operator}"`,
@@ -873,10 +1008,237 @@ export const SVGComponent: React.FC = () => {
       return `  <defs>\n${allDefs.join('\n')}\n  </defs>\n`;
     };
 
+    // Helper function to safely get animation properties
+    const getAnimationProperty = (animation: SVGAnimation, property: string): string | undefined => {
+      return (animation as any)[property];
+    };
+
     const definitions = generateDefinitions();
 
+    // Generate animation elements
+    const generateAnimations = (): string => {
+      if (animations.length === 0) return '';
+      
+      const animationElements = animations.map(animation => {
+        const commonAttrs = [
+          animation.id ? `id="${animation.id}"` : '',
+          animation.dur ? `dur="${animation.dur}"` : 'dur="2s"',
+          getAnimationProperty(animation, 'begin') ? `begin="${getAnimationProperty(animation, 'begin')}"` : '',
+          getAnimationProperty(animation, 'end') ? `end="${getAnimationProperty(animation, 'end')}"` : '',
+          getAnimationProperty(animation, 'repeatCount') ? `repeatCount="${getAnimationProperty(animation, 'repeatCount')}"` : '',
+          getAnimationProperty(animation, 'repeatDur') ? `repeatDur="${getAnimationProperty(animation, 'repeatDur')}"` : '',
+          getAnimationProperty(animation, 'fill') ? `fill="${getAnimationProperty(animation, 'fill')}"` : '',
+          getAnimationProperty(animation, 'restart') ? `restart="${getAnimationProperty(animation, 'restart')}"` : '',
+          getAnimationProperty(animation, 'calcMode') ? `calcMode="${getAnimationProperty(animation, 'calcMode')}"` : '',
+          getAnimationProperty(animation, 'keyTimes') ? `keyTimes="${getAnimationProperty(animation, 'keyTimes')}"` : '',
+          getAnimationProperty(animation, 'keySplines') ? `keySplines="${getAnimationProperty(animation, 'keySplines')}"` : '',
+          getAnimationProperty(animation, 'values') ? `values="${getAnimationProperty(animation, 'values')}"` : '',
+          getAnimationProperty(animation, 'additive') ? `additive="${getAnimationProperty(animation, 'additive')}"` : '',
+          getAnimationProperty(animation, 'accumulate') ? `accumulate="${getAnimationProperty(animation, 'accumulate')}"` : '',
+        ].filter(Boolean).join(' ');
+
+        switch ((animation as any).type) {
+          case 'animate':
+            const animateAttrs = [
+              `attributeName="${(animation as any).attributeName}"`,
+              (animation as any).attributeType ? `attributeType="${(animation as any).attributeType}"` : '',
+              (animation as any).from ? `from="${(animation as any).from}"` : '',
+              (animation as any).to ? `to="${(animation as any).to}"` : '',
+              (animation as any).by ? `by="${(animation as any).by}"` : '',
+              commonAttrs
+            ].filter(Boolean).join(' ');
+            return `    <animate ${animateAttrs} />`;
+            
+          case 'animateTransform':
+            const transformAttrs = [
+              `attributeName="${(animation as any).attributeName}"`,
+              (animation as any).attributeType ? `attributeType="${(animation as any).attributeType}"` : '',
+              `type="${(animation as any).transformType}"`,
+              (animation as any).from ? `from="${(animation as any).from}"` : '',
+              (animation as any).to ? `to="${(animation as any).to}"` : '',
+              (animation as any).by ? `by="${(animation as any).by}"` : '',
+              commonAttrs
+            ].filter(Boolean).join(' ');
+            return `    <animateTransform ${transformAttrs} />`;
+            
+          case 'animateMotion':
+            const motionAttrs = [
+              (animation as any).path ? `path="${(animation as any).path}"` : '',
+              (animation as any).keyPoints ? `keyPoints="${(animation as any).keyPoints}"` : '',
+              (animation as any).rotate !== undefined ? `rotate="${(animation as any).rotate}"` : '',
+              commonAttrs
+            ].filter(Boolean).join(' ');
+            
+            // Handle mpath element if present
+            const mpathElement = (animation as any).mpath ? `\n      <mpath href="#${(animation as any).mpath}" />` : '';
+            const closingTag = (animation as any).mpath ? `${mpathElement}\n    </animateMotion>` : ' />';
+            
+            return (animation as any).mpath 
+              ? `    <animateMotion ${motionAttrs}>${closingTag}`
+              : `    <animateMotion ${motionAttrs} />`;
+              
+          case 'set':
+            const setAttrs = [
+              `attributeName="${(animation as any).attributeName}"`,
+              (animation as any).attributeType ? `attributeType="${(animation as any).attributeType}"` : '',
+              `to="${(animation as any).to}"`,
+              getAnimationProperty(animation, 'begin') ? `begin="${getAnimationProperty(animation, 'begin')}"` : 'begin="0s"',
+              animation.dur ? `dur="${animation.dur}"` : '',
+              getAnimationProperty(animation, 'end') ? `end="${getAnimationProperty(animation, 'end')}"` : '',
+              getAnimationProperty(animation, 'fill') ? `fill="${getAnimationProperty(animation, 'fill')}"` : '',
+              getAnimationProperty(animation, 'restart') ? `restart="${getAnimationProperty(animation, 'restart')}"` : '',
+            ].filter(Boolean).join(' ');
+            return `    <set ${setAttrs} />`;
+            
+          default:
+            return `    <!-- Unknown animation type: ${(animation as any).type} -->`;
+        }
+      });
+      
+      return animationElements.join('\n');
+    };
+
+    // Helper function to inject animations into elements
+    const injectAnimationsIntoElements = (elementsHtml: string): string => {
+      if (animations.length === 0) return elementsHtml;
+      
+      // Group animations by target element
+      const animationsByTarget = animations.reduce((acc, animation) => {
+        const targetId = animation.targetElementId;
+        if (!acc[targetId]) acc[targetId] = [];
+        acc[targetId].push(animation);
+        return acc;
+      }, {} as Record<string, typeof animations>);
+      
+      let modifiedHtml = elementsHtml;
+      
+      // For each target element, inject its animations
+      Object.entries(animationsByTarget).forEach(([targetId, elementAnimations]) => {
+        // Handle special case for SVG root animations (viewBox, etc.)
+        if (targetId === 'svg-root') return;
+        
+        // Filter out animations that target filter primitives or gradients (they're handled in their respective definitions)
+        const nonFilterAnimations = elementAnimations.filter(animation => {
+          // Check if this animation targets a filter primitive
+          const isFilterAnimation = allFilters.some(filter => 
+            filter.primitives.some((primitive: any) => primitive.id === targetId) ||
+            filter.id === targetId
+          );
+          
+          // Check if this animation targets a gradient or gradient stop
+          const isGradientAnimation = allGradients.some(gradient => {
+            if (gradient.id === targetId) return true;
+            // Check stops only for linear and radial gradients (patterns don't have stops)
+            if ((gradient.type === 'linear' || gradient.type === 'radial') && gradient.stops) {
+              return gradient.stops.some((stop: any) => stop.id === targetId);
+            }
+            return false;
+          });
+          
+          return !isFilterAnimation && !isGradientAnimation;
+        });
+        
+        // If no non-filter animations remain, skip this element
+        if (nonFilterAnimations.length === 0) return;
+        
+        const animationsHtml = nonFilterAnimations.map(animation => {
+          const commonAttrs = [
+            animation.dur ? `dur="${animation.dur}"` : 'dur="2s"',
+            getAnimationProperty(animation, 'begin') ? `begin="${getAnimationProperty(animation, 'begin')}"` : '',
+            getAnimationProperty(animation, 'end') ? `end="${getAnimationProperty(animation, 'end')}"` : '',
+            getAnimationProperty(animation, 'repeatCount') ? `repeatCount="${getAnimationProperty(animation, 'repeatCount')}"` : '',
+            getAnimationProperty(animation, 'repeatDur') ? `repeatDur="${getAnimationProperty(animation, 'repeatDur')}"` : '',
+            getAnimationProperty(animation, 'fill') ? `fill="${getAnimationProperty(animation, 'fill')}"` : '',
+            getAnimationProperty(animation, 'restart') ? `restart="${getAnimationProperty(animation, 'restart')}"` : '',
+            getAnimationProperty(animation, 'calcMode') ? `calcMode="${getAnimationProperty(animation, 'calcMode')}"` : '',
+            getAnimationProperty(animation, 'keyTimes') ? `keyTimes="${getAnimationProperty(animation, 'keyTimes')}"` : '',
+            getAnimationProperty(animation, 'keySplines') ? `keySplines="${getAnimationProperty(animation, 'keySplines')}"` : '',
+            getAnimationProperty(animation, 'values') ? `values="${getAnimationProperty(animation, 'values')}"` : '',
+            getAnimationProperty(animation, 'additive') ? `additive="${getAnimationProperty(animation, 'additive')}"` : '',
+            getAnimationProperty(animation, 'accumulate') ? `accumulate="${getAnimationProperty(animation, 'accumulate')}"` : '',
+          ].filter(Boolean).join(' ');
+
+          switch ((animation as any).type) {
+            case 'animate':
+              const animateAttrs = [
+                `attributeName="${(animation as any).attributeName}"`,
+                (animation as any).attributeType ? `attributeType="${(animation as any).attributeType}"` : '',
+                (animation as any).from ? `from="${(animation as any).from}"` : '',
+                (animation as any).to ? `to="${(animation as any).to}"` : '',
+                (animation as any).by ? `by="${(animation as any).by}"` : '',
+                commonAttrs
+              ].filter(Boolean).join(' ');
+              return `      <animate ${animateAttrs} />`;
+              
+            case 'animateTransform':
+              const transformAttrs = [
+                `attributeName="${(animation as any).attributeName}"`,
+                (animation as any).attributeType ? `attributeType="${(animation as any).attributeType}"` : '',
+                `type="${(animation as any).transformType}"`,
+                (animation as any).from ? `from="${(animation as any).from}"` : '',
+                (animation as any).to ? `to="${(animation as any).to}"` : '',
+                (animation as any).by ? `by="${(animation as any).by}"` : '',
+                commonAttrs
+              ].filter(Boolean).join(' ');
+              return `      <animateTransform ${transformAttrs} />`;
+              
+            case 'animateMotion':
+              const motionAttrs = [
+                (animation as any).path ? `path="${(animation as any).path}"` : '',
+                (animation as any).keyPoints ? `keyPoints="${(animation as any).keyPoints}"` : '',
+                (animation as any).rotate !== undefined ? `rotate="${(animation as any).rotate}"` : '',
+                commonAttrs
+              ].filter(Boolean).join(' ');
+              
+              // Handle mpath element if present
+              const mpathElement = (animation as any).mpath ? `\n        <mpath href="#${(animation as any).mpath}" />` : '';
+              const closingTag = (animation as any).mpath ? `${mpathElement}\n      </animateMotion>` : ' />';
+              
+              return (animation as any).mpath 
+                ? `      <animateMotion ${motionAttrs}>${closingTag}`
+                : `      <animateMotion ${motionAttrs} />`;
+                
+            case 'set':
+              const setAttrs = [
+                `attributeName="${(animation as any).attributeName}"`,
+                (animation as any).attributeType ? `attributeType="${(animation as any).attributeType}"` : '',
+                `to="${(animation as any).to}"`,
+                getAnimationProperty(animation, 'begin') ? `begin="${getAnimationProperty(animation, 'begin')}"` : 'begin="0s"',
+                animation.dur ? `dur="${animation.dur}"` : '',
+                getAnimationProperty(animation, 'end') ? `end="${getAnimationProperty(animation, 'end')}"` : '',
+                getAnimationProperty(animation, 'fill') ? `fill="${getAnimationProperty(animation, 'fill')}"` : '',
+                getAnimationProperty(animation, 'restart') ? `restart="${getAnimationProperty(animation, 'restart')}"` : '',
+              ].filter(Boolean).join(' ');
+              return `      <set ${setAttrs} />`;
+              
+            default:
+              return `      <!-- Unknown animation type: ${(animation as any).type} -->`;
+          }
+        }).join('\n');
+        
+        // Replace self-closing tags with opening/closing tags to inject animations
+        const selfClosingRegex = new RegExp(`<(\\w+)([^>]*id="${targetId}"[^>]*) />`, 'g');
+        const openCloseRegex = new RegExp(`<(\\w+)([^>]*id="${targetId}"[^>]*?)>([\\s\\S]*?)<\\/\\1>`, 'g');
+        
+        // Handle self-closing tags
+        modifiedHtml = modifiedHtml.replace(selfClosingRegex, (match, tagName, attributes) => {
+          return `<${tagName}${attributes}>\n${animationsHtml}\n    </${tagName}>`;
+        });
+        
+        // Handle open/close tags - inject animations before closing tag
+        modifiedHtml = modifiedHtml.replace(openCloseRegex, (match, tagName, attributes, content) => {
+          return `<${tagName}${attributes}>${content}\n${animationsHtml}\n    </${tagName}>`;
+        });
+      });
+      
+      return modifiedHtml;
+    };
+
     // Combine all elements for viewBox calculation
-    const allElements = [standalonePathElements, textElements, textPathElements, imageElements, useElements, groupElements].filter(Boolean).join('\n');
+    const baseElements = [standalonePathElements, textElements, textPathElements, imageElements, useElements, groupElements].filter(Boolean).join('\n');
+    
+    // Inject animations into elements
+    const allElements = injectAnimationsIntoElements(baseElements);
 
     // Create a temporary SVG with default viewBox to calculate proper bounds
     const tempSvgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
@@ -889,8 +1251,69 @@ ${definitions}${allElements}
     // Use calculated viewBox or fallback to default
     const viewBoxString = viewBoxData ? viewBoxData.viewBox : "0 0 800 600";
 
+    // Handle SVG root animations (viewBox animations, etc.)
+    const svgRootAnimations = animations.filter(animation => animation.targetElementId === 'svg-root');
+    const svgRootAnimationsHtml = svgRootAnimations.length > 0 ? svgRootAnimations.map(animation => {
+      const commonAttrs = [
+        animation.dur ? `dur="${animation.dur}"` : 'dur="2s"',
+        getAnimationProperty(animation, 'begin') ? `begin="${getAnimationProperty(animation, 'begin')}"` : '',
+        getAnimationProperty(animation, 'end') ? `end="${getAnimationProperty(animation, 'end')}"` : '',
+        getAnimationProperty(animation, 'repeatCount') ? `repeatCount="${getAnimationProperty(animation, 'repeatCount')}"` : '',
+        getAnimationProperty(animation, 'repeatDur') ? `repeatDur="${getAnimationProperty(animation, 'repeatDur')}"` : '',
+        getAnimationProperty(animation, 'fill') ? `fill="${getAnimationProperty(animation, 'fill')}"` : '',
+        getAnimationProperty(animation, 'restart') ? `restart="${getAnimationProperty(animation, 'restart')}"` : '',
+        getAnimationProperty(animation, 'calcMode') ? `calcMode="${getAnimationProperty(animation, 'calcMode')}"` : '',
+        getAnimationProperty(animation, 'keyTimes') ? `keyTimes="${getAnimationProperty(animation, 'keyTimes')}"` : '',
+        getAnimationProperty(animation, 'keySplines') ? `keySplines="${getAnimationProperty(animation, 'keySplines')}"` : '',
+        getAnimationProperty(animation, 'values') ? `values="${getAnimationProperty(animation, 'values')}"` : '',
+        getAnimationProperty(animation, 'additive') ? `additive="${getAnimationProperty(animation, 'additive')}"` : '',
+        getAnimationProperty(animation, 'accumulate') ? `accumulate="${getAnimationProperty(animation, 'accumulate')}"` : '',
+      ].filter(Boolean).join(' ');
+
+      switch ((animation as any).type) {
+        case 'animate':
+          const animateAttrs = [
+            `attributeName="${(animation as any).attributeName}"`,
+            (animation as any).attributeType ? `attributeType="${(animation as any).attributeType}"` : '',
+            (animation as any).from ? `from="${(animation as any).from}"` : '',
+            (animation as any).to ? `to="${(animation as any).to}"` : '',
+            (animation as any).by ? `by="${(animation as any).by}"` : '',
+            commonAttrs
+          ].filter(Boolean).join(' ');
+          return `  <animate ${animateAttrs} />`;
+          
+        case 'animateTransform':
+          const transformAttrs = [
+            `attributeName="${(animation as any).attributeName}"`,
+            (animation as any).attributeType ? `attributeType="${(animation as any).attributeType}"` : '',
+            `type="${(animation as any).transformType}"`,
+            (animation as any).from ? `from="${(animation as any).from}"` : '',
+            (animation as any).to ? `to="${(animation as any).to}"` : '',
+            (animation as any).by ? `by="${(animation as any).by}"` : '',
+            commonAttrs
+          ].filter(Boolean).join(' ');
+          return `  <animateTransform ${transformAttrs} />`;
+          
+        case 'set':
+          const setAttrs = [
+            `attributeName="${(animation as any).attributeName}"`,
+            (animation as any).attributeType ? `attributeType="${(animation as any).attributeType}"` : '',
+            `to="${(animation as any).to}"`,
+            getAnimationProperty(animation, 'begin') ? `begin="${getAnimationProperty(animation, 'begin')}"` : 'begin="0s"',
+            animation.dur ? `dur="${animation.dur}"` : '',
+            getAnimationProperty(animation, 'end') ? `end="${getAnimationProperty(animation, 'end')}"` : '',
+            getAnimationProperty(animation, 'fill') ? `fill="${getAnimationProperty(animation, 'fill')}"` : '',
+            getAnimationProperty(animation, 'restart') ? `restart="${getAnimationProperty(animation, 'restart')}"` : '',
+          ].filter(Boolean).join(' ');
+          return `  <set ${setAttrs} />`;
+          
+        default:
+          return `  <!-- Unknown SVG root animation type: ${(animation as any).type} -->`;
+      }
+    }).join('\n') : '';
+
     const finalSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBoxString}">
-${definitions}${allElements}
+${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allElements}
 </svg>`;
 
     return finalSVG;
@@ -911,8 +1334,8 @@ ${definitions}${allElements}
         }
       }
 
-      // Parse the complete SVG including paths, texts, textPaths, gradients, patterns, filters, and groups
-      const { paths: newPaths, texts: newTexts, textPaths: newTextPaths, gradients: newGradients, filters: newFilters, groups: newGroups } = parseCompleteSVG(svgCode);
+      // Parse the complete SVG including paths, texts, textPaths, gradients, patterns, filters, groups, and animations
+      const { paths: newPaths, texts: newTexts, textPaths: newTextPaths, gradients: newGradients, filters: newFilters, groups: newGroups, animations: newAnimations } = parseCompleteSVG(svgCode);
       
       // Create a mapping of original filter IDs to new IDs for reference updates
       const filterIdMapping: Record<string, string> = {};
@@ -941,7 +1364,7 @@ ${definitions}${allElements}
         });
       };
       
-      const totalElements = newPaths.length + newTexts.length + newTextPaths.length + newGradients.length + newFilters.length + newGroups.length;
+      const totalElements = newPaths.length + newTexts.length + newTextPaths.length + newGradients.length + newFilters.length + newGroups.length + newAnimations.length;
       
       if (totalElements === 0) {
         alert('No valid elements found in the SVG code. Make sure your SVG contains paths, text, textPaths, gradients, patterns, or groups.');
@@ -956,7 +1379,8 @@ ${definitions}${allElements}
           newTextPaths.length > 0 ? `${newTextPaths.length} textPath element(s)` : '',
           newGradients.length > 0 ? `${newGradients.length} gradient(s)/pattern(s)` : '',
           newFilters.length > 0 ? `${newFilters.length} filter(s)` : '',
-          newGroups.length > 0 ? `${newGroups.length} group(s)` : ''
+          newGroups.length > 0 ? `${newGroups.length} group(s)` : '',
+          newAnimations.length > 0 ? `${newAnimations.length} animation(s)` : ''
         ].filter(Boolean).join(', ');
         
         const action = importSettings.mode === 'replace' ? 'replace all current content' : 'append to existing content';
@@ -996,6 +1420,15 @@ ${definitions}${allElements}
         // Also update filter references in existing images if any filters were remapped
         const currentImages = [...images];
         const updatedImages = updateFilterReferences(currentImages);
+        
+        // Clear existing animations and import new ones
+        const currentAnimations = [...animations];
+        currentAnimations.forEach(animation => removeAnimation(animation.id));
+        
+        // Import new animations
+        newAnimations.forEach((animation: any) => {
+          addAnimation(animation);
+        });
         
         // Replace existing content with updated references
         replacePaths(updatedPaths);
@@ -1044,6 +1477,11 @@ ${definitions}${allElements}
         // Also update filter references in existing images
         const updatedImages = updateFilterReferences(currentImages);
         
+        // Import new animations (append mode doesn't clear existing animations)
+        newAnimations.forEach((animation: any) => {
+          addAnimation(animation);
+        });
+        
         // Merge with updated references
         replacePaths([...currentPaths, ...updatedPaths]);
         replaceTexts([...currentTexts, ...updatedTexts]);
@@ -1064,7 +1502,7 @@ ${definitions}${allElements}
         resetViewportCompletely();
       }
       
-      console.log(`Imported (${importSettings.mode}): ${newPaths.length} paths, ${newTexts.length} texts, ${newTextPaths.length} textPaths, ${newGradients.length} gradients/patterns, ${newFilters.length} filters, ${newGroups.length} groups`);
+      console.log(`Imported (${importSettings.mode}): ${newPaths.length} paths, ${newTexts.length} texts, ${newTextPaths.length} textPaths, ${newGradients.length} gradients/patterns, ${newFilters.length} filters, ${newGroups.length} groups, ${newAnimations.length} animations`);
       
     } catch (error) {
       console.error('Error parsing SVG:', error);
@@ -1147,116 +1585,6 @@ ${definitions}${allElements}
     URL.revokeObjectURL(url);
   };
 
-  // Animation export/import functions
-  const handleExportAnimations = () => {
-    const animationData = prepareAnimationExportData(animations, animationState, animationSync);
-    const summary = generateAnimationSummary(animationData);
-    
-    const jsonContent = JSON.stringify(animationData, null, 2);
-    const blob = new Blob([jsonContent], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'svg-animations-export.json';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Clean up the object URL
-    URL.revokeObjectURL(url);
-    
-    console.log(`Exported: ${summary}`);
-    alert(`Successfully exported: ${summary}`);
-  };
-
-  const handleImportAnimations = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json,application/json';
-    
-    input.onchange = (event: Event) => {
-      const target = event.target as HTMLInputElement;
-      const file = target.files?.[0];
-      if (!file) return;
-      
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const jsonContent = e.target?.result as string;
-          const rawData = JSON.parse(jsonContent);
-          
-          // Validate the imported data structure
-          const validation = validateAnimationImportData(rawData);
-          if (!validation.valid) {
-            throw new Error(validation.error);
-          }
-          
-          // Show warnings if any
-          if (validation.warnings && validation.warnings.length > 0) {
-            const warningsMsg = validation.warnings.join('\n');
-            console.warn('Animation import warnings:', warningsMsg);
-            if (!confirm(`Warnings found:\n${warningsMsg}\n\nContinue with import?`)) {
-              return;
-            }
-          }
-          
-          // Sanitize and prepare data
-          const { animations: importedAnimations, animationSync: importedAnimationSync } = sanitizeAnimationImportData(rawData);
-          
-          // Generate summary for confirmation
-          const summary = generateAnimationSummary({
-            animations: importedAnimations,
-            animationState: { isPlaying: false, currentTime: 0, startTime: 0 } as any,
-            animationSync: importedAnimationSync,
-            exportTimestamp: Date.now(),
-            version: '1.0.0'
-          });
-          
-          const confirmMessage = `Import ${summary}? This will replace all current animations.`;
-          
-          if (!confirm(confirmMessage)) {
-            return;
-          }
-          
-          // Clear existing animations
-          const currentAnimations = [...animations];
-          currentAnimations.forEach(animation => removeAnimation(animation.id));
-          
-          // Import new animations
-          importedAnimations.forEach((animation: any) => {
-            addAnimation(animation);
-          });
-          
-          // Update animation sync data in store
-          useEditorStore.setState((state: any) => ({
-            animationSync: importedAnimationSync,
-            animationState: {
-              ...state.animationState,
-              isPlaying: false,
-              currentTime: 0,
-              startTime: 0
-            }
-          }));
-          
-          console.log(`Imported: ${summary}`);
-          alert(`Successfully imported: ${summary}`);
-          
-        } catch (error) {
-          console.error('Error importing animations:', error);
-          alert(`Error importing animations: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-      };
-      
-      reader.onerror = () => {
-        alert('Error reading the animation file.');
-      };
-      
-      reader.readAsText(file);
-    };
-    
-    input.click();
-  };
 
   const currentSVG = generateSVGCode();
 
@@ -1305,32 +1633,6 @@ ${definitions}${allElements}
         </button>
       </div>
 
-      {/* Animation export/import buttons */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
-        <button
-          type="button"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '8px', fontSize: '13px', fontWeight: 500,
-            background: '#ffc107', color: '#212529', border: 'none', borderRadius: '4px', cursor: animations.length === 0 ? 'not-allowed' : 'pointer', width: '100%', opacity: animations.length === 0 ? 0.6 : 1
-          }}
-          onClick={handleExportAnimations}
-          disabled={animations.length === 0}
-          title={`Export ${animations.length} animation(s), ${animationSync.chains.length} chain(s), ${animationSync.events.length} event(s)`}
-        >
-          <Zap size={16} style={{ verticalAlign: 'middle' }} /> Export Animations
-        </button>
-        <button
-          type="button"
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '8px', fontSize: '13px', fontWeight: 500,
-            background: '#17a2b8', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', width: '100%'
-          }}
-          onClick={handleImportAnimations}
-          title="Import animation data from JSON file"
-        >
-          <Zap size={16} style={{ verticalAlign: 'middle' }} /> Import Animations
-        </button>
-      </div>
       
       {/* Hidden file input */}
       <input
