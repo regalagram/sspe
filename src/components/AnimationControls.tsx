@@ -457,6 +457,24 @@ export const AnimationControls: React.FC = () => {
           { value: 'stroke-opacity', label: 'Stroke Opacity' },
           { value: 'stroke-dasharray', label: 'Stroke Dash Array' },
           { value: 'stroke-dashoffset', label: 'Stroke Dash Offset' },
+          // Filter-related attributes
+          { value: 'stdDeviation', label: 'Blur Standard Deviation' },
+          { value: 'dx', label: 'X Offset (filter)' },
+          { value: 'dy', label: 'Y Offset (filter)' },
+          { value: 'flood-color', label: 'Flood Color (filter)' },
+          { value: 'flood-opacity', label: 'Flood Opacity (filter)' },
+          { value: 'values', label: 'Color Matrix Values (filter)' },
+          { value: 'lighting-color', label: 'Lighting Color (filter)' },
+          // Gradient-related attributes
+          { value: 'x1', label: 'Gradient X1' },
+          { value: 'y1', label: 'Gradient Y1' },
+          { value: 'x2', label: 'Gradient X2' },
+          { value: 'y2', label: 'Gradient Y2' },
+          { value: 'cx', label: 'Gradient Center X' },
+          { value: 'cy', label: 'Gradient Center Y' },
+          { value: 'r', label: 'Gradient Radius' },
+          { value: 'stop-color', label: 'Gradient Stop Color' },
+          { value: 'offset', label: 'Gradient Stop Offset' },
         ];
         
         if (isTextElement) {
@@ -560,58 +578,130 @@ export const AnimationControls: React.FC = () => {
           Quick Animations
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('fade')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('fade')}
+            title="Fade In/Out animation - Changes opacity from 1 to 0.5. Works on all elements."
+          >
             Fade In/Out
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('move')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('move')}
+            title="Move animation - Translates element from one position to another. Works on all elements."
+          >
             Move
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('rotate')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('rotate')}
+            title="Rotate animation - Rotates element 360 degrees around its center. Works on all elements."
+          >
             Rotate
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('scale')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('scale')}
+            title="Scale animation - Changes element size from 1 to 1.5. Works on all elements."
+          >
             Scale
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('blur')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('blur')}
+            title="Blur animation - Animates gaussian blur stdDeviation from 0 to 5. Works on all elements."
+          >
             Blur
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('offset')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('offset')}
+            title="Shadow animation - Animates filter offset to create shadow effect. Works on all elements."
+          >
             Shadow
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('colorMatrix')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('colorMatrix')}
+            title="Color Shift animation - Animates color matrix values for color effects. Works on all elements."
+          >
             Color Shift
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('viewBox')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('viewBox')}
+            title="Zoom animation - Animates SVG viewBox for zoom effect. Works on entire viewport."
+          >
             Zoom
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('position')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('position')}
+            title="Position animation - Animates X/Y coordinates. Works on shapes and text elements."
+          >
             Position
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('size')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('size')}
+            title="Size animation - Animates width/height properties. Works on rectangles and shapes."
+          >
             Size
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('circle')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('circle')}
+            title="Circle animation - Animates radius property. Works specifically on circle elements."
+          >
             Circle
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('line')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('line')}
+            title="Line animation - Animates line endpoints (x1,y1,x2,y2). Works on line elements."
+          >
             Line
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('gradient')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('gradient')}
+            title="Gradient animation - Creates animated gradient with color and position changes. Works on all elements."
+          >
             Gradient
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('pattern')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('pattern')}
+            title="Pattern animation - Animates pattern transform and attributes. Works on elements with patterns."
+          >
             Pattern
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('textPosition')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('textPosition')}
+            title="Text Position animation - Animates text X/Y coordinates. Works on text elements only."
+          >
             Text Position
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('fontSize')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('fontSize')}
+            title="Font Size animation - Animates font-size from 12px to 24px. Works on text elements only."
+          >
             Font Size
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('fontWeight')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('fontWeight')}
+            title="Font Weight animation - Animates font-weight from normal to bold. Works on text elements only."
+          >
             Font Weight
           </button>
-          <button style={buttonStyle} onClick={() => handleQuickAnimation('letterSpacing')}>
+          <button 
+            style={buttonStyle} 
+            onClick={() => handleQuickAnimation('letterSpacing')}
+            title="Letter Spacing animation - Animates letter-spacing from 0 to 5px. Works on text elements only."
+          >
             Letter Spacing
           </button>
         </div>

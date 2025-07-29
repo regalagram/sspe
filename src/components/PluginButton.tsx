@@ -8,6 +8,7 @@ interface PluginButtonProps {
   disabled?: boolean;
   onPointerDown?: () => void;
   fullWidth?: boolean;
+  tooltip?: string; // Custom tooltip text
 }
 
 export const PluginButton: React.FC<PluginButtonProps> = ({
@@ -18,6 +19,7 @@ export const PluginButton: React.FC<PluginButtonProps> = ({
   disabled = false,
   onPointerDown,
   fullWidth = false,
+  tooltip,
 }) => {
   // Fixed sizes for desktop
   const buttonHeight = 32;
@@ -54,7 +56,7 @@ export const PluginButton: React.FC<PluginButtonProps> = ({
         width: fullWidth ? '100%' : 'auto',
         userSelect: 'none',
       }}
-      title={text}
+      title={tooltip || text}
       type="button"
     >
       {icon}

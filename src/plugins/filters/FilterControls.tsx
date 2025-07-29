@@ -1528,6 +1528,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('drop-shadow')}
+                  tooltip="Drop Shadow - Adds a shadow effect behind the element. Creates feDropShadow filter with dx/dy offset."
                 />
                 <PluginButton
                   icon={<Zap size={12} />}
@@ -1535,6 +1536,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('blur')}
+                  tooltip="Blur - Applies gaussian blur to the element. Uses feGaussianBlur with stdDeviation attribute."
                 />
               </div>
             )}
@@ -1567,6 +1569,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('grayscale')}
+                  tooltip="Grayscale - Converts colors to grayscale. Uses feColorMatrix with grayscale values."
                 />
                 <PluginButton
                   icon={<Palette size={12} />}
@@ -1574,6 +1577,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('sepia')}
+                  tooltip="Sepia - Applies sepia tone effect. Uses feColorMatrix with sepia transformation values."
                 />
                 <PluginButton
                   icon={<RotateCcw size={12} />}
@@ -1581,6 +1585,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('invert')}
+                  tooltip="Invert - Inverts all colors. Uses feColorMatrix with inversion values."
                 />
                 <PluginButton
                   icon={<Sun size={12} />}
@@ -1588,6 +1593,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('brightness')}
+                  tooltip="Brightness - Adjusts brightness levels. Uses feComponentTransfer with feFuncA."
                 />
                 <PluginButton
                   icon={<Contrast size={12} />}
@@ -1595,6 +1601,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('contrast')}
+                  tooltip="Contrast - Adjusts contrast levels. Uses feComponentTransfer with linear functions."
                 />
                 <PluginButton
                   icon={<Sparkles size={12} />}
@@ -1648,6 +1655,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('emboss')}
+                  tooltip="Emboss - Creates 3D embossed effect. Uses feConvolveMatrix with emboss kernel values."
                 />
                 <PluginButton
                   icon={<Zap size={12} />}
@@ -1655,6 +1663,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('sharpen')}
+                  tooltip="Sharpen - Enhances edge definition. Uses feConvolveMatrix with sharpening kernel."
                 />
                 <PluginButton
                   icon={<Edit size={12} />}
@@ -1662,6 +1671,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('edge-detect')}
+                  tooltip="Edge Detect - Highlights edges in the element. Uses feConvolveMatrix with edge detection kernel."
                 />
                 <PluginButton
                   icon={<Sparkles size={12} />}
@@ -1669,6 +1679,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('glow')}
+                  tooltip="Glow - Adds glowing effect around element. Combines blur, flood, and composite filters."
                 />
                 <PluginButton
                   icon={<Layers size={12} />}
@@ -1676,6 +1687,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('bevel')}
+                  tooltip="Bevel - Creates beveled edge effect. Uses lighting filters with specular and diffuse lighting."
                 />
                 <PluginButton
                   icon={<Move size={12} />}
@@ -1683,6 +1695,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('motion-blur')}
+                  tooltip="Motion Blur - Simulates motion blur effect. Uses feGaussianBlur in specific direction."
                 />
                 <PluginButton
                   icon={<Volume2 size={12} />}
@@ -1690,6 +1703,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('noise')}
+                  tooltip="Noise - Adds texture noise to element. Uses feTurbulence with noise parameters."
                 />
                 <PluginButton
                   icon={<Waves size={12} />}
@@ -1697,6 +1711,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('wave-distortion')}
+                  tooltip="Wave Distort - Creates wave distortion effect. Uses feDisplacementMap with wave patterns."
                 />
               </div>
             )}
@@ -1729,6 +1744,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('oil-painting')}
+                  tooltip="Oil Painting - Creates oil painting texture effect. Uses morphology and blur filters."
                 />
                 <PluginButton
                   icon={<Droplets size={12} />}
@@ -1736,6 +1752,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('watercolor')}
+                  tooltip="Watercolor - Simulates watercolor painting effect. Combines turbulence and displacement."
                 />
                 <PluginButton
                   icon={<Camera size={12} />}
@@ -1743,6 +1760,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('vintage')}
+                  tooltip="Vintage - Adds vintage photo effect with sepia and vignette. Uses color matrix and gradient."
                 />
                 <PluginButton
                   icon={<Zap size={12} />}
@@ -1750,6 +1768,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('neon-glow')}
+                  tooltip="Neon Glow - Creates bright neon glow effect. Combines blur, flood, and composite filters."
                 />
                 <PluginButton
                   icon={<Grid size={12} />}
@@ -1757,6 +1776,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('mosaic')}
+                  tooltip="Mosaic - Creates mosaic tile effect. Uses morphology operations for blocky appearance."
                 />
                 <PluginButton
                   icon={<Shuffle size={12} />}
@@ -1764,6 +1784,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('glitch')}
+                  tooltip="Glitch - Creates digital glitch effect. Uses displacement and color separation."
                 />
                 <PluginButton
                   icon={<Monitor size={12} />}
@@ -1771,6 +1792,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('pixelate')}
+                  tooltip="Pixelate - Creates pixelated appearance. Uses morphology for chunky pixel effect."
                 />
                 <PluginButton
                   icon={<Clock size={12} />}
@@ -1778,6 +1800,7 @@ export const FilterControls: React.FC = () => {
                   color={hasAnyElementsSelected ? '#17a2b8' : '#6c757d'}
                   disabled={!hasAnyElementsSelected}
                   onPointerDown={() => handleQuickApplyFilter('chromatic-aberration')}
+                  tooltip="Chromatic Aberration - Splits colors like lens distortion. Uses offset filters for RGB separation."
                 />
               </div>
             )}
