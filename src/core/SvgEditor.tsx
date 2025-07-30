@@ -9,10 +9,12 @@ import { useGlobalPointerEvents } from '../hooks/useGlobalPointerEvents';
 import { useEditorStyles } from '../hooks/useEditorStyles';
 import { usePluginInitialization } from '../hooks/usePluginInitialization';
 import { usePointerEventHandlers } from '../hooks/usePointerEventHandlers';
+import { useMobileDetection } from '../hooks/useMobileDetection';
 import { pluginManager } from './PluginSystem';
 import { AccordionSidebar } from '../plugins/panelmode/AccordionSidebar';
 import { AccordionToggleButton } from '../components/AccordionToggleButton';
 import { SVGDefinitions } from '../components/SVGDefinitions';
+import { MobileContainer } from '../components/MobileContainer';
 import { extractGradientsFromPaths } from '../utils/gradient-utils';
 
 // Register plugins immediately during module loading
@@ -28,6 +30,10 @@ export const SvgEditor: React.FC = () => {
   // Get panel mode from store
   const { accordionVisible, toggleAccordionVisible, getVisiblePanels } = usePanelModeStore();
   
+  // Mobile detection
+  const { isMobile, isTablet } = useMobileDetection();
+  const isMobileDevice = isMobile || isTablet;
+  
   // Use custom hooks for cleaner separation of concerns
   const { getCursor } = useCombinedCursor();
   const { editorStyle, svgStyle } = useEditorStyles({ isFullscreen, accordionVisible });
@@ -38,11 +44,20 @@ export const SvgEditor: React.FC = () => {
     .filter(ui => ui.position === 'svg-content')
     .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-  // Get all panels for accordion (sidebar + toolbar)
-  const allPanels = pluginManager.getEnabledPlugins()
+  // Get sidebar panels for mobile/accordion
+  const sidebarPanels = pluginManager.getEnabledPlugins()
     .flatMap(plugin => plugin.ui || [])
-    .filter(ui => ui.position === 'sidebar' || ui.position === 'toolbar')
+    .filter(ui => ui.position === 'sidebar')
     .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  // Get toolbar panels  
+  const toolbarPanels = pluginManager.getEnabledPlugins()
+    .flatMap(plugin => plugin.ui || [])
+    .filter(ui => ui.position === 'toolbar')
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  // Get all panels for accordion (sidebar + toolbar) - for desktop
+  const allPanels = [...sidebarPanels, ...toolbarPanels];
   
   // Initialize global event handlers
   useGlobalKeyboard();
@@ -94,35 +109,52 @@ export const SvgEditor: React.FC = () => {
     array.findIndex(g => g.id === gradient.id) === index
   );
 
+  // SVG Canvas component
+  const svgCanvas = (
+    <svg
+      ref={svgRef}
+      width="100%"
+      height="100%"
+      style={{ 
+        cursor: getCursor(),
+        ...svgStyle
+      }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerUp}
+      onWheel={handleWheel}
+    >
+      {/* SVG Definitions for gradients and patterns */}
+      <SVGDefinitions gradients={gradients} />
+      
+      <g transform={getSafeTransform(editorStore.viewport)}>
+        {/* Render SVG content plugins */}
+        {svgContentPlugins.map(ui => (
+          <ui.component key={ui.id} />
+        ))}
+      </g>
+    </svg>
+  );
+
+  // Mobile version with bottom sheet
+  if (isMobileDevice) {
+    return (
+      <div className="svg-editor" style={editorStyle}>
+        <MobileContainer
+          sidebarPlugins={sidebarPanels}
+          toolbarPlugins={toolbarPanels}
+        >
+          {svgCanvas}
+        </MobileContainer>
+      </div>
+    );
+  }
+
+  // Desktop version with accordion sidebar
   return (
     <div className="svg-editor" style={editorStyle}>
-      {/* Toolbar is hidden in accordion mode */}
-      
-      {/* Main SVG canvas */}
-      <svg
-        ref={svgRef}
-        width="100%"
-        height="100%"
-        style={{ 
-          cursor: getCursor(),
-          ...svgStyle
-        }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
-        onWheel={handleWheel}
-      >
-        {/* SVG Definitions for gradients and patterns */}
-        <SVGDefinitions gradients={gradients} />
-        
-        <g transform={getSafeTransform(editorStore.viewport)}>
-          {/* Render SVG content plugins */}
-          {svgContentPlugins.map(ui => (
-            <ui.component key={ui.id} />
-          ))}
-        </g>
-      </svg>
+      {svgCanvas}
       
       {/* Render sidebar as accordion */}
       {accordionVisible && <AccordionSidebar plugins={allPanels} />}

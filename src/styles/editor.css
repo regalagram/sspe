@@ -12,6 +12,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overscroll-behavior: none;
   overscroll-behavior-x: none;
+  /* Mobile-specific optimizations */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 #root {
@@ -334,4 +341,217 @@ button.active:hover {
 
 html,body {
     overscroll-behavior-x: none
+}
+
+/* ========================================
+   MOBILE-SPECIFIC STYLES
+   ======================================== */
+
+/* Mobile toolbar item enhancement */
+.mobile-toolbar-item button {
+  min-width: 48px !important;
+  min-height: 48px !important;
+  padding: 12px !important;
+  font-size: 16px !important;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
+}
+
+/* Bottom sheet specific styles */
+.bottom-sheet {
+  touch-action: none;
+}
+
+.bottom-sheet * {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile plugin menu styles */
+.mobile-plugin-menu button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(59, 130, 246, 0.05);
+  transition: background-color 0.15s ease;
+}
+
+.mobile-plugin-menu button:active {
+  background-color: #f3f4f6 !important;
+}
+
+/* Mobile toolbar styles */
+.mobile-toolbar-container {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.mobile-toolbar-container::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Opera */
+}
+
+/* Smooth scrolling for mobile toolbar */
+@media (pointer: coarse) {
+  .mobile-toolbar-container {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Mobile toolbar section spacing */
+.mobile-toolbar-section {
+  padding: 0 4px;
+}
+
+/* Ensure toolbar buttons are properly sized on mobile */
+@media (max-width: 768px) {
+  .mobile-toolbar-container {
+    padding: 8px 12px;
+  }
+  
+  /* Hide original toolbar components on mobile */
+  .mobile-toolbar-container .undo-redo-controls,
+  .mobile-toolbar-container .zoom-controls,
+  .mobile-toolbar-container .creation-tools,
+  .mobile-toolbar-container .delete-control,
+  .mobile-toolbar-container .fullscreen-control {
+    display: none;
+  }
+}
+
+/* Mobile-responsive breakpoints */
+@media (max-width: 768px) {
+  .svg-editor {
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile browsers */
+  }
+  
+  /* Hide desktop-specific elements on mobile */
+  .accordion-sidebar {
+    display: none !important;
+  }
+  
+  /* Optimize SVG interactions for touch */
+  .svg-editor svg {
+    touch-action: pan-x pan-y;
+  }
+  
+  /* Control points larger on mobile */
+  .command-point,
+  .control-point {
+    r: 8 !important;
+    stroke-width: 2 !important;
+  }
+  
+  /* Selection handles larger on mobile */
+  .selection-handle,
+  .transform-handle {
+    width: 16px !important;
+    height: 16px !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  /* Tablet-specific optimizations */
+  .control-point {
+    r: 7 !important;
+  }
+  
+  .mobile-toolbar-item button {
+    min-width: 40px !important;
+    min-height: 40px !important;
+    padding: 10px !important;
+  }
+}
+
+/* Touch-friendly input elements */
+@media (pointer: coarse) {
+  input[type="range"] {
+    height: 44px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  input[type="range"]::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+    border: 2px solid white;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  input[type="color"] {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 8px !important;
+  }
+  
+  select {
+    min-height: 44px !important;
+    font-size: 16px !important;
+  }
+  
+  input[type="text"],
+  input[type="number"],
+  textarea {
+    min-height: 44px !important;
+    font-size: 16px !important;
+    padding: 12px !important;
+  }
+}
+
+/* Prevent zoom on double-tap */
+@media (pointer: coarse) {
+  button, 
+  input, 
+  select, 
+  textarea {
+    touch-action: manipulation;
+  }
+}
+
+/* Safe area handling for iOS devices */
+@supports (padding: max(0px)) {
+  .mobile-toolbar {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+  
+  .bottom-sheet {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+  
+  .mobile-floating-button {
+    bottom: max(24px, calc(24px + env(safe-area-inset-bottom)));
+    right: max(24px, calc(24px + env(safe-area-inset-right)));
+  }
+}
+
+/* Dark mode support for mobile */
+@media (prefers-color-scheme: dark) {
+  .bottom-sheet {
+    background-color: #1f2937;
+    color: white;
+  }
+  
+  .mobile-plugin-menu button {
+    background-color: #374151;
+    color: white;
+    border-color: #4b5563;
+  }
+  
+  .mobile-plugin-menu button:active {
+    background-color: #4b5563 !important;
+  }
 }
