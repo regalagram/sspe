@@ -54,7 +54,7 @@ export function calculateTextBounds(text: TextElementType): {
 }
 
 /**
- * Calculate precise bounding box using DOM measurement
+ * Calculate precise bounding box using DOM measurement, accounting for transforms
  */
 export function calculateTextBoundsDOM(text: TextElementType): {
   x: number;
@@ -123,85 +123,27 @@ export function calculateTextBoundsDOM(text: TextElementType): {
     
     tempSvg.appendChild(textElement);
     
-    // Use getBBox for accurate measurement
+    // Use getBBox on the entire SVG to account for transforms
     try {
-      if (text.type === 'multiline-text') {
-        // For multiline text, calculate bbox manually by measuring each tspan
-        let maxWidth = 0;
-        let totalHeight = 0;
-        const fontSize = text.style?.fontSize || 16;
-        const lineHeight = fontSize * 1.2;
-        
-        const tspans = textElement.querySelectorAll('tspan');
-        const nonEmptySpansCount = tspans.length;
-        
-        // Measure each tspan individually
-        tspans.forEach((tspan) => {
-          try {
-            const tspanBbox = tspan.getBBox();
-            maxWidth = Math.max(maxWidth, tspanBbox.width);
-          } catch (e) {
-            // Fallback to text length estimation if getBBox fails
-            const content = tspan.textContent || '';
-            const estimatedWidth = content.length * fontSize * 0.6;
-            maxWidth = Math.max(maxWidth, estimatedWidth);
-          }
-        });
-        
-        totalHeight = nonEmptySpansCount * lineHeight;
-        
-        document.body.removeChild(tempSvg);
-        
-        return {
-          x: text.x,
-          y: text.y - fontSize,
-          width: maxWidth,
-          height: totalHeight
-        };
-      } else {
-        // For single line text, use standard getBBox
-        const bbox = textElement.getBBox();
-        document.body.removeChild(tempSvg);
-        
+      const bbox = tempSvg.getBBox();
+      document.body.removeChild(tempSvg);
+      
+      if (bbox && isFinite(bbox.x) && isFinite(bbox.y) && 
+          isFinite(bbox.width) && isFinite(bbox.height) && 
+          bbox.width > 0 && bbox.height > 0) {
         return {
           x: bbox.x,
           y: bbox.y,
           width: bbox.width,
           height: bbox.height
         };
+      } else {
+        // Fallback to original calculation if bbox is invalid
+        return calculateTextBounds(text);
       }
     } catch (error) {
       console.error('Error getting bbox:', error);
       document.body.removeChild(tempSvg);
-      
-      // Fallback with better calculation for multiline text
-      if (text.type === 'multiline-text') {
-        const fontSize = text.style?.fontSize || 16;
-        const lineHeight = fontSize * 1.2;
-        const nonEmptySpans = text.spans.filter(span => span.content && span.content.trim());
-        
-        if (nonEmptySpans.length === 0) {
-          return {
-            x: text.x,
-            y: text.y - fontSize,
-            width: 0,
-            height: fontSize
-          };
-        }
-        
-        const longestLine = nonEmptySpans.reduce((max, span) => 
-          span.content.length > max ? span.content.length : max, 0);
-        const estimatedWidth = longestLine * fontSize * 0.6;
-        const estimatedHeight = nonEmptySpans.length * lineHeight;
-        
-        return {
-          x: text.x,
-          y: text.y - fontSize,
-          width: estimatedWidth,
-          height: estimatedHeight
-        };
-      }
-      
       return calculateTextBounds(text); // Fallback
     }
   } catch (error) {
