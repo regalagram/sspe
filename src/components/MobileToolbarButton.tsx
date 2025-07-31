@@ -125,7 +125,7 @@ export const MobileToolbarSeparator: React.FC<MobileToolbarSeparatorProps> = ({
       width: '1px',
       height: `${height}px`,
       background: '#e5e7eb',
-      margin: '0 8px',
+      margin: '0 6px', // Reduced margin for more compact spacing
       flexShrink: 0
     }} />
   );
@@ -145,7 +145,7 @@ export const MobileToolbarSection: React.FC<MobileToolbarSectionProps> = ({
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '4px',
+        gap: '2px', // Reduced gap within sections
         flexShrink: 0
       }}
       title={title}

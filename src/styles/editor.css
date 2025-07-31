@@ -369,12 +369,50 @@ html,body {
 /* Mobile plugin menu styles */
 .mobile-plugin-menu button {
   touch-action: manipulation;
-  -webkit-tap-highlight-color: rgba(59, 130, 246, 0.05);
+  -webkit-tap-highlight-color: transparent;
   transition: background-color 0.15s ease;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .mobile-plugin-menu button:active {
   background-color: #f3f4f6 !important;
+}
+
+/* iOS-specific fixes for bottom sheet scrolling */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific styles */
+  .bottom-sheet {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  
+  .mobile-plugin-menu {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    /* Ensure content is fully scrollable on iOS */
+    min-height: calc(100% + 40px);
+  }
+  
+  /* Prevent iOS bounce on bottom sheet content */
+  .bottom-sheet > div:last-child {
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Better touch targets for iOS */
+  .mobile-plugin-menu button {
+    min-height: 44px;
+    padding: 12px 16px;
+  }
+  
+  /* Extra space at bottom for iPhone home indicator */
+  .mobile-plugin-menu {
+    padding-bottom: max(40px, env(safe-area-inset-bottom)) !important;
+  }
 }
 
 /* Mobile toolbar styles */

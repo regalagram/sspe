@@ -26,8 +26,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const dragHandleRef = useRef<HTMLDivElement>(null);
 
   const currentSnapPoint = snapPoints[currentSnapIndex];
-  const maxHeight = window.innerHeight * 0.9; // Maximum 90% of viewport
-  const minHeight = window.innerHeight * 0.1; // Minimum 10% of viewport
+  const maxHeight = window.innerHeight * 0.95; // Maximum 95% of viewport
+  const minHeight = window.innerHeight * 0.15; // Minimum 15% of viewport
 
   useEffect(() => {
     if (isOpen) {
@@ -167,12 +167,13 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     flex: 1,
     overflow: 'auto',
     WebkitOverflowScrolling: 'touch',
+    touchAction: 'pan-y',
   };
 
   return (
     <>
       <div style={backdropStyle} onPointerDown={handleBackdropClick} />
-      <div ref={bottomSheetRef} style={bottomSheetStyle}>
+      <div ref={bottomSheetRef} className="bottom-sheet" style={bottomSheetStyle}>
         <div
           ref={dragHandleRef}
           style={dragHandleStyle}

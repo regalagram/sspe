@@ -83,7 +83,7 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({
           <BottomSheet
             isOpen={isBottomSheetOpen}
             onClose={handleCloseBottomSheet}
-            snapPoints={[0.4, 0.7, 0.9]}
+            snapPoints={[0.5, 0.75, 0.95]}
             initialSnap={1}
           >
             <MobilePluginMenu

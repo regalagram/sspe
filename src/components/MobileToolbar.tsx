@@ -1,6 +1,5 @@
 import React from 'react';
 import { UIComponentDefinition } from '../core/PluginSystem';
-import { MobileToolbarSeparator } from './MobileToolbarButton';
 import { MobileUndoRedoControls } from '../plugins/undo-redo/MobileUndoRedo';
 import { MobileZoomControls } from '../plugins/zoom/MobileZoom';
 import { MobileCreationTools } from '../plugins/creation/MobileCreation';
@@ -55,7 +54,7 @@ export const MobileToolbar: React.FC<MobileToolbarProps> = ({
   const toolbarContentStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    padding: '8px 16px',
+    padding: '0px', // No padding for maximum space optimization
     minHeight: '60px',
     gap: '0px', // No gap, separators handle spacing
     minWidth: 'fit-content', // Allow horizontal scrolling
@@ -81,19 +80,15 @@ export const MobileToolbar: React.FC<MobileToolbarProps> = ({
       >
         {/* Section 1: Undo/Redo */}
         <MobileUndoRedoControls />
-        <MobileToolbarSeparator height={40} />
 
         {/* Section 2: Zoom Controls */}
         <MobileZoomControls />
-        <MobileToolbarSeparator height={40} />
 
         {/* Section 3: Creation Tools */}
         <MobileCreationTools />
-        <MobileToolbarSeparator height={40} />
 
         {/* Section 4: Actions */}
         <MobileDeleteControl />
-        <MobileToolbarSeparator height={40} />
 
         {/* Section 5: Display */}
         <MobileFullscreenControl />

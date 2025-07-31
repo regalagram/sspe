@@ -142,7 +142,7 @@ export const SvgEditor: React.FC = () => {
     return (
       <div className="svg-editor" style={editorStyle}>
         <MobileContainer
-          sidebarPlugins={sidebarPanels}
+          sidebarPlugins={allPanels} // Use all panels like desktop
           toolbarPlugins={toolbarPanels}
         >
           {svgCanvas}

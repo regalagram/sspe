@@ -43,7 +43,7 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
       icon: <Settings size={20} />,
       color: '#3b82f6',
       plugins: [],
-      orders: [0, 1, 2, 3, 4, 6] // selection, curves, grid, command, creation, etc.
+      orders: [0, 1, 2, 3, 4, 5, 6, 10] // selection, curves, grid, command, creation, delete, guidelines, path-renderer, etc.
     },
     {
       id: 'styling',
@@ -59,7 +59,7 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
       icon: <Layers size={20} />,
       color: '#059669',
       plugins: [],
-      orders: [8, 20, 22, 23, 24, 25] // groups, images, clipping, markers, symbols, filters
+      orders: [8, 20, 22, 23, 24, 25, 26, 30, 40] // groups, images, clipping, markers, symbols, filters, animation components, visual debug, creation renderer
     },
     {
       id: 'system',
@@ -67,7 +67,7 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
       icon: <Zap size={20} />,
       color: '#dc2626',
       plugins: [],
-      orders: [100, 999] // shortcuts, panel-mode
+      orders: [-1, 100] // panel-mode, shortcuts
     }
   ];
 
@@ -96,6 +96,51 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
 
   const handleCategoryToggle = (categoryId: string) => {
     setExpandedCategory(expandedCategory === categoryId ? null : categoryId);
+  };
+
+  // Better touch handling for iOS
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number; time: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleTouchStart = (e: React.TouchEvent, categoryId: string) => {
+    const touch = e.touches[0];
+    setTouchStart({
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now()
+    });
+    setIsDragging(false);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStart) return;
+    
+    const touch = e.touches[0];
+    const deltaX = Math.abs(touch.clientX - touchStart.x);
+    const deltaY = Math.abs(touch.clientY - touchStart.y);
+    
+    // If user moves more than 10px, consider it a scroll gesture
+    if (deltaX > 10 || deltaY > 10) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent, categoryId: string) => {
+    if (!touchStart) return;
+    
+    const touchTime = Date.now() - touchStart.time;
+    
+    // Only trigger toggle if:
+    // 1. Touch was quick (< 300ms)
+    // 2. User didn't drag
+    // 3. Touch duration was reasonable for a tap
+    if (!isDragging && touchTime < 300) {
+      e.preventDefault();
+      handleCategoryToggle(categoryId);
+    }
+    
+    setTouchStart(null);
+    setIsDragging(false);
   };
 
   const handlePluginTap = (plugin: UIComponentDefinition) => {
@@ -143,11 +188,26 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
 
   // Show category list
   return (
-    <div style={{ height: '100%', overflow: 'auto' }}>
+    <div 
+      className="mobile-plugin-menu"
+      style={{ 
+        height: '100%', 
+        overflow: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        touchAction: 'pan-y',
+        padding: '16px 16px 40px 16px' // Extra padding, especially bottom
+      }}>
       {nonEmptyCategories.map(category => (
         <div key={category.id} style={{ marginBottom: '8px' }}>
           <button
-            onPointerDown={() => handleCategoryToggle(category.id)}
+            onTouchStart={(e) => handleTouchStart(e, category.id)}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={(e) => handleTouchEnd(e, category.id)}
+            onClick={(e) => {
+              // Fallback for non-touch devices
+              e.preventDefault();
+              handleCategoryToggle(category.id);
+            }}
             style={{
               width: '100%',
               display: 'flex',
@@ -160,7 +220,9 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
               margin: '0 0 8px 0',
               boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
               cursor: 'pointer',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -212,7 +274,7 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
                 return (
                   <button
                     key={plugin.id}
-                    onPointerDown={() => handlePluginTap(plugin)}
+                    onClick={() => handlePluginTap(plugin)}
                     style={{
                       width: '100%',
                       display: 'flex',
@@ -225,7 +287,9 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
                       margin: '4px 0',
                       cursor: 'pointer',
                       textAlign: 'left',
-                      transition: 'background 0.2s ease'
+                      transition: 'background 0.2s ease',
+                      touchAction: 'manipulation',
+                      WebkitTapHighlightColor: 'transparent'
                     }}
                   >
                     <div>
@@ -253,6 +317,19 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
           )}
         </div>
       ))}
+      
+      {/* Visual indicator for end of content */}
+      <div style={{
+        height: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#9ca3af',
+        fontSize: '12px',
+        marginTop: '16px'
+      }}>
+        • • •
+      </div>
     </div>
   );
 };
