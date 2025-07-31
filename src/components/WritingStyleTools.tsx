@@ -7,14 +7,30 @@ import { createLinearGradient, createRadialGradient, createGradientStop } from '
 import { createPatternFromPreset, patternPresets } from '../plugins/gradients/patternPresets';
 
 export const WritingStyleTools: React.FC = () => {
-  const { selection, updatePathStyle, paths, addGradient } = useEditorStore();
+  const { 
+    selection, 
+    updatePathStyle, 
+    updateTextStyle, 
+    paths, 
+    texts, 
+    groups, 
+    addGradient 
+  } = useEditorStore();
   const [isStyleSubmenuOpen, setIsStyleSubmenuOpen] = useState(false);
 
-  const hasSelection = selection.selectedPaths.length > 0 || selection.selectedSubPaths.length > 0;
+  const hasSelection = selection.selectedPaths.length > 0 || 
+                      selection.selectedSubPaths.length > 0 || 
+                      selection.selectedCommands.length > 0 ||
+                      selection.selectedTexts.length > 0 ||
+                      selection.selectedGroups.length > 0;
 
-  // Get all affected path IDs (directly selected paths + parent paths of selected subpaths)
-  const getAffectedPathIds = () => {
-    const pathIds = new Set(selection.selectedPaths);
+  // Get all affected element IDs for styling
+  const getAllAffectedElements = () => {
+    const result = {
+      pathIds: new Set(selection.selectedPaths),
+      textIds: new Set(selection.selectedTexts),
+      groupIds: new Set(selection.selectedGroups)
+    };
     
     // Add parent paths of selected subpaths
     selection.selectedSubPaths.forEach(subPathId => {
@@ -22,54 +38,110 @@ export const WritingStyleTools: React.FC = () => {
         path.subPaths.some(subPath => subPath.id === subPathId)
       );
       if (parentPath) {
-        pathIds.add(parentPath.id);
+        result.pathIds.add(parentPath.id);
       }
     });
+
+    // Add parent paths of selected commands
+    selection.selectedCommands.forEach(commandId => {
+      paths.forEach(path => {
+        path.subPaths.forEach(subPath => {
+          if (subPath.commands.some(cmd => cmd.id === commandId)) {
+            result.pathIds.add(path.id);
+          }
+        });
+      });
+    });
+
+    // TODO: Add logic for groups that contain selected elements
+    // For now, we'll apply styles directly to selected groups
     
-    return Array.from(pathIds);
+    return {
+      pathIds: Array.from(result.pathIds),
+      textIds: Array.from(result.textIds),
+      groupIds: Array.from(result.groupIds)
+    };
   };
 
   const handleFillColor = (color: string) => {
     if (hasSelection) {
-      const pathIds = getAffectedPathIds();
+      const { pathIds, textIds, groupIds } = getAllAffectedElements();
+      
+      // Apply to paths
       pathIds.forEach(pathId => {
         updatePathStyle(pathId, { fill: color });
       });
+      
+      // Apply to texts
+      textIds.forEach(textId => {
+        updateTextStyle(textId, { fill: color });
+      });
+      
+      // TODO: Apply to groups (groups don't have direct styles, would need to apply to children)
+      // For now, skip groups as they would need recursive application to children
     }
   };
 
   const handleStrokeColor = (color: string) => {
     if (hasSelection) {
-      const pathIds = getAffectedPathIds();
+      const { pathIds, textIds, groupIds } = getAllAffectedElements();
+      
+      // Apply to paths
       pathIds.forEach(pathId => {
         updatePathStyle(pathId, { stroke: color });
+      });
+      
+      // Apply to texts  
+      textIds.forEach(textId => {
+        updateTextStyle(textId, { stroke: color });
       });
     }
   };
 
   const handleStrokeWidth = (width: number) => {
     if (hasSelection) {
-      const pathIds = getAffectedPathIds();
+      const { pathIds, textIds, groupIds } = getAllAffectedElements();
+      
+      // Apply to paths
       pathIds.forEach(pathId => {
         updatePathStyle(pathId, { strokeWidth: width });
+      });
+      
+      // Apply to texts
+      textIds.forEach(textId => {
+        updateTextStyle(textId, { strokeWidth: width });
       });
     }
   };
 
   const handleRemoveFill = () => {
     if (hasSelection) {
-      const pathIds = getAffectedPathIds();
+      const { pathIds, textIds, groupIds } = getAllAffectedElements();
+      
+      // Apply to paths
       pathIds.forEach(pathId => {
         updatePathStyle(pathId, { fill: 'none' });
+      });
+      
+      // Apply to texts
+      textIds.forEach(textId => {
+        updateTextStyle(textId, { fill: 'none' });
       });
     }
   };
 
   const handleRemoveStroke = () => {
     if (hasSelection) {
-      const pathIds = getAffectedPathIds();
+      const { pathIds, textIds, groupIds } = getAllAffectedElements();
+      
+      // Apply to paths
       pathIds.forEach(pathId => {
         updatePathStyle(pathId, { stroke: 'none' });
+      });
+      
+      // Apply to texts
+      textIds.forEach(textId => {
+        updateTextStyle(textId, { stroke: 'none' });
       });
     }
   };
@@ -90,10 +162,17 @@ export const WritingStyleTools: React.FC = () => {
     // Add gradient to store
     addGradient(gradient);
 
-    // Apply to selected paths
-    const pathIds = getAffectedPathIds();
+    // Apply to all selected elements
+    const { pathIds, textIds, groupIds } = getAllAffectedElements();
+    
+    // Apply to paths
     pathIds.forEach(pathId => {
       updatePathStyle(pathId, { [target]: gradient });
+    });
+    
+    // Apply to texts
+    textIds.forEach(textId => {
+      updateTextStyle(textId, { [target]: gradient });
     });
   };
 
@@ -108,10 +187,17 @@ export const WritingStyleTools: React.FC = () => {
     // Add pattern to store (assuming addGradient also handles patterns)
     addGradient(pattern);
 
-    // Apply to selected paths
-    const pathIds = getAffectedPathIds();
+    // Apply to all selected elements
+    const { pathIds, textIds, groupIds } = getAllAffectedElements();
+    
+    // Apply to paths
     pathIds.forEach(pathId => {
       updatePathStyle(pathId, { [target]: pattern });
+    });
+    
+    // Apply to texts
+    textIds.forEach(textId => {
+      updateTextStyle(textId, { [target]: pattern });
     });
   };
 
@@ -179,7 +265,7 @@ export const WritingStyleTools: React.FC = () => {
             color: '#6b7280',
             textAlign: 'center'
           }}>
-            Select a path to style
+            Select elements to style
           </div>
         ) : (
           <>
