@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Palette, PaintBucket, Brush, ChevronDown } from 'lucide-react';
+import { Palette, PaintBucket, Brush, ChevronDown, Zap, Grid3X3 } from 'lucide-react';
 import { ToolbarButton, ToolbarSection } from './ToolbarButton';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useEditorStore } from '../store/editorStore';
+import { createLinearGradient, createRadialGradient, createGradientStop } from '../utils/gradient-utils';
+import { createPatternFromPreset, patternPresets } from '../plugins/gradients/patternPresets';
 
 export const WritingStyleTools: React.FC = () => {
-  const { selection, updatePathStyle, paths } = useEditorStore();
+  const { selection, updatePathStyle, paths, addGradient } = useEditorStore();
   const [isStyleSubmenuOpen, setIsStyleSubmenuOpen] = useState(false);
 
   const hasSelection = selection.selectedPaths.length > 0 || selection.selectedSubPaths.length > 0;
@@ -72,11 +74,70 @@ export const WritingStyleTools: React.FC = () => {
     }
   };
 
+  const handleApplyGradient = (gradientType: 'linear' | 'radial', colors: string[], target: 'fill' | 'stroke' = 'fill') => {
+    if (!hasSelection) return;
+
+    // Create gradient stops
+    const stops = colors.map((color, index) => 
+      createGradientStop((index / (colors.length - 1)) * 100, color, 1)
+    );
+
+    // Create gradient with proper normalized coordinates (0-1 range for objectBoundingBox)
+    const gradient = gradientType === 'linear' 
+      ? createLinearGradient(0, 0, 1, 0, stops)
+      : createRadialGradient(0.5, 0.5, 0.5, stops);
+
+    // Add gradient to store
+    addGradient(gradient);
+
+    // Apply to selected paths
+    const pathIds = getAffectedPathIds();
+    pathIds.forEach(pathId => {
+      updatePathStyle(pathId, { [target]: gradient });
+    });
+  };
+
+  const handleApplyPattern = (patternId: string, target: 'fill' | 'stroke' = 'fill') => {
+    if (!hasSelection) return;
+
+    const preset = patternPresets.find(p => p.id === patternId);
+    if (!preset) return;
+
+    const pattern = createPatternFromPreset(preset);
+    
+    // Add pattern to store (assuming addGradient also handles patterns)
+    addGradient(pattern);
+
+    // Apply to selected paths
+    const pathIds = getAffectedPathIds();
+    pathIds.forEach(pathId => {
+      updatePathStyle(pathId, { [target]: pattern });
+    });
+  };
+
   const colors = [
     '#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff', 
     '#ffff00', '#ff00ff', '#00ffff', '#ff8800', '#8800ff'
   ];
   const strokeWidths = [1, 2, 3, 5, 8, 12, 16, 20];
+
+  // Predefined gradients
+  const predefinedGradients = [
+    { name: 'Sunset', colors: ['#ff6b6b', '#feca57'], type: 'linear' as const },
+    { name: 'Ocean', colors: ['#54a0ff', '#2e86de'], type: 'linear' as const },
+    { name: 'Forest', colors: ['#26de81', '#20bf6b'], type: 'linear' as const },
+    { name: 'Purple', colors: ['#a55eea', '#8b5cf6'], type: 'linear' as const },
+    { name: 'Fire', colors: ['#ff9ff3', '#f368e0'], type: 'radial' as const },
+    { name: 'Sky', colors: ['#74b9ff', '#0984e3'], type: 'radial' as const },
+  ];
+
+  // Popular patterns (limit to a few for the toolbar)
+  const popularPatterns = [
+    'dots',
+    'stripes-diagonal',
+    'checkerboard',
+    'waves'
+  ].map(id => patternPresets.find(p => p.id === id)).filter((pattern): pattern is NonNullable<typeof pattern> => pattern !== undefined);
 
   return (
     <ToolbarSection title="Style Tools">
@@ -217,6 +278,60 @@ export const WritingStyleTools: React.FC = () => {
                 setIsStyleSubmenuOpen(false);
               }}
             />
+
+            <div style={{ 
+              height: '1px', 
+              background: '#e5e7eb', 
+              margin: '4px 0' 
+            }} />
+
+            {/* Gradients */}
+            <div style={{ padding: '8px 12px', fontSize: '12px', color: '#6b7280', fontWeight: 600 }}>
+              Gradients
+            </div>
+            {predefinedGradients.map(gradient => (
+              <SubmenuItem
+                key={gradient.name}
+                icon={
+                  <div style={{ 
+                    width: '16px', 
+                    height: '16px', 
+                    borderRadius: '50%',
+                    background: gradient.type === 'linear' 
+                      ? `linear-gradient(45deg, ${gradient.colors.join(', ')})`
+                      : `radial-gradient(circle, ${gradient.colors.join(', ')})`,
+                    border: '1px solid #e5e7eb'
+                  }} />
+                }
+                label={gradient.name}
+                onClick={() => {
+                  handleApplyGradient(gradient.type, gradient.colors, 'fill');
+                  setIsStyleSubmenuOpen(false);
+                }}
+              />
+            ))}
+
+            <div style={{ 
+              height: '1px', 
+              background: '#e5e7eb', 
+              margin: '4px 0' 
+            }} />
+
+            {/* Patterns */}
+            <div style={{ padding: '8px 12px', fontSize: '12px', color: '#6b7280', fontWeight: 600 }}>
+              Patterns
+            </div>
+            {popularPatterns.map(pattern => (
+              <SubmenuItem
+                key={pattern.id}
+                icon={<Grid3X3 size={16} />}
+                label={pattern.name}
+                onClick={() => {
+                  handleApplyPattern(pattern.id, 'fill');
+                  setIsStyleSubmenuOpen(false);
+                }}
+              />
+            ))}
 
             <div style={{ 
               height: '1px', 

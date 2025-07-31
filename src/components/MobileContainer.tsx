@@ -9,6 +9,8 @@ interface MobileContainerProps {
   sidebarPlugins: UIComponentDefinition[];
   toolbarPlugins: UIComponentDefinition[];
   children: React.ReactNode; // SVG canvas content
+  onBottomSheetStateChange?: (isOpen: boolean) => void;
+  onToggleBottomSheet?: (toggle: () => void) => void;
 }
 
 // Load saved bottom sheet state from localStorage
@@ -35,7 +37,9 @@ const loadSavedSelectedPlugin = (plugins: UIComponentDefinition[]): UIComponentD
 export const MobileContainer: React.FC<MobileContainerProps> = ({
   sidebarPlugins,
   toolbarPlugins,
-  children
+  children,
+  onBottomSheetStateChange,
+  onToggleBottomSheet
 }) => {
   const { isMobile, isTablet } = useMobileDetection();
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(() => loadSavedBottomSheetState());
@@ -57,7 +61,7 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({
     } catch {}
   }, [selectedPlugin]);
 
-  const handleToggleBottomSheet = () => {
+  const handleToggleBottomSheet = React.useCallback(() => {
     if (isBottomSheetOpen) {
       // If bottom sheet is open, close it (preserve plugin selection)
       setIsBottomSheetOpen(false);
@@ -66,7 +70,7 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({
       setIsBottomSheetOpen(true);
       // selectedPlugin will maintain its localStorage state
     }
-  };
+  }, [isBottomSheetOpen]);
 
   const handlePluginSelect = (plugin: UIComponentDefinition) => {
     setSelectedPlugin(plugin);
@@ -80,6 +84,20 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({
     setIsBottomSheetOpen(false);
     // Don't reset selectedPlugin - preserve it for next opening
   };
+
+  // Notify parent of bottom sheet state changes
+  useEffect(() => {
+    if (onBottomSheetStateChange) {
+      onBottomSheetStateChange(isBottomSheetOpen);
+    }
+  }, [isBottomSheetOpen, onBottomSheetStateChange]);
+
+  // Provide toggle function to parent
+  useEffect(() => {
+    if (onToggleBottomSheet) {
+      onToggleBottomSheet(handleToggleBottomSheet);
+    }
+  }, [onToggleBottomSheet, handleToggleBottomSheet]);
 
   const isMobileDevice = isMobile || isTablet;
 
@@ -104,14 +122,6 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({
         // No margin/padding - let canvas fill entire background
       }}>
         {children}
-        
-        {/* Mobile-only: Floating Action Button */}
-        {isMobileDevice && (
-          <MobileFloatingButton
-            onToggleBottomSheet={handleToggleBottomSheet}
-            isBottomSheetOpen={isBottomSheetOpen}
-          />
-        )}
         
         {/* Mobile-only: Bottom Sheet */}
         {isMobileDevice && (

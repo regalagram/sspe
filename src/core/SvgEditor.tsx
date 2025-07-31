@@ -36,6 +36,19 @@ export const SvgEditor: React.FC = () => {
   const { isMobile, isTablet } = useMobileDetection();
   const isMobileDevice = isMobile || isTablet;
   
+  // State for mobile bottom sheet
+  const [mobileBottomSheetOpen, setMobileBottomSheetOpen] = React.useState(false);
+  const [mobileToggleFunction, setMobileToggleFunction] = React.useState<(() => void) | null>(null);
+
+  // Callbacks for mobile bottom sheet
+  const handleBottomSheetStateChange = React.useCallback((isOpen: boolean) => {
+    setMobileBottomSheetOpen(isOpen);
+  }, []);
+
+  const handleToggleBottomSheetRef = React.useCallback((toggleFn: () => void) => {
+    setMobileToggleFunction(() => toggleFn);
+  }, []);
+  
   // Use custom hooks for cleaner separation of concerns
   const { getCursor } = useCombinedCursor();
   const { editorStyle, svgStyle } = useEditorStyles({ isFullscreen, accordionVisible });
@@ -74,12 +87,12 @@ export const SvgEditor: React.FC = () => {
   // Extract gradients and patterns from paths
   const pathGradients = extractGradientsFromPaths(paths);
   
-  // Add predefined gradients for text styling
+  // Add predefined gradients for text styling with proper normalized coordinates
   const predefinedGradients = [
     {
       id: 'text-gradient-1',
       type: 'linear' as const,
-      x1: 0, y1: 0, x2: 100, y2: 0,
+      x1: 0, y1: 0, x2: 1, y2: 0,
       stops: [
         { id: 'stop-1', offset: 0, color: '#ff6b6b', opacity: 1 },
         { id: 'stop-2', offset: 100, color: '#4ecdc4', opacity: 1 }
@@ -88,7 +101,7 @@ export const SvgEditor: React.FC = () => {
     {
       id: 'text-gradient-2',
       type: 'linear' as const,
-      x1: 0, y1: 0, x2: 100, y2: 100,
+      x1: 0, y1: 0, x2: 1, y2: 1,
       stops: [
         { id: 'stop-3', offset: 0, color: '#667eea', opacity: 1 },
         { id: 'stop-4', offset: 100, color: '#764ba2', opacity: 1 }
@@ -97,7 +110,7 @@ export const SvgEditor: React.FC = () => {
     {
       id: 'text-gradient-3',
       type: 'radial' as const,
-      cx: 50, cy: 50, r: 50,
+      cx: 0.5, cy: 0.5, r: 0.5,
       stops: [
         { id: 'stop-5', offset: 0, color: '#ffeaa7', opacity: 1 },
         { id: 'stop-6', offset: 100, color: '#fab1a0', opacity: 1 }
@@ -144,11 +157,16 @@ export const SvgEditor: React.FC = () => {
     return (
       <div className="svg-editor" style={editorStyle}>
         {/* Writing toolbar at top */}
-        <WritingToolbar />
+        <WritingToolbar 
+          onMobileToggle={mobileToggleFunction || undefined}
+          isMobileBottomSheetOpen={mobileBottomSheetOpen}
+        />
         
         <MobileContainer
           sidebarPlugins={allPanels} // Use all panels like desktop
           toolbarPlugins={toolbarPanels}
+          onBottomSheetStateChange={handleBottomSheetStateChange}
+          onToggleBottomSheet={handleToggleBottomSheetRef}
         >
           {svgCanvas}
         </MobileContainer>
@@ -169,15 +187,6 @@ export const SvgEditor: React.FC = () => {
       
       {/* Render sidebar as accordion */}
       {accordionVisible && <AccordionSidebar plugins={allPanels} />}
-
-      {/* Accordion toggle button - solo mostrar cuando el acordeón NO está visible */}
-      {!accordionVisible && (
-        <AccordionToggleButton
-          accordionVisible={accordionVisible}
-          toggleAccordionVisible={toggleAccordionVisible}
-          isFullscreen={isFullscreen}
-        />
-      )}
     </div>
   );
 };

@@ -2,6 +2,7 @@ import React from 'react';
 import { UIComponentDefinition } from '../core/PluginSystem';
 import { MobileUndoRedoControls } from '../plugins/undo-redo/ToolbarUndoRedo';
 import { MobileZoomControls } from '../plugins/zoom/ToolbarZoom';
+import { AnimationPlayButton } from './AnimationPlayButton';
 
 interface ToolbarProps {
   toolbarPlugins: UIComponentDefinition[];
@@ -71,6 +72,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
         {/* Section 2: Zoom Controls */}
         <MobileZoomControls />
+
+        {/* Section 3: Animation Controls */}
+        <AnimationPlayButton />
       </div>
     </div>
   );

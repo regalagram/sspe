@@ -37,7 +37,7 @@ export const ToolbarSubmenu: React.FC<ToolbarSubmenuProps> = ({
         } else {
           // Count only rendered children (those that aren't null/false)
           const visibleChildren = React.Children.toArray(children).filter(child => 
-            child !== null && child !== false && child !== undefined
+            child != null && Boolean(child)
           );
           submenuHeight = visibleChildren.length * 32 + 20;
         }
@@ -97,7 +97,7 @@ export const ToolbarSubmenu: React.FC<ToolbarSubmenuProps> = ({
         } else {
           // Count only rendered children (those that aren't null/false)
           const visibleChildren = React.Children.toArray(children).filter(child => 
-            child !== null && child !== false && child !== undefined
+            child != null && Boolean(child)
           );
           submenuHeight = visibleChildren.length * 32 + 20;
         }

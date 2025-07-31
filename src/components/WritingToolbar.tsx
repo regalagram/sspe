@@ -6,13 +6,19 @@ import { WritingShapeTools } from './WritingShapeTools';
 import { WritingCurveTools } from './WritingCurveTools';
 import { WritingStyleTools } from './WritingStyleTools';
 import { WritingDeleteTools } from './WritingDeleteTools';
+import { SandwichButton } from './SandwichButton';
 
 interface WritingToolbarProps {
   toolbarPlugins?: UIComponentDefinition[];
+  // For mobile bottom sheet control
+  onMobileToggle?: () => void;
+  isMobileBottomSheetOpen?: boolean;
 }
 
 export const WritingToolbar: React.FC<WritingToolbarProps> = ({ 
-  toolbarPlugins = [] 
+  toolbarPlugins = [],
+  onMobileToggle,
+  isMobileBottomSheetOpen
 }) => {
   // Always use the optimized toolbar with dropdown buttons and fixed positioning
   const toolbarStyle: React.CSSProperties = {
@@ -87,6 +93,12 @@ export const WritingToolbar: React.FC<WritingToolbarProps> = ({
 
         {/* Section 6: Delete Tools */}
         <WritingDeleteTools />
+
+        {/* Section 7: Sandwich button for panels/sidebar */}
+        <SandwichButton 
+          onMobileToggle={onMobileToggle}
+          isMobileBottomSheetOpen={isMobileBottomSheetOpen}
+        />
       </div>
     </div>
   );
