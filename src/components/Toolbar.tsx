@@ -2,9 +2,6 @@ import React from 'react';
 import { UIComponentDefinition } from '../core/PluginSystem';
 import { MobileUndoRedoControls } from '../plugins/undo-redo/ToolbarUndoRedo';
 import { MobileZoomControls } from '../plugins/zoom/ToolbarZoom';
-import { MobileCreationTools } from '../plugins/creation/ToolbarCreation';
-import { MobileFullscreenControl } from '../plugins/fullscreen/ToolbarFullscreen';
-import { MobileDeleteControl } from '../plugins/delete/ToolbarDelete';
 
 interface ToolbarProps {
   toolbarPlugins: UIComponentDefinition[];
@@ -22,7 +19,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     borderRadius: '12px', // Rounded corners
     boxShadow: '0 2px 12px rgba(0, 0, 0, 0.15)',
     position: 'fixed', // Fixed position instead of sticky
-    top: 'env(safe-area-inset-top, 8px)', // Top margin with safe area support
+    bottom: 'env(safe-area-inset-bottom, 8px)', // Bottom margin with safe area support
     left: '50%', // Center horizontally
     transform: 'translateX(-50%)', // Center alignment
     zIndex: 9998, // Very high z-index to stay above everything
@@ -75,15 +72,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
         {/* Section 2: Zoom Controls */}
         <MobileZoomControls />
-
-        {/* Section 3: Creation Tools */}
-        <MobileCreationTools />
-
-        {/* Section 4: Actions */}
-        <MobileDeleteControl />
-
-        {/* Section 5: Display */}
-        <MobileFullscreenControl />
       </div>
     </div>
   );

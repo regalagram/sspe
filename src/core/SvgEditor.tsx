@@ -16,6 +16,7 @@ import { AccordionToggleButton } from '../components/AccordionToggleButton';
 import { SVGDefinitions } from '../components/SVGDefinitions';
 import { MobileContainer } from '../components/MobileContainer';
 import { Toolbar } from '../components/Toolbar';
+import { WritingToolbar } from '../components/WritingToolbar';
 import { extractGradientsFromPaths } from '../utils/gradient-utils';
 
 // Register plugins immediately during module loading
@@ -138,10 +139,13 @@ export const SvgEditor: React.FC = () => {
     </svg>
   );
 
-  // Mobile version with bottom sheet
+  // Mobile version with bottom sheet and both toolbars
   if (isMobileDevice) {
     return (
       <div className="svg-editor" style={editorStyle}>
+        {/* Writing toolbar at top */}
+        <WritingToolbar />
+        
         <MobileContainer
           sidebarPlugins={allPanels} // Use all panels like desktop
           toolbarPlugins={toolbarPanels}
@@ -152,10 +156,13 @@ export const SvgEditor: React.FC = () => {
     );
   }
 
-  // Desktop version with accordion sidebar and toolbar
+  // Desktop version with accordion sidebar and both toolbars
   return (
     <div className="svg-editor" style={editorStyle}>
-      {/* Always visible toolbar for desktop */}
+      {/* Writing toolbar at top */}
+      <WritingToolbar />
+      
+      {/* Controls toolbar at bottom */}
       <Toolbar toolbarPlugins={toolbarPanels} />
       
       {svgCanvas}

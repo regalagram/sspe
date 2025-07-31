@@ -1,7 +1,33 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../store/editorStore';
-import { Play, Pause, RotateCcw, Plus } from 'lucide-react';
+import { 
+  Play, 
+  Pause, 
+  RotateCcw, 
+  Plus, 
+  Eye, 
+  Move, 
+  RotateCw, 
+  Maximize, 
+  Palette, 
+  ZoomIn, 
+  MapPin, 
+  Square, 
+  Circle, 
+  Minus, 
+  Grid, 
+  Type, 
+  AlignCenter, 
+  Bold,
+  Filter,
+  Droplets,
+  Zap,
+  Target,
+  AlignJustify,
+  Trash2
+} from 'lucide-react';
 import { createLinearGradient } from '../utils/gradient-utils';
+import { PluginButton } from './PluginButton';
 
 export const AnimationControls: React.FC = () => {
   const { 
@@ -441,6 +467,15 @@ export const AnimationControls: React.FC = () => {
     setEditingAnimation(null);
   };
 
+  const handleClearAllAnimations = () => {
+    if (animations.length === 0) return;
+    
+    if (confirm(`Are you sure you want to remove all ${animations.length} animations?`)) {
+      // Remove all animations one by one using the existing removeAnimation function
+      animations.forEach(animation => removeAnimation(animation.id));
+    }
+  };
+
   // Get available attributes based on animation type and selected element
   const getAvailableAttributes = (type: string) => {
     const targetId = getAnimationTargetId();
@@ -554,18 +589,22 @@ export const AnimationControls: React.FC = () => {
         <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333' }}>
           Playback Controls
         </div>
-        <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
-          <button 
-            style={animationState.isPlaying ? activeButtonStyle : buttonStyle}
-            onClick={handlePlayPause}
-          >
-            {animationState.isPlaying ? <Pause size={14} /> : <Play size={14} />}
-            {animationState.isPlaying ? 'Pause' : 'Play'}
-          </button>
-          <button style={buttonStyle} onClick={handleStop}>
-            <RotateCcw size={14} />
-            Stop
-          </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
+          <PluginButton
+            icon={animationState.isPlaying ? <Pause size={16} /> : <Play size={16} />}
+            text={animationState.isPlaying ? 'Pause' : 'Play'}
+            color="#007bff"
+            active={animationState.isPlaying}
+            onPointerDown={handlePlayPause}
+            fullWidth={true}
+          />
+          <PluginButton
+            icon={<RotateCcw size={16} />}
+            text="Stop"
+            color="#6c757d"
+            onPointerDown={handleStop}
+            fullWidth={true}
+          />
         </div>
         <div style={{ fontSize: '10px', color: '#666' }}>
           Status: {animationState.isPlaying ? 'Playing' : 'Stopped'}
@@ -577,133 +616,223 @@ export const AnimationControls: React.FC = () => {
         <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333' }}>
           Quick Animations
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('fade')}
-            title="Fade In/Out animation - Changes opacity from 1 to 0.5. Works on all elements."
-          >
-            Fade In/Out
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('move')}
-            title="Move animation - Translates element from one position to another. Works on all elements."
-          >
-            Move
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('rotate')}
-            title="Rotate animation - Rotates element 360 degrees around its center. Works on all elements."
-          >
-            Rotate
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('scale')}
-            title="Scale animation - Changes element size from 1 to 1.5. Works on all elements."
-          >
-            Scale
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('blur')}
-            title="Blur animation - Animates gaussian blur stdDeviation from 0 to 5. Works on all elements."
-          >
-            Blur
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('offset')}
-            title="Shadow animation - Animates filter offset to create shadow effect. Works on all elements."
-          >
-            Shadow
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('colorMatrix')}
-            title="Color Shift animation - Animates color matrix values for color effects. Works on all elements."
-          >
-            Color Shift
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('viewBox')}
-            title="Zoom animation - Animates SVG viewBox for zoom effect. Works on entire viewport."
-          >
-            Zoom
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('position')}
-            title="Position animation - Animates X/Y coordinates. Works on shapes and text elements."
-          >
-            Position
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('size')}
-            title="Size animation - Animates width/height properties. Works on rectangles and shapes."
-          >
-            Size
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('circle')}
-            title="Circle animation - Animates radius property. Works specifically on circle elements."
-          >
-            Circle
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('line')}
-            title="Line animation - Animates line endpoints (x1,y1,x2,y2). Works on line elements."
-          >
-            Line
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('gradient')}
-            title="Gradient animation - Creates animated gradient with color and position changes. Works on all elements."
-          >
-            Gradient
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('pattern')}
-            title="Pattern animation - Animates pattern transform and attributes. Works on elements with patterns."
-          >
-            Pattern
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('textPosition')}
-            title="Text Position animation - Animates text X/Y coordinates. Works on text elements only."
-          >
-            Text Position
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('fontSize')}
-            title="Font Size animation - Animates font-size from 12px to 24px. Works on text elements only."
-          >
-            Font Size
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('fontWeight')}
-            title="Font Weight animation - Animates font-weight from normal to bold. Works on text elements only."
-          >
-            Font Weight
-          </button>
-          <button 
-            style={buttonStyle} 
-            onClick={() => handleQuickAnimation('letterSpacing')}
-            title="Letter Spacing animation - Animates letter-spacing from 0 to 5px. Works on text elements only."
-          >
-            Letter Spacing
-          </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div>
+            <PluginButton
+              icon={<Eye size={16} />}
+              text="Fade In/Out"
+              color="#e91e63"
+              onPointerDown={() => handleQuickAnimation('fade')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Changes opacity from 1 to 0.5. Works on all elements.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<Move size={16} />}
+              text="Move"
+              color="#2196f3"
+              onPointerDown={() => handleQuickAnimation('move')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Translates element from one position to another. Works on all elements.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<RotateCw size={16} />}
+              text="Rotate"
+              color="#ff9800"
+              onPointerDown={() => handleQuickAnimation('rotate')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Rotates element 360 degrees around its center. Works on all elements.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<Maximize size={16} />}
+              text="Scale"
+              color="#4caf50"
+              onPointerDown={() => handleQuickAnimation('scale')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Changes element size from 1 to 1.5. Works on all elements.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<Filter size={16} />}
+              text="Blur"
+              color="#9c27b0"
+              onPointerDown={() => handleQuickAnimation('blur')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Animates gaussian blur stdDeviation from 0 to 5. Works on all elements.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<Droplets size={16} />}
+              text="Shadow"
+              color="#795548"
+              onPointerDown={() => handleQuickAnimation('offset')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Animates filter offset to create shadow effect. Works on all elements.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<Palette size={16} />}
+              text="Color Shift"
+              color="#f44336"
+              onPointerDown={() => handleQuickAnimation('colorMatrix')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Animates color matrix values for color effects. Works on all elements.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<ZoomIn size={16} />}
+              text="Zoom"
+              color="#00bcd4"
+              onPointerDown={() => handleQuickAnimation('viewBox')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Animates SVG viewBox for zoom effect. Works on entire viewport.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<MapPin size={16} />}
+              text="Position"
+              color="#3f51b5"
+              onPointerDown={() => handleQuickAnimation('position')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Animates X/Y coordinates. Works on shapes and text elements.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<Square size={16} />}
+              text="Size"
+              color="#607d8b"
+              onPointerDown={() => handleQuickAnimation('size')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Animates width/height properties. Works on rectangles and shapes.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<Circle size={16} />}
+              text="Circle"
+              color="#ff5722"
+              onPointerDown={() => handleQuickAnimation('circle')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Animates radius property. Works specifically on circle elements.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<Minus size={16} />}
+              text="Line"
+              color="#009688"
+              onPointerDown={() => handleQuickAnimation('line')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Animates line endpoints (x1,y1,x2,y2). Works on line elements.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<Zap size={16} />}
+              text="Gradient"
+              color="#cddc39"
+              onPointerDown={() => handleQuickAnimation('gradient')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Creates animated gradient with color and position changes. Works on all elements.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<Grid size={16} />}
+              text="Pattern"
+              color="#8bc34a"
+              onPointerDown={() => handleQuickAnimation('pattern')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Animates pattern transform and attributes. Works on elements with patterns.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<AlignCenter size={16} />}
+              text="Text Position"
+              color="#ffc107"
+              onPointerDown={() => handleQuickAnimation('textPosition')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Animates text X/Y coordinates. Works on text elements only.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<Type size={16} />}
+              text="Font Size"
+              color="#673ab7"
+              onPointerDown={() => handleQuickAnimation('fontSize')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Animates font-size from 12px to 24px. Works on text elements only.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<Bold size={16} />}
+              text="Font Weight"
+              color="#ff6f00"
+              onPointerDown={() => handleQuickAnimation('fontWeight')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Animates font-weight from normal to bold. Works on text elements only.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<AlignJustify size={16} />}
+              text="Letter Spacing"
+              color="#37474f"
+              onPointerDown={() => handleQuickAnimation('letterSpacing')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Animates letter-spacing from 0 to 5px. Works on text elements only.
+            </div>
+          </div>
         </div>
       </div>
 
@@ -711,13 +840,14 @@ export const AnimationControls: React.FC = () => {
         <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333' }}>
           Create Animation
         </div>
-        <button 
-          style={showCreateForm ? activeButtonStyle : buttonStyle}
-          onClick={() => setShowCreateForm(!showCreateForm)}
-        >
-          <Plus size={14} />
-          {showCreateForm ? 'Hide Form' : 'Custom Animation'}
-        </button>
+        <PluginButton
+          icon={<Plus size={16} />}
+          text={showCreateForm ? 'Hide Form' : 'Custom Animation'}
+          color="#28a745"
+          active={showCreateForm}
+          onPointerDown={() => setShowCreateForm(!showCreateForm)}
+          fullWidth={true}
+        />
 
         {showCreateForm && (
           <div style={{ marginTop: '8px', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>
@@ -1183,8 +1313,20 @@ export const AnimationControls: React.FC = () => {
       </div>
 
       <div>
-        <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333' }}>
-          Animations ({animations.length})
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div style={{ fontWeight: 'bold', color: '#333' }}>
+            Animations ({animations.length})
+          </div>
+          {animations.length > 0 && (
+            <div style={{ marginLeft: '8px' }}>
+              <PluginButton
+                icon={<Trash2 size={12} />}
+                text="Clear All"
+                color="#dc3545"
+                onPointerDown={handleClearAllAnimations}
+              />
+            </div>
+          )}
         </div>
         {animations.length === 0 ? (
           <div style={{ fontSize: '10px', color: '#666', fontStyle: 'italic' }}>

@@ -31,7 +31,7 @@ export const ToolbarCreationTools: React.FC = () => {
     creationManager.exitCreation();
   };
 
-  const isCreateMode = mode.current === 'create';
+  const isCreateMode = mode.current === 'create' && mode.createMode?.commandType !== 'PENCIL';
   const createMode = mode.createMode;
 
   const tools = [
@@ -74,7 +74,7 @@ export const ToolbarCreationTools: React.FC = () => {
 
   // Get current active tool
   const getActiveTool = () => {
-    if (!isCreateMode) return null;
+    if (!isCreateMode || createMode?.commandType === 'PENCIL') return null;
     return tools.find(tool => 
       tool.command === 'NEW_PATH' 
         ? createMode?.commandType === 'NEW_PATH'
@@ -127,6 +127,21 @@ export const ToolbarCreationTools: React.FC = () => {
         isOpen={isCreationSubmenuOpen}
         onToggle={() => setCreationSubmenuOpen(!isCreationSubmenuOpen)}
       >
+        {isCreateMode && (
+          <>
+            <MobileSubmenuItem
+              icon={<X size={16} />}
+              label="Exit Create Mode"
+              onClick={() => handleToolAction(handleExitCreateMode)}
+              active={true}
+            />
+            <div style={{ 
+              height: '1px', 
+              background: '#e5e7eb', 
+              margin: '4px 0' 
+            }} />
+          </>
+        )}
         {tools.map(tool => (
           <MobileSubmenuItem
             key={tool.command}
@@ -140,20 +155,6 @@ export const ToolbarCreationTools: React.FC = () => {
             )}
           />
         ))}
-        {isCreateMode && (
-          <>
-            <div style={{ 
-              height: '1px', 
-              background: '#e5e7eb', 
-              margin: '4px 0' 
-            }} />
-            <MobileSubmenuItem
-              icon={<X size={16} />}
-              label="Exit Create Mode"
-              onClick={() => handleToolAction(handleExitCreateMode)}
-            />
-          </>
-        )}
       </MobileToolbarSubmenu>
       
       {/* Small spacing after creation tools */}

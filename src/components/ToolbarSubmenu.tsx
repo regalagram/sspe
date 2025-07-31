@@ -28,8 +28,10 @@ export const ToolbarSubmenu: React.FC<ToolbarSubmenuProps> = ({
       const triggerRect = triggerRef.current.getBoundingClientRect();
       const submenuWidth = 180;
       
-      // Position below the trigger button
-      const top = triggerRect.bottom + 8;
+      // Position relative to the trigger button based on position prop
+      const top = position === 'top' 
+        ? triggerRect.top - 8 - 200 // Approximate height of submenu
+        : triggerRect.bottom + 8;
       
       // Center horizontally on the trigger
       let left = triggerRect.left + (triggerRect.width / 2) - (submenuWidth / 2);
@@ -46,7 +48,7 @@ export const ToolbarSubmenu: React.FC<ToolbarSubmenuProps> = ({
       
       setSubmenuPosition({ top, left });
     }
-  }, [isOpen]);
+  }, [isOpen, position]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {

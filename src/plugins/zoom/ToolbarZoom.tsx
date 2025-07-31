@@ -96,6 +96,7 @@ export const ToolbarZoomControls: React.FC = () => {
         }
         isOpen={isZoomSubmenuOpen}
         onToggle={() => setZoomSubmenuOpen(!isZoomSubmenuOpen)}
+        position="top"
       >
         <MobileSubmenuItem
           icon={<Maximize2 size={16} />}
