@@ -26,9 +26,9 @@ export const MobileToolbarButton: React.FC<MobileToolbarButtonProps> = ({
   const isMobileDevice = isMobile || isTablet;
 
   const sizes = {
-    small: isMobileDevice ? 36 : 28,
-    medium: isMobileDevice ? 44 : 32,
-    large: isMobileDevice ? 52 : 40
+    small: isMobileDevice ? 32 : 28,
+    medium: isMobileDevice ? 40 : 32,
+    large: isMobileDevice ? 48 : 40
   };
 
   const buttonSize = sizes[size];

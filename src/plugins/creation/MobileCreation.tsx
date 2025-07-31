@@ -97,8 +97,8 @@ export const MobileCreationTools: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '52px', // Fixed width to prevent jumping
-            height: '44px',
+            width: '48px', // Fixed width to prevent jumping
+            height: '40px',
             background: hasActiveTool ? '#007acc' : (isSubmenuOpen ? '#e0f2fe' : '#f8f9fa'),
             borderRadius: '8px',
             fontSize: '12px',
@@ -154,6 +154,9 @@ export const MobileCreationTools: React.FC = () => {
           </>
         )}
       </MobileToolbarSubmenu>
+      
+      {/* Small spacing after creation tools */}
+      <div style={{ width: '8px' }} />
     </MobileToolbarSection>
   );
 };

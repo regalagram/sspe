@@ -54,10 +54,11 @@ export const MobileToolbar: React.FC<MobileToolbarProps> = ({
   const toolbarContentStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'center', // Center all buttons horizontally
     padding: '0px', // No padding for maximum space optimization
-    minHeight: '60px',
     gap: '0px', // No gap, separators handle spacing
-    minWidth: 'fit-content', // Allow horizontal scrolling
+    minWidth: '100%', // Take full width to enable centering
+    width: '100%', // Ensure full width
   };
 
   // CSS to hide scrollbar in WebKit browsers
