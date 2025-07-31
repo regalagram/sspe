@@ -20,7 +20,6 @@ export const WritingToolbar: React.FC<WritingToolbarProps> = ({
     backdropFilter: 'blur(10px)', // Blur effect for modern look
     WebkitBackdropFilter: 'blur(10px)', // Safari support
     border: '1px solid rgba(229, 231, 235, 0.5)', // Border all around
-    borderRadius: '12px', // Rounded corners
     boxShadow: '0 2px 12px rgba(0, 0, 0, 0.15)',
     position: 'fixed', // Fixed position instead of sticky
     top: 'env(safe-area-inset-top, 8px)', // Top margin with safe area support
@@ -45,8 +44,8 @@ export const WritingToolbar: React.FC<WritingToolbarProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center', // Center all buttons horizontally
-    padding: '6px 12px', // Comfortable padding around buttons
-    gap: '4px', // Small gap between sections
+    padding: '0px', // No vertical padding
+    gap: '4px', // Optimized gap between sections
     minHeight: 'fit-content', // Natural height based on button size
     overflow: 'visible', // Allow submenus to overflow
     position: 'relative', // Establish positioning context
@@ -62,13 +61,13 @@ export const WritingToolbar: React.FC<WritingToolbarProps> = ({
     <div style={{ ...toolbarStyle, ...scrollbarHideStyle }}>
       <style>
         {`
-          .writing-toolbar-container::-webkit-scrollbar {
+          .top-toolbar-content::-webkit-scrollbar {
             display: none;
           }
         `}
       </style>
       <div 
-        className="writing-toolbar-container"
+        className="top-toolbar-content"
         style={toolbarContentStyle}
       >
         {/* Section 1: Creation Tools (M, L, C, Z, New Path) */}

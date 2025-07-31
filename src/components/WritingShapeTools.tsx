@@ -72,12 +72,11 @@ export const WritingShapeTools: React.FC = () => {
             justifyContent: 'center',
             width: '48px',
             height: '40px',
-            background: isShapeActive ? '#007acc' : (isShapeSubmenuOpen ? '#e0f2fe' : '#f8f9fa'),
-            borderRadius: '8px',
+            background: isShapeActive ? '#007acc' : (isShapeSubmenuOpen ? '#e5e7eb' : 'white'),
             fontSize: '12px',
             fontWeight: 600,
             color: isShapeActive ? 'white' : '#007acc',
-            border: isShapeActive ? '2px solid #007acc' : '1px solid #e5e7eb',
+            border: 'none',
             gap: '4px',
             padding: '0 4px',
             cursor: 'pointer',
@@ -163,9 +162,6 @@ export const WritingShapeTools: React.FC = () => {
           );
         })}
       </ToolbarSubmenu>
-      
-      {/* Small spacing after shape tools */}
-      <div style={{ width: '4px' }} />
     </ToolbarSection>
   );
 };

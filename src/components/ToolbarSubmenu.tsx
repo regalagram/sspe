@@ -25,19 +25,134 @@ export const ToolbarSubmenu: React.FC<ToolbarSubmenuProps> = ({
   // Calculate submenu position when it opens
   useEffect(() => {
     if (isOpen && triggerRef.current) {
+      // Use a small delay to ensure the submenu is rendered in the DOM
+      const calculatePosition = () => {
+        const triggerRect = triggerRef.current!.getBoundingClientRect();
+        const submenuWidth = 180;
+        
+        // Get actual submenu height from DOM if available, otherwise estimate
+        let submenuHeight = 120; // Default fallback
+        if (submenuRef.current) {
+          submenuHeight = submenuRef.current.offsetHeight;
+        } else {
+          // Count only rendered children (those that aren't null/false)
+          const visibleChildren = React.Children.toArray(children).filter(child => 
+            child !== null && child !== false && child !== undefined
+          );
+          submenuHeight = visibleChildren.length * 32 + 20;
+        }
+        
+        // Position relative to the trigger button based on position prop
+        const top = position === 'top' 
+          ? triggerRect.top - 4 - submenuHeight
+          : triggerRect.bottom + 4;
+        
+        // Center horizontally on the trigger
+        let left = triggerRect.left + (triggerRect.width / 2) - (submenuWidth / 2);
+        
+        // Ensure submenu doesn't go off-screen
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const padding = 16;
+        
+        // Horizontal bounds check
+        if (left < padding) {
+          left = padding;
+        } else if (left + submenuWidth > viewportWidth - padding) {
+          left = viewportWidth - submenuWidth - padding;
+        }
+        
+        // Vertical bounds check - if submenu would go off screen, flip position
+        let finalTop = top;
+        if (position === 'top' && top < padding) {
+          // Flip to bottom if not enough space above
+          finalTop = triggerRect.bottom + 4;
+        } else if (position === 'bottom' && top + submenuHeight > viewportHeight - padding) {
+          // Flip to top if not enough space below
+          finalTop = triggerRect.top - 4 - submenuHeight;
+        }
+        
+        setSubmenuPosition({ top: finalTop, left });
+      };
+
+      // Small delay to ensure DOM is updated
+      const timer = setTimeout(calculatePosition, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, position, children]);
+
+  // Recalculate position on window resize or scroll
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const handleReposition = () => {
+      if (triggerRef.current) {
+        const triggerRect = triggerRef.current.getBoundingClientRect();
+        const submenuWidth = 180;
+        
+        // Get actual submenu height from DOM if available, otherwise estimate
+        let submenuHeight = 120; // Default fallback
+        if (submenuRef.current) {
+          submenuHeight = submenuRef.current.offsetHeight;
+        } else {
+          // Count only rendered children (those that aren't null/false)
+          const visibleChildren = React.Children.toArray(children).filter(child => 
+            child !== null && child !== false && child !== undefined
+          );
+          submenuHeight = visibleChildren.length * 32 + 20;
+        }
+        
+        const top = position === 'top' 
+          ? triggerRect.top - 4 - submenuHeight
+          : triggerRect.bottom + 4;
+        
+        let left = triggerRect.left + (triggerRect.width / 2) - (submenuWidth / 2);
+        
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const padding = 16;
+        
+        if (left < padding) {
+          left = padding;
+        } else if (left + submenuWidth > viewportWidth - padding) {
+          left = viewportWidth - submenuWidth - padding;
+        }
+        
+        let finalTop = top;
+        if (position === 'top' && top < padding) {
+          finalTop = triggerRect.bottom + 4;
+        } else if (position === 'bottom' && top + submenuHeight > viewportHeight - padding) {
+          finalTop = triggerRect.top - 4 - submenuHeight;
+        }
+        
+        setSubmenuPosition({ top: finalTop, left });
+      }
+    };
+
+    window.addEventListener('resize', handleReposition);
+    window.addEventListener('scroll', handleReposition, true); // Use capture for all scroll events
+    
+    return () => {
+      window.removeEventListener('resize', handleReposition);
+      window.removeEventListener('scroll', handleReposition, true);
+    };
+  }, [isOpen, position, children]);
+
+  // Recalculate position after submenu is rendered (for more accurate height)
+  useEffect(() => {
+    if (isOpen && submenuRef.current && triggerRef.current) {
       const triggerRect = triggerRef.current.getBoundingClientRect();
       const submenuWidth = 180;
+      const submenuHeight = submenuRef.current.offsetHeight; // Actual DOM height
       
-      // Position relative to the trigger button based on position prop
       const top = position === 'top' 
-        ? triggerRect.top - 8 - 200 // Approximate height of submenu
-        : triggerRect.bottom + 8;
+        ? triggerRect.top - 4 - submenuHeight
+        : triggerRect.bottom + 4;
       
-      // Center horizontally on the trigger
       let left = triggerRect.left + (triggerRect.width / 2) - (submenuWidth / 2);
       
-      // Ensure submenu doesn't go off-screen
       const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
       const padding = 16;
       
       if (left < padding) {
@@ -46,9 +161,16 @@ export const ToolbarSubmenu: React.FC<ToolbarSubmenuProps> = ({
         left = viewportWidth - submenuWidth - padding;
       }
       
-      setSubmenuPosition({ top, left });
+      let finalTop = top;
+      if (position === 'top' && top < padding) {
+        finalTop = triggerRect.bottom + 4;
+      } else if (position === 'bottom' && top + submenuHeight > viewportHeight - padding) {
+        finalTop = triggerRect.top - 4 - submenuHeight;
+      }
+      
+      setSubmenuPosition({ top: finalTop, left });
     }
-  }, [isOpen, position]);
+  }, [isOpen, position]); // Only depend on isOpen and position, not children
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {

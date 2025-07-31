@@ -44,7 +44,7 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
     justifyContent: 'center',
     border: 'none',
     borderRadius: isMobileDevice ? '8px' : '6px',
-    background: active ? color : 'transparent',
+    background: active ? color : 'white',
     color: active ? 'white' : (disabled ? '#9ca3af' : color),
     cursor: disabled ? 'not-allowed' : 'pointer',
     transition: 'all 0.15s ease',
@@ -70,7 +70,7 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
 
   const handlePointerLeave = (e: React.PointerEvent) => {
     if (!active) {
-      (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
+      (e.currentTarget as HTMLButtonElement).style.background = 'white';
     }
   };
 

@@ -100,12 +100,11 @@ export const ToolbarCreationTools: React.FC = () => {
             justifyContent: 'center',
             width: '48px', // Fixed width to prevent jumping
             height: '40px',
-            background: hasActiveTool ? '#007acc' : (isCreationSubmenuOpen ? '#e0f2fe' : '#f8f9fa'),
-            borderRadius: '8px',
+            background: hasActiveTool ? '#007acc' : (isCreationSubmenuOpen ? '#e5e7eb' : 'white'),
             fontSize: '12px',
             fontWeight: 600,
             color: hasActiveTool ? 'white' : '#007acc',
-            border: '1px solid #e5e7eb',
+            border: 'none',
             gap: '4px',
             padding: '0 4px', // Reduced padding since width is fixed
             cursor: 'pointer',
@@ -156,9 +155,6 @@ export const ToolbarCreationTools: React.FC = () => {
           />
         ))}
       </MobileToolbarSubmenu>
-      
-      {/* Small spacing after creation tools */}
-      <div style={{ width: '8px' }} />
     </MobileToolbarSection>
   );
 };

@@ -39,12 +39,11 @@ export const WritingCurveTools: React.FC = () => {
             justifyContent: 'center',
             width: '48px',
             height: '40px',
-            background: isCurveActive ? '#007acc' : (isCurveSubmenuOpen ? '#e0f2fe' : '#f8f9fa'),
-            borderRadius: '8px',
+            background: isCurveActive ? '#007acc' : (isCurveSubmenuOpen ? '#e5e7eb' : 'white'),
             fontSize: '12px',
             fontWeight: 600,
             color: isCurveActive ? 'white' : '#007acc',
-            border: '1px solid #e5e7eb',
+            border: 'none',
             gap: '4px',
             padding: '0 4px',
             cursor: 'pointer',
@@ -102,9 +101,6 @@ export const WritingCurveTools: React.FC = () => {
           </>
         )}
       </ToolbarSubmenu>
-      
-      {/* Small spacing after curve tools */}
-      <div style={{ width: '4px' }} />
     </ToolbarSection>
   );
 };

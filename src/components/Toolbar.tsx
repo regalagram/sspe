@@ -16,7 +16,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     backdropFilter: 'blur(10px)', // Blur effect for modern look
     WebkitBackdropFilter: 'blur(10px)', // Safari support
     border: '1px solid rgba(229, 231, 235, 0.5)', // Border all around
-    borderRadius: '12px', // Rounded corners
     boxShadow: '0 2px 12px rgba(0, 0, 0, 0.15)',
     position: 'fixed', // Fixed position instead of sticky
     bottom: 'env(safe-area-inset-bottom, 8px)', // Bottom margin with safe area support
@@ -41,8 +40,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center', // Center all buttons horizontally
-    padding: '6px 12px', // Comfortable padding around buttons
-    gap: '2px', // Small gap between sections
+    padding: '0px', // No vertical padding
+    gap: '4px', // Optimized gap between sections
     minHeight: 'fit-content', // Natural height based on button size
     overflow: 'visible', // Allow submenus to overflow
     position: 'relative', // Establish positioning context
@@ -58,13 +57,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     <div style={{ ...toolbarStyle, ...scrollbarHideStyle }}>
       <style>
         {`
-          .toolbar-container::-webkit-scrollbar {
+          .bottom-toolbar-content::-webkit-scrollbar {
             display: none;
           }
         `}
       </style>
       <div 
-        className="toolbar-container"
+        className="bottom-toolbar-content"
         style={toolbarContentStyle}
       >
         {/* Section 1: Undo/Redo */}
