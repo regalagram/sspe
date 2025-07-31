@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, ArrowLeft, Settings, Palette, Layers, Zap } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Settings, Palette, Layers, Zap, Play } from 'lucide-react';
 import { UIComponentDefinition } from '../core/PluginSystem';
 import { usePanelModeStore } from '../plugins/panelmode/PanelManager';
 
@@ -51,7 +51,15 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
       icon: <Palette size={20} />,
       color: '#8b5cf6',
       plugins: [],
-      orders: [15, 16, 17] // gradients, text-style, animations, etc.
+      orders: [15, 16, 17] // gradients, text-style, etc.
+    },
+    {
+      id: 'animations',
+      name: 'Animations',
+      icon: <Play size={20} />,
+      color: '#f59e0b',
+      plugins: [],
+      orders: [] // Will be populated by name matching
     },
     {
       id: 'advanced',
@@ -75,13 +83,28 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
   visiblePlugins.forEach(plugin => {
     const panel = visiblePanels.find(p => p.id === plugin.id);
     const order = panel?.order || 0;
+    const panelName = panel?.name || plugin.id;
     
     let assigned = false;
-    for (const category of categories) {
-      if (category.orders.includes(order)) {
-        category.plugins.push(plugin);
+    
+    // Check for animation-related panels first (by name)
+    const animationNames = ['Animations', 'Animation Synchronizer', 'Timeline'];
+    if (animationNames.some(name => panelName.includes(name))) {
+      const animationsCategory = categories.find(c => c.id === 'animations');
+      if (animationsCategory) {
+        animationsCategory.plugins.push(plugin);
         assigned = true;
-        break;
+      }
+    }
+    
+    // Then check by order for other categories
+    if (!assigned) {
+      for (const category of categories) {
+        if (category.id !== 'animations' && category.orders.includes(order)) {
+          category.plugins.push(plugin);
+          assigned = true;
+          break;
+        }
       }
     }
     
@@ -188,7 +211,7 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
           </div>
         </div>
         
-        <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
+        <div style={{ flex: 1, overflow: 'auto', padding: '16px', color: '#374151' }}>
           <MobilePluginContent plugin={selectedPlugin} />
         </div>
       </div>

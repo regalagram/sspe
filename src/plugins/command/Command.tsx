@@ -26,18 +26,11 @@ const CommandPanel: React.FC<CommandPanelProps> = ({ command, pathId, subPathId 
 
     // Always show command type
     properties.push(
-      <div key="type" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+      <div>
+        <div>
           Command Type:
         </div>
-        <div style={{ 
-          fontSize: '14px', 
-          fontWeight: '600', 
-          color: '#007acc',
-          maxWidth: '170px',
-          wordWrap: 'break-word',
-          lineHeight: '1.3'
-        }}>
+        <div>
           {cmd.command} - {getCommandTypeDescription(cmd)}
         </div>
       </div>
@@ -46,11 +39,11 @@ const CommandPanel: React.FC<CommandPanelProps> = ({ command, pathId, subPathId 
     // Show coordinates based on command type
     if (cmd.x !== undefined || cmd.y !== undefined) {
       properties.push(
-        <div key="coordinates" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+        <div>
+          <div>
             Coordinates:
           </div>
-          <div style={{ fontSize: '12px', fontFamily: 'monospace' }}>
+          <div>
             x: {cmd.x?.toFixed(2) || 'N/A'}, y: {cmd.y?.toFixed(2) || 'N/A'}
           </div>
         </div>
@@ -60,11 +53,11 @@ const CommandPanel: React.FC<CommandPanelProps> = ({ command, pathId, subPathId 
     // Show control points for curves
     if (cmd.x1 !== undefined || cmd.y1 !== undefined) {
       properties.push(
-        <div key="control1" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+        <div>
+          <div>
             Control Point 1:
           </div>
-          <div style={{ fontSize: '12px', fontFamily: 'monospace' }}>
+          <div>
             x1: {cmd.x1?.toFixed(2) || 'N/A'}, y1: {cmd.y1?.toFixed(2) || 'N/A'}
           </div>
         </div>
@@ -73,11 +66,11 @@ const CommandPanel: React.FC<CommandPanelProps> = ({ command, pathId, subPathId 
 
     if (cmd.x2 !== undefined || cmd.y2 !== undefined) {
       properties.push(
-        <div key="control2" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
+        <div>
+          <div>
             Control Point 2:
           </div>
-          <div style={{ fontSize: '12px', fontFamily: 'monospace' }}>
+          <div>
             x2: {cmd.x2?.toFixed(2) || 'N/A'}, y2: {cmd.y2?.toFixed(2) || 'N/A'}
           </div>
         </div>
@@ -86,11 +79,11 @@ const CommandPanel: React.FC<CommandPanelProps> = ({ command, pathId, subPathId 
 
     // Show ID information
     properties.push(
-      <div key="ids" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
-          IDs:
+      <div>
+        <div>
+          IDs
         </div>
-        <div style={{ fontSize: '11px', fontFamily: 'monospace', color: '#666' }}>
+        <div>
           <div>Command: {cmd.id}</div>
           <div>SubPath: {subPathId}</div>
           <div>Path: {pathId}</div>
@@ -105,7 +98,7 @@ const CommandPanel: React.FC<CommandPanelProps> = ({ command, pathId, subPathId 
     <div className="command-info" style={{ 
       display: 'flex', 
       flexDirection: 'column', 
-      gap: '12px' 
+      gap: '12px',
     }}>
       {renderCommandProperties(command)}
     </div>
