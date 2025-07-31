@@ -116,7 +116,7 @@ export const AnimationSynchronizer: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '8px', fontSize: '11px' }}>
+    <div style={{ fontSize: '11px' }}>
       {/* Header */}
       <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <Link size={14} />
