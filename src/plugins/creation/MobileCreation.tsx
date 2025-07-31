@@ -3,6 +3,7 @@ import { Plus, Move, Minus, Pen, X, ChevronDown } from 'lucide-react';
 import { MobileToolbarButton, MobileToolbarSection } from '../../components/MobileToolbarButton';
 import { MobileToolbarSubmenu, MobileSubmenuItem } from '../../components/MobileToolbarSubmenu';
 import { useEditorStore } from '../../store/editorStore';
+import { useMobileToolbarStore } from '../../store/mobileToolbarStore';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 import { SVGCommandType, EditorCommandType } from '../../types';
 import { toolModeManager } from '../../managers/ToolModeManager';
@@ -11,7 +12,10 @@ import { creationManager } from './CreationManager';
 export const MobileCreationTools: React.FC = () => {
   const { mode } = useEditorStore();
   const { isMobile } = useMobileDetection();
-  const [isSubmenuOpen, setIsSubmenuOpen] = useState(false);
+  const { 
+    isCreationSubmenuOpen, 
+    setCreationSubmenuOpen 
+  } = useMobileToolbarStore();
 
   if (!isMobile) {
     // Return null for desktop - use original component
@@ -39,7 +43,7 @@ export const MobileCreationTools: React.FC = () => {
       icon: <Move size={16} />, 
       label: 'M', 
       title: 'Move To (M)',
-      description: 'Start new path'
+      description: 'Start new sub-path'
     },
     { 
       command: 'NEW_PATH' as const, 
@@ -86,7 +90,7 @@ export const MobileCreationTools: React.FC = () => {
 
   const handleToolAction = (action: () => void) => {
     action();
-    setIsSubmenuOpen(false);
+    setCreationSubmenuOpen(false);
   };
 
   return (
@@ -99,7 +103,7 @@ export const MobileCreationTools: React.FC = () => {
             justifyContent: 'center',
             width: '48px', // Fixed width to prevent jumping
             height: '40px',
-            background: hasActiveTool ? '#007acc' : (isSubmenuOpen ? '#e0f2fe' : '#f8f9fa'),
+            background: hasActiveTool ? '#007acc' : (isCreationSubmenuOpen ? '#e0f2fe' : '#f8f9fa'),
             borderRadius: '8px',
             fontSize: '12px',
             fontWeight: 600,
@@ -118,13 +122,13 @@ export const MobileCreationTools: React.FC = () => {
             )}
             <ChevronDown size={12} style={{ 
               marginLeft: '2px',
-              transform: isSubmenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+              transform: isCreationSubmenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
               transition: 'transform 0.2s ease'
             }} />
           </div>
         }
-        isOpen={isSubmenuOpen}
-        onToggle={() => setIsSubmenuOpen(!isSubmenuOpen)}
+        isOpen={isCreationSubmenuOpen}
+        onToggle={() => setCreationSubmenuOpen(!isCreationSubmenuOpen)}
       >
         {tools.map(tool => (
           <MobileSubmenuItem

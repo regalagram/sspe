@@ -3,12 +3,16 @@ import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Target } from 'lucide-react';
 import { MobileToolbarButton, MobileToolbarSection } from '../../components/MobileToolbarButton';
 import { MobileToolbarSubmenu, MobileSubmenuItem } from '../../components/MobileToolbarSubmenu';
 import { useEditorStore } from '../../store/editorStore';
+import { useMobileToolbarStore } from '../../store/mobileToolbarStore';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 
 export const MobileZoomControls: React.FC = () => {
   const { viewport, selection, zoomIn, zoomOut, zoomToFit, zoomToSelection, zoomToSubPath, resetView } = useEditorStore();
   const { isMobile } = useMobileDetection();
-  const [isSubmenuOpen, setIsSubmenuOpen] = useState(false);
+  const { 
+    isZoomSubmenuOpen, 
+    setZoomSubmenuOpen 
+  } = useMobileToolbarStore();
 
   if (!isMobile) {
     // Return null for desktop - use original component
@@ -52,12 +56,12 @@ export const MobileZoomControls: React.FC = () => {
   };
 
   const handleSubmenuClose = () => {
-    setIsSubmenuOpen(false);
+    setZoomSubmenuOpen(false);
   };
 
   const handleZoomAction = (action: () => void) => {
     action();
-    setIsSubmenuOpen(false);
+    setZoomSubmenuOpen(false);
   };
 
   return (
@@ -79,7 +83,7 @@ export const MobileZoomControls: React.FC = () => {
             justifyContent: 'center',
             minWidth: '46px',
             height: '40px',
-            background: isSubmenuOpen ? '#e0f2fe' : '#f8f9fa',
+            background: isZoomSubmenuOpen ? '#e0f2fe' : '#f8f9fa',
             borderRadius: '8px',
             fontSize: '12px',
             fontWeight: 600,
@@ -93,8 +97,8 @@ export const MobileZoomControls: React.FC = () => {
             <span>{Math.round(viewport.zoom * 100)}</span>
           </div>
         }
-        isOpen={isSubmenuOpen}
-        onToggle={() => setIsSubmenuOpen(!isSubmenuOpen)}
+        isOpen={isZoomSubmenuOpen}
+        onToggle={() => setZoomSubmenuOpen(!isZoomSubmenuOpen)}
       >
         <MobileSubmenuItem
           icon={<Maximize2 size={16} />}

@@ -91,6 +91,15 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
     }
   });
 
+  // Sort plugins alphabetically within each category
+  categories.forEach(category => {
+    category.plugins.sort((a, b) => {
+      const nameA = visiblePanels.find(p => p.id === a.id)?.name || a.id;
+      const nameB = visiblePanels.find(p => p.id === b.id)?.name || b.id;
+      return nameA.localeCompare(nameB);
+    });
+  });
+
   // Filter out empty categories
   const nonEmptyCategories = categories.filter(cat => cat.plugins.length > 0);
 

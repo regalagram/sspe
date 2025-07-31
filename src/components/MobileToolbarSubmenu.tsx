@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 
 interface MobileToolbarSubmenuProps {
@@ -25,12 +26,12 @@ export const MobileToolbarSubmenu: React.FC<MobileToolbarSubmenuProps> = ({
   useEffect(() => {
     if (isOpen && triggerRef.current) {
       const triggerRect = triggerRef.current.getBoundingClientRect();
-      const submenuWidth = 200; // Approximate width
+      const submenuWidth = 180;
       
-      // Position below the trigger
-      const top = triggerRect.bottom + 4;
+      // Position below the trigger button
+      const top = triggerRect.bottom + 8;
       
-      // Center horizontally on the trigger, but ensure it stays within viewport
+      // Center horizontally on the trigger
       let left = triggerRect.left + (triggerRect.width / 2) - (submenuWidth / 2);
       
       // Ensure submenu doesn't go off-screen
@@ -70,32 +71,43 @@ export const MobileToolbarSubmenu: React.FC<MobileToolbarSubmenuProps> = ({
   if (!isMobile) return null;
 
   const submenuStyle: React.CSSProperties = {
-    position: 'fixed',
+    position: 'fixed', // Use fixed for portal
     top: `${submenuPosition.top}px`,
     left: `${submenuPosition.left}px`,
     backgroundColor: 'white',
     border: '1px solid #e5e7eb',
     borderRadius: '8px',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-    zIndex: 9999,
-    minWidth: '160px',
+    zIndex: 99999,
+    minWidth: '180px',
     maxWidth: '220px',
     padding: '8px',
     display: isOpen ? 'block' : 'none',
     maxHeight: '300px',
     overflowY: 'auto',
     WebkitOverflowScrolling: 'touch',
+    // Force visibility
+    opacity: 1,
+    visibility: 'visible',
+    pointerEvents: 'auto',
   };
 
   return (
-    <div ref={submenuRef} style={{ position: 'relative', display: 'inline-block' }}>
-      <div ref={triggerRef} onClick={onToggle} style={{ cursor: 'pointer' }}>
-        {trigger}
+    <>
+      <div style={{ position: 'relative', display: 'inline-block' }}>
+        <div ref={triggerRef} onClick={onToggle} style={{ cursor: 'pointer' }}>
+          {trigger}
+        </div>
       </div>
-      <div style={submenuStyle}>
-        {children}
-      </div>
-    </div>
+      
+      {/* Render submenu in a portal to escape overflow constraints */}
+      {isOpen && createPortal(
+        <div ref={submenuRef} style={submenuStyle}>
+          {children}
+        </div>,
+        document.body
+      )}
+    </>
   );
 };
 

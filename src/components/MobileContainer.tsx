@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UIComponentDefinition } from '../core/PluginSystem';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { BottomSheet } from './BottomSheet';
@@ -11,25 +11,60 @@ interface MobileContainerProps {
   children: React.ReactNode; // SVG canvas content
 }
 
+// Load saved bottom sheet state from localStorage
+const loadSavedBottomSheetState = (): boolean => {
+  try {
+    const saved = localStorage.getItem('sspe-mobile-bottom-sheet-open');
+    return saved === 'true';
+  } catch {
+    return false;
+  }
+};
+
+// Load saved selected plugin from localStorage
+const loadSavedSelectedPlugin = (plugins: UIComponentDefinition[]): UIComponentDefinition | null => {
+  try {
+    const saved = localStorage.getItem('sspe-mobile-selected-plugin');
+    if (saved) {
+      return plugins.find(plugin => plugin.id === saved) || null;
+    }
+  } catch {}
+  return null;
+};
+
 export const MobileContainer: React.FC<MobileContainerProps> = ({
   sidebarPlugins,
   toolbarPlugins,
   children
 }) => {
   const { isMobile, isTablet } = useMobileDetection();
-  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
-  const [selectedPlugin, setSelectedPlugin] = useState<UIComponentDefinition | null>(null);
+  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(() => loadSavedBottomSheetState());
+  const [selectedPlugin, setSelectedPlugin] = useState<UIComponentDefinition | null>(() => 
+    loadSavedSelectedPlugin(sidebarPlugins)
+  );
+
+  // Persist bottom sheet state to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('sspe-mobile-bottom-sheet-open', isBottomSheetOpen ? 'true' : 'false');
+    } catch {}
+  }, [isBottomSheetOpen]);
+
+  // Persist selected plugin to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('sspe-mobile-selected-plugin', selectedPlugin?.id || '');
+    } catch {}
+  }, [selectedPlugin]);
 
   const handleToggleBottomSheet = () => {
-    if (isBottomSheetOpen && selectedPlugin) {
-      // If a plugin is selected, first go back to menu
-      setSelectedPlugin(null);
+    if (isBottomSheetOpen) {
+      // If bottom sheet is open, close it (preserve plugin selection)
+      setIsBottomSheetOpen(false);
     } else {
-      // Toggle bottom sheet
-      setIsBottomSheetOpen(!isBottomSheetOpen);
-      if (!isBottomSheetOpen) {
-        setSelectedPlugin(null); // Reset selection when opening
-      }
+      // If bottom sheet is closed, open it (restore any saved plugin)
+      setIsBottomSheetOpen(true);
+      // selectedPlugin will maintain its localStorage state
     }
   };
 
@@ -43,7 +78,7 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({
 
   const handleCloseBottomSheet = () => {
     setIsBottomSheetOpen(false);
-    setSelectedPlugin(null);
+    // Don't reset selectedPlugin - preserve it for next opening
   };
 
   const isMobileDevice = isMobile || isTablet;
@@ -62,11 +97,12 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({
         isMobile={isMobileDevice}
       />
       
-      {/* Main Content Area */}
+      {/* Main Content Area - Full background canvas */}
       <div style={{ 
         flex: 1, 
         position: 'relative',
         overflow: 'hidden'
+        // No margin/padding - let canvas fill entire background
       }}>
         {children}
         
