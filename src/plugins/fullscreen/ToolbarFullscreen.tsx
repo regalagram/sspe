@@ -1,17 +1,14 @@
 import React from 'react';
 import { Maximize, Minimize } from 'lucide-react';
-import { MobileToolbarButton, MobileToolbarSection } from '../../components/MobileToolbarButton';
+import { MobileToolbarButton, MobileToolbarSection } from '../../components/ToolbarButton';
 import { useEditorStore } from '../../store/editorStore';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 
-export const MobileFullscreenControl: React.FC = () => {
+export const ToolbarFullscreenControl: React.FC = () => {
   const { isFullscreen, toggleFullscreen } = useEditorStore();
   const { isMobile } = useMobileDetection();
 
-  if (!isMobile) {
-    // Return null for desktop - use original component
-    return null;
-  }
+  // Always show toolbar fullscreen control (removed mobile-only restriction)
 
   const handleToggle = async () => {
     try {
@@ -40,3 +37,6 @@ export const MobileFullscreenControl: React.FC = () => {
     </MobileToolbarSection>
   );
 };
+
+// Backward compatibility export
+export const MobileFullscreenControl = ToolbarFullscreenControl;

@@ -31,12 +31,12 @@ interface ToolbarActions {
   saveToStorage: () => void;
 }
 
-type MobileToolbarStore = ToolbarState & ToolbarActions;
+type ToolbarStore = ToolbarState & ToolbarActions;
 
 // Load saved toolbar state from localStorage
 const loadSavedToolbarState = (): Partial<ToolbarState> => {
   try {
-    const saved = localStorage.getItem('sspe-mobile-toolbar-state');
+    const saved = localStorage.getItem('sspe-toolbar-state');
     if (saved) {
       return JSON.parse(saved);
     }
@@ -53,11 +53,11 @@ const saveToolbarState = (state: ToolbarState) => {
       isZoomSubmenuOpen: state.isZoomSubmenuOpen,
       lastActiveTools: state.lastActiveTools,
     };
-    localStorage.setItem('sspe-mobile-toolbar-state', JSON.stringify(stateToSave));
+    localStorage.setItem('sspe-toolbar-state', JSON.stringify(stateToSave));
   } catch {}
 };
 
-export const useMobileToolbarStore = create<MobileToolbarStore>()(
+export const useToolbarStore = create<ToolbarStore>()(
   subscribeWithSelector((set, get) => {
     // Load initial state
     const savedState = loadSavedToolbarState();
@@ -115,11 +115,14 @@ export const useMobileToolbarStore = create<MobileToolbarStore>()(
 );
 
 // Subscribe to state changes to auto-save important changes
-useMobileToolbarStore.subscribe(
+useToolbarStore.subscribe(
   (state) => state.activeCreationTool,
   () => {
     // Auto-save when active creation tool changes
-    const state = useMobileToolbarStore.getState();
+    const state = useToolbarStore.getState();
     saveToolbarState(state);
   }
 );
+
+// Backward compatibility export
+export const useMobileToolbarStore = useToolbarStore;

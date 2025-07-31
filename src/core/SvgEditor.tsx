@@ -15,6 +15,7 @@ import { AccordionSidebar } from '../plugins/panelmode/AccordionSidebar';
 import { AccordionToggleButton } from '../components/AccordionToggleButton';
 import { SVGDefinitions } from '../components/SVGDefinitions';
 import { MobileContainer } from '../components/MobileContainer';
+import { Toolbar } from '../components/Toolbar';
 import { extractGradientsFromPaths } from '../utils/gradient-utils';
 
 // Register plugins immediately during module loading
@@ -151,9 +152,12 @@ export const SvgEditor: React.FC = () => {
     );
   }
 
-  // Desktop version with accordion sidebar
+  // Desktop version with accordion sidebar and toolbar
   return (
     <div className="svg-editor" style={editorStyle}>
+      {/* Always visible toolbar for desktop */}
+      <Toolbar toolbarPlugins={toolbarPanels} />
+      
       {svgCanvas}
       
       {/* Render sidebar as accordion */}

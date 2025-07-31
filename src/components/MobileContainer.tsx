@@ -3,7 +3,7 @@ import { UIComponentDefinition } from '../core/PluginSystem';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { BottomSheet } from './BottomSheet';
 import { MobilePluginMenu } from './MobilePluginMenu';
-import { MobileToolbar, MobileFloatingButton } from './MobileToolbar';
+import { Toolbar, MobileFloatingButton } from './Toolbar';
 
 interface MobileContainerProps {
   sidebarPlugins: UIComponentDefinition[];
@@ -91,10 +91,9 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({
       flexDirection: 'column',
       overflow: 'hidden'
     }}>
-      {/* Mobile/Desktop Toolbar */}
-      <MobileToolbar 
-        toolbarPlugins={toolbarPlugins} 
-        isMobile={isMobileDevice}
+      {/* Always visible optimized Toolbar */}
+      <Toolbar 
+        toolbarPlugins={toolbarPlugins}
       />
       
       {/* Main Content Area - Full background canvas */}

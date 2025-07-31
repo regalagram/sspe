@@ -1,17 +1,14 @@
 import React from 'react';
 import { Undo2, Redo2 } from 'lucide-react';
-import { MobileToolbarButton, MobileToolbarSection } from '../../components/MobileToolbarButton';
+import { MobileToolbarButton, MobileToolbarSection } from '../../components/ToolbarButton';
 import { useEditorStore } from '../../store/editorStore';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 
-export const MobileUndoRedoControls: React.FC = () => {
+export const ToolbarUndoRedoControls: React.FC = () => {
   const { history, undo, redo } = useEditorStore();
   const { isMobile } = useMobileDetection();
 
-  if (!isMobile) {
-    // Return null for desktop - use original component
-    return null;
-  }
+  // Always show toolbar undo/redo controls (removed mobile-only restriction)
 
   return (
     <MobileToolbarSection title="Undo/Redo">
@@ -34,3 +31,6 @@ export const MobileUndoRedoControls: React.FC = () => {
     </MobileToolbarSection>
   );
 };
+
+// Backward compatibility export
+export const MobileUndoRedoControls = ToolbarUndoRedoControls;

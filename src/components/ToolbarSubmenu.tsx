@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 
-interface MobileToolbarSubmenuProps {
+interface ToolbarSubmenuProps {
   trigger: React.ReactNode;
   children: React.ReactNode;
   isOpen: boolean;
@@ -10,7 +10,7 @@ interface MobileToolbarSubmenuProps {
   position?: 'bottom' | 'top';
 }
 
-export const MobileToolbarSubmenu: React.FC<MobileToolbarSubmenuProps> = ({
+export const ToolbarSubmenu: React.FC<ToolbarSubmenuProps> = ({
   trigger,
   children,
   isOpen,
@@ -68,7 +68,7 @@ export const MobileToolbarSubmenu: React.FC<MobileToolbarSubmenuProps> = ({
     };
   }, [isOpen, onToggle]);
 
-  if (!isMobile) return null;
+  // Always show toolbar submenu (removed mobile-only restriction)
 
   const submenuStyle: React.CSSProperties = {
     position: 'fixed', // Use fixed for portal
@@ -111,7 +111,7 @@ export const MobileToolbarSubmenu: React.FC<MobileToolbarSubmenuProps> = ({
   );
 };
 
-interface MobileSubmenuItemProps {
+interface SubmenuItemProps {
   icon?: React.ReactNode;
   label: string;
   onClick: () => void;
@@ -119,7 +119,7 @@ interface MobileSubmenuItemProps {
   active?: boolean;
 }
 
-export const MobileSubmenuItem: React.FC<MobileSubmenuItemProps> = ({
+export const SubmenuItem: React.FC<SubmenuItemProps> = ({
   icon,
   label,
   onClick,
@@ -172,3 +172,7 @@ export const MobileSubmenuItem: React.FC<MobileSubmenuItemProps> = ({
     </button>
   );
 };
+
+// Backward compatibility exports
+export const MobileToolbarSubmenu = ToolbarSubmenu;
+export const MobileSubmenuItem = SubmenuItem;

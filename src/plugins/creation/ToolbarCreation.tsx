@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { Plus, Move, Minus, Pen, X, ChevronDown } from 'lucide-react';
-import { MobileToolbarButton, MobileToolbarSection } from '../../components/MobileToolbarButton';
-import { MobileToolbarSubmenu, MobileSubmenuItem } from '../../components/MobileToolbarSubmenu';
+import { MobileToolbarButton, MobileToolbarSection } from '../../components/ToolbarButton';
+import { MobileToolbarSubmenu, MobileSubmenuItem } from '../../components/ToolbarSubmenu';
 import { useEditorStore } from '../../store/editorStore';
-import { useMobileToolbarStore } from '../../store/mobileToolbarStore';
+import { useMobileToolbarStore } from '../../store/toolbarStore';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 import { SVGCommandType, EditorCommandType } from '../../types';
 import { toolModeManager } from '../../managers/ToolModeManager';
 import { creationManager } from './CreationManager';
 
-export const MobileCreationTools: React.FC = () => {
+export const ToolbarCreationTools: React.FC = () => {
   const { mode } = useEditorStore();
   const { isMobile } = useMobileDetection();
   const { 
@@ -17,10 +17,7 @@ export const MobileCreationTools: React.FC = () => {
     setCreationSubmenuOpen 
   } = useMobileToolbarStore();
 
-  if (!isMobile) {
-    // Return null for desktop - use original component
-    return null;
-  }
+  // Always show toolbar creation tools (removed mobile-only restriction)
 
   const handleSelectTool = (commandType: SVGCommandType | 'NEW_PATH') => {
     if (commandType === 'NEW_PATH') {
@@ -164,3 +161,6 @@ export const MobileCreationTools: React.FC = () => {
     </MobileToolbarSection>
   );
 };
+
+// Backward compatibility export
+export const MobileCreationTools = ToolbarCreationTools;

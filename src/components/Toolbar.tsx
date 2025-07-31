@@ -1,43 +1,20 @@
 import React from 'react';
 import { UIComponentDefinition } from '../core/PluginSystem';
-import { MobileUndoRedoControls } from '../plugins/undo-redo/MobileUndoRedo';
-import { MobileZoomControls } from '../plugins/zoom/MobileZoom';
-import { MobileCreationTools } from '../plugins/creation/MobileCreation';
-import { MobileFullscreenControl } from '../plugins/fullscreen/MobileFullscreen';
-import { MobileDeleteControl } from '../plugins/delete/MobileDelete';
+import { MobileUndoRedoControls } from '../plugins/undo-redo/ToolbarUndoRedo';
+import { MobileZoomControls } from '../plugins/zoom/ToolbarZoom';
+import { MobileCreationTools } from '../plugins/creation/ToolbarCreation';
+import { MobileFullscreenControl } from '../plugins/fullscreen/ToolbarFullscreen';
+import { MobileDeleteControl } from '../plugins/delete/ToolbarDelete';
 
-interface MobileToolbarProps {
+interface ToolbarProps {
   toolbarPlugins: UIComponentDefinition[];
-  isMobile: boolean;
 }
 
-export const MobileToolbar: React.FC<MobileToolbarProps> = ({ 
-  toolbarPlugins, 
-  isMobile 
+export const Toolbar: React.FC<ToolbarProps> = ({ 
+  toolbarPlugins 
 }) => {
-  if (!isMobile) {
-    // Return regular toolbar for desktop
-    return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '8px 12px',
-        background: '#f8f9fa',
-        borderBottom: '1px solid #e5e7eb',
-        minHeight: '48px'
-      }}>
-        {toolbarPlugins.map(plugin => (
-          <div key={plugin.id}>
-            <plugin.component />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  // Mobile-optimized toolbar with sections
-  const mobileToolbarStyle: React.CSSProperties = {
+  // Always use the optimized toolbar with dropdown buttons and fixed positioning
+  const toolbarStyle: React.CSSProperties = {
     background: 'rgba(255, 255, 255, 0.95)', // Semi-transparent for overlay effect
     backdropFilter: 'blur(10px)', // Blur effect for modern look
     WebkitBackdropFilter: 'blur(10px)', // Safari support
@@ -81,16 +58,16 @@ export const MobileToolbar: React.FC<MobileToolbarProps> = ({
   };
 
   return (
-    <div style={{ ...mobileToolbarStyle, ...scrollbarHideStyle }}>
+    <div style={{ ...toolbarStyle, ...scrollbarHideStyle }}>
       <style>
         {`
-          .mobile-toolbar-container::-webkit-scrollbar {
+          .toolbar-container::-webkit-scrollbar {
             display: none;
           }
         `}
       </style>
       <div 
-        className="mobile-toolbar-container"
+        className="toolbar-container"
         style={toolbarContentStyle}
       >
         {/* Section 1: Undo/Redo */}

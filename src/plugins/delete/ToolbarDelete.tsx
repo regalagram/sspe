@@ -1,18 +1,15 @@
 import React from 'react';
 import { Trash2 } from 'lucide-react';
-import { MobileToolbarButton, MobileToolbarSection } from '../../components/MobileToolbarButton';
+import { MobileToolbarButton, MobileToolbarSection } from '../../components/ToolbarButton';
 import { useEditorStore } from '../../store/editorStore';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 import { executeDelete } from './Delete';
 
-export const MobileDeleteControl: React.FC = () => {
+export const ToolbarDeleteControl: React.FC = () => {
   const { selection } = useEditorStore();
   const { isMobile } = useMobileDetection();
 
-  if (!isMobile) {
-    // Return null for desktop - use original component
-    return null;
-  }
+  // Always show toolbar delete control (removed mobile-only restriction)
 
   const hasSelection = 
     selection.selectedPaths.length > 0 || 
@@ -42,3 +39,6 @@ export const MobileDeleteControl: React.FC = () => {
     </MobileToolbarSection>
   );
 };
+
+// Backward compatibility export
+export const MobileDeleteControl = ToolbarDeleteControl;

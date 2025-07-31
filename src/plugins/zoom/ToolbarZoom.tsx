@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Target } from 'lucide-react';
-import { MobileToolbarButton, MobileToolbarSection } from '../../components/MobileToolbarButton';
-import { MobileToolbarSubmenu, MobileSubmenuItem } from '../../components/MobileToolbarSubmenu';
+import { MobileToolbarButton, MobileToolbarSection } from '../../components/ToolbarButton';
+import { MobileToolbarSubmenu, MobileSubmenuItem } from '../../components/ToolbarSubmenu';
 import { useEditorStore } from '../../store/editorStore';
-import { useMobileToolbarStore } from '../../store/mobileToolbarStore';
+import { useMobileToolbarStore } from '../../store/toolbarStore';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 
-export const MobileZoomControls: React.FC = () => {
+export const ToolbarZoomControls: React.FC = () => {
   const { viewport, selection, zoomIn, zoomOut, zoomToFit, zoomToSelection, zoomToSubPath, resetView } = useEditorStore();
   const { isMobile } = useMobileDetection();
   const { 
@@ -14,10 +14,7 @@ export const MobileZoomControls: React.FC = () => {
     setZoomSubmenuOpen 
   } = useMobileToolbarStore();
 
-  if (!isMobile) {
-    // Return null for desktop - use original component
-    return null;
-  }
+  // Always show toolbar zoom controls (removed mobile-only restriction)
 
   const hasSelection = selection.selectedCommands.length > 0;
   const hasSubPathSelection = selection.selectedSubPaths.length > 0;
@@ -136,3 +133,6 @@ export const MobileZoomControls: React.FC = () => {
     </MobileToolbarSection>
   );
 };
+
+// Backward compatibility export
+export const MobileZoomControls = ToolbarZoomControls;

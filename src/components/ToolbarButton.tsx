@@ -1,7 +1,7 @@
 import React from 'react';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 
-interface MobileToolbarButtonProps {
+interface ToolbarButtonProps {
   icon: React.ReactNode;
   label?: string; // Optional single letter or short text
   onClick: () => void;
@@ -12,7 +12,7 @@ interface MobileToolbarButtonProps {
   title?: string; // Tooltip text
 }
 
-export const MobileToolbarButton: React.FC<MobileToolbarButtonProps> = ({
+export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
   icon,
   label,
   onClick,
@@ -113,11 +113,11 @@ export const MobileToolbarButton: React.FC<MobileToolbarButtonProps> = ({
   );
 };
 
-interface MobileToolbarSeparatorProps {
+interface ToolbarSeparatorProps {
   height?: number;
 }
 
-export const MobileToolbarSeparator: React.FC<MobileToolbarSeparatorProps> = ({ 
+export const ToolbarSeparator: React.FC<ToolbarSeparatorProps> = ({ 
   height = 32 
 }) => {
   return (
@@ -131,12 +131,12 @@ export const MobileToolbarSeparator: React.FC<MobileToolbarSeparatorProps> = ({
   );
 };
 
-interface MobileToolbarSectionProps {
+interface ToolbarSectionProps {
   children: React.ReactNode;
   title?: string;
 }
 
-export const MobileToolbarSection: React.FC<MobileToolbarSectionProps> = ({ 
+export const ToolbarSection: React.FC<ToolbarSectionProps> = ({ 
   children, 
   title 
 }) => {
@@ -154,3 +154,8 @@ export const MobileToolbarSection: React.FC<MobileToolbarSectionProps> = ({
     </div>
   );
 };
+
+// Backward compatibility exports
+export const MobileToolbarButton = ToolbarButton;
+export const MobileToolbarSeparator = ToolbarSeparator;
+export const MobileToolbarSection = ToolbarSection;
