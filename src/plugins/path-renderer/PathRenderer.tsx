@@ -54,6 +54,8 @@ interface PathWithAnimationsProps {
   markerMid?: string;
   markerEnd?: string;
   style?: React.CSSProperties;
+  'data-element-type'?: string;
+  'data-element-id'?: string;
 }
 
 const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
@@ -75,6 +77,8 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
       markerMid={props.markerMid}
       markerEnd={props.markerEnd}
       style={props.style}
+      data-element-type={props['data-element-type']}
+      data-element-id={props['data-element-id']}
     >
       {animations}
     </path>
@@ -93,6 +97,8 @@ interface SubPathWithAnimationsProps {
   markerEnd?: string;
   style?: React.CSSProperties;
   onPointerDown?: (e: React.PointerEvent<SVGPathElement>) => void;
+  'data-element-type'?: string;
+  'data-element-id'?: string;
 }
 
 const SubPathWithAnimations: React.FC<SubPathWithAnimationsProps> = (props) => {
@@ -109,6 +115,8 @@ const SubPathWithAnimations: React.FC<SubPathWithAnimationsProps> = (props) => {
       markerEnd={props.markerEnd}
       style={props.style}
       onPointerDown={props.onPointerDown}
+      data-element-type={props['data-element-type']}
+      data-element-id={props['data-element-id']}
     >
       {animations}
     </path>
@@ -385,6 +393,8 @@ export const PathRenderer: React.FC = () => {
               markerStart={path.style.markerStart}
               markerMid={path.style.markerMid}
               markerEnd={path.style.markerEnd}
+              data-element-type="path"
+              data-element-id={path.id}
               style={{ 
                 pointerEvents: 'all',
                 clipPath: path.style.clipPath,
@@ -426,6 +436,8 @@ export const PathRenderer: React.FC = () => {
                   markerStart={path.style.markerStart}
                   markerMid={path.style.markerMid}
                   markerEnd={path.style.markerEnd}
+                  data-element-type="subpath"
+                  data-element-id={subPath.id}
                   style={{
                     cursor: 'grab',
                     pointerEvents: 'all',
@@ -503,6 +515,8 @@ export const PathRenderer: React.FC = () => {
                 stroke={contrastColor}
                 strokeWidth={(2.5) / viewport.zoom}
                 strokeDasharray={`${6 / viewport.zoom},${4 / viewport.zoom}`}
+                data-element-type="subpath"
+                data-element-id={subPath.id}
                 style={{
                   pointerEvents: 'all',
                   cursor: dragState.isDragging && dragState.subPathId === subPath.id && dragState.dragStarted 

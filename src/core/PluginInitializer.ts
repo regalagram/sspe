@@ -39,6 +39,7 @@ import { MarkerPlugin } from '../plugins/markers';
 import { SymbolPlugin } from '../plugins/symbols';
 import { TextPathPlugin } from '../plugins/textpath';
 import { AnimationSystemPlugin } from '../plugins/animation-system';
+import { ContextMenuPlugin } from '../plugins/context-menu';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -48,6 +49,7 @@ export const initializePlugins = (): void => {
   // Register base dependencies first
   pluginManager.registerPlugin(PointerInteractionPlugin); // Required by pencil
   pluginManager.registerPlugin(GesturesPlugin); // Gestures for pinch/pan on canvas, need to be before selection and transform plugins
+  pluginManager.registerPlugin(ContextMenuPlugin); // Context menu should be early to handle right-clicks before other interactions
   pluginManager.registerPlugin(SelectionPlugin); // Required by subpath-transform and point-transform
   
   // Register Transform early so it can handle transform handles before PathRenderer

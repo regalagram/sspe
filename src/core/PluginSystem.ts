@@ -125,15 +125,26 @@ export class PluginManager {
 
     // Process plugins in order, stop if any plugin handles the event
     let pluginsToProcess: Plugin[] = this.getEnabledPlugins();
+    let contextMenuPrioritized = false;
+    
+    if (eventType === 'pointerDown' && (e as PointerEvent<SVGElement>).button === 2) {
+      // For right-clicks, prioritize context menu plugin above all others
+      const contextMenuPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'context-menu');
+      const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'context-menu');
+      if (contextMenuPlugin) {
+        pluginsToProcess = [contextMenuPlugin, ...otherPlugins];
+        contextMenuPrioritized = true;
+      }
+    }
 
-    if ((handleType === 'transform' || handleType === 'rotation') && eventType === 'pointerDown') {
+    if ((handleType === 'transform' || handleType === 'rotation') && eventType === 'pointerDown' && !contextMenuPrioritized) {
       // When clicking on a transform or rotation handle, prioritize Transform plugin
       const transformPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'transform');
       const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'transform');
       if (transformPlugin) {
         pluginsToProcess = [transformPlugin, ...otherPlugins];
       }
-    } else if (eventType === 'pointerDown') {
+    } else if (eventType === 'pointerDown' && !contextMenuPrioritized) {
       // Check if this is a text or textPath element
       const target = e.target as SVGElement;
       const elementType = target && typeof target.getAttribute === 'function'

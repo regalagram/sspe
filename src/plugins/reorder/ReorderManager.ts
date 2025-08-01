@@ -1,4 +1,5 @@
 import { SVGSubPath, SVGPath } from '../../types';
+import { useEditorStore } from '../../store/editorStore';
 
 export class ReorderManager {
   private editorStore: any = null;
@@ -8,9 +9,7 @@ export class ReorderManager {
   }
 
   private getSelectedSubPaths(): SVGSubPath[] {
-    if (!this.editorStore) return [];
-
-    const { paths, selection } = this.editorStore;
+    const { paths, selection } = useEditorStore.getState();
     const selectedSubPaths: SVGSubPath[] = [];
 
     // Get selected subpaths
@@ -28,9 +27,7 @@ export class ReorderManager {
   }
 
   private getParentPathForSubPath(subPathId: string): SVGPath | null {
-    if (!this.editorStore) return null;
-
-    const { paths } = this.editorStore;
+    const { paths } = useEditorStore.getState();
     
     for (const path of paths) {
       if (path.subPaths.some((sp: SVGSubPath) => sp.id === subPathId)) {
@@ -57,9 +54,8 @@ export class ReorderManager {
   }
 
   private updatePathSubPaths(pathId: string, newSubPaths: SVGSubPath[]): void {
-    if (!this.editorStore) return;
-
-    const { paths } = this.editorStore;
+    const editorState = useEditorStore.getState();
+    const { paths } = editorState;
     const updatedPaths = paths.map((path: SVGPath) => {
       if (path.id === pathId) {
         return {
@@ -70,7 +66,7 @@ export class ReorderManager {
       return path;
     });
 
-    this.editorStore.replacePaths(updatedPaths);
+    editorState.replacePaths(updatedPaths);
   }
 
   private movePathInArray(paths: SVGPath[], pathId: string, newIndex: number): SVGPath[] {
@@ -89,21 +85,26 @@ export class ReorderManager {
   }
 
   private getPathIndex(pathId: string): number {
-    if (!this.editorStore) return -1;
-    return this.editorStore.paths.findIndex((p: SVGPath) => p.id === pathId);
+    const editorState = useEditorStore.getState();
+    return editorState.paths.findIndex((p: SVGPath) => p.id === pathId);
   }
 
   private getSubPathIndex(pathId: string, subPathId: string): number {
-    if (!this.editorStore) return -1;
-    const path = this.editorStore.paths.find((p: SVGPath) => p.id === pathId);
+    const editorState = useEditorStore.getState();
+    const path = editorState.paths.find((p: SVGPath) => p.id === pathId);
     if (!path) return -1;
     return path.subPaths.findIndex((sp: SVGSubPath) => sp.id === subPathId);
   }
 
   // Bring selected subpaths to front (last in array = rendered on top)
   bringToFront() {
+    console.log('🔝 ReorderManager.bringToFront() called');
     const selectedSubPaths = this.getSelectedSubPaths();
-    if (selectedSubPaths.length === 0) return;
+    console.log('🔝 Selected subpaths:', selectedSubPaths.length);
+    if (selectedSubPaths.length === 0) {
+      console.log('🔝 No selected subpaths, returning');
+      return;
+    }
 
     // Group by parent path
     const pathGroups = new Map<string, string[]>();
@@ -118,7 +119,8 @@ export class ReorderManager {
       }
     }
 
-    let pathsUpdated = [...this.editorStore.paths];
+    const editorState = useEditorStore.getState();
+    let pathsUpdated = [...editorState.paths];
     const pathsToMoveToFront: string[] = [];
 
     // Process each path
@@ -131,7 +133,7 @@ export class ReorderManager {
       // Remove selected subpaths from their current positions
       const selectedSubPathsData = subPathIds.map(id => 
         newSubPaths.find(sp => sp.id === id)
-      ).filter(Boolean);
+      ).filter((sp): sp is SVGSubPath => sp !== undefined);
       
       newSubPaths = newSubPaths.filter(sp => !subPathIds.includes(sp.id));
       
@@ -154,8 +156,8 @@ export class ReorderManager {
       pathsUpdated = this.movePathInArray(pathsUpdated, pathId, pathsUpdated.length - 1);
     }
 
-    this.editorStore.replacePaths(pathsUpdated);
-    this.editorStore.pushToHistory();
+    editorState.replacePaths(pathsUpdated);
+    editorState.pushToHistory();
   }
 
   // Bring selected subpaths forward one level
@@ -176,7 +178,8 @@ export class ReorderManager {
       }
     }
 
-    let pathsUpdated = [...this.editorStore.paths];
+    const editorState = useEditorStore.getState();
+    let pathsUpdated = [...editorState.paths];
 
     // Process each path
     for (const [pathId, subPathIds] of pathGroups) {
@@ -220,8 +223,8 @@ export class ReorderManager {
       }
     }
 
-    this.editorStore.replacePaths(pathsUpdated);
-    this.editorStore.pushToHistory();
+    editorState.replacePaths(pathsUpdated);
+    editorState.pushToHistory();
   }
 
   // Send selected subpaths backward one level
@@ -242,7 +245,8 @@ export class ReorderManager {
       }
     }
 
-    let pathsUpdated = [...this.editorStore.paths];
+    const editorState = useEditorStore.getState();
+    let pathsUpdated = [...editorState.paths];
 
     // Process each path
     for (const [pathId, subPathIds] of pathGroups) {
@@ -286,8 +290,8 @@ export class ReorderManager {
       }
     }
 
-    this.editorStore.replacePaths(pathsUpdated);
-    this.editorStore.pushToHistory();
+    editorState.replacePaths(pathsUpdated);
+    editorState.pushToHistory();
   }
 
   // Send selected subpaths to back (first in array = rendered behind)
@@ -308,7 +312,8 @@ export class ReorderManager {
       }
     }
 
-    let pathsUpdated = [...this.editorStore.paths];
+    const editorState = useEditorStore.getState();
+    let pathsUpdated = [...editorState.paths];
     const pathsToMoveToBack: string[] = [];
 
     // Process each path
@@ -321,7 +326,7 @@ export class ReorderManager {
       // Remove selected subpaths from their current positions
       const selectedSubPathsData = subPathIds.map(id => 
         newSubPaths.find(sp => sp.id === id)
-      ).filter(Boolean);
+      ).filter((sp): sp is SVGSubPath => sp !== undefined);
       
       newSubPaths = newSubPaths.filter(sp => !subPathIds.includes(sp.id));
       
@@ -344,13 +349,13 @@ export class ReorderManager {
       pathsUpdated = this.movePathInArray(pathsUpdated, pathId, 0);
     }
 
-    this.editorStore.replacePaths(pathsUpdated);
-    this.editorStore.pushToHistory();
+    editorState.replacePaths(pathsUpdated);
+    editorState.pushToHistory();
   }
 
   hasValidSelection(): boolean {
-    if (!this.editorStore) return false;
-    return this.editorStore.selection.selectedSubPaths.length > 0;
+    const editorState = useEditorStore.getState();
+    return editorState.selection.selectedSubPaths.length > 0;
   }
 }
 
