@@ -76,12 +76,7 @@ export const ContextMenuComponent: React.FC = () => {
     
     // Helper function to execute action with preserved selection
     const executeWithSelection = (actionFn: () => void, actionName: string) => {
-      console.log(`🎯 ${actionName} with preserved selection:`, {
-        subPaths: contextSelection.subPaths.length,
-        paths: contextSelection.paths.length,
-        commands: contextSelection.commands.length
-      });
-      
+            
       // Temporarily restore selection before calling action
       const editorState = useEditorStore.getState();
       const currentSelection = editorState.selection;
@@ -197,8 +192,7 @@ export const ContextMenuComponent: React.FC = () => {
             }]
           };
           
-          console.log('🎨 Creating blur filter (ID will be auto-generated):', blurFilter);
-          
+                    
           // Add filter and get the generated ID  
           const filtersBeforeAdd = editorState.filters.length;
           addFilter(blurFilter);
@@ -207,53 +201,41 @@ export const ContextMenuComponent: React.FC = () => {
           const updatedState = useEditorStore.getState();
           const blurFilterId = updatedState.filters[updatedState.filters.length - 1]?.id;
           
-          console.log('🎨 Blur filter created with ID:', blurFilterId);
-          
+                    
           if (!blurFilterId) {
             console.error('❌ Failed to create blur filter - no ID returned');
             return;
           }
           
-          console.log('🎨 Applying blur filter to selection:', {
-            selectedPaths: selection.selectedPaths,
-            selectedSubPaths: selection.selectedSubPaths,
-            selectedTexts: selection.selectedTexts,
-            filterId: blurFilterId
-          });
-          
+                    
           // Apply filter to selected paths (using restored selection)
           for (const pathId of selection.selectedPaths) {
-            console.log(`🎨 Applying blur filter to path: ${pathId} with filter url(#${blurFilterId})`);
-            updatePathStyle(pathId, { filter: `url(#${blurFilterId})` });
+                        updatePathStyle(pathId, { filter: `url(#${blurFilterId})` });
           }
           
           // Apply filter to selected texts
           for (const textId of selection.selectedTexts) {
-            console.log(`🎨 Applying blur filter to text: ${textId}`);
-            updateText(textId, { 
+                        updateText(textId, { 
               style: { filter: `url(#${blurFilterId})` } 
             });
           }
           
           // If we have selected subpaths but no selected paths, we need to find the parent paths
           if (selection.selectedPaths.length === 0 && selection.selectedSubPaths.length > 0) {
-            console.log('🎨 No paths selected, but subpaths found. Finding parent paths...');
-            const parentPaths = new Set<string>();
+                        const parentPaths = new Set<string>();
             
             for (const subPathId of selection.selectedSubPaths) {
               for (const path of paths) {
                 if (path.subPaths.some(sp => sp.id === subPathId)) {
                   parentPaths.add(path.id);
-                  console.log(`🎨 Found parent path ${path.id} for subpath ${subPathId}`);
-                  break;
+                                    break;
                 }
               }
             }
             
             // Apply filter to parent paths
             for (const pathId of parentPaths) {
-              console.log(`🎨 Applying blur filter to parent path: ${pathId}`);
-              updatePathStyle(pathId, { filter: `url(#${blurFilterId})` });
+                            updatePathStyle(pathId, { filter: `url(#${blurFilterId})` });
             }
           }
         }, 'Blur Filter') },
@@ -279,8 +261,7 @@ export const ContextMenuComponent: React.FC = () => {
             ]
           };
           
-          console.log('🎨 Creating drop shadow filter (ID will be auto-generated):', shadowFilter);
-          
+                    
           // Add filter and get the generated ID
           addFilter(shadowFilter);
           
@@ -288,47 +269,36 @@ export const ContextMenuComponent: React.FC = () => {
           const updatedState = useEditorStore.getState();
           const shadowFilterId = updatedState.filters[updatedState.filters.length - 1]?.id;
           
-          console.log('🎨 Drop shadow filter created with ID:', shadowFilterId);
-          
-          console.log('🎨 Applying drop shadow filter to selection:', {
-            selectedPaths: selection.selectedPaths,
-            selectedSubPaths: selection.selectedSubPaths,
-            filterId: shadowFilterId
-          });
-          
+                    
+                    
           // Apply filter to selected paths (using restored selection)
           for (const pathId of selection.selectedPaths) {
-            console.log(`🎨 Applying drop shadow filter to path: ${pathId}`);
-            updatePathStyle(pathId, { filter: `url(#${shadowFilterId})` });
+                        updatePathStyle(pathId, { filter: `url(#${shadowFilterId})` });
           }
           
           // Apply filter to selected texts
           for (const textId of selection.selectedTexts) {
-            console.log(`🎨 Applying drop shadow filter to text: ${textId}`);
-            updateText(textId, { 
+                        updateText(textId, { 
               style: { filter: `url(#${shadowFilterId})` } 
             });
           }
           
           // If we have selected subpaths but no selected paths, we need to find the parent paths
           if (selection.selectedPaths.length === 0 && selection.selectedSubPaths.length > 0) {
-            console.log('🎨 No paths selected for drop shadow, but subpaths found. Finding parent paths...');
-            const parentPaths = new Set<string>();
+                        const parentPaths = new Set<string>();
             
             for (const subPathId of selection.selectedSubPaths) {
               for (const path of paths) {
                 if (path.subPaths.some(sp => sp.id === subPathId)) {
                   parentPaths.add(path.id);
-                  console.log(`🎨 Found parent path ${path.id} for subpath ${subPathId}`);
-                  break;
+                                    break;
                 }
               }
             }
             
             // Apply filter to parent paths
             for (const pathId of parentPaths) {
-              console.log(`🎨 Applying drop shadow filter to parent path: ${pathId}`);
-              updatePathStyle(pathId, { filter: `url(#${shadowFilterId})` });
+                            updatePathStyle(pathId, { filter: `url(#${shadowFilterId})` });
             }
           }
         }, 'Drop Shadow Filter') },
@@ -350,8 +320,7 @@ export const ContextMenuComponent: React.FC = () => {
             }]
           };
           
-          console.log('🎨 Creating brightness filter (ID will be auto-generated):', brightnessFilter);
-          
+                    
           // Add filter and get the generated ID
           addFilter(brightnessFilter);
           
@@ -359,47 +328,36 @@ export const ContextMenuComponent: React.FC = () => {
           const updatedState = useEditorStore.getState();
           const brightnessFilterId = updatedState.filters[updatedState.filters.length - 1]?.id;
           
-          console.log('🎨 Brightness filter created with ID:', brightnessFilterId);
-          
-          console.log('🎨 Applying brightness filter to selection:', {
-            selectedPaths: selection.selectedPaths,
-            selectedSubPaths: selection.selectedSubPaths,
-            filterId: brightnessFilterId
-          });
-          
+                    
+                    
           // Apply filter to selected paths (using restored selection)
           for (const pathId of selection.selectedPaths) {
-            console.log(`🎨 Applying brightness filter to path: ${pathId}`);
-            updatePathStyle(pathId, { filter: `url(#${brightnessFilterId})` });
+                        updatePathStyle(pathId, { filter: `url(#${brightnessFilterId})` });
           }
           
           // Apply filter to selected texts
           for (const textId of selection.selectedTexts) {
-            console.log(`🎨 Applying brightness filter to text: ${textId}`);
-            updateText(textId, { 
+                        updateText(textId, { 
               style: { filter: `url(#${brightnessFilterId})` } 
             });
           }
           
           // If we have selected subpaths but no selected paths, we need to find the parent paths
           if (selection.selectedPaths.length === 0 && selection.selectedSubPaths.length > 0) {
-            console.log('🎨 No paths selected for brightness, but subpaths found. Finding parent paths...');
-            const parentPaths = new Set<string>();
+                        const parentPaths = new Set<string>();
             
             for (const subPathId of selection.selectedSubPaths) {
               for (const path of paths) {
                 if (path.subPaths.some(sp => sp.id === subPathId)) {
                   parentPaths.add(path.id);
-                  console.log(`🎨 Found parent path ${path.id} for subpath ${subPathId}`);
-                  break;
+                                    break;
                 }
               }
             }
             
             // Apply filter to parent paths
             for (const pathId of parentPaths) {
-              console.log(`🎨 Applying brightness filter to parent path: ${pathId}`);
-              updatePathStyle(pathId, { filter: `url(#${brightnessFilterId})` });
+                            updatePathStyle(pathId, { filter: `url(#${brightnessFilterId})` });
             }
           }
         }, 'Brightness Filter') }
@@ -413,14 +371,7 @@ export const ContextMenuComponent: React.FC = () => {
           const editorState = useEditorStore.getState();
           const { selection, addAnimation, paths } = editorState;
           
-          console.log('🎬 Creating opacity animations for selection:', {
-            selectedPaths: selection.selectedPaths,
-            selectedSubPaths: selection.selectedSubPaths,
-            selectedTexts: selection.selectedTexts,
-            selectedGroups: selection.selectedGroups,
-            selectedImages: selection.selectedImages
-          });
-          
+                    
           // Create opacity fade animation for selected elements (using restored selection)
           const selectedItems = [
             ...selection.selectedPaths,
@@ -431,15 +382,13 @@ export const ContextMenuComponent: React.FC = () => {
           
           // If we have selected subpaths but no selected paths, find parent paths
           if (selection.selectedPaths.length === 0 && selection.selectedSubPaths.length > 0) {
-            console.log('🎬 No paths selected for animation, but subpaths found. Finding parent paths...');
-            const parentPaths = new Set<string>();
+                        const parentPaths = new Set<string>();
             
             for (const subPathId of selection.selectedSubPaths) {
               for (const path of paths) {
                 if (path.subPaths.some(sp => sp.id === subPathId)) {
                   parentPaths.add(path.id);
-                  console.log(`🎬 Found parent path ${path.id} for subpath ${subPathId}`);
-                  break;
+                                    break;
                 }
               }
             }
@@ -448,8 +397,7 @@ export const ContextMenuComponent: React.FC = () => {
             selectedItems.push(...Array.from(parentPaths));
           }
           
-          console.log('🎬 Final items to animate:', selectedItems);
-          
+                    
           selectedItems.forEach(itemId => {
             const opacityAnimation = {
               targetElementId: itemId, // Remove id, addAnimation will generate it
@@ -461,19 +409,14 @@ export const ContextMenuComponent: React.FC = () => {
               repeatCount: 'indefinite'
             };
             
-            console.log(`🎬 Adding opacity animation to: ${itemId}`);
-            addAnimation(opacityAnimation);
+                        addAnimation(opacityAnimation);
           });
         }, 'Animate Opacity') },
         { id: 'animate-transform', label: 'Animate Transform', action: () => executeWithSelection(() => {
           const editorState = useEditorStore.getState();
           const { selection, addAnimation, paths } = editorState;
           
-          console.log('🎬 Creating transform animations for selection:', {
-            selectedPaths: selection.selectedPaths,
-            selectedSubPaths: selection.selectedSubPaths
-          });
-          
+                    
           // Create rotation animation for selected elements (using restored selection)
           const selectedItems = [
             ...selection.selectedPaths,
@@ -484,15 +427,13 @@ export const ContextMenuComponent: React.FC = () => {
           
           // If we have selected subpaths but no selected paths, find parent paths
           if (selection.selectedPaths.length === 0 && selection.selectedSubPaths.length > 0) {
-            console.log('🎬 No paths selected for transform animation, but subpaths found. Finding parent paths...');
-            const parentPaths = new Set<string>();
+                        const parentPaths = new Set<string>();
             
             for (const subPathId of selection.selectedSubPaths) {
               for (const path of paths) {
                 if (path.subPaths.some(sp => sp.id === subPathId)) {
                   parentPaths.add(path.id);
-                  console.log(`🎬 Found parent path ${path.id} for subpath ${subPathId}`);
-                  break;
+                                    break;
                 }
               }
             }
@@ -501,8 +442,7 @@ export const ContextMenuComponent: React.FC = () => {
             selectedItems.push(...Array.from(parentPaths));
           }
           
-          console.log('🎬 Final items to animate with transform:', selectedItems);
-          
+                    
           selectedItems.forEach(itemId => {
             const rotationAnimation = {
               targetElementId: itemId, // Remove id, addAnimation will generate it
@@ -515,33 +455,26 @@ export const ContextMenuComponent: React.FC = () => {
               repeatCount: 'indefinite'
             };
             
-            console.log(`🎬 Adding transform animation to: ${itemId}`);
-            addAnimation(rotationAnimation);
+                        addAnimation(rotationAnimation);
           });
         }, 'Animate Transform') },
         { id: 'animate-path', label: 'Animate Path', action: () => executeWithSelection(() => {
           const editorState = useEditorStore.getState();
           const { selection, addAnimation, paths } = editorState;
           
-          console.log('🎬 Creating path animations for selection:', {
-            selectedPaths: selection.selectedPaths,
-            selectedSubPaths: selection.selectedSubPaths
-          });
-          
+                    
           // Create path morphing animation for selected paths (using restored selection)
           let pathsToAnimate = [...selection.selectedPaths];
           
           // If we have selected subpaths but no selected paths, find parent paths
           if (selection.selectedPaths.length === 0 && selection.selectedSubPaths.length > 0) {
-            console.log('🎬 No paths selected for path animation, but subpaths found. Finding parent paths...');
-            const parentPaths = new Set<string>();
+                        const parentPaths = new Set<string>();
             
             for (const subPathId of selection.selectedSubPaths) {
               for (const path of paths) {
                 if (path.subPaths.some(sp => sp.id === subPathId)) {
                   parentPaths.add(path.id);
-                  console.log(`🎬 Found parent path ${path.id} for subpath ${subPathId}`);
-                  break;
+                                    break;
                 }
               }
             }
@@ -549,8 +482,7 @@ export const ContextMenuComponent: React.FC = () => {
             pathsToAnimate = Array.from(parentPaths);
           }
           
-          console.log('🎬 Final paths to animate:', pathsToAnimate);
-          
+                    
           pathsToAnimate.forEach(pathId => {
             const path = paths.find(p => p.id === pathId);
             if (path && path.subPaths.length > 0) {
@@ -589,11 +521,7 @@ export const ContextMenuComponent: React.FC = () => {
                 repeatCount: 'indefinite'
               };
               
-              console.log(`🎬 Adding path animation to: ${pathId}`, {
-                originalPath: originalPath.substring(0, 50) + '...',
-                modifiedPath: modifiedPath.substring(0, 50) + '...'
-              });
-              addAnimation(pathAnimation);
+                            addAnimation(pathAnimation);
             }
           });
         }, 'Animate Path') }
@@ -622,20 +550,16 @@ export const ContextMenuComponent: React.FC = () => {
       { id: 'group', label: 'Group Selection', action: () => executeWithSelection(() => createGroupFromSelection(), 'Group Selection') },
       { id: 'separator-5', label: '', action: () => {}, separator: true },
       { id: 'delete', label: 'Delete', action: () => executeWithSelection(() => {
-        console.log('🗑️ DELETE ACTION CALLED - Starting execution with preserved selection');
-        executeDelete(); 
-        console.log('🗑️ DELETE ACTION - executeDelete() completed');
-      }, 'Delete') },
+                executeDelete(); 
+              }, 'Delete') },
       { id: 'separator-6', label: '', action: () => {}, separator: true }
     );
 
     // Zoom to selection
     options.push(
       { id: 'zoom-to-selection', label: 'Zoom to Selection', action: () => executeWithSelection(() => {
-        console.log('🔍 ZOOM TO SELECTION ACTION CALLED - Starting execution with preserved selection');
-        zoomToSelection(); 
-        console.log('🔍 ZOOM TO SELECTION - zoomToSelection() completed');
-      }, 'Zoom to Selection') }
+                zoomToSelection(); 
+              }, 'Zoom to Selection') }
     );
 
     return options;
@@ -647,12 +571,9 @@ export const ContextMenuComponent: React.FC = () => {
     // Grid options
     options.push(
       { id: 'toggle-grid', label: grid.enabled ? 'Hide Grid' : 'Show Grid', action: () => { 
-        console.log('🏁 TOGGLE GRID ACTION CALLED - Starting execution');
-        toggleGrid(); 
-        console.log('🏁 TOGGLE GRID - toggleGrid() completed');
-        setTimeout(() => hideContextMenu(), 50);
-        console.log('🏁 TOGGLE GRID - All steps completed');
-      }},
+                toggleGrid(); 
+                setTimeout(() => hideContextMenu(), 50);
+              }},
       { id: 'snap-to-grid', label: grid.snapToGrid ? 'Disable Snap to Grid' : 'Enable Snap to Grid', action: () => { 
         toggleSnapToGrid(); 
         setTimeout(() => hideContextMenu(), 50); 
@@ -874,8 +795,7 @@ ${pathElements}
                   // Reset viewport to fit new content
                   resetViewportCompletely();
                   
-                  console.log(`SVG imported: ${newPaths.length} paths, ${newTexts.length} texts, ${newTextPaths.length} textPaths, ${newGradients.length} gradients, ${newFilters.length} filters, ${newGroups.length} groups, ${newAnimations.length} animations`);
-                  
+                                    
                 } catch (error) {
                   console.error('Error importing SVG:', error);
                   alert(`Error importing SVG: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -902,35 +822,22 @@ ${pathElements}
     }
 
     const handleClick = (e: React.MouseEvent) => {
-      console.log(`🚀 Menu item clicked: ${option.label}`, {
-        disabled: option.disabled,
-        hasSubmenu: !!option.submenu,
-        target: e.target,
-        currentTarget: e.currentTarget
-      });
-      
+            
       e.preventDefault();
       e.stopPropagation();
       
       if (!option.disabled) {
-        console.log(`🎯 Executing action for: ${option.label}`);
-        
+                
         // CRITICAL: Capture current selection state before any events can clear it
         const currentSelection = useEditorStore.getState().selection;
-        console.log('💾 Preserved selection:', {
-          selectedPaths: currentSelection.selectedPaths.length,
-          selectedSubPaths: currentSelection.selectedSubPaths.length,
-          selectedCommands: currentSelection.selectedCommands.length
-        });
-        
+                
         try {
           option.action();
-          console.log(`✅ Action completed for: ${option.label}`);
         } catch (error) {
           console.error(`❌ Error executing action for ${option.label}:`, error);
         }
       } else {
-        console.log(`⚠️ Action disabled for: ${option.label}`);
+        console.warn(`⚠️ Action disabled for: ${option.label}`);
       }
     };
 
