@@ -638,8 +638,11 @@ export const createGroupActions: StateCreator<
         state.texts,
         state.groups,
         state.images,
+        state.symbols,
+        state.uses,
         allGradients,
         allFilters,
+        state.animations,
         state.precision || 2
       );
 

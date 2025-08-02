@@ -38,6 +38,9 @@ export const AnimationControls: React.FC = () => {
     gradients,
     paths,
     texts,
+    images,
+    groups,
+    uses,
     playAnimations, 
     pauseAnimations, 
     stopAnimations,
@@ -168,7 +171,7 @@ export const AnimationControls: React.FC = () => {
   };
 
   const getAnimationTargetId = () => {
-    const { paths, texts } = useEditorStore.getState();
+    const { paths, texts, images, groups, uses } = useEditorStore.getState();
     
     // If a text is directly selected, use it
     if (selection.selectedTexts.length > 0) {
@@ -178,6 +181,21 @@ export const AnimationControls: React.FC = () => {
     // If a path is directly selected, use it
     if (selection.selectedPaths.length > 0) {
       return selection.selectedPaths[0];
+    }
+    
+    // If an image is directly selected, use it
+    if (selection.selectedImages && selection.selectedImages.length > 0) {
+      return selection.selectedImages[0];
+    }
+    
+    // If a group is directly selected, use it
+    if (selection.selectedGroups && selection.selectedGroups.length > 0) {
+      return selection.selectedGroups[0];
+    }
+    
+    // If a symbol use is directly selected, use it
+    if (selection.selectedUses && selection.selectedUses.length > 0) {
+      return selection.selectedUses[0];
     }
     
     // If a subpath is selected, find the parent path

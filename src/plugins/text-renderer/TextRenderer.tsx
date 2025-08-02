@@ -18,6 +18,7 @@ const TextElementComponent: React.FC<{ text: TextElement }> = ({ text }) => {
     <g key={`text-group-${text.id}`}>
       {/* Main text element */}
       <text
+        id={text.id}
         x={text.x}
         y={text.y}
         fontFamily={text.style.fontFamily}
@@ -136,6 +137,7 @@ const MultilineTextElementComponent: React.FC<{ text: MultilineTextElement }> = 
     <g key={`multiline-text-group-${text.id}`}>
       {/* Main multiline text element */}
       <text
+        id={text.id}
         x={text.x}
         y={text.y}
         fontFamily={text.style.fontFamily}

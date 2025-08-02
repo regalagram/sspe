@@ -1,8 +1,139 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
+import { useAnimationsForElement } from '../../components/AnimationRenderer';
+
+// Individual Use Element Component that can use hooks
+const UseElementComponent: React.FC<{ use: any }> = ({ use }) => {
+  const { symbols, selection, viewport } = useEditorStore();
+  const animations = useAnimationsForElement(use.id);
+  
+  const isSelected = selection.selectedUses.includes(use.id);
+  const strokeWidth = 1 / viewport.zoom;
+
+  return (
+    <g key={use.id} data-use-id={use.id}>
+      {/* Use element */}
+      <use
+        id={use.id}
+        href={use.href}
+        x={use.x}
+        y={use.y}
+        width={use.width}
+        height={use.height}
+        transform={use.transform}
+        style={{
+          opacity: use.style?.opacity ?? 1,
+          clipPath: use.style?.clipPath,
+          mask: use.style?.mask,
+          filter: use.style?.filter,
+        }}
+        data-element-type="use"
+        data-element-id={use.id}
+      />
+      {/* Include animations as siblings that target the use element */}
+      {animations}
+      
+      {/* Selection outline */}
+      {isSelected && (() => {
+        // Try to get the symbol to determine proper bounds
+        const symbol = symbols.find(s => use.href === `#${s.id}`);
+        let selectionWidth = use.width || 100;
+        let selectionHeight = use.height || 100;
+        
+        // If the symbol has a viewBox and no explicit width/height on use, use viewBox dimensions
+        if (symbol && symbol.viewBox && !use.width && !use.height) {
+          const viewBoxMatch = symbol.viewBox.match(/^[\d\s.,-]+$/);
+          if (viewBoxMatch) {
+            const viewBoxParts = symbol.viewBox.split(/[\s,]+/).map(Number);
+            if (viewBoxParts.length === 4) {
+              selectionWidth = viewBoxParts[2]; // width from viewBox
+              selectionHeight = viewBoxParts[3]; // height from viewBox
+            }
+          }
+        }
+        
+        return (
+          <rect
+            x={use.x || 0}
+            y={use.y || 0}
+            width={selectionWidth}
+            height={selectionHeight}
+            fill="none"
+            stroke="#007ACC"
+            strokeWidth={strokeWidth}
+            strokeDasharray={`${4 / viewport.zoom} ${4 / viewport.zoom}`}
+            pointerEvents="none"
+            data-element-type="use-selection"
+            data-element-id={use.id}
+          />
+        );
+      })()}
+      
+      {/* Selection handles for transform */}
+      {isSelected && (() => {
+        // Calculate dimensions using the same logic as selection outline
+        const symbol = symbols.find(s => use.href === `#${s.id}`);
+        let useWidth = use.width || 100;
+        let useHeight = use.height || 100;
+        
+        if (symbol && symbol.viewBox && !use.width && !use.height) {
+          const viewBoxMatch = symbol.viewBox.match(/^[\d\s.,-]+$/);
+          if (viewBoxMatch) {
+            const viewBoxParts = symbol.viewBox.split(/[\s,]+/).map(Number);
+            if (viewBoxParts.length === 4) {
+              useWidth = viewBoxParts[2];
+              useHeight = viewBoxParts[3];
+            }
+          }
+        }
+        
+        return (
+          <g data-element-type="use-handles" data-element-id={use.id}>
+            {/* Corner handles */}
+            {[
+              { x: use.x || 0, y: use.y || 0, cursor: 'nw-resize' },
+              { x: (use.x || 0) + useWidth, y: use.y || 0, cursor: 'ne-resize' },
+              { x: (use.x || 0) + useWidth, y: (use.y || 0) + useHeight, cursor: 'se-resize' },
+              { x: use.x || 0, y: (use.y || 0) + useHeight, cursor: 'sw-resize' },
+            ].map((handle, index) => (
+              <rect
+                key={index}
+                x={handle.x - 4 / viewport.zoom}
+                y={handle.y - 4 / viewport.zoom}
+                width={8 / viewport.zoom}
+                height={8 / viewport.zoom}
+                fill="#007ACC"
+                stroke="#ffffff"
+                strokeWidth={strokeWidth}
+                style={{ cursor: handle.cursor }}
+                data-element-type="use-handle"
+                data-element-id={use.id}
+                data-handle-type={`corner-${index}`}
+              />
+            ))}
+            
+            {/* Center handle for move */}
+            <circle
+              cx={(use.x || 0) + useWidth / 2}
+              cy={(use.y || 0) + useHeight / 2}
+              r={4 / viewport.zoom}
+              fill="#007ACC"
+              stroke="#ffffff"
+              strokeWidth={strokeWidth}
+              style={{ cursor: 'move' }}
+              data-element-type="use-handle"
+              data-element-id={use.id}
+              data-handle-type="move"
+            />
+          </g>
+        );
+      })()}
+    </g>
+  );
+};
 
 export const SymbolRenderer: React.FC = () => {
-  const { symbols, uses, paths, groups, selection, viewport } = useEditorStore();
+  const { symbols, uses, paths, groups } = useEditorStore();
 
   // Helper function to render path from group children
   const renderChildContent = (childId: string, childType: string) => {
@@ -117,127 +248,7 @@ export const SymbolRenderer: React.FC = () => {
         <g data-layer="symbol-instances">
           {uses.map((use) => {
             if (use.locked) return null;
-            
-            const isSelected = selection.selectedUses.includes(use.id);
-            const strokeWidth = 1 / viewport.zoom;
-            
-            return (
-              <g key={use.id} data-use-id={use.id}>
-                {/* Use element */}
-                <use
-                  href={use.href}
-                  x={use.x}
-                  y={use.y}
-                  width={use.width}
-                  height={use.height}
-                  transform={use.transform}
-                  style={{
-                    opacity: use.style?.opacity ?? 1,
-                    clipPath: use.style?.clipPath,
-                    mask: use.style?.mask,
-                    filter: use.style?.filter,
-                  }}
-                  data-element-type="use"
-                  data-element-id={use.id}
-                />
-                
-                {/* Selection outline */}
-                {isSelected && (() => {
-                  // Try to get the symbol to determine proper bounds
-                  const symbol = symbols.find(s => use.href === `#${s.id}`);
-                  let selectionWidth = use.width || 100;
-                  let selectionHeight = use.height || 100;
-                  
-                  // If the symbol has a viewBox and no explicit width/height on use, use viewBox dimensions
-                  if (symbol && symbol.viewBox && !use.width && !use.height) {
-                    const viewBoxMatch = symbol.viewBox.match(/^[\d\s.,-]+$/);
-                    if (viewBoxMatch) {
-                      const viewBoxParts = symbol.viewBox.split(/[\s,]+/).map(Number);
-                      if (viewBoxParts.length === 4) {
-                        selectionWidth = viewBoxParts[2]; // width from viewBox
-                        selectionHeight = viewBoxParts[3]; // height from viewBox
-                      }
-                    }
-                  }
-                  
-                  return (
-                    <rect
-                      x={use.x || 0}
-                      y={use.y || 0}
-                      width={selectionWidth}
-                      height={selectionHeight}
-                      fill="none"
-                      stroke="#007ACC"
-                      strokeWidth={strokeWidth}
-                      strokeDasharray={`${4 / viewport.zoom} ${4 / viewport.zoom}`}
-                      pointerEvents="none"
-                      data-element-type="use-selection"
-                      data-element-id={use.id}
-                    />
-                  );
-                })()}
-                
-                {/* Selection handles for transform */}
-                {isSelected && (() => {
-                  // Calculate dimensions using the same logic as selection outline
-                  const symbol = symbols.find(s => use.href === `#${s.id}`);
-                  let useWidth = use.width || 100;
-                  let useHeight = use.height || 100;
-                  
-                  if (symbol && symbol.viewBox && !use.width && !use.height) {
-                    const viewBoxMatch = symbol.viewBox.match(/^[\d\s.,-]+$/);
-                    if (viewBoxMatch) {
-                      const viewBoxParts = symbol.viewBox.split(/[\s,]+/).map(Number);
-                      if (viewBoxParts.length === 4) {
-                        useWidth = viewBoxParts[2];
-                        useHeight = viewBoxParts[3];
-                      }
-                    }
-                  }
-                  
-                  return (
-                    <g data-element-type="use-handles" data-element-id={use.id}>
-                      {/* Corner handles */}
-                      {[
-                        { x: use.x || 0, y: use.y || 0, cursor: 'nw-resize' },
-                        { x: (use.x || 0) + useWidth, y: use.y || 0, cursor: 'ne-resize' },
-                        { x: (use.x || 0) + useWidth, y: (use.y || 0) + useHeight, cursor: 'se-resize' },
-                        { x: use.x || 0, y: (use.y || 0) + useHeight, cursor: 'sw-resize' },
-                      ].map((handle, index) => (
-                        <rect
-                          key={index}
-                          x={handle.x - 4 / viewport.zoom}
-                          y={handle.y - 4 / viewport.zoom}
-                          width={8 / viewport.zoom}
-                          height={8 / viewport.zoom}
-                          fill="#007ACC"
-                          stroke="#ffffff"
-                          strokeWidth={strokeWidth}
-                          style={{ cursor: handle.cursor }}
-                          data-element-type="use-handle"
-                          data-element-id={use.id}
-                          data-handle-type={`corner-${index}`}
-                        />
-                      ))}
-                      
-                      {/* Center handle for move */}
-                      <circle
-                        cx={(use.x || 0) + useWidth / 2}
-                        cy={(use.y || 0) + useHeight / 2}
-                        r={4 / viewport.zoom}
-                        fill="#007ACC"
-                        stroke="#ffffff"
-                        strokeWidth={strokeWidth}
-                        style={{ cursor: 'move' }}
-                        data-element-type="use-handle"
-                        data-element-id={use.id}
-                        data-handle-type="move"
-                      />
-                    </g>
-                  );
-                })()}
-              </g>
-            );
+            return <UseElementComponent key={use.id} use={use} />;
           })}
         </g>
       )}

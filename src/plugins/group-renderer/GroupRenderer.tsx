@@ -1,6 +1,7 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { SVGGroup, SVGGroupChild, GroupLockLevel } from '../../types';
+import { useAnimationsForElement } from '../../components/AnimationRenderer';
 
 interface GroupRendererProps {
   group: SVGGroup;
@@ -10,6 +11,7 @@ interface GroupRendererProps {
 
 const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false, isParentSelected = false }) => {
   const { paths, texts, groups, selection, viewport, getGroupLockLevel, isGroupLocked, enabledFeatures } = useEditorStore();
+  const animations = useAnimationsForElement(group.id);
 
   const handleSelectGroupElements = () => {
     // Check if group is locked for selection
@@ -203,7 +205,7 @@ const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false,
 
   return (
     <g
-      id={`group-${group.id}`}
+      id={group.id}
       transform={group.transform}
       filter={group.style?.filter}
       clipPath={group.style?.clipPath}
@@ -269,6 +271,9 @@ const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false,
           </text>
         </g>
       )}
+      
+      {/* Include animations with programmatic control */}
+      {animations}
     </g>
   );
 };

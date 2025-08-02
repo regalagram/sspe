@@ -63,6 +63,7 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
   
   return (
     <path
+      id={props.pathId}
       d={props.d}
       fill={props.fill}
       stroke={props.stroke}
@@ -106,6 +107,7 @@ const SubPathWithAnimations: React.FC<SubPathWithAnimationsProps> = (props) => {
   
   return (
     <path
+      id={props.subPathId}
       d={props.d}
       fill={props.fill}
       stroke={props.stroke}

@@ -176,6 +176,7 @@ export const renderAnimationsForElement = (
   animationState?: { isPlaying: boolean; currentTime: number; chainDelays?: Map<string, number> }
 ): React.ReactElement[] => {
   const elementAnimations = animations.filter(animation => animation.targetElementId === elementId);
+  console.log(`🎭 Rendering ${elementAnimations.length} animations for element ${elementId}:`, elementAnimations.map(a => a.id));
   
   return elementAnimations.map((animation) => {
     // Always use indefinite - animations controlled programmatically
@@ -297,6 +298,8 @@ const AnimationElement: React.FC<{ animation: SVGAnimation; animationKey: number
     
     // Handle play/resume - start animations programmatically
     if (animationState.isPlaying && !hasStartedRef.current && animRef.current) {
+      console.log(`🎮 Attempting to start animation ${animation.id} (target: ${animation.targetElementId}), animRef.current:`, animRef.current);
+      
       // Resume SVG animations if paused
       const svgElement = animRef.current.closest('svg');
       if (svgElement && typeof (svgElement as any).unpauseAnimations === 'function') {
@@ -308,7 +311,7 @@ const AnimationElement: React.FC<{ animation: SVGAnimation; animationKey: number
         }
       }
       
-      const chainDelay = chainDelaysMap.get(animation.id) || 0;
+      const chainDelay = chainDelaysMap.get((animation as any).originalAnimationId || animation.id) || 0;
       const currentTimeMs = animationState.currentTime * 1000;
       const adjustedDelay = Math.max(0, chainDelay - currentTimeMs);
       
@@ -319,9 +322,9 @@ const AnimationElement: React.FC<{ animation: SVGAnimation; animationKey: number
             try {
               animRef.current.beginElement();
               hasStartedRef.current = true;
-              console.log(`🚀 Started animation ${animation.id} after ${adjustedDelay}ms delay`);
+              console.log(`🚀 Started animation ${animation.id} after ${adjustedDelay}ms delay (target: ${animation.targetElementId}, originalId: ${(animation as any).originalAnimationId || 'none'})`);
             } catch (error) {
-              console.warn(`Failed to start animation ${animation.id}:`, error);
+              console.warn(`Failed to start animation ${animation.id} (target: ${animation.targetElementId}):`, error);
             }
           }
         }, adjustedDelay);
@@ -330,9 +333,9 @@ const AnimationElement: React.FC<{ animation: SVGAnimation; animationKey: number
         try {
           animRef.current.beginElement();
           hasStartedRef.current = true;
-          console.log(`🚀 Started animation ${animation.id} immediately`);
+          console.log(`🚀 Started animation ${animation.id} immediately (target: ${animation.targetElementId}, originalId: ${(animation as any).originalAnimationId || 'none'})`);
         } catch (error) {
-          console.warn(`Failed to start animation ${animation.id}:`, error);
+          console.warn(`Failed to start animation ${animation.id} (target: ${animation.targetElementId}):`, error);
         }
       }
     }
@@ -429,7 +432,7 @@ const AnimationElement: React.FC<{ animation: SVGAnimation; animationKey: number
 
 // Hook for components to easily get animation elements with playback control
 export const useAnimationsForElement = (elementId: string) => {
-  const { animations, animationState } = useEditorStore();
+  const { animations, animationState, groups } = useEditorStore();
   const [animationKey, setAnimationKey] = React.useState(0);
   
   // Only force re-render when we explicitly restart (not on pause/resume)
@@ -438,12 +441,45 @@ export const useAnimationsForElement = (elementId: string) => {
     setAnimationKey(prev => prev + 1);
   }, [animationState.restartKey]); // Removed isPlaying to prevent pause reset
 
+  // Helper function to find parent groups of an element
+  const findParentGroups = React.useCallback((targetElementId: string): string[] => {
+    const parentGroups: string[] = [];
+    
+    groups.forEach(group => {
+      const hasElement = group.children.some(child => child.id === targetElementId);
+      if (hasElement) {
+        parentGroups.push(group.id);
+        // Recursively find parent groups of this group
+        const grandParents = findParentGroups(group.id);
+        parentGroups.push(...grandParents);
+      }
+    });
+    
+    return parentGroups;
+  }, [groups]);
+
   const createAnimationElement = React.useCallback((animation: SVGAnimation) => {
     return <AnimationElement key={`${animation.id}-${animationKey}`} animation={animation} animationKey={animationKey} />;
   }, [animationKey]);
   
   return React.useMemo(() => {
-    const elementAnimations = animations.filter(animation => animation.targetElementId === elementId);
-    return elementAnimations.map(createAnimationElement);
-  }, [elementId, animations, createAnimationElement, animationKey]);
+    // Get direct animations for this element
+    const directAnimations = animations.filter(animation => animation.targetElementId === elementId);
+    
+    // Get animations from parent groups (inherited animations)
+    const parentGroupIds = findParentGroups(elementId);
+    const inheritedAnimations = animations.filter(animation => 
+      parentGroupIds.includes(animation.targetElementId)
+    ).map(animation => ({
+      ...animation,
+      id: `${animation.id}-inherited-${elementId}`, // Make IDs unique for inherited animations
+      targetElementId: elementId, // Retarget to current element
+      originalAnimationId: animation.id // Keep reference to original for sync chain lookup
+    }));
+    
+    const allAnimations = [...directAnimations, ...inheritedAnimations];
+    console.log(`🎬 Creating ${allAnimations.length} animations for element ${elementId} (${directAnimations.length} direct + ${inheritedAnimations.length} inherited):`, allAnimations.map(a => a.id));
+    
+    return allAnimations.map(createAnimationElement);
+  }, [elementId, animations, createAnimationElement, animationKey, findParentGroups]);
 };

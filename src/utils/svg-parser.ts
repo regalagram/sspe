@@ -1,4 +1,4 @@
-import { SVGCommand, PathStyle, SVGCommandType, SVGPath, TextElement, MultilineTextElement, TextElementType, SVGGroup, SVGGroupChild, SVGFilter, FilterPrimitiveType, SVGTextPath, SVGAnimation } from '../types';
+import { SVGCommand, PathStyle, SVGCommandType, SVGPath, TextElement, MultilineTextElement, TextElementType, SVGGroup, SVGGroupChild, SVGFilter, FilterPrimitiveType, SVGTextPath, SVGAnimation, SVGImage, SVGSymbol, SVGUse } from '../types';
 import { parsePath, absolutize, normalize, serialize } from 'path-data-parser';
 import { generateId } from './id-utils';
 import { decomposeIntoSubPaths } from './subpath-utils';
@@ -2513,10 +2513,131 @@ function parseAnimations(svgElement: Element): SVGAnimation[] {
   return animations;
 }
 
+/**
+ * Parse SVG image elements from SVG content
+ */
+function parseImages(svgElement: Element): SVGImage[] {
+  const images: SVGImage[] = [];
+  
+  const imageElements = svgElement.querySelectorAll('image');
+  imageElements.forEach(imageElement => {
+    const id = imageElement.getAttribute('id') || generateId();
+    const href = imageElement.getAttribute('href') || imageElement.getAttribute('xlink:href') || '';
+    const x = parseFloat(imageElement.getAttribute('x') || '0');
+    const y = parseFloat(imageElement.getAttribute('y') || '0');
+    const width = parseFloat(imageElement.getAttribute('width') || '0');
+    const height = parseFloat(imageElement.getAttribute('height') || '0');
+    const transform = imageElement.getAttribute('transform') || undefined;
+    
+    // Parse style attributes
+    const style = parsePathStyle(imageElement);
+    
+    images.push({
+      id,
+      type: 'image',
+      href,
+      x,
+      y,
+      width,
+      height,
+      transform,
+      style
+    });
+  });
+  
+  return images;
+}
+
+/**
+ * Parse SVG symbol elements from SVG content
+ */
+function parseSymbols(svgElement: Element): SVGSymbol[] {
+  const symbols: SVGSymbol[] = [];
+  
+  const symbolElements = svgElement.querySelectorAll('defs symbol, symbol');
+  symbolElements.forEach(symbolElement => {
+    const id = symbolElement.getAttribute('id') || generateId();
+    const viewBox = symbolElement.getAttribute('viewBox') || undefined;
+    const preserveAspectRatio = symbolElement.getAttribute('preserveAspectRatio') || undefined;
+    
+    // Parse style attributes
+    const style = parsePathStyle(symbolElement);
+    
+    // Parse children elements
+    const children: SVGGroupChild[] = [];
+    const childElements = symbolElement.children;
+    for (let i = 0; i < childElements.length; i++) {
+      const child = childElements[i];
+      const childId = child.getAttribute('id');
+      if (childId) {
+        const tagName = child.tagName.toLowerCase();
+        if (['path', 'text', 'tspan', 'group', 'g', 'image', 'use', 'textpath'].includes(tagName)) {
+          const childType = tagName === 'g' ? 'group' : 
+                           tagName === 'tspan' ? 'text' : 
+                           tagName as any;
+          children.push({
+            type: childType,
+            id: childId
+          });
+        }
+      }
+    }
+    
+    symbols.push({
+      id,
+      type: 'symbol',
+      viewBox,
+      preserveAspectRatio,
+      children,
+      style
+    });
+  });
+  
+  return symbols;
+}
+
+/**
+ * Parse SVG use elements from SVG content
+ */
+function parseUses(svgElement: Element): SVGUse[] {
+  const uses: SVGUse[] = [];
+  
+  const useElements = svgElement.querySelectorAll('use');
+  useElements.forEach(useElement => {
+    const id = useElement.getAttribute('id') || generateId();
+    const href = useElement.getAttribute('href') || useElement.getAttribute('xlink:href') || '';
+    const x = useElement.getAttribute('x') ? parseFloat(useElement.getAttribute('x')!) : undefined;
+    const y = useElement.getAttribute('y') ? parseFloat(useElement.getAttribute('y')!) : undefined;
+    const width = useElement.getAttribute('width') ? parseFloat(useElement.getAttribute('width')!) : undefined;
+    const height = useElement.getAttribute('height') ? parseFloat(useElement.getAttribute('height')!) : undefined;
+    const transform = useElement.getAttribute('transform') || undefined;
+    
+    // Parse style attributes
+    const style = parsePathStyle(useElement);
+    
+    uses.push({
+      id,
+      type: 'use',
+      href,
+      x,
+      y,
+      width,
+      height,
+      transform,
+      style
+    });
+  });
+  
+  return uses;
+}
+
 export function parseCompleteSVG(svgString: string): {
   paths: SVGPath[];
   texts: TextElementType[];
   textPaths: SVGTextPath[];
+  images: SVGImage[];
+  symbols: SVGSymbol[];
+  uses: SVGUse[];
   gradients: GradientOrPattern[];
   filters: SVGFilter[];
   groups: SVGGroup[];
@@ -2534,6 +2655,15 @@ export function parseCompleteSVG(svgString: string): {
     // Parse textPaths (pass paths for validation)
     const textPaths = parseTextPaths(svgElement, paths);
     
+    // Parse images
+    const images = parseImages(svgElement);
+    
+    // Parse symbols
+    const symbols = parseSymbols(svgElement);
+    
+    // Parse uses
+    const uses = parseUses(svgElement);
+    
     // Parse gradients and patterns
     const gradients = parseGradients(svgElement);
     
@@ -2550,6 +2680,9 @@ export function parseCompleteSVG(svgString: string): {
       paths,
       texts,
       textPaths,
+      images,
+      symbols,
+      uses,
       gradients,
       filters,
       groups,

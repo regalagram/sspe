@@ -3,6 +3,81 @@ import { EditorState, Point } from '../types';
 import { findSubPathAtPoint } from '../utils/path-utils';
 import { calculateTextBounds, calculateTextBoundsDOM } from '../utils/text-utils';
 
+// Utility function to check if all elements of a group are selected
+const areAllGroupElementsSelected = (state: EditorState, groupId: string): boolean => {
+  const group = state.groups.find(g => g.id === groupId);
+  if (!group) return false;
+
+  const allElementsSelected = group.children.every(child => {
+    switch (child.type) {
+      case 'path':
+        return state.selection.selectedPaths.includes(child.id);
+      case 'text':
+        return state.selection.selectedTexts.includes(child.id);
+      case 'image':
+        return state.selection.selectedImages.includes(child.id);
+      case 'group':
+        return state.selection.selectedGroups.includes(child.id);
+      case 'use':
+        return state.selection.selectedUses.includes(child.id);
+      default:
+        return false;
+    }
+  });
+
+  return allElementsSelected && group.children.length > 0;
+};
+
+// Utility function to promote selection to group level
+const promoteSelectionToGroup = (state: EditorState, groupId: string): EditorState['selection'] => {
+  const group = state.groups.find(g => g.id === groupId);
+  if (!group) return state.selection;
+
+  // Remove individual elements from selection
+  const newSelection = { ...state.selection };
+  
+  group.children.forEach(child => {
+    switch (child.type) {
+      case 'path':
+        newSelection.selectedPaths = newSelection.selectedPaths.filter(id => id !== child.id);
+        break;
+      case 'text':
+        newSelection.selectedTexts = newSelection.selectedTexts.filter(id => id !== child.id);
+        break;
+      case 'image':
+        newSelection.selectedImages = newSelection.selectedImages.filter(id => id !== child.id);
+        break;
+      case 'group':
+        newSelection.selectedGroups = newSelection.selectedGroups.filter(id => id !== child.id);
+        break;
+      case 'use':
+        newSelection.selectedUses = newSelection.selectedUses.filter(id => id !== child.id);
+        break;
+    }
+  });
+
+  // Add group to selection if not already selected
+  if (!newSelection.selectedGroups.includes(groupId)) {
+    newSelection.selectedGroups = [...newSelection.selectedGroups, groupId];
+  }
+
+  return newSelection;
+};
+
+// Utility function to check for group promotion after any selection change
+const checkAndPromoteGroupSelection = (state: EditorState): EditorState['selection'] => {
+  let newSelection = { ...state.selection };
+  
+  // Check all groups to see if their elements are fully selected
+  state.groups.forEach(group => {
+    if (areAllGroupElementsSelected(state, group.id) && !newSelection.selectedGroups.includes(group.id)) {
+      newSelection = promoteSelectionToGroup({ ...state, selection: newSelection }, group.id);
+    }
+  });
+
+  return newSelection;
+};
+
 export interface SelectionActions {
   selectPath: (pathId: string, addToSelection?: boolean) => void;
   selectSubPath: (subPathId: string, addToSelection?: boolean) => void;
@@ -544,7 +619,10 @@ export const createSelectionActions: StateCreator<
           break;
       }
       
-      return { selection };
+      // Check for group promotion after selection change
+      const promotedSelection = checkAndPromoteGroupSelection({ ...state, selection });
+      
+      return { selection: promotedSelection };
     }),
 
   removeFromSelection: (id, type) =>
@@ -745,12 +823,19 @@ export const createSelectionActions: StateCreator<
       }
     });
 
-    set(state => ({
-      selection: {
+    set(state => {
+      const tempSelection = {
         ...state.selection,
         ...newSelection
-      }
-    }));
+      };
+      
+      // Check for group promotion after box selection
+      const promotedSelection = checkAndPromoteGroupSelection({ ...state, selection: tempSelection });
+      
+      return {
+        selection: promotedSelection
+      };
+    });
   },
 
   // New selection functions for SVG elements

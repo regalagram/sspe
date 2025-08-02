@@ -2,7 +2,7 @@
  * Utilities for generating SVG exports specific to groups
  */
 
-import { SVGGroup, SVGPath, TextElementType, GradientOrPattern, SVGFilter, SVGImage } from '../types';
+import { SVGGroup, SVGPath, TextElementType, GradientOrPattern, SVGFilter, SVGImage, SVGAnimation, SVGSymbol, SVGUse } from '../types';
 import { subPathToString } from './path-utils';
 import { extractGradientsFromPaths } from './gradient-utils';
 
@@ -15,8 +15,11 @@ export function generateGroupSVG(
   allTexts: TextElementType[],
   allGroups: SVGGroup[],
   allImages: SVGImage[],
+  allSymbols: SVGSymbol[],
+  allUses: SVGUse[],
   allGradients: GradientOrPattern[] = [],
   allFilters: SVGFilter[] = [],
+  allAnimations: SVGAnimation[] = [],
   precision: number = 2
 ): string {
   
@@ -30,20 +33,62 @@ export function generateGroupSVG(
     return 'none';
   };
 
+  // Helper function to generate animation elements for an element
+  const generateAnimations = (elementId: string): string => {
+    const elementAnimations = allAnimations.filter(anim => anim.targetElementId === elementId);
+    if (elementAnimations.length === 0) return '';
+
+    return elementAnimations.map(animation => {
+      const commonProps = [
+        `dur="${animation.dur || '2s'}"`,
+        `begin="${animation.begin || '0s'}"`,
+        animation.end ? `end="${animation.end}"` : '',
+        `fill="${animation.fill || 'freeze'}"`,
+        animation.repeatCount ? `repeatCount="${animation.repeatCount}"` : '',
+        animation.calcMode ? `calcMode="${animation.calcMode}"` : '',
+        animation.keyTimes ? `keyTimes="${animation.keyTimes}"` : '',
+        animation.keySplines ? `keySplines="${animation.keySplines}"` : ''
+      ].filter(Boolean).join(' ');
+
+      switch (animation.type) {
+        case 'animate':
+          return `<animate attributeName="${animation.attributeName}" ${animation.values ? `values="${animation.values}"` : ''} ${animation.from ? `from="${animation.from}"` : ''} ${animation.to ? `to="${animation.to}"` : ''} ${commonProps}/>`;
+        
+        case 'animateTransform':
+          return `<animateTransform attributeName="${animation.attributeName}" type="${animation.transformType}" ${animation.values ? `values="${animation.values}"` : ''} ${animation.from ? `from="${animation.from}"` : ''} ${animation.to ? `to="${animation.to}"` : ''} ${animation.additive ? `additive="${animation.additive}"` : ''} ${animation.accumulate ? `accumulate="${animation.accumulate}"` : ''} ${commonProps}/>`;
+        
+        case 'animateMotion':
+          return `<animateMotion ${animation.path ? `path="${animation.path}"` : ''} ${animation.rotate ? `rotate="${animation.rotate}"` : ''} ${animation.keyPoints ? `keyPoints="${animation.keyPoints}"` : ''} ${commonProps}>${animation.mpath ? `<mpath href="#${animation.mpath}"/>` : ''}</animateMotion>`;
+        
+        case 'set':
+          return `<set attributeName="${animation.attributeName}" to="${animation.to}" ${animation.begin ? `begin="${animation.begin}"` : ''} ${animation.end ? `end="${animation.end}"` : ''} ${animation.fill ? `fill="${animation.fill}"` : ''}/>`;
+        
+        default:
+          return '';
+      }
+    }).join('\n    ');
+  };
+
   // Collect all elements in the group (recursively)
   const collectGroupElements = (groupId: string): {
     paths: SVGPath[];
     texts: TextElementType[];
     images: SVGImage[];
+    groups: SVGGroup[];
+    symbols: SVGSymbol[];
+    uses: SVGUse[];
     usedGradients: Set<string>;
     usedFilters: Set<string>;
   } => {
     const targetGroup = allGroups.find(g => g.id === groupId);
-    if (!targetGroup) return { paths: [], texts: [], images: [], usedGradients: new Set(), usedFilters: new Set() };
+    if (!targetGroup) return { paths: [], texts: [], images: [], groups: [], symbols: [], uses: [], usedGradients: new Set(), usedFilters: new Set() };
 
     const paths: SVGPath[] = [];
     const texts: TextElementType[] = [];
     const images: SVGImage[] = [];
+    const groups: SVGGroup[] = [];
+    const symbols: SVGSymbol[] = [];
+    const uses: SVGUse[] = [];
     const usedGradients = new Set<string>();
     const usedFilters = new Set<string>();
 
@@ -111,24 +156,45 @@ export function generateGroupSVG(
           break;
           
         case 'group':
-          // Recursively collect from nested groups
+          // Include the group itself and recursively collect from nested groups
+          const nestedGroup = allGroups.find(g => g.id === child.id);
+          if (nestedGroup) {
+            groups.push(nestedGroup);
+          }
           const nestedElements = collectGroupElements(child.id);
           paths.push(...nestedElements.paths);
           texts.push(...nestedElements.texts);
           images.push(...nestedElements.images);
+          groups.push(...nestedElements.groups);
+          symbols.push(...nestedElements.symbols);
+          uses.push(...nestedElements.uses);
           nestedElements.usedGradients.forEach(id => usedGradients.add(id));
           nestedElements.usedFilters.forEach(id => usedFilters.add(id));
+          break;
+          
+        case 'use':
+          const use = allUses.find(u => u.id === child.id);
+          if (use) {
+            uses.push(use);
+            
+            // Collect the referenced symbol
+            const symbolId = use.href.replace('#', '');
+            const referencedSymbol = allSymbols.find(s => s.id === symbolId);
+            if (referencedSymbol && !symbols.find(s => s.id === symbolId)) {
+              symbols.push(referencedSymbol);
+            }
+          }
           break;
       }
     });
 
-    return { paths, texts, images, usedGradients, usedFilters };
+    return { paths, texts, images, groups, symbols, uses, usedGradients, usedFilters };
   };
 
-  const { paths: groupPaths, texts: groupTexts, images: groupImages, usedGradients, usedFilters } = collectGroupElements(group.id);
+  const { paths: groupPaths, texts: groupTexts, images: groupImages, groups: groupGroups, symbols: groupSymbols, uses: groupUses, usedGradients, usedFilters } = collectGroupElements(group.id);
 
   // If no elements, return empty SVG
-  if (groupPaths.length === 0 && groupTexts.length === 0 && groupImages.length === 0) {
+  if (groupPaths.length === 0 && groupTexts.length === 0 && groupImages.length === 0 && groupGroups.length === 0 && groupUses.length === 0) {
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <!-- Empty group: ${group.name || group.id} -->
 </svg>`;
@@ -318,8 +384,58 @@ export function generateGroupSVG(
     return `  <filter ${filterAttrs}>\n${primitives}\n  </filter>`;
   }).filter(Boolean);
 
-  const defsSection = (gradientDefs.length > 0 || filterDefs.length > 0) 
-    ? `  <defs>\n${[...gradientDefs, ...filterDefs].join('\n')}\n  </defs>\n` 
+  // Generate symbol definitions for the defs section
+  const symbolDefs = groupSymbols.map(symbol => {
+    const attributes = [
+      `id="${symbol.id}"`,
+      symbol.viewBox ? `viewBox="${symbol.viewBox}"` : '',
+      symbol.preserveAspectRatio ? `preserveAspectRatio="${symbol.preserveAspectRatio}"` : '',
+    ].filter(Boolean).join(' ');
+    
+    // Generate symbol content recursively
+    const symbolPaths = allPaths.filter(p => symbol.children.some(c => c.id === p.id));
+    const symbolTexts = allTexts.filter(t => symbol.children.some(c => c.id === t.id));
+    const symbolImages = allImages.filter(i => symbol.children.some(c => c.id === i.id));
+    const symbolUses = allUses.filter(u => symbol.children.some(c => c.id === u.id));
+    
+    const symbolPathElements = symbolPaths.map(path => {
+      // Same logic as pathElements generation above
+      const pathData = path.subPaths.map(subPath => subPathToString(subPath)).join(' ');
+      const style = path.style;
+      
+      const fillValue = convertStyleValue(style.fill);
+      const strokeValue = convertStyleValue(style.stroke);
+      
+      const pathAttributes = [
+        `id="${path.id}"`,
+        `d="${pathData}"`,
+        fillValue !== 'none' ? `fill="${fillValue}"` : 'fill="none"',
+        strokeValue !== 'none' ? `stroke="${strokeValue}"` : '',
+        style.strokeWidth ? `stroke-width="${style.strokeWidth}"` : '',
+        style.strokeDasharray ? `stroke-dasharray="${style.strokeDasharray}"` : '',
+        style.strokeLinecap ? `stroke-linecap="${style.strokeLinecap}"` : '',
+        style.strokeLinejoin ? `stroke-linejoin="${style.strokeLinejoin}"` : '',
+        style.fillOpacity !== undefined && style.fillOpacity !== 1 ? `fill-opacity="${style.fillOpacity}"` : '',
+        style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${style.strokeOpacity}"` : '',
+        style.opacity !== undefined && style.opacity !== 1 ? `opacity="${style.opacity}"` : '',
+        style.filter ? `filter="${style.filter}"` : '',
+        style.clipPath ? `clip-path="${style.clipPath}"` : '',
+        style.mask ? `mask="${style.mask}"` : '',
+      ].filter(Boolean).join(' ');
+      
+      return `    <path ${pathAttributes} />`;
+    }).join('\n');
+    
+    // Include symbol text, image, and use elements similarly...
+    const symbolContent = [symbolPathElements].filter(Boolean).join('\n');
+    
+    return `    <symbol ${attributes}>
+${symbolContent}
+    </symbol>`;
+  }).join('\n');
+
+  const defsSection = (gradientDefs.length > 0 || filterDefs.length > 0 || symbolDefs.length > 0) 
+    ? `  <defs>\n${[...gradientDefs, ...filterDefs, ...symbolDefs].join('\n')}\n  </defs>\n` 
     : '';
 
   // Generate path elements
@@ -347,7 +463,16 @@ export function generateGroupSVG(
       style.mask ? `mask="${style.mask}"` : '',
     ].filter(Boolean).join(' ');
     
-    return `  <path ${attributes} />`;
+    const animations = generateAnimations(path.id);
+    const hasAnimations = animations.length > 0;
+    
+    if (hasAnimations) {
+      return `  <path ${attributes}>
+    ${animations}
+  </path>`;
+    } else {
+      return `  <path ${attributes} />`;
+    }
   }).join('\n');
 
   // Generate text elements
@@ -409,9 +534,31 @@ export function generateGroupSVG(
         return `    <tspan ${spanAttributes}>${span.content}</tspan>`;
       }).join('\n');
       
-      return `  <text ${attributes}>\n${spans}\n  </text>`;
+      const animations = generateAnimations(text.id);
+      const hasAnimations = animations.length > 0;
+      
+      if (hasAnimations) {
+        return `  <text ${attributes}>
+${spans}
+    ${animations}
+  </text>`;
+      } else {
+        return `  <text ${attributes}>
+${spans}
+  </text>`;
+      }
     } else {
-      return `  <text ${attributes}>${text.content}</text>`;
+      const animations = generateAnimations(text.id);
+      const hasAnimations = animations.length > 0;
+      
+      if (hasAnimations) {
+        return `  <text ${attributes}>
+    ${text.content}
+    ${animations}
+  </text>`;
+      } else {
+        return `  <text ${attributes}>${text.content}</text>`;
+      }
     }
   }).join('\n');
 
@@ -432,11 +579,84 @@ export function generateGroupSVG(
       style.mask ? `mask="${style.mask}"` : '',
     ].filter(Boolean).join(' ');
     
-    return `  <image ${attributes} />`;
+    const animations = generateAnimations(image.id);
+    const hasAnimations = animations.length > 0;
+    
+    if (hasAnimations) {
+      return `  <image ${attributes}>
+    ${animations}
+  </image>`;
+    } else {
+      return `  <image ${attributes} />`;
+    }
+  }).join('\n');
+
+  // Generate group elements
+  const groupElements = groupGroups.map(groupEl => {
+    const style = groupEl.style || {};
+    
+    const attributes = [
+      `id="${groupEl.id}"`,
+      groupEl.transform ? `transform="${groupEl.transform}"` : '',
+      style.opacity !== undefined && style.opacity !== 1 ? `opacity="${style.opacity}"` : '',
+      style.filter ? `filter="${style.filter}"` : '',
+      style.clipPath ? `clip-path="${style.clipPath}"` : '',
+      style.mask ? `mask="${style.mask}"` : '',
+    ].filter(Boolean).join(' ');
+    
+    const animations = generateAnimations(groupEl.id);
+    const hasAnimations = animations.length > 0;
+    
+    // Generate child elements recursively
+    const childSVG = generateGroupSVG(groupEl, allPaths, allTexts, allGroups, allImages, allSymbols, allUses, allGradients, allFilters, allAnimations, precision);
+    // Extract just the content inside the SVG tags
+    const svgContentMatch = childSVG.match(/<svg[^>]*>([\s\S]*)<\/svg>/);
+    const childContent = svgContentMatch ? svgContentMatch[1].replace(/^[\s\S]*?(<defs>[\s\S]*?<\/defs>)?/, '').trim() : '';
+    
+    if (hasAnimations) {
+      return `  <g ${attributes}>
+    ${animations}
+${childContent.split('\n').map(line => '    ' + line).join('\n')}
+  </g>`;
+    } else {
+      return `  <g ${attributes}>
+${childContent.split('\n').map(line => '    ' + line).join('\n')}
+  </g>`;
+    }
+  }).join('\n');
+
+  // Generate use elements
+  const useElements = groupUses.map(use => {
+    const style = use.style || {};
+    
+    const attributes = [
+      `id="${use.id}"`,
+      `href="${use.href}"`,
+      use.x !== undefined ? `x="${use.x}"` : '',
+      use.y !== undefined ? `y="${use.y}"` : '',
+      use.width !== undefined ? `width="${use.width}"` : '',
+      use.height !== undefined ? `height="${use.height}"` : '',
+      use.transform ? `transform="${use.transform}"` : '',
+      style.opacity !== undefined && style.opacity !== 1 ? `opacity="${style.opacity}"` : '',
+      style.filter ? `filter="${style.filter}"` : '',
+      style.clipPath ? `clip-path="${style.clipPath}"` : '',
+      style.mask ? `mask="${style.mask}"` : '',
+    ].filter(Boolean).join(' ');
+    
+    const animations = generateAnimations(use.id);
+    const hasAnimations = animations.length > 0;
+    
+    if (hasAnimations) {
+      return `  <use ${attributes}>
+    ${animations}
+  </use>`;
+    } else {
+      return `  <use ${attributes} />`;
+    }
   }).join('\n');
 
   // Combine all elements
-  const allElements = [pathElements, textElements, imageElements].filter(Boolean).join('\n');
+  const allElements = [pathElements, textElements, imageElements, groupElements, useElements].filter(Boolean).join('\n');
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${finalViewBox}">
 ${defsSection}${allElements}
