@@ -611,9 +611,6 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
           beginTime = (chainAnim.delay || 0) * 1000;
         }
         
-        // Log chain delay calculation for debugging
-        console.log(`⛓️ Chain delay calculation: Animation ${chainAnim.animationId} -> delay: ${chainAnim.delay}s -> beginTime: ${beginTime}ms (dependsOn: ${chainAnim.dependsOn || 'none'})`);
-        
         processedAnimations.set(chainAnim.animationId, beginTime);
       });
     });
