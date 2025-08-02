@@ -132,7 +132,14 @@ export const AnimationSynchronizer: React.FC = () => {
 
   const getAnimationTarget = (animId: string) => {
     const anim = animations.find(a => a.id === animId);
-    return anim ? (anim as any).targetElementId?.slice(-8) || 'unknown' : 'unknown';
+    if (!anim) return 'unknown';
+    
+    // All animation types have targetElementId property
+    const targetId = anim.targetElementId;
+    if (!targetId) return 'unknown';
+    
+    // Return last 8 characters for display
+    return targetId.length > 8 ? targetId.slice(-8) : targetId;
   };
 
   return (

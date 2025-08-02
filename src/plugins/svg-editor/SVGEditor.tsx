@@ -1387,12 +1387,16 @@ export const SVGComponent: React.FC = () => {
       if (elementAnimations.length === 0) return '';
       
       const result = elementAnimations.map(animation => {
-        // Use indefinite begin for chained animations to allow programmatic control
-        let beginValue = 'indefinite';
+        // For SVG export, calculate proper begin times for sequential playback
+        let beginValue = '0s';
         const chainDelay = chainDelays.get(animation.id);
         
-        // Only use original begin time if there's no chain delay
-        if (chainDelay === undefined || chainDelay === 0) {
+        if (chainDelay !== undefined && chainDelay > 0) {
+          // Convert from ms to seconds for SVG
+          const delayInSeconds = chainDelay / 1000;
+          beginValue = `${delayInSeconds}s`;
+        } else {
+          // Use original begin time or default to 0s
           beginValue = getAnimationProperty(animation, 'begin') || '0s';
         }
 
@@ -1685,19 +1689,32 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         const currentAnimations = [...animations];
         currentAnimations.forEach(animation => removeAnimation(animation.id));
         
-        // Import new animations with deduplication
+        // Create animation ID mapping for chains
+        const animationIdMapping: { [key: string]: string } = {};
+        
+        // Import new animations with deduplication and track ID mapping
         newAnimations.forEach((animation: any) => {
           // Remove the parsed ID to allow addAnimation to generate a new one and apply deduplication
-          const { id, ...animationWithoutId } = animation;
-          addAnimation(animationWithoutId);
+          const { id: originalId, ...animationWithoutId } = animation;
+          const newId = addAnimation(animationWithoutId);
+          animationIdMapping[originalId] = newId;
+          console.log(`🔗 Animation ID mapping: ${originalId} -> ${newId}`);
         });
 
-        // Create auto-generated animation chains if any were detected
+        // Create auto-generated animation chains if any were detected, updating with new IDs
         if (newAnimationChains && newAnimationChains.length > 0) {
           console.log(`🔗 Creating ${newAnimationChains.length} auto-generated animation chains from begin times (SVGEditor)`);
           newAnimationChains.forEach((chain: any) => {
             console.log(`🔗 Creating chain: ${chain.name} with ${chain.animations.length} animations`);
-            createAnimationChain(chain.name, chain.animations);
+            
+            // Update animation IDs in the chain
+            const updatedChainAnimations = chain.animations.map((chainAnim: any) => ({
+              ...chainAnim,
+              animationId: animationIdMapping[chainAnim.animationId] || chainAnim.animationId,
+              dependsOn: chainAnim.dependsOn ? animationIdMapping[chainAnim.dependsOn] || chainAnim.dependsOn : chainAnim.dependsOn
+            }));
+            
+            createAnimationChain(chain.name, updatedChainAnimations);
           });
         }
         
@@ -1743,19 +1760,32 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         
         console.log(`➕ Adding ${updatedNewImages.length} new images to existing ${currentImages.length} images (SVGEditor append)`);
         
+        // Create animation ID mapping for chains  
+        const animationIdMapping: { [key: string]: string } = {};
+        
         // Import new animations (append mode doesn't clear existing animations) with deduplication
         newAnimations.forEach((animation: any) => {
           // Remove the parsed ID to allow addAnimation to generate a new one and apply deduplication
-          const { id, ...animationWithoutId } = animation;
-          addAnimation(animationWithoutId);
+          const { id: originalId, ...animationWithoutId } = animation;
+          const newId = addAnimation(animationWithoutId);
+          animationIdMapping[originalId] = newId;
+          console.log(`🔗 Animation ID mapping (append): ${originalId} -> ${newId}`);
         });
 
-        // Create auto-generated animation chains if any were detected
+        // Create auto-generated animation chains if any were detected, updating with new IDs
         if (newAnimationChains && newAnimationChains.length > 0) {
           console.log(`🔗 Creating ${newAnimationChains.length} auto-generated animation chains from begin times (SVGEditor append)`);
           newAnimationChains.forEach((chain: any) => {
             console.log(`🔗 Creating chain: ${chain.name} with ${chain.animations.length} animations`);
-            createAnimationChain(chain.name, chain.animations);
+            
+            // Update animation IDs in the chain
+            const updatedChainAnimations = chain.animations.map((chainAnim: any) => ({
+              ...chainAnim,
+              animationId: animationIdMapping[chainAnim.animationId] || chainAnim.animationId,
+              dependsOn: chainAnim.dependsOn ? animationIdMapping[chainAnim.dependsOn] || chainAnim.dependsOn : chainAnim.dependsOn
+            }));
+            
+            createAnimationChain(chain.name, updatedChainAnimations);
           });
         }
         

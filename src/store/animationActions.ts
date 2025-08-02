@@ -4,7 +4,7 @@ import { generateId } from '../utils/id-utils';
 
 export interface AnimationActions {
   // Animation CRUD operations
-  addAnimation: (animation: any) => void;
+  addAnimation: (animation: any) => string;
   updateAnimation: (animationId: string, updates: Partial<SVGAnimation>) => void;
   removeAnimation: (animationId: string) => void;
   duplicateAnimation: (animationId: string) => void;
@@ -112,6 +112,9 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
         animations: [...filteredAnimations, animation],
       };
     });
+    
+    // Return the new animation ID
+    return animation.id;
   },
 
   updateAnimation: (animationId: string, updates: any) => {

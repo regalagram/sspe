@@ -51,7 +51,7 @@ export const WritingToolbar: React.FC<WritingToolbarProps> = ({
     alignItems: 'center',
     justifyContent: 'center', // Center all buttons horizontally
     padding: '0px', // No vertical padding
-    gap: '4px', // Optimized gap between sections
+    gap: '0px', // Optimized gap between sections
     minHeight: 'fit-content', // Natural height based on button size
     overflow: 'visible', // Allow submenus to overflow
     position: 'relative', // Establish positioning context
