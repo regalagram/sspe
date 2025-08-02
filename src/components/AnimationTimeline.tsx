@@ -10,7 +10,8 @@ export const AnimationTimeline: React.FC = () => {
     pauseAnimations,
     stopAnimations,
     setAnimationTime,
-    removeAnimation
+    removeAnimation,
+    calculateChainDelays
   } = useEditorStore();
 
   const [isDragging, setIsDragging] = useState(false);
@@ -18,9 +19,17 @@ export const AnimationTimeline: React.FC = () => {
   const timelineRef = useRef<HTMLDivElement>(null);
   const scrubberRef = useRef<HTMLDivElement>(null);
 
-  // Calculate timeline width and position
+  // Calculate chain delays for timeline visualization
+  const chainDelays = calculateChainDelays();
+  
+  // Calculate timeline width and position including chain delays
   const timelineWidth = 180; // pixels
-  const maxDuration = Math.max(5, ...animations.map(anim => parseFloat(anim.dur || '2s') || 2)); // minimum 5 seconds
+  const animationDurations = animations.map(anim => {
+    const duration = parseFloat(anim.dur || '2s') || 2;
+    const chainDelay = (chainDelays.get(anim.id) || 0) / 1000; // Convert ms to seconds
+    return chainDelay + duration;
+  });
+  const maxDuration = Math.max(5, ...animationDurations); // minimum 5 seconds
   const currentTimePosition = (animationState.currentTime / maxDuration) * timelineWidth;
 
   const handleTimelineClick = (e: React.MouseEvent) => {
@@ -153,27 +162,49 @@ export const AnimationTimeline: React.FC = () => {
           }}
           onClick={handleTimelineClick}
         >
-          {/* Animation Bars */}
+          {/* Animation Bars with Chain Delays */}
           {animations.map((anim, index) => {
             const duration = parseFloat(anim.dur || '2s') || 2;
+            const chainDelay = (chainDelays.get(anim.id) || 0) / 1000; // Convert ms to seconds
+            const startPosition = (chainDelay / maxDuration) * timelineWidth;
             const width = (duration / maxDuration) * timelineWidth;
             const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57'];
             
             return (
-              <div
-                key={anim.id}
-                style={{
-                  position: 'absolute',
-                  left: '0px',
-                  top: `${2 + index * 3}px`,
-                  width: `${width}px`,
-                  height: '2px',
-                  backgroundColor: colors[index % colors.length],
-                  borderRadius: '1px',
-                  opacity: 0.7
-                }}
-                title={`${anim.type} - ${(anim as any).targetElementId} (${anim.dur || '2s'})`}
-              />
+              <div key={anim.id}>
+                {/* Chain Delay indicator (if any) */}
+                {chainDelay > 0 && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: '0px',
+                      top: `${2 + index * 3}px`,
+                      width: `${startPosition}px`,
+                      height: '2px',
+                      backgroundColor: '#ddd',
+                      borderRadius: '1px',
+                      opacity: 0.5,
+                      borderRight: '1px dashed #999'
+                    }}
+                    title={`Delay: ${chainDelay.toFixed(1)}s`}
+                  />
+                )}
+                
+                {/* Animation Bar */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: `${startPosition}px`,
+                    top: `${2 + index * 3}px`,
+                    width: `${width}px`,
+                    height: '2px',
+                    backgroundColor: colors[index % colors.length],
+                    borderRadius: '1px',
+                    opacity: 0.8
+                  }}
+                  title={`${anim.type} - ${(anim as any).targetElementId}\nDelay: ${chainDelay.toFixed(1)}s, Duration: ${anim.dur || '2s'}`}
+                />
+              </div>
             );
           })}
           

@@ -174,7 +174,7 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
 };
 
 export const SVGComponent: React.FC = () => {
-  const { paths, texts, textPaths, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, viewport, replacePaths, replaceTexts, replaceTextPaths, replaceGroups, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients, addText, addGradient, addImage, addSymbol, addMarker, addClipPath, addMask, addFilter, removeFilter, clearAllSVGElements, addUse, updateImage, animations, animationState, animationSync, addAnimation, removeAnimation } = useEditorStore();
+  const { paths, texts, textPaths, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, viewport, replacePaths, replaceTexts, replaceTextPaths, replaceGroups, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients, addText, addGradient, addImage, addSymbol, addMarker, addClipPath, addMask, addFilter, removeFilter, clearAllSVGElements, addUse, updateImage, animations, animationState, animationSync, addAnimation, removeAnimation, calculateChainDelays } = useEditorStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Import settings state
@@ -629,6 +629,9 @@ export const SVGComponent: React.FC = () => {
     const generateDefinitions = () => {
       const allDefs: string[] = [];
       
+      // Calculate chain delays for proper synchronization in SVG export
+      const chainDelays = calculateChainDelays();
+      
       // Add gradients and patterns
       if (allGradients.length > 0) {
         const gradientDefs = allGradients.map(gradient => {
@@ -638,9 +641,20 @@ export const SVGComponent: React.FC = () => {
           );
           
           const gradientAnimationsHtml = gradientAnimations.length > 0 ? gradientAnimations.map(animation => {
+            // Calculate begin time including chain delays
+            let beginValue = getAnimationProperty(animation, 'begin') || '';
+            const chainDelay = chainDelays.get(animation.id);
+            if (chainDelay !== undefined && chainDelay > 0) {
+              // Convert from ms to seconds for SVG
+              const delayInSeconds = chainDelay / 1000;
+              beginValue = `${delayInSeconds}s`;
+            } else if (!beginValue) {
+              beginValue = '0s'; // Default begin time
+            }
+
             const commonAttrs = [
               animation.dur ? `dur="${animation.dur}"` : 'dur="2s"',
-              getAnimationProperty(animation, 'begin') ? `begin="${getAnimationProperty(animation, 'begin')}"` : '',
+              beginValue ? `begin="${beginValue}"` : '',
               getAnimationProperty(animation, 'end') ? `end="${getAnimationProperty(animation, 'end')}"` : '',
               getAnimationProperty(animation, 'repeatCount') ? `repeatCount="${getAnimationProperty(animation, 'repeatCount')}"` : '',
               getAnimationProperty(animation, 'fill') ? `fill="${getAnimationProperty(animation, 'fill')}"` : '',
@@ -677,8 +691,20 @@ export const SVGComponent: React.FC = () => {
               const linearStops = gradient.stops.map(stop => {
                 const stopAnimations = animations.filter(anim => anim.targetElementId === stop.id);
                 const stopAnimationsHtml = stopAnimations.length > 0 ? stopAnimations.map(animation => {
+                  // Calculate begin time including chain delays
+                  let beginValue = getAnimationProperty(animation, 'begin') || '';
+                  const chainDelay = chainDelays.get(animation.id);
+                  if (chainDelay !== undefined && chainDelay > 0) {
+                    // Convert from ms to seconds for SVG
+                    const delayInSeconds = chainDelay / 1000;
+                    beginValue = `${delayInSeconds}s`;
+                  } else if (!beginValue) {
+                    beginValue = '0s'; // Default begin time
+                  }
+
                   const commonAttrs = [
                     animation.dur ? `dur="${animation.dur}"` : 'dur="2s"',
+                    beginValue ? `begin="${beginValue}"` : '',
                     getAnimationProperty(animation, 'fill') ? `fill="${getAnimationProperty(animation, 'fill')}"` : '',
                   ].filter(Boolean).join(' ');
                   const animateAttrs = [
@@ -703,8 +729,20 @@ export const SVGComponent: React.FC = () => {
               const radialStops = gradient.stops.map(stop => {
                 const stopAnimations = animations.filter(anim => anim.targetElementId === stop.id);
                 const stopAnimationsHtml = stopAnimations.length > 0 ? stopAnimations.map(animation => {
+                  // Calculate begin time including chain delays
+                  let beginValue = getAnimationProperty(animation, 'begin') || '';
+                  const chainDelay = chainDelays.get(animation.id);
+                  if (chainDelay !== undefined && chainDelay > 0) {
+                    // Convert from ms to seconds for SVG
+                    const delayInSeconds = chainDelay / 1000;
+                    beginValue = `${delayInSeconds}s`;
+                  } else if (!beginValue) {
+                    beginValue = '0s'; // Default begin time
+                  }
+
                   const commonAttrs = [
                     animation.dur ? `dur="${animation.dur}"` : 'dur="2s"',
+                    beginValue ? `begin="${beginValue}"` : '',
                     getAnimationProperty(animation, 'fill') ? `fill="${getAnimationProperty(animation, 'fill')}"` : '',
                   ].filter(Boolean).join(' ');
                   const animateAttrs = [
@@ -729,8 +767,20 @@ export const SVGComponent: React.FC = () => {
             case 'pattern':
               const patternAnimations = animations.filter(anim => anim.targetElementId === gradient.id);
               const patternAnimationsHtml = patternAnimations.length > 0 ? patternAnimations.map(animation => {
+                // Calculate begin time including chain delays
+                let beginValue = getAnimationProperty(animation, 'begin') || '';
+                const chainDelay = chainDelays.get(animation.id);
+                if (chainDelay !== undefined && chainDelay > 0) {
+                  // Convert from ms to seconds for SVG
+                  const delayInSeconds = chainDelay / 1000;
+                  beginValue = `${delayInSeconds}s`;
+                } else if (!beginValue) {
+                  beginValue = '0s'; // Default begin time
+                }
+
                 const commonAttrs = [
                   animation.dur ? `dur="${animation.dur}"` : 'dur="2s"',
+                  beginValue ? `begin="${beginValue}"` : '',
                   getAnimationProperty(animation, 'fill') ? `fill="${getAnimationProperty(animation, 'fill')}"` : '',
                 ].filter(Boolean).join(' ');
                 const animateAttrs = [
@@ -838,9 +888,20 @@ export const SVGComponent: React.FC = () => {
             );
             
             const primitiveAnimationsHtml = primitiveAnimations.length > 0 ? primitiveAnimations.map(animation => {
+              // Calculate begin time including chain delays
+              let beginValue = getAnimationProperty(animation, 'begin') || '';
+              const chainDelay = chainDelays.get(animation.id);
+              if (chainDelay !== undefined && chainDelay > 0) {
+                // Convert from ms to seconds for SVG
+                const delayInSeconds = chainDelay / 1000;
+                beginValue = `${delayInSeconds}s`;
+              } else if (!beginValue) {
+                beginValue = '0s'; // Default begin time
+              }
+
               const commonAttrs = [
                 animation.dur ? `dur="${animation.dur}"` : 'dur="2s"',
-                getAnimationProperty(animation, 'begin') ? `begin="${getAnimationProperty(animation, 'begin')}"` : '',
+                beginValue ? `begin="${beginValue}"` : '',
                 getAnimationProperty(animation, 'end') ? `end="${getAnimationProperty(animation, 'end')}"` : '',
                 getAnimationProperty(animation, 'repeatCount') ? `repeatCount="${getAnimationProperty(animation, 'repeatCount')}"` : '',
                 getAnimationProperty(animation, 'fill') ? `fill="${getAnimationProperty(animation, 'fill')}"` : '',
@@ -1102,6 +1163,9 @@ export const SVGComponent: React.FC = () => {
     const injectAnimationsIntoElements = (elementsHtml: string): string => {
       if (animations.length === 0) return elementsHtml;
       
+      // Calculate chain delays for proper synchronization in SVG export
+      const chainDelays = calculateChainDelays();
+      
       // Group animations by target element
       const animationsByTarget = animations.reduce((acc, animation) => {
         const targetId = animation.targetElementId;
@@ -1142,9 +1206,20 @@ export const SVGComponent: React.FC = () => {
         if (nonFilterAnimations.length === 0) return;
         
         const animationsHtml = nonFilterAnimations.map(animation => {
+          // Calculate begin time including chain delays
+          let beginValue = getAnimationProperty(animation, 'begin') || '';
+          const chainDelay = chainDelays.get(animation.id);
+          if (chainDelay !== undefined && chainDelay > 0) {
+            // Convert from ms to seconds for SVG
+            const delayInSeconds = chainDelay / 1000;
+            beginValue = `${delayInSeconds}s`;
+          } else if (!beginValue) {
+            beginValue = '0s'; // Default begin time
+          }
+
           const commonAttrs = [
             animation.dur ? `dur="${animation.dur}"` : 'dur="2s"',
-            getAnimationProperty(animation, 'begin') ? `begin="${getAnimationProperty(animation, 'begin')}"` : '',
+            beginValue ? `begin="${beginValue}"` : '',
             getAnimationProperty(animation, 'end') ? `end="${getAnimationProperty(animation, 'end')}"` : '',
             getAnimationProperty(animation, 'repeatCount') ? `repeatCount="${getAnimationProperty(animation, 'repeatCount')}"` : '',
             getAnimationProperty(animation, 'repeatDur') ? `repeatDur="${getAnimationProperty(animation, 'repeatDur')}"` : '',
@@ -1254,9 +1329,21 @@ ${definitions}${allElements}
     // Handle SVG root animations (viewBox animations, etc.)
     const svgRootAnimations = animations.filter(animation => animation.targetElementId === 'svg-root');
     const svgRootAnimationsHtml = svgRootAnimations.length > 0 ? svgRootAnimations.map(animation => {
+      // Calculate begin time including chain delays for SVG root animations
+      const chainDelays = calculateChainDelays();
+      let beginValue = getAnimationProperty(animation, 'begin') || '';
+      const chainDelay = chainDelays.get(animation.id);
+      if (chainDelay !== undefined && chainDelay > 0) {
+        // Convert from ms to seconds for SVG
+        const delayInSeconds = chainDelay / 1000;
+        beginValue = `${delayInSeconds}s`;
+      } else if (!beginValue) {
+        beginValue = '0s'; // Default begin time
+      }
+
       const commonAttrs = [
         animation.dur ? `dur="${animation.dur}"` : 'dur="2s"',
-        getAnimationProperty(animation, 'begin') ? `begin="${getAnimationProperty(animation, 'begin')}"` : '',
+        beginValue ? `begin="${beginValue}"` : '',
         getAnimationProperty(animation, 'end') ? `end="${getAnimationProperty(animation, 'end')}"` : '',
         getAnimationProperty(animation, 'repeatCount') ? `repeatCount="${getAnimationProperty(animation, 'repeatCount')}"` : '',
         getAnimationProperty(animation, 'repeatDur') ? `repeatDur="${getAnimationProperty(animation, 'repeatDur')}"` : '',

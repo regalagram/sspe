@@ -957,6 +957,7 @@ export interface AnimationState {
   playbackRate: number; // Playback speed multiplier
   loop: boolean; // Whether to loop animations
   startTime?: number; // Timestamp when playback started (for timer calculations)
+  restartKey?: number; // Key to force re-render of animations on restart
   
   // Advanced animation state
   activeAnimations: string[]; // Currently running animation IDs

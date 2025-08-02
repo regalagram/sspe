@@ -13,6 +13,7 @@ export interface AnimationActions {
   playAnimations: () => void;
   pauseAnimations: () => void;
   stopAnimations: () => void;
+  resetAnimationsAfterCompletion: () => void;
   setCurrentTime: (time: number) => void;
   setAnimationTime: (time: number) => void;
   setPlaybackRate: (rate: number) => void;
@@ -27,6 +28,7 @@ export interface AnimationActions {
   // Utility functions
   getAnimationsForElement: (elementId: string) => SVGAnimation[];
   getTotalAnimationDuration: () => number;
+  calculateChainDelays: () => Map<string, number>;
   
   // Quick animation creators
   createFadeAnimation: (elementId: string, duration: string, fromOpacity?: string, toOpacity?: string) => void;
@@ -136,63 +138,106 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
     const state = get();
     const currentTime = Date.now();
     
-    // Process animation chains to calculate proper begin times
-    const processedAnimations = new Map<string, number>(); // animationId -> begin time in ms
+    // Check if we're resuming from a pause (chain delays exist and we have a current time)
+    const isResuming = state.animationState.chainDelays && 
+                      state.animationState.chainDelays.size > 0 && 
+                      !state.animationState.isPlaying;
     
-    state.animationSync.chains.forEach((chain: any) => {
-      let chainStartTime = 0;
+    if (!isResuming) {
+      // Fresh start - clear any existing chain delays and recalculate
+      set((state: any) => ({
+        animationState: {
+          ...state.animationState,
+          chainDelays: new Map(),
+          restartKey: (state.animationState.restartKey || 0) + 1, // Increment restart key to force re-render
+        },
+      }));
       
-      chain.animations.forEach((chainAnim: any, index: number) => {
-        let beginTime = chainStartTime;
-        
-        if (chainAnim.dependsOn) {
-          // If this animation depends on another, calculate when it should start
-          const dependencyDelay = processedAnimations.get(chainAnim.dependsOn) || 0;
-          const dependencyAnimation = state.animations.find((a: any) => a.id === chainAnim.dependsOn);
-          if (dependencyAnimation) {
-            // Parse duration more robustly
-            const durValue = dependencyAnimation.dur || '2s';
-            const durMatch = durValue.match(/^(\d+(?:\.\d+)?)(s|ms)?$/i);
-            const durNumber = durMatch ? parseFloat(durMatch[1]) : 2;
-            const durUnit = durMatch ? (durMatch[2] || 's').toLowerCase() : 's';
-            const dependencyDuration = (durUnit === 'ms' ? durNumber : durNumber * 1000);
-            beginTime = Math.max(beginTime, dependencyDelay + dependencyDuration);
-          }
-        }
-        
-        // Add any additional delay specified in the chain
-        beginTime += (chainAnim.delay || 0) * 1000;
-        
-        processedAnimations.set(chainAnim.animationId, beginTime);
+      // Calculate chain delays using the helper function
+      const calculateChainDelays = get().calculateChainDelays;
+      const processedAnimations = calculateChainDelays();
+      
+      // Debug logging
+      console.log('🎬 Starting playAnimations - Chain delays calculated:', processedAnimations);
+      processedAnimations.forEach((delay: number, animId: string) => {
+        console.log(`  Animation ${animId}: ${delay}ms delay`);
       });
-    });
-    
-    set((state: any) => ({
-      animationState: {
-        ...state.animationState,
-        isPlaying: true,
-        startTime: currentTime,
-        chainDelays: processedAnimations, // Store calculated delays
-      },
-    }));
+      
+      set((state: any) => ({
+        animationState: {
+          ...state.animationState,
+          isPlaying: true,
+          startTime: currentTime,
+          chainDelays: processedAnimations, // Store calculated delays
+        },
+      }));
+    } else {
+      // Resuming from pause - adjust timing to continue from where we paused
+      const pausedAtSeconds = state.animationState.currentTime; // Time where we paused
+      const adjustedStartTime = currentTime - (pausedAtSeconds * 1000); // Adjust start time to account for elapsed time
+      
+      console.log('▶️ Resuming animations from pause at', pausedAtSeconds, 'seconds');
+      console.log('   Original start time would be:', new Date(adjustedStartTime).toISOString());
+      
+      set((state: any) => ({
+        animationState: {
+          ...state.animationState,
+          isPlaying: true,
+          startTime: adjustedStartTime, // This allows animations to continue from correct time
+          // DON'T increment restartKey on resume - keep same animation instances to maintain state
+        },
+      }));
+    }
   },
 
   pauseAnimations: () => {
+    const state = get();
+    const currentTime = Date.now();
+    
+    // Calculate how much time has elapsed since animations started
+    let elapsedSeconds = 0;
+    if (state.animationState.startTime) {
+      elapsedSeconds = (currentTime - state.animationState.startTime) / 1000;
+    }
+    
+    console.log('⏸️ Pausing animations at', elapsedSeconds, 'seconds (preserving chain delays)');
+    
     set((state: any) => ({
       animationState: {
         ...state.animationState,
         isPlaying: false,
+        currentTime: elapsedSeconds, // Capture current playback position
+        // DON'T clear chain delays when pausing - keep them for resume
+        // DON'T increment restartKey when pausing - keep same animation instances
+        // DON'T clear startTime when pausing - we need it for resume calculations
       },
     }));
   },
 
   stopAnimations: () => {
+    console.log('⏹️ Stopping all animations');
     set((state: any) => ({
       animationState: {
         ...state.animationState,
         isPlaying: false,
         currentTime: 0,
+        startTime: null, // Reset start time for clean restart
         chainDelays: new Map(), // Clear chain delays when stopping
+        restartKey: (state.animationState.restartKey || 0) + 1, // Force re-render to reset animations
+      },
+    }));
+  },
+
+  // Function to reset animations when they finish naturally
+  resetAnimationsAfterCompletion: () => {
+    console.log('🏁 Animations completed - resetting state');
+    set((state: any) => ({
+      animationState: {
+        ...state.animationState,
+        isPlaying: false,
+        startTime: null, // Reset start time to ensure fresh restart
+        currentTime: 0,
+        chainDelays: new Map(), // Clear chain delays when animations complete
       },
     }));
   },
@@ -291,6 +336,57 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
     });
     
     return Math.max(...durations);
+  },
+
+  // Calculate chain delays for export (without starting playback)
+  calculateChainDelays: () => {
+    const state = get();
+    const processedAnimations = new Map<string, number>(); // animationId -> begin time in ms
+    
+    state.animationSync.chains.forEach((chain: any) => {
+      // Sort animations by their dependencies to ensure proper processing order
+      const sortedAnimations = [...chain.animations].sort((a, b) => {
+        if (a.dependsOn && !b.dependsOn) return 1;
+        if (!a.dependsOn && b.dependsOn) return -1;
+        return 0;
+      });
+      
+      sortedAnimations.forEach((chainAnim: any, index: number) => {
+        let beginTime = 0;
+        
+        if (chainAnim.dependsOn) {
+          // If this animation depends on another, calculate when it should start
+          const dependencyDelay = processedAnimations.get(chainAnim.dependsOn) || 0;
+          const dependencyAnimation = state.animations.find((a: any) => a.id === chainAnim.dependsOn);
+          if (dependencyAnimation) {
+            // Parse duration more robustly
+            const durValue = dependencyAnimation.dur || '2s';
+            const durMatch = durValue.match(/^(\d+(?:\.\d+)?)(s|ms)?$/i);
+            const durNumber = durMatch ? parseFloat(durMatch[1]) : 2;
+            const durUnit = durMatch ? (durMatch[2] || 's').toLowerCase() : 's';
+            const dependencyDuration = (durUnit === 'ms' ? durNumber : durNumber * 1000);
+            
+            // Calculate begin time based on trigger type
+            switch (chainAnim.trigger) {
+              case 'end':
+                beginTime = dependencyDelay + dependencyDuration;
+                break;
+              case 'start':
+              default:
+                beginTime = dependencyDelay;
+                break;
+            }
+          }
+        }
+        
+        // Add any additional delay specified in the chain
+        beginTime += (chainAnim.delay || 0) * 1000;
+        
+        processedAnimations.set(chainAnim.animationId, beginTime);
+      });
+    });
+    
+    return processedAnimations;
   },
 
   // Quick animation creators
