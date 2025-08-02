@@ -43,7 +43,7 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     border: 'none',
-    borderRadius: isMobileDevice ? '8px' : '6px',
+    borderRadius: '0px',
     background: active ? color : 'white',
     color: active ? 'white' : (disabled ? '#9ca3af' : color),
     cursor: disabled ? 'not-allowed' : 'pointer',
