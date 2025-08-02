@@ -213,9 +213,30 @@ export const AnimationSynchronizer: React.FC = () => {
             </div>
 
             <div style={{ marginBottom: '8px' }}>
-              <label style={{ display: 'block', marginBottom: '4px', fontSize: '10px', fontWeight: 'bold' }}>
-                Select Animations:
-              </label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <label style={{ fontSize: '10px', fontWeight: 'bold' }}>
+                  Select Animations:
+                </label>
+                <button
+                  style={{
+                    ...buttonStyle,
+                    padding: '2px 6px',
+                    fontSize: '9px',
+                    backgroundColor: selectedAnimations.length === animations.length ? '#dc3545' : '#28a745',
+                    color: 'white',
+                    border: selectedAnimations.length === animations.length ? '1px solid #dc3545' : '1px solid #28a745'
+                  }}
+                  onClick={() => {
+                    if (selectedAnimations.length === animations.length) {
+                      setSelectedAnimations([]);
+                    } else {
+                      setSelectedAnimations(animations.map(anim => anim.id));
+                    }
+                  }}
+                >
+                  {selectedAnimations.length === animations.length ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
               <div style={{ maxHeight: '100px', overflow: 'auto', border: '1px solid #ddd', padding: '4px', backgroundColor: '#fff' }}>
                 {animations.map(anim => (
                   <label key={anim.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', marginBottom: '2px' }}>
