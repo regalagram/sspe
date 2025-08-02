@@ -286,6 +286,21 @@ const SelectionDetails: React.FC = () => {
   const getElementDetails = () => {
     const details: any[] = [];
     
+    // Check for root-level animations (animations applied to the entire SVG)
+    const rootAnimations = animations.filter(animation => 
+      animation.targetElementId === 'svg-root'
+    );
+    
+    if (rootAnimations.length > 0) {
+      details.push({
+        type: 'SVG Root Animations',
+        id: 'svg-root',
+        info: `${rootAnimations.length} global animation${rootAnimations.length !== 1 ? 's' : ''}`,
+        animations: rootAnimations,
+        isGlobal: true
+      });
+    }
+    
     // Paths
     selection.selectedPaths.forEach(pathId => {
       const path = paths.find(p => p.id === pathId);
@@ -512,7 +527,66 @@ const SelectionDetails: React.FC = () => {
   
   const elementDetails = getElementDetails();
   
-  if (elementDetails.length === 0) {
+  // Check if we only have root animations and no selected elements
+  const hasOnlyRootAnimations = elementDetails.length === 1 && elementDetails[0]?.isGlobal;
+  const hasNoSelection = elementDetails.length === 0;
+  const rootAnimationsOnly = elementDetails.filter(detail => detail.isGlobal);
+  
+  if (hasNoSelection) {
+    // Show root animations even when nothing is selected
+    const rootAnimations = animations.filter(animation => 
+      animation.targetElementId === 'svg-root'
+    );
+    
+    if (rootAnimations.length > 0) {
+      return (
+        <div style={{
+          fontSize: '11px',
+          border: '1px solid #ddd',
+          borderRadius: '4px',
+          background: '#fff'
+        }}>
+          <div style={{
+            background: '#fff5f3',
+            padding: '8px',
+            borderBottom: '1px solid #ffccb8',
+            fontWeight: 'bold',
+            color: '#ff6b35'
+          }}>
+            🎬 Global SVG Animations ({rootAnimations.length})
+          </div>
+          
+          <div style={{ padding: '8px' }}>
+            <div style={{ marginBottom: '4px', color: '#333' }}>
+              Animations applied to the entire SVG
+            </div>
+            
+            {rootAnimations.map((animation: any, animIndex: number) => (
+              <div key={animIndex} style={{ 
+                fontSize: '9px',
+                color: '#d14',
+                padding: '4px 0',
+                borderBottom: animIndex < rootAnimations.length - 1 ? '1px solid #ffe4d6' : 'none'
+              }}>
+                <div style={{ fontWeight: 'bold' }}>
+                  {animation.type}: {animation.attributeName || 'transform'}
+                </div>
+                <div style={{ marginLeft: '8px', color: '#666', marginTop: '2px' }}>
+                  Duration: {animation.dur}
+                  {animation.from && ` | From: ${animation.from}`}
+                  {animation.to && ` | To: ${animation.to}`}
+                  {animation.values && ` | Values: ${animation.values}`}
+                  {animation.type === 'animateTransform' && animation.transformType && ` | Type: ${animation.transformType}`}
+                  {animation.repeatCount && ` | Repeat: ${animation.repeatCount}`}
+                  {animation.begin && ` | Begin: ${animation.begin}`}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    
     return (
       <div style={{
         fontSize: '12px',
@@ -609,6 +683,42 @@ const SelectionDetails: React.FC = () => {
               marginLeft: detail.position ? '4px' : '0'
             }}>
               🎬 {detail.animations.length} animation{detail.animations.length !== 1 ? 's' : ''}
+            </div>
+          )}
+          
+          {/* Detailed animation information */}
+          {detail.animations && detail.animations.length > 0 && (
+            <div style={{ 
+              marginTop: '4px',
+              padding: '4px 8px',
+              background: '#fff5f3',
+              borderRadius: '3px',
+              border: '1px solid #ffccb8'
+            }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '2px', color: '#ff6b35', fontSize: '10px' }}>
+                🎬 Animation Details:
+              </div>
+              {detail.animations.map((animation: any, animIndex: number) => (
+                <div key={animIndex} style={{ 
+                  fontSize: '9px',
+                  color: '#d14',
+                  padding: '1px 0',
+                  borderBottom: animIndex < detail.animations.length - 1 ? '1px solid #ffe4d6' : 'none'
+                }}>
+                  <div style={{ fontWeight: 'bold' }}>
+                    {animation.type}: {animation.attributeName || 'transform'}
+                  </div>
+                  <div style={{ marginLeft: '8px', color: '#666' }}>
+                    Duration: {animation.dur} | 
+                    {animation.from && ` From: ${animation.from} |`}
+                    {animation.to && ` To: ${animation.to} |`}
+                    {animation.values && ` Values: ${animation.values} |`}
+                    {animation.type === 'animateTransform' && animation.transformType && ` Type: ${animation.transformType} |`}
+                    {animation.repeatCount && ` Repeat: ${animation.repeatCount} |`}
+                    {animation.begin && ` Begin: ${animation.begin}`}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
           

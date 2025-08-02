@@ -87,17 +87,37 @@ export interface AnimationActions {
 export const createAnimationActions = (set: any, get: any): AnimationActions => ({
   // Animation CRUD operations
   addAnimation: (animationData: any) => {
+    const state = get();
+    state.pushToHistory();
+    
     const animation = {
       ...animationData,
       id: generateId(),
     };
     
-    set((state: any) => ({
-      animations: [...state.animations, animation],
-    }));
+    set((state: any) => {
+      // Remove existing animations of the same type on the same element to prevent duplicates
+      const filteredAnimations = state.animations.filter((existingAnim: any) => {
+        const sameElement = existingAnim.targetElementId === animation.targetElementId;
+        const sameType = existingAnim.type === animation.type;
+        const sameAttribute = existingAnim.attributeName === animation.attributeName;
+        const sameTransformType = animation.type === 'animateTransform' ? 
+          existingAnim.transformType === animation.transformType : true;
+        
+        // Remove if it's the same element, type, attribute, and transform type (for animateTransform)
+        return !(sameElement && sameType && sameAttribute && sameTransformType);
+      });
+      
+      return {
+        animations: [...filteredAnimations, animation],
+      };
+    });
   },
 
   updateAnimation: (animationId: string, updates: any) => {
+    const state = get();
+    state.pushToHistory();
+    
     set((state: any) => ({
       animations: state.animations.map((animation: any) =>
         animation.id === animationId
@@ -108,6 +128,9 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
   },
 
   removeAnimation: (animationId: string) => {
+    const state = get();
+    state.pushToHistory();
+    
     set((state: any) => ({
       animations: state.animations.filter((animation: any) => animation.id !== animationId),
       selection: {
@@ -119,6 +142,8 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
 
   duplicateAnimation: (animationId: string) => {
     const state = get();
+    state.pushToHistory();
+    
     const animation = state.animations.find((a: any) => a.id === animationId);
     
     if (animation) {

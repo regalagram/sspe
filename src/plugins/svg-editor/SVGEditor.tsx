@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { subPathToString } from '../../utils/path-utils';
@@ -1386,7 +1386,7 @@ export const SVGComponent: React.FC = () => {
       const elementAnimations = animations.filter(anim => anim.targetElementId === elementId);
       if (elementAnimations.length === 0) return '';
       
-      return elementAnimations.map(animation => {
+      const result = elementAnimations.map(animation => {
         // Calculate begin time including chain delays
         let beginValue = getAnimationProperty(animation, 'begin') || '';
         const chainDelay = chainDelays.get(animation.id);
@@ -1472,13 +1472,15 @@ export const SVGComponent: React.FC = () => {
         
         return '';
       }).filter(Boolean).join('\n');
+      
+      return result;
     }
 
     // Combine all elements for viewBox calculation
     const baseElements = [standalonePathElements, textElements, textPathElements, imageElements, useElements, groupElements].filter(Boolean).join('\n');
     
-    // Inject animations into elements
-    const allElements = injectAnimationsIntoElements(baseElements);
+    // Animations are already injected by renderAnimationsForElement, so use baseElements directly
+    const allElements = baseElements;
 
     // Create a temporary SVG with default viewBox to calculate proper bounds
     const tempSvgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
@@ -1677,9 +1679,11 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         const currentAnimations = [...animations];
         currentAnimations.forEach(animation => removeAnimation(animation.id));
         
-        // Import new animations
+        // Import new animations with deduplication
         newAnimations.forEach((animation: any) => {
-          addAnimation(animation);
+          // Remove the parsed ID to allow addAnimation to generate a new one and apply deduplication
+          const { id, ...animationWithoutId } = animation;
+          addAnimation(animationWithoutId);
         });
         
         // Replace existing content with updated references
@@ -1729,9 +1733,11 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         // Also update filter references in existing images
         const updatedImages = updateFilterReferences(currentImages);
         
-        // Import new animations (append mode doesn't clear existing animations)
+        // Import new animations (append mode doesn't clear existing animations) with deduplication
         newAnimations.forEach((animation: any) => {
-          addAnimation(animation);
+          // Remove the parsed ID to allow addAnimation to generate a new one and apply deduplication
+          const { id, ...animationWithoutId } = animation;
+          addAnimation(animationWithoutId);
         });
         
         // Merge with updated references
@@ -1838,7 +1844,9 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
   };
 
 
-  const currentSVG = generateSVGCode();
+  const currentSVG = useMemo(() => {
+    return generateSVGCode();
+  }, [paths, texts, textPaths, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, animations]);
 
   return (
     <div>

@@ -2510,7 +2510,41 @@ function parseAnimations(svgElement: Element): SVGAnimation[] {
     }
   });
   
-  return animations;
+  // Also check elements without IDs that might contain animations
+  const allElements = svgElement.querySelectorAll('*');
+  allElements.forEach(element => {
+    const elementId = element.getAttribute('id');
+    if (!elementId) {
+      // Generate a temporary ID for elements without ID that contain animations
+      const animationElements = element.querySelectorAll('animate, animateTransform, animateMotion, set');
+      if (animationElements.length > 0) {
+        const tempId = generateId(); // Generate a unique ID for this element
+        const elementAnimations = extractAnimationFromElement(element, tempId);
+        animations.push(...elementAnimations);
+      }
+    }
+  });
+  
+  // Deduplicate animations before returning to prevent duplicates from SVG files
+  const deduplicatedAnimations = animations.filter((animation, index) => {
+    // Find if there's another animation with the same characteristics earlier in the array
+    const duplicateIndex = animations.findIndex((otherAnim, otherIndex) => {
+      if (otherIndex >= index) return false; // Only look at earlier animations
+      
+      const sameElement = otherAnim.targetElementId === animation.targetElementId;
+      const sameType = otherAnim.type === animation.type;
+      const sameAttribute = otherAnim.attributeName === animation.attributeName;
+      const sameTransformType = animation.type === 'animateTransform' ? 
+        otherAnim.transformType === animation.transformType : true;
+      
+      return sameElement && sameType && sameAttribute && sameTransformType;
+    });
+    
+    // Keep this animation if no duplicate was found earlier
+    return duplicateIndex === -1;
+  });
+  
+  return deduplicatedAnimations;
 }
 
 /**

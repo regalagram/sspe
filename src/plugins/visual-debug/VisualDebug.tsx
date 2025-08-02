@@ -349,6 +349,22 @@ export const VisualDebugComponent: React.FC = () => {
   };
   return (
     <div>
+      <button
+        style={{
+          marginBottom: '16px',
+          padding: '8px 12px',
+          background: '#dc3545',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          width: '100%'
+        }}
+        onClick={handleClearLocalStorage}
+      >
+        Borrar LocalStorage
+      </button>
       <VisualDebugControls
         commandPointsEnabled={enabledFeatures.commandPointsEnabled}
         controlPointsEnabled={enabledFeatures.controlPointsEnabled}
@@ -373,22 +389,6 @@ export const VisualDebugComponent: React.FC = () => {
         onTransformResizeFactorChange={setVisualDebugTransformResizeFactor}
         onTransformRotateFactorChange={setVisualDebugTransformRotateFactor}
       />
-      <button
-        style={{
-          marginTop: '24px',
-          padding: '8px 12px',
-          background: '#dc3545',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          fontWeight: 'bold',
-          cursor: 'pointer',
-          width: '100%'
-        }}
-        onClick={handleClearLocalStorage}
-      >
-        Borrar LocalStorage
-      </button>
     </div>
   );
 };
