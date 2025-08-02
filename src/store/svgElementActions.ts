@@ -8,6 +8,7 @@ export interface SVGElementActions {
   addImage: (image: Omit<SVGImage, 'id'>) => void;
   updateImage: (id: string, updates: Partial<SVGImage>) => void;
   removeImage: (id: string) => void;
+  replaceImages: (images: SVGImage[]) => void;
   duplicateImage: (id: string, offset?: Point) => void;
   moveImage: (id: string, delta: Point) => void;
   resizeImage: (id: string, newWidth: number, newHeight: number) => void;
@@ -84,6 +85,16 @@ export const createSVGElementActions: StateCreator<
       selection: {
         ...state.selection,
         selectedImages: state.selection.selectedImages.filter((imgId) => imgId !== id),
+      },
+      renderVersion: state.renderVersion + 1,
+    })),
+
+  replaceImages: (images) =>
+    set((state) => ({
+      images: images,
+      selection: {
+        ...state.selection,
+        selectedImages: [],
       },
       renderVersion: state.renderVersion + 1,
     })),

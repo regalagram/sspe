@@ -599,11 +599,17 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
                 beginTime = dependencyDelay;
                 break;
             }
+            
+            // Add any additional delay specified in the chain
+            beginTime += (chainAnim.delay || 0) * 1000;
           }
+        } else {
+          // For auto-generated chains without dependencies, delay is absolute time from start
+          beginTime = (chainAnim.delay || 0) * 1000;
         }
         
-        // Add any additional delay specified in the chain
-        beginTime += (chainAnim.delay || 0) * 1000;
+        // Log chain delay calculation for debugging
+        console.log(`⛓️ Chain delay calculation: Animation ${chainAnim.animationId} -> delay: ${chainAnim.delay}s -> beginTime: ${beginTime}ms (dependsOn: ${chainAnim.dependsOn || 'none'})`);
         
         processedAnimations.set(chainAnim.animationId, beginTime);
       });

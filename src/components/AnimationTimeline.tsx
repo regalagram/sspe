@@ -3,9 +3,9 @@ import { useEditorStore } from '../store/editorStore';
 import { Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 
 export const AnimationTimeline: React.FC = () => {
-  const { 
-    animations, 
-    animationState, 
+  const {
+    animations,
+    animationState,
     playAnimations,
     pauseAnimations,
     stopAnimations,
@@ -13,6 +13,8 @@ export const AnimationTimeline: React.FC = () => {
     removeAnimation,
     calculateChainDelays
   } = useEditorStore();
+
+  console.log('🎬 AnimationTimeline rendering - animations count:', animations.length);
 
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(0);
@@ -22,11 +24,15 @@ export const AnimationTimeline: React.FC = () => {
   // Calculate chain delays for timeline visualization
   const chainDelays = calculateChainDelays();
   
+  // Debug chain delays
+  console.log('📊 Timeline chain delays:', Array.from(chainDelays.entries()).map(([id, delay]) => ({ id, delay: delay/1000 })));
+  
   // Calculate timeline width and position including chain delays
   const timelineWidth = 180; // pixels
   const animationDurations = animations.map(anim => {
     const duration = parseFloat(anim.dur || '2s') || 2;
     const chainDelay = (chainDelays.get(anim.id) || 0) / 1000; // Convert ms to seconds
+    console.log(`📊 Animation ${anim.id} (${anim.targetElementId}): delay=${chainDelay}s, duration=${duration}s`);
     return chainDelay + duration;
   });
   const maxDuration = Math.max(5, ...animationDurations); // minimum 5 seconds

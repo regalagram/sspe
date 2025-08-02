@@ -731,3 +731,42 @@ html,body {
 .carousel-action.disabled .action-label {
   color: #999;
 }
+
+/* Force light theme for carousel actions in all modes */
+@media (prefers-color-scheme: dark) {
+  .context-actions-carousel {
+    border-bottom-color: #e5e5e5;
+  }
+  
+  .carousel-action {
+    background: white !important;
+    border-color: #e5e5e5 !important;
+    color: #333 !important;
+  }
+  
+  .carousel-action:hover:not(.disabled) {
+    background: #f8f9fa !important;
+    border-color: #007acc !important;
+  }
+  
+  .carousel-action.disabled {
+    background: #f5f5f5 !important;
+    color: #999 !important;
+  }
+  
+  .action-icon {
+    color: #333 !important;
+  }
+  
+  .carousel-action.disabled .action-icon {
+    color: #999 !important;
+  }
+  
+  .action-label {
+    color: #666 !important;
+  }
+  
+  .carousel-action.disabled .action-label {
+    color: #999 !important;
+  }
+}

@@ -174,7 +174,7 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
 };
 
 export const SVGComponent: React.FC = () => {
-  const { paths, texts, textPaths, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, viewport, replacePaths, replaceTexts, replaceTextPaths, replaceGroups, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients, addText, addGradient, addImage, addSymbol, addMarker, addClipPath, addMask, addFilter, removeFilter, clearAllSVGElements, addUse, updateImage, animations, animationState, animationSync, addAnimation, removeAnimation, calculateChainDelays } = useEditorStore();
+  const { paths, texts, textPaths, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, viewport, replacePaths, replaceTexts, replaceTextPaths, replaceGroups, replaceImages, clearAllTexts, resetViewportCompletely, precision, setPrecision, setGradients, clearGradients, addText, addGradient, addImage, addSymbol, addMarker, addClipPath, addMask, addFilter, removeFilter, clearAllSVGElements, addUse, updateImage, animations, animationState, animationSync, addAnimation, removeAnimation, createAnimationChain, calculateChainDelays } = useEditorStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Import settings state
@@ -1387,15 +1387,13 @@ export const SVGComponent: React.FC = () => {
       if (elementAnimations.length === 0) return '';
       
       const result = elementAnimations.map(animation => {
-        // Calculate begin time including chain delays
-        let beginValue = getAnimationProperty(animation, 'begin') || '';
+        // Use indefinite begin for chained animations to allow programmatic control
+        let beginValue = 'indefinite';
         const chainDelay = chainDelays.get(animation.id);
-        if (chainDelay !== undefined && chainDelay > 0) {
-          // Convert from ms to seconds for SVG
-          const delayInSeconds = chainDelay / 1000;
-          beginValue = `${delayInSeconds}s`;
-        } else if (!beginValue) {
-          beginValue = '0s'; // Default begin time
+        
+        // Only use original begin time if there's no chain delay
+        if (chainDelay === undefined || chainDelay === 0) {
+          beginValue = getAnimationProperty(animation, 'begin') || '0s';
         }
 
         const dur = getAnimationProperty(animation, 'dur') || '2s';
@@ -1588,8 +1586,16 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         }
       }
 
-      // Parse the complete SVG including paths, texts, textPaths, gradients, patterns, filters, groups, and animations
-      const { paths: newPaths, texts: newTexts, textPaths: newTextPaths, gradients: newGradients, filters: newFilters, groups: newGroups, animations: newAnimations } = parseCompleteSVG(svgCode);
+      // Parse the complete SVG including paths, texts, textPaths, images, gradients, patterns, filters, groups, and animations
+      const { paths: newPaths, texts: newTexts, textPaths: newTextPaths, images: newImages, gradients: newGradients, filters: newFilters, groups: newGroups, animations: newAnimations, animationChains: newAnimationChains } = parseCompleteSVG(svgCode);
+      
+      console.log('📊 Parsed SVG content via SVGEditor:', { 
+        paths: newPaths.length, 
+        texts: newTexts.length, 
+        images: newImages.length, 
+        animations: newAnimations.length,
+        animationChains: (newAnimationChains || []).length 
+      });
       
       // Create a mapping of original filter IDs to new IDs for reference updates
       const filterIdMapping: Record<string, string> = {};
@@ -1670,10 +1676,10 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         const updatedPaths = updateFilterReferences(newPaths);
         const updatedTexts = updateFilterReferences(newTexts);
         const updatedGroups = updateFilterReferences(newGroups);
+        const updatedImages = updateFilterReferences(newImages); // Use newImages, not existing images
         
-        // Also update filter references in existing images if any filters were remapped
-        const currentImages = [...images];
-        const updatedImages = updateFilterReferences(currentImages);
+        console.log(`➕ Original images (SVGEditor replace):`, newImages.length);
+        console.log(`➕ Updated images (SVGEditor replace):`, updatedImages.length);
         
         // Clear existing animations and import new ones
         const currentAnimations = [...animations];
@@ -1685,6 +1691,15 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
           const { id, ...animationWithoutId } = animation;
           addAnimation(animationWithoutId);
         });
+
+        // Create auto-generated animation chains if any were detected
+        if (newAnimationChains && newAnimationChains.length > 0) {
+          console.log(`🔗 Creating ${newAnimationChains.length} auto-generated animation chains from begin times (SVGEditor)`);
+          newAnimationChains.forEach((chain: any) => {
+            console.log(`🔗 Creating chain: ${chain.name} with ${chain.animations.length} animations`);
+            createAnimationChain(chain.name, chain.animations);
+          });
+        }
         
         // Replace existing content with updated references
         replacePaths(updatedPaths);
@@ -1692,14 +1707,9 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         replaceTextPaths(newTextPaths);
         setGradients(newGradients);
         replaceGroups(updatedGroups);
+        replaceImages(updatedImages); // Replace images instead of updating existing ones
         
-        // Update images if filter references changed
-        if (JSON.stringify(currentImages) !== JSON.stringify(updatedImages)) {
-          // Update images that have filter references
-          updatedImages.forEach(image => {
-            updateImage(image.id, image);
-          });
-        }
+        console.log(`✅ Images in store after replace (SVGEditor): ${useEditorStore.getState().images.length}`);
       } else {
         // Append to existing content
         // First add new filters and create ID mapping
@@ -1721,6 +1731,7 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         const updatedPaths = updateFilterReferences(newPaths);
         const updatedTexts = updateFilterReferences(newTexts);
         const updatedGroups = updateFilterReferences(newGroups);
+        const updatedNewImages = updateFilterReferences(newImages); // Update new images for filter references
         
         // For append mode, we need to merge the new content with existing content
         const currentPaths = [...paths];
@@ -1730,8 +1741,7 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         const currentGroups = [...groups];
         const currentImages = [...images];
         
-        // Also update filter references in existing images
-        const updatedImages = updateFilterReferences(currentImages);
+        console.log(`➕ Adding ${updatedNewImages.length} new images to existing ${currentImages.length} images (SVGEditor append)`);
         
         // Import new animations (append mode doesn't clear existing animations) with deduplication
         newAnimations.forEach((animation: any) => {
@@ -1739,6 +1749,15 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
           const { id, ...animationWithoutId } = animation;
           addAnimation(animationWithoutId);
         });
+
+        // Create auto-generated animation chains if any were detected
+        if (newAnimationChains && newAnimationChains.length > 0) {
+          console.log(`🔗 Creating ${newAnimationChains.length} auto-generated animation chains from begin times (SVGEditor append)`);
+          newAnimationChains.forEach((chain: any) => {
+            console.log(`🔗 Creating chain: ${chain.name} with ${chain.animations.length} animations`);
+            createAnimationChain(chain.name, chain.animations);
+          });
+        }
         
         // Merge with updated references
         replacePaths([...currentPaths, ...updatedPaths]);
@@ -1746,13 +1765,9 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         replaceTextPaths([...currentTextPaths, ...newTextPaths]);
         setGradients([...currentGradients, ...newGradients]);
         replaceGroups([...currentGroups, ...updatedGroups]);
+        replaceImages([...currentImages, ...updatedNewImages]); // Merge existing and new images
         
-        // Update images if filter references changed
-        if (JSON.stringify(currentImages) !== JSON.stringify(updatedImages)) {
-          updatedImages.forEach(image => {
-            updateImage(image.id, image);
-          });
-        }
+        console.log(`✅ Images in store after append (SVGEditor): ${useEditorStore.getState().images.length}`);
       }
       
       // Auto-adjust viewport if enabled
@@ -1760,7 +1775,7 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         resetViewportCompletely();
       }
       
-      console.log(`Imported (${importSettings.mode}): ${newPaths.length} paths, ${newTexts.length} texts, ${newTextPaths.length} textPaths, ${newGradients.length} gradients/patterns, ${newFilters.length} filters, ${newGroups.length} groups, ${newAnimations.length} animations`);
+      console.log(`Imported (${importSettings.mode}): ${newPaths.length} paths, ${newTexts.length} texts, ${newTextPaths.length} textPaths, ${newImages.length} images, ${newGradients.length} gradients/patterns, ${newFilters.length} filters, ${newGroups.length} groups, ${newAnimations.length} animations`);
       
     } catch (error) {
       console.error('Error parsing SVG:', error);

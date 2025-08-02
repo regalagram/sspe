@@ -886,6 +886,9 @@ export function parseSVGToSubPaths(svgString: string, useComputedStyles = false)
       const pathData = pathElement.getAttribute('d');
       if (!pathData) continue;
       
+      // Use existing ID if present, otherwise generate a new one
+      const pathId = pathElement.getAttribute('id') || generateId();
+      
       try {
         const commands = parsePathData(pathData);
         const style = parsePathStyle(pathElement, useComputedStyles);
@@ -903,7 +906,7 @@ export function parseSVGToSubPaths(svgString: string, useComputedStyles = false)
           const subPaths = decomposeIntoSubPaths(commands);
           
           paths.push({
-            id: generateId(),
+            id: pathId,
             subPaths,
             style
           });
@@ -1270,6 +1273,9 @@ export function parseTextElements(svgElement: Element): TextElementType[] {
   const textNodes = svgElement.querySelectorAll('text');
   
   textNodes.forEach((textNode) => {
+    // Use existing ID if present, otherwise generate a new one
+    const textId = textNode.getAttribute('id') || generateId();
+    
     const x = parseFloat(textNode.getAttribute('x') || '0');
     const y = parseFloat(textNode.getAttribute('y') || '0');
     const transform = textNode.getAttribute('transform') || undefined;
@@ -1534,7 +1540,7 @@ export function parseTextElements(svgElement: Element): TextElementType[] {
       }));
       
       const multilineText: MultilineTextElement = {
-        id: generateId(),
+        id: textId,
         type: 'multiline-text',
         x,
         y,
@@ -1549,7 +1555,7 @@ export function parseTextElements(svgElement: Element): TextElementType[] {
       const content = textNode.textContent || '';
       
       const singleText: TextElement = {
-        id: generateId(),
+        id: textId,
         type: 'text',
         content,
         x,
@@ -2030,6 +2036,14 @@ export function parseGroups(svgElement: Element, allPaths: SVGPath[], allTexts: 
   
   // Helper function to recursively parse group hierarchy
   const parseGroupRecursive = (groupElement: Element, allGroupElements: Element[]): SVGGroup | null => {
+    // Use existing ID if present, otherwise generate a new one
+    const groupId = groupElement.getAttribute('id') || generateId();
+    
+    // If no ID was present, set it on the element for consistency
+    if (!groupElement.getAttribute('id')) {
+      groupElement.setAttribute('id', groupId);
+    }
+    
     const name = groupElement.getAttribute('data-name') || undefined;
     const transform = groupElement.getAttribute('transform') || undefined;
     
@@ -2040,11 +2054,19 @@ export function parseGroups(svgElement: Element, allPaths: SVGPath[], allTexts: 
       const tagName = child.tagName.toLowerCase();
       
       if (tagName === 'path') {
-        // Find matching path by d attribute (since we don't have original IDs)
+        // Try to find matching path by ID first, then by d attribute
+        const pathId = child.getAttribute('id');
         const pathData = child.getAttribute('d');
-        if (pathData) {
-          const matchingPath = allPaths.find(p => {
-            // Compare normalized path data
+        
+        let matchingPath = null;
+        
+        if (pathId) {
+          matchingPath = allPaths.find(p => p.id === pathId);
+        }
+        
+        if (!matchingPath && pathData) {
+          matchingPath = allPaths.find(p => {
+            // Compare normalized path data as fallback
             const pathString = p.subPaths.map(sp => sp.commands.map(cmd => {
               let cmdStr: string = cmd.command;
               if (cmd.x !== undefined && cmd.y !== undefined) {
@@ -2062,29 +2084,37 @@ export function parseGroups(svgElement: Element, allPaths: SVGPath[], allTexts: 
               return cmdStr;
             }).join(' ')).join(' ');
             
-            // Simple comparison - could be improved with better normalization
             return pathString.replace(/\s+/g, ' ').trim() === pathData.replace(/\s+/g, ' ').trim();
           });
-          
-          if (matchingPath) {
-            children.push({
-              type: 'path',
-              id: matchingPath.id
-            });
-          }
+        }
+        
+        if (matchingPath) {
+          children.push({
+            type: 'path',
+            id: matchingPath.id
+          });
         }
       } else if (tagName === 'text') {
-        // Find matching text by content and position
+        // Try to find matching text by ID first, then by content and position
+        const textId = child.getAttribute('id');
         const textContent = child.textContent || '';
         const x = parseFloat(child.getAttribute('x') || '0');
         const y = parseFloat(child.getAttribute('y') || '0');
         
-        const matchingText = allTexts.find(t => {
-          const contentMatches = (t.type === 'text' && t.content === textContent) ||
-                                (t.type === 'multiline-text' && t.spans.map(s => s.content).join(' ') === textContent);
-          const positionMatches = Math.abs(t.x - x) < 0.1 && Math.abs(t.y - y) < 0.1;
-          return contentMatches && positionMatches;
-        });
+        let matchingText = null;
+        
+        if (textId) {
+          matchingText = allTexts.find(t => t.id === textId);
+        }
+        
+        if (!matchingText) {
+          matchingText = allTexts.find(t => {
+            const contentMatches = (t.type === 'text' && t.content === textContent) ||
+                                  (t.type === 'multiline-text' && t.spans.map(s => s.content).join(' ') === textContent);
+            const positionMatches = Math.abs(t.x - x) < 0.1 && Math.abs(t.y - y) < 0.1;
+            return contentMatches && positionMatches;
+          });
+        }
         
         if (matchingText) {
           children.push({
@@ -2110,7 +2140,7 @@ export function parseGroups(svgElement: Element, allPaths: SVGPath[], allTexts: 
     // Only create group if it has children
     if (children.length > 0) {
       const group: SVGGroup = {
-        id: generateId(),
+        id: groupId,
         name,
         transform,
         children,
@@ -2496,17 +2526,34 @@ function parseAnimations(svgElement: Element): SVGAnimation[] {
     return elementAnimations;
   };
   
-  // Parse animations from SVG root
+  // Parse animations from SVG root (only direct children, not nested)
+  // Temporarily disabled to avoid duplicates - animations are processed via elements with IDs
+  /*
   const svgRootAnimations = extractAnimationFromElement(svgElement, 'svg-root');
-  animations.push(...svgRootAnimations);
+  // Filter out animations that are actually inside other elements
+  const directSvgAnimations = svgRootAnimations.filter(anim => {
+    // Check if this animation element is a direct child of the SVG root
+    const animElement = svgElement.querySelector(`#${anim.id}`);
+    return animElement && animElement.parentElement === svgElement;
+  });
+  animations.push(...directSvgAnimations);
+  */
   
   // Find all elements with IDs and check for embedded animations
   const elementsWithIds = svgElement.querySelectorAll('[id]');
+  const processedAnimations = new Set<string>(); // Track processed animation IDs to avoid duplicates
+  
   elementsWithIds.forEach(element => {
     const elementId = element.getAttribute('id');
     if (elementId) {
       const elementAnimations = extractAnimationFromElement(element, elementId);
-      animations.push(...elementAnimations);
+      // Only add animations we haven't processed before
+      elementAnimations.forEach(anim => {
+        if (!processedAnimations.has(anim.id)) {
+          animations.push(anim);
+          processedAnimations.add(anim.id);
+        }
+      });
     }
   });
   
@@ -2519,6 +2566,7 @@ function parseAnimations(svgElement: Element): SVGAnimation[] {
       const animationElements = element.querySelectorAll('animate, animateTransform, animateMotion, set');
       if (animationElements.length > 0) {
         const tempId = generateId(); // Generate a unique ID for this element
+        element.setAttribute('id', tempId); // Actually set the ID on the element
         const elementAnimations = extractAnimationFromElement(element, tempId);
         animations.push(...elementAnimations);
       }
@@ -2533,8 +2581,14 @@ function parseAnimations(svgElement: Element): SVGAnimation[] {
       
       const sameElement = otherAnim.targetElementId === animation.targetElementId;
       const sameType = otherAnim.type === animation.type;
-      const sameAttribute = otherAnim.attributeName === animation.attributeName;
-      const sameTransformType = animation.type === 'animateTransform' ? 
+      
+      // Check attribute name for animations that have it
+      const sameAttribute = 
+        ('attributeName' in otherAnim && 'attributeName' in animation) ? 
+          otherAnim.attributeName === animation.attributeName : true;
+      
+      // Check transform type for animateTransform animations
+      const sameTransformType = (animation.type === 'animateTransform' && otherAnim.type === 'animateTransform') ? 
         otherAnim.transformType === animation.transformType : true;
       
       return sameElement && sameType && sameAttribute && sameTransformType;
@@ -2554,14 +2608,26 @@ function parseImages(svgElement: Element): SVGImage[] {
   const images: SVGImage[] = [];
   
   const imageElements = svgElement.querySelectorAll('image');
+  console.log(`🖼️ Found ${imageElements.length} image elements in SVG`);
+  
   imageElements.forEach(imageElement => {
+    // Use existing ID if present, otherwise generate a new one
     const id = imageElement.getAttribute('id') || generateId();
+    
+    // If no ID was present, set it on the element for consistency
+    if (!imageElement.getAttribute('id')) {
+      imageElement.setAttribute('id', id);
+    }
+    
     const href = imageElement.getAttribute('href') || imageElement.getAttribute('xlink:href') || '';
     const x = parseFloat(imageElement.getAttribute('x') || '0');
     const y = parseFloat(imageElement.getAttribute('y') || '0');
     const width = parseFloat(imageElement.getAttribute('width') || '0');
     const height = parseFloat(imageElement.getAttribute('height') || '0');
     const transform = imageElement.getAttribute('transform') || undefined;
+    const preserveAspectRatio = imageElement.getAttribute('preserveAspectRatio') || undefined;
+    
+    console.log(`🖼️ Parsing image: ${id}, href: ${href.substring(0, 50)}..., size: ${width}x${height}, position: (${x}, ${y})`);
     
     // Parse style attributes
     const style = parsePathStyle(imageElement);
@@ -2575,10 +2641,12 @@ function parseImages(svgElement: Element): SVGImage[] {
       width,
       height,
       transform,
+      preserveAspectRatio,
       style
     });
   });
   
+  console.log(`🖼️ Total images parsed: ${images.length}`);
   return images;
 }
 
@@ -2665,6 +2733,144 @@ function parseUses(svgElement: Element): SVGUse[] {
   return uses;
 }
 
+/**
+ * Auto-generate animation chains based on begin times in animations
+ */
+function createAutoAnimationChains(animations: SVGAnimation[]): any[] {
+  const chains: any[] = [];
+  
+  // Group animations that have begin times (including 0s)
+  const animationsWithBeginTimes = animations.filter(anim => {
+    const beginTime = (anim as any).begin;
+    return beginTime && beginTime !== 'indefinite';
+  });
+  
+  if (animationsWithBeginTimes.length === 0) {
+    return chains;
+  }
+  
+  console.log('⛓️ Found animations with begin times:', animationsWithBeginTimes.map(a => ({ id: a.id, begin: (a as any).begin })));
+  
+  // Parse begin times and sort animations
+  const animationsWithParsedTimes = animationsWithBeginTimes.map(anim => {
+    const beginTime = (anim as any).begin;
+    const beginValue = parseTimeValue(beginTime);
+    return {
+      animation: anim,
+      beginTimeMs: beginValue,
+      beginTimeOriginal: beginTime
+    };
+  }).sort((a, b) => a.beginTimeMs - b.beginTimeMs);
+  
+  // Group animations by target element
+  const animationsByTarget = new Map<string, typeof animationsWithParsedTimes>();
+  animationsWithParsedTimes.forEach(item => {
+    const targetId = item.animation.targetElementId;
+    if (!animationsByTarget.has(targetId)) {
+      animationsByTarget.set(targetId, []);
+    }
+    animationsByTarget.get(targetId)!.push(item);
+  });
+  
+  // Create chains for each target element (if multiple animations)
+  animationsByTarget.forEach((targetAnimations, targetId) => {
+    if (targetAnimations.length > 1) {
+      // Multiple animations on same element - create element-specific sequential chain
+      const chainName = `Auto Sequential - Element ${targetId.slice(-8)}`;
+      const chainAnimations = targetAnimations.map((item, index) => {
+        if (index === 0) {
+          // First animation on this element starts immediately
+          return {
+            animationId: item.animation.id,
+            delay: 0,
+            trigger: 'start' as const
+            // No dependsOn for the first animation
+          };
+        } else {
+          // Each subsequent animation depends on the previous one ending
+          const previousAnimation = targetAnimations[index - 1];
+          return {
+            animationId: item.animation.id,
+            delay: 0, // No additional delay - just wait for dependency
+            trigger: 'end' as const, // Start when previous animation ENDS
+            dependsOn: previousAnimation.animation.id
+          };
+        }
+      });
+      
+      chains.push({
+        id: generateId(),
+        name: chainName,
+        animations: chainAnimations,
+        autoGenerated: true
+      });
+      
+      console.log(`⛓️ Created auto sequential chain for element ${targetId}: ${targetAnimations.length} animations with dependencies`);
+    }
+  });
+  
+  // If we have animations across different elements, create a global sequential chain
+  if (animationsWithParsedTimes.length > 1) {
+    const allAnimationsChain = animationsWithParsedTimes.map((item, index) => {
+      console.log(`⛓️ Animation ${item.animation.id} (target: ${item.animation.targetElementId}) - begin: ${item.beginTimeOriginal} -> position: ${index}`);
+      
+      if (index === 0) {
+        // First animation starts immediately
+        return {
+          animationId: item.animation.id,
+          delay: 0,
+          trigger: 'start' as const
+          // No dependsOn for the first animation
+        };
+      } else {
+        // Each subsequent animation depends on the previous one ending
+        const previousAnimation = animationsWithParsedTimes[index - 1];
+        return {
+          animationId: item.animation.id,
+          delay: 0, // No additional delay - just wait for dependency
+          trigger: 'end' as const, // Start when previous animation ENDS
+          dependsOn: previousAnimation.animation.id
+        };
+      }
+    });
+    
+    const chainName = `Auto Sequential Chain - ${animationsWithParsedTimes.length} Animations`;
+    chains.push({
+      id: generateId(),
+      name: chainName,
+      animations: allAnimationsChain,
+      autoGenerated: true
+    });
+    
+    console.log(`⛓️ Created auto sequential chain: ${animationsWithParsedTimes.length} animations with dependencies`);
+    console.log(`⛓️ Chain structure:`, allAnimationsChain.map(a => ({ 
+      id: a.animationId, 
+      dependsOn: a.dependsOn || 'START', 
+      trigger: a.trigger 
+    })));
+  }
+  
+  return chains;
+}
+
+/**
+ * Parse time value (e.g., "1s", "500ms") into milliseconds
+ */
+function parseTimeValue(timeStr: string): number {
+  if (!timeStr) return 0;
+  
+  // Handle special case for "0" without unit
+  if (timeStr === '0') return 0;
+  
+  const match = timeStr.match(/^(\d+(?:\.\d+)?)(s|ms)?$/i);
+  if (!match) return 0;
+  
+  const value = parseFloat(match[1]);
+  const unit = (match[2] || 's').toLowerCase();
+  
+  return unit === 'ms' ? value : value * 1000;
+}
+
 export function parseCompleteSVG(svgString: string): {
   paths: SVGPath[];
   texts: TextElementType[];
@@ -2676,39 +2882,64 @@ export function parseCompleteSVG(svgString: string): {
   filters: SVGFilter[];
   groups: SVGGroup[];
   animations: SVGAnimation[];
+  animationChains?: any[]; // Auto-generated chains
 } {
   try {
     const { svgElement } = processSvgContent(svgString);
     
-    // Parse paths
+    // First pass: Ensure all elements that contain animations have IDs
+    const elementsWithAnimations = svgElement.querySelectorAll('*');
+    elementsWithAnimations.forEach(element => {
+      const hasAnimations = element.querySelectorAll('animate, animateTransform, animateMotion, set').length > 0;
+      if (hasAnimations && !element.getAttribute('id')) {
+        element.setAttribute('id', generateId());
+      }
+    });
+    
+    // Parse animations FIRST to ensure elements get proper IDs
+    let animations = parseAnimations(svgElement);
+    
+    console.log('🎬 Parsed animations:', animations.length, animations);
+    
+    // Parse other elements
     const paths = parseSVGToSubPaths(svgString);
-    
-    // Parse texts
     const texts = parseTextElements(svgElement);
-    
-    // Parse textPaths (pass paths for validation)
     const textPaths = parseTextPaths(svgElement, paths);
-    
-    // Parse images
     const images = parseImages(svgElement);
-    
-    // Parse symbols
     const symbols = parseSymbols(svgElement);
-    
-    // Parse uses
     const uses = parseUses(svgElement);
-    
-    // Parse gradients and patterns
     const gradients = parseGradients(svgElement);
-    
-    // Parse filters
     const filters = parseFilters(svgElement);
-    
-    // Parse groups
     const groups = parseGroups(svgElement, paths, texts);
     
-    // Parse animations
-    const animations = parseAnimations(svgElement);
+    // Auto-generate animation chains based on begin times
+    let animationChains = createAutoAnimationChains(animations);
+    
+    // If auto-chains were created, remove begin times from those animations to avoid conflicts
+    if (animationChains.length > 0) {
+      console.log('🔧 Removing begin times from chained animations to prevent conflicts');
+      const chainedAnimationIds = new Set<string>();
+      animationChains.forEach(chain => {
+        chain.animations.forEach((chainAnim: any) => {
+          chainedAnimationIds.add(chainAnim.animationId);
+        });
+      });
+      
+      // Remove begin times from animations that are part of chains
+      animations = animations.map(anim => {
+        if (chainedAnimationIds.has(anim.id)) {
+          console.log(`🔧 Removing begin="${(anim as any).begin}" from animation ${anim.id}`);
+          const { begin, ...animWithoutBegin } = anim as any;
+          return animWithoutBegin;
+        }
+        return anim;
+      });
+    }
+    
+    console.log('🖼️ Parsed images:', images.length, images);
+    if (animationChains.length > 0) {
+      console.log('⛓️ Auto-generated animation chains:', animationChains.length, animationChains);
+    }
     
     return {
       paths,
@@ -2720,7 +2951,8 @@ export function parseCompleteSVG(svgString: string): {
       gradients,
       filters,
       groups,
-      animations
+      animations,
+      animationChains
     };
   } catch (error) {
     console.error('Failed to parse complete SVG:', error);

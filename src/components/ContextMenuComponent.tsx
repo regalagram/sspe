@@ -696,10 +696,19 @@ ${pathElements}
               const svgContent = event.target?.result as string;
               if (svgContent) {
                 try {
+                  console.log('🔄 Starting SVG import process via context menu...');
                   // Import SVG using the same functionality as SVGEditor plugin
-                  const { paths: newPaths, texts: newTexts, textPaths: newTextPaths, gradients: newGradients, filters: newFilters, groups: newGroups, animations: newAnimations } = parseCompleteSVG(svgContent);
+                  const { paths: newPaths, texts: newTexts, textPaths: newTextPaths, images: newImages, gradients: newGradients, filters: newFilters, groups: newGroups, animations: newAnimations, animationChains: newAnimationChains } = parseCompleteSVG(svgContent);
                   
-                  const totalElements = newPaths.length + newTexts.length + newTextPaths.length + newGradients.length + newFilters.length + newGroups.length + newAnimations.length;
+                  console.log('📊 Parsed SVG content via context menu:', { 
+                    paths: newPaths.length, 
+                    texts: newTexts.length, 
+                    images: newImages.length, 
+                    animations: newAnimations.length,
+                    animationChains: (newAnimationChains || []).length 
+                  });
+                  
+                  const totalElements = newPaths.length + newTexts.length + newTextPaths.length + newImages.length + newGradients.length + newFilters.length + newGroups.length + newAnimations.length;
                   
                   if (totalElements === 0) {
                     alert('No valid elements found in the SVG file.');
@@ -711,10 +720,12 @@ ${pathElements}
                     newPaths.length > 0 ? `${newPaths.length} path(s)` : '',
                     newTexts.length > 0 ? `${newTexts.length} text element(s)` : '',
                     newTextPaths.length > 0 ? `${newTextPaths.length} textPath element(s)` : '',
+                    newImages.length > 0 ? `${newImages.length} image(s)` : '',
                     newGradients.length > 0 ? `${newGradients.length} gradient(s)/pattern(s)` : '',
                     newFilters.length > 0 ? `${newFilters.length} filter(s)` : '',
                     newGroups.length > 0 ? `${newGroups.length} group(s)` : '',
-                    newAnimations.length > 0 ? `${newAnimations.length} animation(s)` : ''
+                    newAnimations.length > 0 ? `${newAnimations.length} animation(s)` : '',
+                    (newAnimationChains || []).length > 0 ? `${(newAnimationChains || []).length} animation chain(s)` : ''
                   ].filter(Boolean).join(', ');
                   
                   const confirmMessage = `Import SVG with: ${elementsInfo}?\n\nThis will replace all current content.`;
@@ -725,7 +736,7 @@ ${pathElements}
                   
                   // Get editor store and import content
                   const editorState = useEditorStore.getState();
-                  const { replacePaths, replaceTexts, replaceTextPaths, setGradients, replaceGroups, resetViewportCompletely, addFilter, removeFilter, addAnimation, removeAnimation, updateImage, filters, animations, images } = editorState;
+                  const { replacePaths, replaceTexts, replaceTextPaths, setGradients, replaceGroups, replaceImages, resetViewportCompletely, addFilter, removeFilter, addAnimation, removeAnimation, createAnimationChain, updateImage, filters, animations, images } = editorState;
                   
                   // Create filter ID mapping for reference updates
                   const filterIdMapping: Record<string, string> = {};
@@ -773,12 +784,31 @@ ${pathElements}
                   newAnimations.forEach((animation: any) => {
                     addAnimation(animation);
                   });
+
+                  // Create auto-generated animation chains if any were detected
+                  if (newAnimationChains && newAnimationChains.length > 0) {
+                    console.log(`🔗 Creating ${newAnimationChains.length} auto-generated animation chains from begin times (context menu)`);
+                    newAnimationChains.forEach((chain: any) => {
+                      console.log(`🔗 Creating chain: ${chain.name} with ${chain.animations.length} animations`);
+                      console.log(`🔗 Chain animations:`, chain.animations.map((a: any) => ({ id: a.animationId, delay: a.delay, trigger: a.trigger })));
+                      createAnimationChain(chain.name, chain.animations);
+                    });
+                  } else {
+                    console.log('🔗 No auto-generated animation chains to create (context menu)');
+                  }
                   
                   // Update filter references in elements before importing
                   const updatedPaths = updateFilterReferences(newPaths);
                   const updatedTexts = updateFilterReferences(newTexts);
                   const updatedGroups = updateFilterReferences(newGroups);
-                  const updatedImages = updateFilterReferences([...images]);
+                  const updatedImages = updateFilterReferences(newImages); // Use newImages, not existing images
+                  
+                  console.log(`➕ Original images (context menu):`, newImages.length);
+                  console.log(`➕ Updated images (context menu):`, updatedImages.length);
+                  console.log(`➕ Replacing ${updatedImages.length} images in store (context menu)`);
+                  updatedImages.forEach((image: any) => {
+                    console.log(`➕ Image (context menu): ${image.id}, href: ${image.href.substring(0, 50)}...`);
+                  });
                   
                   // Replace content with updated references
                   replacePaths(updatedPaths);
@@ -786,10 +816,13 @@ ${pathElements}
                   replaceTextPaths(newTextPaths);
                   setGradients(newGradients);
                   replaceGroups(updatedGroups);
+                  replaceImages(updatedImages); // Use replaceImages instead of individual updates
                   
-                  // Update images if filter references changed
-                  updatedImages.forEach(image => {
-                    updateImage(image.id, image);
+                  // Verify images were stored correctly
+                  const storeAfterReplace = useEditorStore.getState();
+                  console.log(`✅ Images in store after replace (context menu): ${storeAfterReplace.images.length}`);
+                  storeAfterReplace.images.forEach((img: any) => {
+                    console.log(`✅ Stored image (context menu): ${img.id}, href: ${img.href.substring(0, 50)}...`);
                   });
                   
                   // Reset viewport to fit new content

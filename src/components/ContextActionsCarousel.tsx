@@ -59,6 +59,10 @@ export const ContextActionsCarousel: React.FC<ContextActionsCarouselProps> = ({ 
     removeFilter,
     addAnimation,
     removeAnimation,
+    createAnimationChain,
+    addImage,
+    removeImage,
+    replaceImages,
     createGroupFromSelection,
     zoomToSelection,
     duplicateSelection,
@@ -518,8 +522,38 @@ export const ContextActionsCarousel: React.FC<ContextActionsCarouselProps> = ({ 
         }
       }).join('\n');
       
+      // Include image elements
+      const imageElements = images.map(image => {
+        const attributes = [
+          `id="${image.id}"`,
+          `x="${image.x}"`,
+          `y="${image.y}"`,
+          `width="${image.width}"`,
+          `height="${image.height}"`,
+          `href="${image.href}"`,
+          image.preserveAspectRatio ? `preserveAspectRatio="${image.preserveAspectRatio}"` : '',
+          image.transform ? `transform="${image.transform}"` : '',
+        ].filter(Boolean).join(' ');
+        
+        // Include animations for this image
+        const imageAnimations = animations.filter(anim => anim.targetElementId === image.id);
+        if (imageAnimations.length > 0) {
+          const animationsHTML = imageAnimations.map(anim => {
+            if (anim.type === 'animateTransform') {
+              return `    <animateTransform attributeName="transform" type="${anim.transformType}" from="${anim.from || ''}" to="${anim.to || ''}" dur="${anim.dur || '2s'}" begin="${anim.begin || '0s'}" fill="freeze" />`;
+            } else if (anim.type === 'animate') {
+              return `    <animate attributeName="${anim.attributeName}" from="${anim.from || ''}" to="${anim.to || ''}" dur="${anim.dur || '2s'}" begin="${anim.begin || '0s'}" fill="freeze" />`;
+            }
+            return '';
+          }).filter(Boolean).join('\n');
+          return `  <image ${attributes}>\n${animationsHTML}\n  </image>`;
+        } else {
+          return `  <image ${attributes} />`;
+        }
+      }).join('\n');
+      
       // Combine all elements
-      const allElements = [pathElements, textElements, groupElements].filter(Boolean).join('\n');
+      const allElements = [pathElements, textElements, groupElements, imageElements].filter(Boolean).join('\n');
       
       return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">
 ${allElements}
@@ -556,10 +590,19 @@ ${allElements}
           const svgContent = event.target?.result as string;
           if (svgContent) {
             try {
+              console.log('🔄 Starting SVG import process...');
               // Import SVG using the same functionality as context menu
-              const { paths: newPaths, texts: newTexts, textPaths: newTextPaths, gradients: newGradients, filters: newFilters, groups: newGroups, animations: newAnimations } = parseCompleteSVG(svgContent);
+              const { paths: newPaths, texts: newTexts, textPaths: newTextPaths, images: newImages, gradients: newGradients, filters: newFilters, groups: newGroups, animations: newAnimations, animationChains: newAnimationChains } = parseCompleteSVG(svgContent);
               
-              const totalElements = newPaths.length + newTexts.length + newTextPaths.length + newGradients.length + newFilters.length + newGroups.length + newAnimations.length;
+              console.log('📊 Parsed SVG content:', { 
+                paths: newPaths.length, 
+                texts: newTexts.length, 
+                images: newImages.length, 
+                animations: newAnimations.length,
+                animationChains: (newAnimationChains || []).length 
+              });
+              
+              const totalElements = newPaths.length + newTexts.length + newTextPaths.length + newImages.length + newGradients.length + newFilters.length + newGroups.length + newAnimations.length;
               
               if (totalElements === 0) {
                 alert('No valid elements found in the SVG file.');
@@ -571,10 +614,12 @@ ${allElements}
                 newPaths.length > 0 ? `${newPaths.length} path(s)` : '',
                 newTexts.length > 0 ? `${newTexts.length} text element(s)` : '',
                 newTextPaths.length > 0 ? `${newTextPaths.length} textPath element(s)` : '',
+                newImages.length > 0 ? `${newImages.length} image(s)` : '',
                 newGradients.length > 0 ? `${newGradients.length} gradient(s)/pattern(s)` : '',
                 newFilters.length > 0 ? `${newFilters.length} filter(s)` : '',
                 newGroups.length > 0 ? `${newGroups.length} group(s)` : '',
-                newAnimations.length > 0 ? `${newAnimations.length} animation(s)` : ''
+                newAnimations.length > 0 ? `${newAnimations.length} animation(s)` : '',
+                (newAnimationChains || []).length > 0 ? `${(newAnimationChains || []).length} animation chain(s)` : ''
               ].filter(Boolean).join(', ');
               
               const confirmMessage = `Import SVG with: ${elementsInfo}?\n\nThis will replace all current content.`;
@@ -632,12 +677,31 @@ ${allElements}
               newAnimations.forEach((animation: any) => {
                 addAnimation(animation);
               });
+
+              // Create auto-generated animation chains if any were detected
+              if (newAnimationChains && newAnimationChains.length > 0) {
+                console.log(`🔗 Creating ${newAnimationChains.length} auto-generated animation chains from begin times`);
+                newAnimationChains.forEach((chain: any) => {
+                  console.log(`🔗 Creating chain: ${chain.name} with ${chain.animations.length} animations`);
+                  console.log(`🔗 Chain animations:`, chain.animations.map((a: any) => ({ id: a.animationId, delay: a.delay, trigger: a.trigger })));
+                  createAnimationChain(chain.name, chain.animations);
+                });
+              } else {
+                console.log('🔗 No auto-generated animation chains to create');
+              }
               
               // Update filter references in elements before importing
               const updatedPaths = updateFilterReferences(newPaths);
               const updatedTexts = updateFilterReferences(newTexts);
               const updatedGroups = updateFilterReferences(newGroups);
-              const updatedImages = updateFilterReferences([...images]);
+              const updatedImages = updateFilterReferences(newImages);
+              
+              console.log(`➕ Original images:`, newImages.length);
+              console.log(`➕ Updated images:`, updatedImages.length);
+              console.log(`➕ Replacing ${updatedImages.length} images in store`);
+              updatedImages.forEach((image: any) => {
+                console.log(`➕ Image: ${image.id}, href: ${image.href.substring(0, 50)}...`);
+              });
               
               // Replace content with updated references
               replacePaths(updatedPaths);
@@ -645,10 +709,13 @@ ${allElements}
               replaceTextPaths(newTextPaths);
               setGradients(newGradients);
               replaceGroups(updatedGroups);
+              replaceImages(updatedImages);
               
-              // Update images if filter references changed
-              updatedImages.forEach(image => {
-                updateImage(image.id, image);
+              // Verify images were stored correctly
+              const storeAfterReplace = useEditorStore.getState();
+              console.log(`✅ Images in store after replace: ${storeAfterReplace.images.length}`);
+              storeAfterReplace.images.forEach((img: any) => {
+                console.log(`✅ Stored image: ${img.id}, href: ${img.href.substring(0, 50)}...`);
               });
               
               // Reset viewport to fit new content
