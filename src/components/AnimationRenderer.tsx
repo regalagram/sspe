@@ -13,7 +13,7 @@ const ensureChainDelaysMap = (chainDelays: any): Map<string, number> => {
 
 // Hook to manage animation timer and SVG time control
 const useAnimationTimer = () => {
-  const { animationState, setAnimationTime, animations, resetAnimationsAfterCompletion } = useEditorStore();
+  const { animationState, setAnimationTime } = useEditorStore();
   const svgElementRef = React.useRef<SVGSVGElement | null>(null);
   
   // Find and store reference to the main SVG element
@@ -36,30 +36,12 @@ const useAnimationTimer = () => {
             svgElementRef.current.setCurrentTime(newTime);
           } catch (error) {
             // Fallback if setCurrentTime fails
-            console.warn('Failed to set SVG current time:', error);
           }
         }
         
-        // Calculate max duration considering chain delays
-        let maxDuration = 5; // Default minimum
-        
-        animations.forEach(anim => {
-          const animDuration = parseFloat(anim.dur || '2s') || 2;
-          // Ensure chainDelays is a Map before using .get()
-          const chainDelaysMap = ensureChainDelaysMap(animationState.chainDelays);
-          const chainDelay = chainDelaysMap.get(anim.id) || 0;
-          const totalAnimTime = (chainDelay / 1000) + animDuration; // Convert ms to seconds
-          maxDuration = Math.max(maxDuration, totalAnimTime);
-        });
-        
-        if (newTime >= maxDuration && !animationState.loop) {
-          // Animation finished - use the reset function instead of stop
-          resetAnimationsAfterCompletion();
-        } else {
-          // Update current time (with looping if enabled)
-          const currentTime = animationState.loop ? newTime % maxDuration : Math.min(newTime, maxDuration);
-          setAnimationTime(currentTime);
-        }
+        // Just update current time - don't handle completion here
+        // Let the main animation system in animationActions.ts handle auto-reset
+        setAnimationTime(newTime);
       }, 16); // ~60 FPS updates
     } else if (!animationState.isPlaying && svgElementRef.current) {
       // When paused, maintain the current SVG time
@@ -67,9 +49,7 @@ const useAnimationTimer = () => {
       if (typeof svgElementRef.current.setCurrentTime === 'function') {
         try {
           svgElementRef.current.setCurrentTime(currentTime);
-          console.log(`⏸️ SVG time set to ${currentTime}s (paused)`);
         } catch (error) {
-          console.warn('Failed to set SVG time on pause:', error);
         }
       }
     }
@@ -79,7 +59,7 @@ const useAnimationTimer = () => {
         clearInterval(intervalId);
       }
     };
-  }, [animationState.isPlaying, animationState.startTime, animationState.playbackRate, animationState.loop, animationState.chainDelays, animationState.currentTime, animations, setAnimationTime, resetAnimationsAfterCompletion]);
+  }, [animationState.isPlaying, animationState.startTime, animationState.playbackRate, animationState.currentTime, setAnimationTime]);
 };
 
 export const AnimationRenderer: React.FC = () => {
@@ -176,7 +156,6 @@ export const renderAnimationsForElement = (
   animationState?: { isPlaying: boolean; currentTime: number; chainDelays?: Map<string, number> }
 ): React.ReactElement[] => {
   const elementAnimations = animations.filter(animation => animation.targetElementId === elementId);
-  console.log(`🎭 Rendering ${elementAnimations.length} animations for element ${elementId}:`, elementAnimations.map(a => a.id));
   
   return elementAnimations.map((animation) => {
     // Always use indefinite - animations controlled programmatically
@@ -274,7 +253,6 @@ const AnimationElement: React.FC<{ animation: SVGAnimation; animationKey: number
       if (animRef.current) {
         try {
           animRef.current.endElement();
-          console.log(`⏹️ Stopped animation ${animation.id}`);
         } catch (error) {
           // Ignore errors
         }
@@ -288,9 +266,7 @@ const AnimationElement: React.FC<{ animation: SVGAnimation; animationKey: number
       if (svgElement && typeof (svgElement as any).pauseAnimations === 'function') {
         try {
           (svgElement as any).pauseAnimations();
-          console.log(`⏸️ SVG-level pause activated`);
         } catch (error) {
-          console.warn('SVG pause failed:', error);
         }
       }
       return;
@@ -298,16 +274,12 @@ const AnimationElement: React.FC<{ animation: SVGAnimation; animationKey: number
     
     // Handle play/resume - start animations programmatically
     if (animationState.isPlaying && !hasStartedRef.current && animRef.current) {
-      console.log(`🎮 Attempting to start animation ${animation.id} (target: ${animation.targetElementId}), animRef.current:`, animRef.current);
-      
       // Resume SVG animations if paused
       const svgElement = animRef.current.closest('svg');
       if (svgElement && typeof (svgElement as any).unpauseAnimations === 'function') {
         try {
           (svgElement as any).unpauseAnimations();
-          console.log(`▶️ SVG-level unpause activated`);
         } catch (error) {
-          console.warn('SVG unpause failed:', error);
         }
       }
       
@@ -322,9 +294,7 @@ const AnimationElement: React.FC<{ animation: SVGAnimation; animationKey: number
             try {
               animRef.current.beginElement();
               hasStartedRef.current = true;
-              console.log(`🚀 Started animation ${animation.id} after ${adjustedDelay}ms delay (target: ${animation.targetElementId}, originalId: ${(animation as any).originalAnimationId || 'none'})`);
             } catch (error) {
-              console.warn(`Failed to start animation ${animation.id} (target: ${animation.targetElementId}):`, error);
             }
           }
         }, adjustedDelay);
@@ -333,9 +303,7 @@ const AnimationElement: React.FC<{ animation: SVGAnimation; animationKey: number
         try {
           animRef.current.beginElement();
           hasStartedRef.current = true;
-          console.log(`🚀 Started animation ${animation.id} immediately (target: ${animation.targetElementId}, originalId: ${(animation as any).originalAnimationId || 'none'})`);
         } catch (error) {
-          console.warn(`Failed to start animation ${animation.id} (target: ${animation.targetElementId}):`, error);
         }
       }
     }
@@ -478,7 +446,6 @@ export const useAnimationsForElement = (elementId: string) => {
     }));
     
     const allAnimations = [...directAnimations, ...inheritedAnimations];
-    console.log(`🎬 Creating ${allAnimations.length} animations for element ${elementId} (${directAnimations.length} direct + ${inheritedAnimations.length} inherited):`, allAnimations.map(a => a.id));
     
     return allAnimations.map(createAnimationElement);
   }, [elementId, animations, createAnimationElement, animationKey, findParentGroups]);

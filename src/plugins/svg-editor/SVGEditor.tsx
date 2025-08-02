@@ -202,6 +202,9 @@ export const SVGComponent: React.FC = () => {
 
   // Generate SVG string from current paths and texts
   const generateSVGCode = (): string => {
+    // Calculate chain delays for proper animation timing
+    const chainDelays = calculateChainDelays();
+    
     // Helper function to convert fill/stroke values to SVG format
     const convertStyleValue = (value: any): string => {
       if (!value || value === 'none') return 'none';
@@ -239,7 +242,14 @@ export const SVGComponent: React.FC = () => {
         style.mask ? `mask="${convertStyleValue(style.mask)}"` : '',
       ].filter(Boolean).join(' ');
       
-      return `<path ${attributes} />`;
+      // Get animations for this path
+      const pathAnimations = renderAnimationsForElement(path.id, chainDelays);
+      
+      if (pathAnimations) {
+        return `<path ${attributes}>\n${pathAnimations}\n    </path>`;
+      } else {
+        return `<path ${attributes} />`;
+      }
     };
 
     const renderText = (text: any) => {
@@ -268,6 +278,9 @@ export const SVGComponent: React.FC = () => {
         style.mask ? `mask="${convertStyleValue(style.mask)}"` : '',
       ].filter(Boolean).join(' ');
 
+      // Get animations for this text
+      const textAnimations = renderAnimationsForElement(text.id, chainDelays);
+
       if (text.type === 'multiline-text') {
         const spans = text.spans.map((span: any, index: number) => {
           const spanFillValue = span.style?.fill ? convertStyleValue(span.style.fill) : '';
@@ -282,9 +295,17 @@ export const SVGComponent: React.FC = () => {
           return `    <tspan ${spanAttributes}>${span.content}</tspan>`;
         }).join('\n');
         
-        return `<text ${attributes}>\n${spans}\n  </text>`;
+        if (textAnimations) {
+          return `<text ${attributes}>\n${spans}\n${textAnimations}\n  </text>`;
+        } else {
+          return `<text ${attributes}>\n${spans}\n  </text>`;
+        }
       } else {
-        return `<text ${attributes}>${text.content}</text>`;
+        if (textAnimations) {
+          return `<text ${attributes}>${text.content}\n${textAnimations}\n    </text>`;
+        } else {
+          return `<text ${attributes}>${text.content}</text>`;
+        }
       }
     };
 
@@ -303,7 +324,14 @@ export const SVGComponent: React.FC = () => {
         image.style?.filter ? `filter="${convertStyleValue(image.style.filter)}"` : '',
       ].filter(Boolean).join(' ');
       
-      return `<image ${attributes} />`;
+      // Get animations for this image
+      const imageAnimations = renderAnimationsForElement(image.id, chainDelays);
+      
+      if (imageAnimations) {
+        return `<image ${attributes}>\n${imageAnimations}\n    </image>`;
+      } else {
+        return `<image ${attributes} />`;
+      }
     };
 
     // Render use elements (symbol instances)
@@ -320,7 +348,14 @@ export const SVGComponent: React.FC = () => {
         use.style?.filter ? `filter="${convertStyleValue(use.style.filter)}"` : '',
       ].filter(Boolean).join(' ');
       
-      return `<use ${attributes} />`;
+      // Get animations for this use element (symbol instance)
+      const useAnimations = renderAnimationsForElement(use.id, chainDelays);
+      
+      if (useAnimations) {
+        return `<use ${attributes}>\n${useAnimations}\n    </use>`;
+      } else {
+        return `<use ${attributes} />`;
+      }
     };
 
     // Render textPath elements
@@ -357,7 +392,14 @@ export const SVGComponent: React.FC = () => {
         textPath.lengthAdjust ? `lengthAdjust="${textPath.lengthAdjust}"` : '',
       ].filter(Boolean).join(' ');
       
-      return `<text ${textAttributes}><textPath ${textPathAttributes}>${textPath.content}</textPath></text>`;
+      // Get animations for this textPath
+      const textPathAnimations = renderAnimationsForElement(textPath.id, chainDelays);
+      
+      if (textPathAnimations) {
+        return `<text ${textAttributes}><textPath ${textPathAttributes}>${textPath.content}</textPath>\n${textPathAnimations}\n  </text>`;
+      } else {
+        return `<text ${textAttributes}><textPath ${textPathAttributes}>${textPath.content}</textPath></text>`;
+      }
     };
 
     // Collect elements that are NOT in any group
@@ -437,7 +479,15 @@ export const SVGComponent: React.FC = () => {
             const nestedAttrs = [];
             if (nestedGroup.transform) nestedAttrs.push(`transform="${nestedGroup.transform}"`);
             const nestedAttrStr = nestedAttrs.length > 0 ? ` ${nestedAttrs.join(' ')}` : '';
-            groupElements.push(`    <g${nestedAttrStr}>\n${nestedContent}\n    </g>`);
+            
+            // Get animations for this nested group
+            const nestedGroupAnimations = renderAnimationsForElement(nestedGroup.id, chainDelays);
+            
+            if (nestedGroupAnimations) {
+              groupElements.push(`    <g${nestedAttrStr}>\n${nestedContent}\n${nestedGroupAnimations}\n    </g>`);
+            } else {
+              groupElements.push(`    <g${nestedAttrStr}>\n${nestedContent}\n    </g>`);
+            }
           }
         }
       });
@@ -456,7 +506,14 @@ export const SVGComponent: React.FC = () => {
       
       const groupAttrStr = groupAttrs.length > 0 ? ` ${groupAttrs.join(' ')}` : '';
       
-      return `  <g${groupAttrStr}>\n${groupContent}\n  </g>`;
+      // Get animations for this group
+      const groupAnimations = renderAnimationsForElement(group.id, chainDelays);
+      
+      if (groupAnimations) {
+        return `  <g${groupAttrStr}>\n${groupContent}\n${groupAnimations}\n  </g>`;
+      } else {
+        return `  <g${groupAttrStr}>\n${groupContent}\n  </g>`;
+      }
     }).filter(Boolean).join('\n');
 
     // Helper function to extract gradient IDs from style values
@@ -813,6 +870,7 @@ export const SVGComponent: React.FC = () => {
               const strokeValue = convertStyleValue(style.stroke);
               
               const pathAttrs = [
+                `id="${child.id}"`,
                 `d="${pathData}"`,
                 fillValue !== 'none' ? `fill="${fillValue}"` : 'fill="none"',
                 strokeValue !== 'none' ? `stroke="${strokeValue}"` : '',
@@ -821,10 +879,20 @@ export const SVGComponent: React.FC = () => {
                 style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${style.strokeOpacity}"` : '',
               ].filter(Boolean).join(' ');
               
-              return `    <path ${pathAttrs} />`;
+              // Get animations for this path within the symbol
+              const pathAnimations = renderAnimationsForElement(child.id, chainDelays);
+              
+              if (pathAnimations) {
+                return `    <path ${pathAttrs}>\n${pathAnimations}\n    </path>`;
+              } else {
+                return `    <path ${pathAttrs} />`;
+              }
             }
             return '';
           }).filter(Boolean).join('\n');
+          
+          // Get animations for the symbol itself
+          const symbolAnimations = renderAnimationsForElement(symbol.id, chainDelays);
           
           const symbolAttrs = [
             `id="${symbol.id}"`,
@@ -832,7 +900,11 @@ export const SVGComponent: React.FC = () => {
             symbol.preserveAspectRatio ? `preserveAspectRatio="${symbol.preserveAspectRatio}"` : '',
           ].filter(Boolean).join(' ');
           
-          return `  <symbol ${symbolAttrs}>\n${symbolContent}\n  </symbol>`;
+          if (symbolAnimations) {
+            return `  <symbol ${symbolAttrs}>\n${symbolContent}\n${symbolAnimations}\n  </symbol>`;
+          } else {
+            return `  <symbol ${symbolAttrs}>\n${symbolContent}\n  </symbol>`;
+          }
         });
         allDefs.push(...symbolDefs);
       }
@@ -1070,9 +1142,9 @@ export const SVGComponent: React.FC = () => {
     };
 
     // Helper function to safely get animation properties
-    const getAnimationProperty = (animation: SVGAnimation, property: string): string | undefined => {
+    function getAnimationProperty(animation: SVGAnimation, property: string): string | undefined {
       return (animation as any)[property];
-    };
+    }
 
     const definitions = generateDefinitions();
 
@@ -1308,6 +1380,99 @@ export const SVGComponent: React.FC = () => {
       
       return modifiedHtml;
     };
+
+    // Helper function to render animations for an element
+    function renderAnimationsForElement(elementId: string, chainDelays: Map<string, number>): string {
+      const elementAnimations = animations.filter(anim => anim.targetElementId === elementId);
+      if (elementAnimations.length === 0) return '';
+      
+      return elementAnimations.map(animation => {
+        // Calculate begin time including chain delays
+        let beginValue = getAnimationProperty(animation, 'begin') || '';
+        const chainDelay = chainDelays.get(animation.id);
+        if (chainDelay !== undefined && chainDelay > 0) {
+          // Convert from ms to seconds for SVG
+          const delayInSeconds = chainDelay / 1000;
+          beginValue = `${delayInSeconds}s`;
+        } else if (!beginValue) {
+          beginValue = '0s'; // Default begin time
+        }
+
+        const dur = getAnimationProperty(animation, 'dur') || '2s';
+        const repeatCount = getAnimationProperty(animation, 'repeatCount') || '1';
+        const fill = getAnimationProperty(animation, 'fill') || 'freeze';
+        
+        if (animation.type === 'animate') {
+          const from = getAnimationProperty(animation, 'from') || '';
+          const to = getAnimationProperty(animation, 'to') || '';
+          const values = getAnimationProperty(animation, 'values') || '';
+          const attributeName = getAnimationProperty(animation, 'attributeName') || '';
+          
+          const animateAttrs = [
+            `attributeName="${attributeName}"`,
+            from ? `from="${from}"` : '',
+            to ? `to="${to}"` : '',
+            values ? `values="${values}"` : '',
+            `dur="${dur}"`,
+            `begin="${beginValue}"`,
+            `repeatCount="${repeatCount}"`,
+            `fill="${fill}"`,
+          ].filter(Boolean).join(' ');
+          
+          return `      <animate ${animateAttrs} />`;
+        } else if (animation.type === 'animateTransform') {
+          const from = getAnimationProperty(animation, 'from') || '';
+          const to = getAnimationProperty(animation, 'to') || '';
+          const values = getAnimationProperty(animation, 'values') || '';
+          const transformType = getAnimationProperty(animation, 'transformType') || 'translate';
+          
+          const animateTransformAttrs = [
+            `attributeName="transform"`,
+            `type="${transformType}"`,
+            from ? `from="${from}"` : '',
+            to ? `to="${to}"` : '',
+            values ? `values="${values}"` : '',
+            `dur="${dur}"`,
+            `begin="${beginValue}"`,
+            `repeatCount="${repeatCount}"`,
+            `fill="${fill}"`,
+          ].filter(Boolean).join(' ');
+          
+          return `      <animateTransform ${animateTransformAttrs} />`;
+        } else if (animation.type === 'animateMotion') {
+          const path = getAnimationProperty(animation, 'path') || '';
+          const rotate = getAnimationProperty(animation, 'rotate') || 'auto';
+          const mpath = getAnimationProperty(animation, 'mpath') || '';
+          
+          const animateMotionAttrs = [
+            path ? `path="${path}"` : '',
+            `dur="${dur}"`,
+            `begin="${beginValue}"`,
+            `repeatCount="${repeatCount}"`,
+            `fill="${fill}"`,
+            `rotate="${rotate}"`,
+          ].filter(Boolean).join(' ');
+          
+          const mpathElement = mpath ? `\n        <mpath href="#${mpath}" />` : '';
+          
+          return `      <animateMotion ${animateMotionAttrs}>${mpathElement}\n      </animateMotion>`;
+        } else if (animation.type === 'set') {
+          const to = getAnimationProperty(animation, 'to') || '';
+          const attributeName = getAnimationProperty(animation, 'attributeName') || '';
+          
+          const setAttrs = [
+            `attributeName="${attributeName}"`,
+            `to="${to}"`,
+            `begin="${beginValue}"`,
+            `fill="${fill}"`,
+          ].filter(Boolean).join(' ');
+          
+          return `      <set ${setAttrs} />`;
+        }
+        
+        return '';
+      }).filter(Boolean).join('\n');
+    }
 
     // Combine all elements for viewBox calculation
     const baseElements = [standalonePathElements, textElements, textPathElements, imageElements, useElements, groupElements].filter(Boolean).join('\n');

@@ -70,7 +70,10 @@ const checkAndPromoteGroupSelection = (state: EditorState): EditorState['selecti
   
   // Check all groups to see if their elements are fully selected
   state.groups.forEach(group => {
-    if (areAllGroupElementsSelected(state, group.id) && !newSelection.selectedGroups.includes(group.id)) {
+    const allElementsSelected = areAllGroupElementsSelected({ ...state, selection: newSelection }, group.id);
+    
+    if (allElementsSelected && !newSelection.selectedGroups.includes(group.id)) {
+      console.log(`🔄 Promoting selection to group: ${group.id}`);
       newSelection = promoteSelectionToGroup({ ...state, selection: newSelection }, group.id);
     }
   });
@@ -110,8 +113,8 @@ export const createSelectionActions: StateCreator<
   SelectionActions
 > = (set, get) => ({
   selectPath: (pathId, addToSelection = false) =>
-    set((state) => ({
-      selection: addToSelection ? {
+    set((state) => {
+      const newSelection = addToSelection ? {
         ...state.selection,
         selectedPaths: state.selection.selectedPaths.includes(pathId) 
           ? state.selection.selectedPaths 
@@ -132,8 +135,13 @@ export const createSelectionActions: StateCreator<
         selectedSymbols: [],
         selectedUses: [],
         selectedAnimations: [],
-      },
-    })),
+      };
+      
+      // Check for group promotion after selection change
+      const promotedSelection = checkAndPromoteGroupSelection({ ...state, selection: newSelection });
+      
+      return { selection: promotedSelection };
+    }),
 
   selectSubPath: (subPathId) =>
     set((state) => {
@@ -427,29 +435,33 @@ export const createSelectionActions: StateCreator<
       if (!text || text.locked) {
         return state;
       }
-      return {
-        selection: addToSelection ? {
-          ...state.selection,
-          selectedTexts: state.selection.selectedTexts.includes(textId)
-            ? state.selection.selectedTexts
-            : [...state.selection.selectedTexts, textId],
-        } : {
-          ...state.selection,
-          selectedTexts: [textId],
-          selectedTextSpans: [],
-          selectedPaths: [],
-          selectedSubPaths: [],
-          selectedCommands: [],
-          selectedGroups: [],
-          selectedImages: [],
-          selectedClipPaths: [],
-          selectedMasks: [],
-          selectedFilters: [],
-          selectedMarkers: [],
-          selectedSymbols: [],
-          selectedUses: [],
-        },
+      
+      const newSelection = addToSelection ? {
+        ...state.selection,
+        selectedTexts: state.selection.selectedTexts.includes(textId)
+          ? state.selection.selectedTexts
+          : [...state.selection.selectedTexts, textId],
+      } : {
+        ...state.selection,
+        selectedTexts: [textId],
+        selectedTextSpans: [],
+        selectedPaths: [],
+        selectedSubPaths: [],
+        selectedCommands: [],
+        selectedGroups: [],
+        selectedImages: [],
+        selectedClipPaths: [],
+        selectedMasks: [],
+        selectedFilters: [],
+        selectedMarkers: [],
+        selectedSymbols: [],
+        selectedUses: [],
       };
+      
+      // Check for group promotion after selection change
+      const promotedSelection = checkAndPromoteGroupSelection({ ...state, selection: newSelection });
+      
+      return { selection: promotedSelection };
     }),
 
   selectTextMultiple: (textId, isShiftPressed = false) =>
@@ -870,29 +882,32 @@ export const createSelectionActions: StateCreator<
       const image = state.images.find(img => img.id === imageId);
       if (image?.locked) return state;
 
-      return {
-        selection: addToSelection ? {
-          ...state.selection,
-          selectedImages: state.selection.selectedImages.includes(imageId) 
-            ? state.selection.selectedImages 
-            : [...state.selection.selectedImages, imageId],
-        } : {
-          ...state.selection,
-          selectedPaths: [],
-          selectedSubPaths: [],
-          selectedCommands: [],
-          selectedTexts: [],
-          selectedTextSpans: [],
-          selectedGroups: [],
-          selectedImages: [imageId],
-          selectedClipPaths: [],
-          selectedMasks: [],
-          selectedFilters: [],
-          selectedMarkers: [],
-          selectedSymbols: [],
-          selectedUses: [],
-        },
+      const newSelection = addToSelection ? {
+        ...state.selection,
+        selectedImages: state.selection.selectedImages.includes(imageId) 
+          ? state.selection.selectedImages 
+          : [...state.selection.selectedImages, imageId],
+      } : {
+        ...state.selection,
+        selectedPaths: [],
+        selectedSubPaths: [],
+        selectedCommands: [],
+        selectedTexts: [],
+        selectedTextSpans: [],
+        selectedGroups: [],
+        selectedImages: [imageId],
+        selectedClipPaths: [],
+        selectedMasks: [],
+        selectedFilters: [],
+        selectedMarkers: [],
+        selectedSymbols: [],
+        selectedUses: [],
       };
+      
+      // Check for group promotion after selection change
+      const promotedSelection = checkAndPromoteGroupSelection({ ...state, selection: newSelection });
+      
+      return { selection: promotedSelection };
     }),
 
   selectUse: (useId, addToSelection = false) =>

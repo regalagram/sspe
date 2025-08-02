@@ -19,41 +19,21 @@ const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false,
       return;
     }
     
-    // Recolectar todos los elementos del grupo
-    const pathIds: string[] = [];
-    const textIds: string[] = [];
-    const groupIds: string[] = [];
-    const subPathIds: string[] = [];
-    
-    group.children.forEach(child => {
-      if (child.type === 'path') {
-        pathIds.push(child.id);
-        // Encontrar todos los subpaths del path
-        const path = paths.find(p => p.id === child.id);
-        if (path && path.subPaths) {
-          path.subPaths.forEach(subPath => {
-            subPathIds.push(subPath.id);
-          });
-        }
-      } else if (child.type === 'text') {
-        textIds.push(child.id);
-      } else if (child.type === 'group') {
-        groupIds.push(child.id);
-      }
-    });
-    
-    // Actualizar la selección directamente en el store
+    // Instead of selecting individual elements, select the group itself
     useEditorStore.setState(state => ({
       ...state,
       selection: {
         ...state.selection,
-        selectedPaths: pathIds,
-        selectedTexts: textIds,
-        selectedGroups: groupIds,
-        selectedSubPaths: subPathIds,
+        selectedPaths: [],
+        selectedTexts: [],
+        selectedGroups: [group.id], // Select the group directly
+        selectedSubPaths: [],
         selectedCommands: [],
         selectedControlPoints: [],
-        selectedTextSpans: []
+        selectedTextSpans: [],
+        selectedImages: [],
+        selectedUses: [],
+        selectedAnimations: []
       }
     }));
   };

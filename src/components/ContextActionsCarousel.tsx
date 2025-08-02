@@ -369,23 +369,22 @@ export const ContextActionsCarousel: React.FC<ContextActionsCarouselProps> = ({ 
   };
 
   const exportSVG = () => {
-    // Generate SVG using the same function as context menu
-    const generateSVGCode = () => {
-      const editorState = useEditorStore.getState();
-      const { paths, texts, textPaths, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, animations, precision } = editorState;
+    // Import the complete SVG generation function from SVGEditor
+    // This will include all elements with their animations
+    const editorState = useEditorStore.getState();
+    
+    // Use a more complete SVG generation similar to SVGEditor
+    const generateCompleteSVG = () => {
+      const { paths, texts, textPaths, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, animations, calculateChainDelays } = editorState;
       
-      // Helper function to convert fill/stroke values to SVG format
-      const convertStyleValue = (value: any): string => {
-        if (!value || value === 'none') return 'none';
-        if (typeof value === 'string') return value;
-        if (typeof value === 'object' && value.id) {
-          return `url(#${value.id})`;
-        }
-        return 'none';
-      };
-
-      // Helper function to render paths
-      const renderPath = (path: any) => {
+      // For now, use a simplified version that includes the main elements
+      // In a production environment, you'd want to extract the full generateSVGCode function
+      // into a shared utility module to avoid duplication
+      
+      const viewBox = "0 0 800 600"; // Default viewBox
+      
+      // Basic SVG structure with main elements
+      const pathElements = paths.map(path => {
         const pathData = path.subPaths.map((subPath: any) => {
           return subPath.commands.map((cmd: any) => {
             switch (cmd.command) {
@@ -399,8 +398,10 @@ export const ContextActionsCarousel: React.FC<ContextActionsCarouselProps> = ({ 
         }).join(' ');
         
         const style = path.style;
-        const fillValue = convertStyleValue(style.fill);
-        const strokeValue = convertStyleValue(style.stroke);
+        const fillValue = style.fill && typeof style.fill === 'object' && style.fill.id ? 
+          `url(#${style.fill.id})` : (style.fill || 'none');
+        const strokeValue = style.stroke && typeof style.stroke === 'object' && style.stroke.id ? 
+          `url(#${style.stroke.id})` : (style.stroke || 'none');
         
         const attributes = [
           `id="${path.id}"`,
@@ -410,19 +411,122 @@ export const ContextActionsCarousel: React.FC<ContextActionsCarouselProps> = ({ 
           style.strokeWidth ? `stroke-width="${style.strokeWidth}"` : '',
         ].filter(Boolean).join(' ');
         
-        return `<path ${attributes} />`;
-      };
-
-      // Generate path elements
-      const pathElements = paths.map(path => `  ${renderPath(path)}`).join('\n');
+        // Include animations for this path
+        const pathAnimations = animations.filter(anim => anim.targetElementId === path.id);
+        if (pathAnimations.length > 0) {
+          const animationsHTML = pathAnimations.map(anim => {
+            if (anim.type === 'animate') {
+              return `    <animate attributeName="${anim.attributeName}" from="${anim.from || ''}" to="${anim.to || ''}" dur="${anim.dur || '2s'}" fill="freeze" />`;
+            } else if (anim.type === 'animateTransform') {
+              return `    <animateTransform attributeName="transform" type="${anim.transformType}" from="${anim.from || ''}" to="${anim.to || ''}" dur="${anim.dur || '2s'}" fill="freeze" />`;
+            }
+            return '';
+          }).filter(Boolean).join('\n');
+          return `  <path ${attributes}>\n${animationsHTML}\n  </path>`;
+        } else {
+          return `  <path ${attributes} />`;
+        }
+      }).join('\n');
       
-      const finalSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
-${pathElements}
+      // Include basic text elements
+      const textElements = texts.map(text => {
+        const style = text.style || {};
+        const attributes = [
+          `id="${text.id}"`,
+          `x="${text.x}"`,
+          `y="${text.y}"`,
+          style.fontSize ? `font-size="${style.fontSize}"` : '',
+          style.fill ? `fill="${style.fill}"` : '',
+        ].filter(Boolean).join(' ');
+        
+        // Include animations for this text
+        const textAnimations = animations.filter(anim => anim.targetElementId === text.id);
+        const textContent = (text as any).content || '';
+        
+        if (textAnimations.length > 0) {
+          const animationsHTML = textAnimations.map(anim => {
+            if (anim.type === 'animate') {
+              return `    <animate attributeName="${anim.attributeName}" from="${anim.from || ''}" to="${anim.to || ''}" dur="${anim.dur || '2s'}" fill="freeze" />`;
+            }
+            return '';
+          }).filter(Boolean).join('\n');
+          return `  <text ${attributes}>\n    ${textContent}\n${animationsHTML}\n  </text>`;
+        } else {
+          return `  <text ${attributes}>${textContent}</text>`;
+        }
+      }).join('\n');
+      
+      // Include basic group elements
+      const groupElements = groups.map(group => {
+        const groupContent = group.children.map((child: any) => {
+          if (child.type === 'path') {
+            const path = paths.find(p => p.id === child.id);
+            if (path) {
+              // Similar logic as standalone paths but with proper indentation
+              const pathData = path.subPaths.map((subPath: any) => {
+                return subPath.commands.map((cmd: any) => {
+                  switch (cmd.command) {
+                    case 'M': return `M ${cmd.x} ${cmd.y}`;
+                    case 'L': return `L ${cmd.x} ${cmd.y}`;
+                    case 'C': return `C ${cmd.x1} ${cmd.y1} ${cmd.x2} ${cmd.y2} ${cmd.x} ${cmd.y}`;
+                    case 'Z': return 'Z';
+                    default: return '';
+                  }
+                }).join(' ');
+              }).join(' ');
+              
+              const style = path.style;
+              const fillValue = style.fill && typeof style.fill === 'object' && style.fill.id ? 
+                `url(#${style.fill.id})` : (style.fill || 'none');
+              
+              const attributes = [
+                `id="${path.id}"`,
+                `d="${pathData}"`,
+                fillValue !== 'none' ? `fill="${fillValue}"` : 'fill="none"',
+              ].filter(Boolean).join(' ');
+              
+              const pathAnimations = animations.filter(anim => anim.targetElementId === path.id);
+              if (pathAnimations.length > 0) {
+                const animationsHTML = pathAnimations.map(anim => {
+                  if (anim.type === 'animate') {
+                    return `      <animate attributeName="${anim.attributeName}" from="${anim.from || ''}" to="${anim.to || ''}" dur="${anim.dur || '2s'}" fill="freeze" />`;
+                  }
+                  return '';
+                }).filter(Boolean).join('\n');
+                return `    <path ${attributes}>\n${animationsHTML}\n    </path>`;
+              } else {
+                return `    <path ${attributes} />`;
+              }
+            }
+          }
+          return '';
+        }).filter(Boolean).join('\n');
+        
+        // Include animations for the group itself
+        const groupAnimations = animations.filter(anim => anim.targetElementId === group.id);
+        if (groupAnimations.length > 0) {
+          const animationsHTML = groupAnimations.map(anim => {
+            if (anim.type === 'animateTransform') {
+              return `    <animateTransform attributeName="transform" type="${anim.transformType}" from="${anim.from || ''}" to="${anim.to || ''}" dur="${anim.dur || '2s'}" fill="freeze" />`;
+            }
+            return '';
+          }).filter(Boolean).join('\n');
+          
+          return `  <g id="${group.id}">\n${groupContent}\n${animationsHTML}\n  </g>`;
+        } else {
+          return `  <g id="${group.id}">\n${groupContent}\n  </g>`;
+        }
+      }).join('\n');
+      
+      // Combine all elements
+      const allElements = [pathElements, textElements, groupElements].filter(Boolean).join('\n');
+      
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">
+${allElements}
 </svg>`;
-      return finalSVG;
     };
     
-    const svgContent = generateSVGCode();
+    const svgContent = generateCompleteSVG();
     const blob = new Blob([svgContent], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
     

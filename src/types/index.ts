@@ -958,6 +958,8 @@ export interface AnimationState {
   loop: boolean; // Whether to loop animations
   startTime?: number; // Timestamp when playback started (for timer calculations)
   restartKey?: number; // Key to force re-render of animations on restart
+  manualStop?: boolean; // Flag to indicate if animations were manually stopped
+  autoResetTimerId?: NodeJS.Timeout | null; // Timer ID for auto-reset
   
   // Advanced animation state
   activeAnimations: string[]; // Currently running animation IDs

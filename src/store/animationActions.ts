@@ -157,11 +157,8 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
       const calculateChainDelays = get().calculateChainDelays;
       const processedAnimations = calculateChainDelays();
       
-      // Debug logging
-      console.log('🎬 Starting playAnimations - Chain delays calculated:', processedAnimations);
-      processedAnimations.forEach((delay: number, animId: string) => {
-        console.log(`  Animation ${animId}: ${delay}ms delay`);
-      });
+      // Calculate total duration to set up auto-reset
+      const totalDuration = get().getTotalAnimationDuration();
       
       set((state: any) => ({
         animationState: {
@@ -169,24 +166,81 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
           isPlaying: true,
           startTime: currentTime,
           chainDelays: processedAnimations, // Store calculated delays
+          duration: totalDuration,
+          manualStop: false, // Clear manual stop flag when starting
+          autoResetTimerId: null, // Clear any existing timer ID
         },
       }));
+      
+      // Set up auto-reset timer for when animations finish naturally
+      // Wait a small amount to ensure animations have actually started
+      if (totalDuration > 0) {
+        setTimeout(() => {
+          const currentState = get();
+          // Only set the timer if we're still playing and haven't been manually stopped
+          if (currentState.animationState.isPlaying && !currentState.animationState.manualStop) {
+            const timerId = setTimeout(() => {
+              const latestState = get();
+              // Only reset if animations are still playing and haven't been manually stopped
+              if (latestState.animationState.isPlaying && !latestState.animationState.manualStop) {
+                get().resetAnimationsAfterCompletion();
+              }
+            }, (totalDuration + 0.1) * 1000); // Add small buffer
+            
+            // Store timer ID to be able to cancel it later
+            set((state: any) => ({
+              animationState: {
+                ...state.animationState,
+                autoResetTimerId: timerId,
+              },
+            }));
+          }
+        }, 50); // Wait 50ms before setting up the reset timer
+      }
     } else {
       // Resuming from pause - adjust timing to continue from where we paused
       const pausedAtSeconds = state.animationState.currentTime; // Time where we paused
       const adjustedStartTime = currentTime - (pausedAtSeconds * 1000); // Adjust start time to account for elapsed time
       
-      console.log('▶️ Resuming animations from pause at', pausedAtSeconds, 'seconds');
-      console.log('   Original start time would be:', new Date(adjustedStartTime).toISOString());
+      // Calculate remaining duration for auto-reset
+      const totalDuration = state.animationState.duration || get().getTotalAnimationDuration();
+      const remainingDuration = Math.max(0, totalDuration - pausedAtSeconds);
       
       set((state: any) => ({
         animationState: {
           ...state.animationState,
           isPlaying: true,
           startTime: adjustedStartTime, // This allows animations to continue from correct time
+          manualStop: false, // Clear manual stop flag when resuming
           // DON'T increment restartKey on resume - keep same animation instances to maintain state
         },
       }));
+      
+      // Set up auto-reset timer for remaining duration
+      // Wait a small amount to ensure animations have actually resumed
+      if (remainingDuration > 0) {
+        setTimeout(() => {
+          const currentState = get();
+          // Only set the timer if we're still playing and haven't been manually stopped
+          if (currentState.animationState.isPlaying && !currentState.animationState.manualStop) {
+            const timerId = setTimeout(() => {
+              const latestState = get();
+              // Only reset if animations are still playing and haven't been manually stopped
+              if (latestState.animationState.isPlaying && !latestState.animationState.manualStop) {
+                get().resetAnimationsAfterCompletion();
+              }
+            }, (remainingDuration + 0.1) * 1000); // Add small buffer
+            
+            // Store timer ID to be able to cancel it later
+            set((state: any) => ({
+              animationState: {
+                ...state.animationState,
+                autoResetTimerId: timerId,
+              },
+            }));
+          }
+        }, 50); // Wait 50ms before setting up the reset timer
+      }
     }
   },
 
@@ -194,19 +248,23 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
     const state = get();
     const currentTime = Date.now();
     
+    // Cancel auto-reset timer when pausing
+    if (state.animationState.autoResetTimerId) {
+      clearTimeout(state.animationState.autoResetTimerId);
+    }
+    
     // Calculate how much time has elapsed since animations started
     let elapsedSeconds = 0;
     if (state.animationState.startTime) {
       elapsedSeconds = (currentTime - state.animationState.startTime) / 1000;
     }
     
-    console.log('⏸️ Pausing animations at', elapsedSeconds, 'seconds (preserving chain delays)');
-    
     set((state: any) => ({
       animationState: {
         ...state.animationState,
         isPlaying: false,
         currentTime: elapsedSeconds, // Capture current playback position
+        autoResetTimerId: null, // Clear timer ID
         // DON'T clear chain delays when pausing - keep them for resume
         // DON'T increment restartKey when pausing - keep same animation instances
         // DON'T clear startTime when pausing - we need it for resume calculations
@@ -215,7 +273,43 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
   },
 
   stopAnimations: () => {
-    console.log('⏹️ Stopping all animations');
+    // Get current state before making changes
+    const currentState = get();
+    
+    // Cancel auto-reset timer when stopping manually
+    if (currentState.animationState.autoResetTimerId) {
+      clearTimeout(currentState.animationState.autoResetTimerId);
+    }
+    
+    // Reset all animated elements to their initial state
+    const resetAnimatedElements = () => {
+      currentState.animations.forEach((animation: any) => {
+        try {
+          const targetElement = document.getElementById(animation.targetElementId);
+          if (targetElement) {
+            // Remove any animated attribute transformations
+            if (animation.attributeName === 'transform') {
+              targetElement.removeAttribute('transform');
+            } else if (animation.attributeName === 'opacity') {
+              targetElement.removeAttribute('opacity');
+            } else if (animation.attributeName) {
+              targetElement.removeAttribute(animation.attributeName);
+            }
+            
+            // Reset style attributes if they were animated
+            if (animation.attributeName && targetElement.style) {
+              (targetElement.style as any).removeProperty(animation.attributeName);
+            }
+          }
+        } catch (error) {
+          console.warn(`Failed to reset element ${animation.targetElementId}:`, error);
+        }
+      });
+    };
+    
+    // Reset elements after a short delay to ensure animations have stopped
+    setTimeout(resetAnimatedElements, 100);
+    
     set((state: any) => ({
       animationState: {
         ...state.animationState,
@@ -224,20 +318,46 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
         startTime: null, // Reset start time for clean restart
         chainDelays: new Map(), // Clear chain delays when stopping
         restartKey: (state.animationState.restartKey || 0) + 1, // Force re-render to reset animations
+        manualStop: true, // Flag to indicate this was a manual stop
+        autoResetTimerId: null, // Clear timer ID
       },
     }));
   },
 
   // Function to reset animations when they finish naturally
   resetAnimationsAfterCompletion: () => {
-    console.log('🏁 Animations completed - resetting state');
+    // Get current state before making changes
+    const currentState = get();
+    
+    // Cancel any existing auto-reset timer
+    if (currentState.animationState.autoResetTimerId) {
+      clearTimeout(currentState.animationState.autoResetTimerId);
+    }
+    
+    // Stop all animations first
+    currentState.animations.forEach((animation: any) => {
+      try {
+        const animationElement = document.querySelector(`[id*="${animation.id}"]`);
+        if (animationElement && typeof (animationElement as any).endElement === 'function') {
+          (animationElement as any).endElement();
+        }
+      } catch (error) {
+        // Ignore errors
+      }
+    });
+    
+    // Use the same mechanism as the timeline - set time to 0
+    // This will trigger the same reset behavior that works for the timeline indicator
+    get().setAnimationTime(0);
+    
+    // Reset animation state like stopAnimations does
     set((state: any) => ({
       animationState: {
         ...state.animationState,
         isPlaying: false,
-        startTime: null, // Reset start time to ensure fresh restart
-        currentTime: 0,
-        chainDelays: new Map(), // Clear chain delays when animations complete
+        startTime: null,
+        chainDelays: new Map(), // Clear chain delays to indicate full stop
+        autoResetTimerId: null, // Clear timer ID
       },
     }));
   },
@@ -325,17 +445,30 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
     const state = get();
     if (state.animations.length === 0) return 0;
     
-    const durations = state.animations.map((animation: any) => {
+    // Calculate delays from chains
+    const chainDelays = get().calculateChainDelays();
+    
+    let maxEndTime = 0;
+    
+    state.animations.forEach((animation: any) => {
+      // Parse animation duration
       const durMatch = (animation.dur || '2s').match(/^(\d+(?:\.\d+)?)(s|ms)?$/);
-      if (!durMatch) return 0;
+      if (!durMatch) return;
       
       const value = parseFloat(durMatch[1]);
       const unit = durMatch[2] || 's';
+      const durationInSeconds = unit === 'ms' ? value / 1000 : value;
       
-      return unit === 'ms' ? value / 1000 : value;
+      // Get delay from chain (convert from ms to seconds)
+      const delayInSeconds = (chainDelays.get(animation.id) || 0) / 1000;
+      
+      // Calculate when this animation ends
+      const endTime = delayInSeconds + durationInSeconds;
+      
+      maxEndTime = Math.max(maxEndTime, endTime);
     });
     
-    return Math.max(...durations);
+    return maxEndTime;
   },
 
   // Calculate chain delays for export (without starting playback)
@@ -717,7 +850,6 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
   
   // ViewBox animation creator (deprecated - poor browser support)
   createViewBoxAnimation: (duration: string, fromViewBox = '0 0 100 100', toViewBox = '0 0 200 200') => {
-    console.warn('ViewBox animations have poor browser support and are deprecated. Consider using transform animations instead.');
     const addAnimation = get().addAnimation;
     addAnimation({
       type: 'animate',

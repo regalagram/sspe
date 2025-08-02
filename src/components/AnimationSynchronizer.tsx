@@ -48,6 +48,21 @@ export const AnimationSynchronizer: React.FC = () => {
     border: '1px solid #007bff'
   };
 
+  const generateSuggestedChainName = () => {
+    // Extract numbers from existing chain names that follow the pattern "Chain X"
+    const existingChainNumbers = animationSync.chains
+      .map(chain => {
+        if (!chain.name) return 0;
+        const match = chain.name.match(/^Chain (\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      })
+      .filter(num => num > 0);
+    
+    // Find the next available number
+    const nextNumber = existingChainNumbers.length > 0 ? Math.max(...existingChainNumbers) + 1 : 1;
+    return `Chain ${nextNumber}`;
+  };
+
   const handleCreateChain = () => {
     if (!newChainName || selectedAnimations.length === 0) {
       alert('Please enter a chain name and select animations');
@@ -153,7 +168,15 @@ export const AnimationSynchronizer: React.FC = () => {
       <div style={{ marginBottom: '12px' }}>
         <button
           style={showCreateChain ? activeButtonStyle : buttonStyle}
-          onClick={() => setShowCreateChain(!showCreateChain)}
+          onClick={() => {
+            if (!showCreateChain) {
+              // When opening the form, suggest a name if none exists
+              if (!newChainName) {
+                setNewChainName(generateSuggestedChainName());
+              }
+            }
+            setShowCreateChain(!showCreateChain);
+          }}
         >
           <Link size={12} />
           {showCreateChain ? 'Hide' : 'Create'} Chain
