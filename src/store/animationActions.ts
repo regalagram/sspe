@@ -293,12 +293,29 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
             } else if (animation.attributeName === 'opacity') {
               targetElement.removeAttribute('opacity');
             } else if (animation.attributeName) {
+              // Remove other animated attributes (x, y, width, height, etc.)
               targetElement.removeAttribute(animation.attributeName);
             }
             
             // Reset style attributes if they were animated
             if (animation.attributeName && targetElement.style) {
               (targetElement.style as any).removeProperty(animation.attributeName);
+            }
+            
+            // For animateTransform, ensure transform is completely reset
+            if (animation.type === 'animateTransform') {
+              targetElement.removeAttribute('transform');
+              if (targetElement.style) {
+                (targetElement.style as any).removeProperty('transform');
+              }
+            }
+            
+            // For filter-related animations, reset filter-related attributes
+            if (animation.attributeName && animation.attributeName.includes('filter')) {
+              targetElement.removeAttribute('filter');
+              if (targetElement.style) {
+                (targetElement.style as any).removeProperty('filter');
+              }
             }
           }
         } catch (error) {
@@ -334,7 +351,50 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
       clearTimeout(currentState.animationState.autoResetTimerId);
     }
     
-    // Stop all animations first
+    // Reset all animated elements to their initial state (same as stopAnimations)
+    const resetAnimatedElements = () => {
+      currentState.animations.forEach((animation: any) => {
+        try {
+          const targetElement = document.getElementById(animation.targetElementId);
+          if (targetElement) {
+            // Remove any animated attribute transformations
+            if (animation.attributeName === 'transform') {
+              targetElement.removeAttribute('transform');
+            } else if (animation.attributeName === 'opacity') {
+              targetElement.removeAttribute('opacity');
+            } else if (animation.attributeName) {
+              // Remove other animated attributes (x, y, width, height, etc.)
+              targetElement.removeAttribute(animation.attributeName);
+            }
+            
+            // Reset style attributes if they were animated
+            if (animation.attributeName && targetElement.style) {
+              (targetElement.style as any).removeProperty(animation.attributeName);
+            }
+            
+            // For animateTransform, ensure transform is completely reset
+            if (animation.type === 'animateTransform') {
+              targetElement.removeAttribute('transform');
+              if (targetElement.style) {
+                (targetElement.style as any).removeProperty('transform');
+              }
+            }
+            
+            // For filter-related animations, reset filter-related attributes
+            if (animation.attributeName && animation.attributeName.includes('filter')) {
+              targetElement.removeAttribute('filter');
+              if (targetElement.style) {
+                (targetElement.style as any).removeProperty('filter');
+              }
+            }
+          }
+        } catch (error) {
+          console.warn(`Failed to reset element ${animation.targetElementId}:`, error);
+        }
+      });
+    };
+    
+    // Stop all SVG animation elements first
     currentState.animations.forEach((animation: any) => {
       try {
         const animationElement = document.querySelector(`[id*="${animation.id}"]`);
@@ -346,6 +406,9 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
       }
     });
     
+    // Reset elements after a short delay to ensure animations have stopped
+    setTimeout(resetAnimatedElements, 100);
+    
     // Use the same mechanism as the timeline - set time to 0
     // This will trigger the same reset behavior that works for the timeline indicator
     get().setAnimationTime(0);
@@ -355,8 +418,10 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
       animationState: {
         ...state.animationState,
         isPlaying: false,
+        currentTime: 0, // Reset to beginning of timeline
         startTime: null,
         chainDelays: new Map(), // Clear chain delays to indicate full stop
+        restartKey: (state.animationState.restartKey || 0) + 1, // Force re-render to reset animations
         autoResetTimerId: null, // Clear timer ID
       },
     }));

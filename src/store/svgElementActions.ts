@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { EditorState, SVGImage, SVGClipPath, SVGMask, SVGFilter, SVGMarker, SVGSymbol, SVGUse, Point } from '../types';
 import { generateId } from '../utils/id-utils';
+import { HistoryActions } from './historyActions';
 
 export interface SVGElementActions {
   // Image actions
@@ -57,7 +58,7 @@ export interface SVGElementActions {
 }
 
 export const createSVGElementActions: StateCreator<
-  EditorState & SVGElementActions,
+  EditorState & SVGElementActions & HistoryActions,
   [],
   [],
   SVGElementActions
@@ -150,21 +151,29 @@ export const createSVGElementActions: StateCreator<
     })),
 
   // Filter actions
-  addFilter: (filterData) =>
+  addFilter: (filterData) => {
+    const state = get();
+    state.pushToHistory();
     set((state) => ({
       filters: [...state.filters, { ...filterData, id: generateId() }],
       renderVersion: state.renderVersion + 1,
-    })),
+    }));
+  },
 
-  updateFilter: (id, updates) =>
+  updateFilter: (id, updates) => {
+    const state = get();
+    state.pushToHistory();
     set((state) => ({
       filters: state.filters.map((filter) =>
         filter.id === id ? { ...filter, ...updates } : filter
       ),
       renderVersion: state.renderVersion + 1,
-    })),
+    }));
+  },
 
-  removeFilter: (id) =>
+  removeFilter: (id) => {
+    const state = get();
+    state.pushToHistory();
     set((state) => ({
       filters: state.filters.filter((filter) => filter.id !== id),
       selection: {
@@ -172,12 +181,14 @@ export const createSVGElementActions: StateCreator<
         selectedFilters: state.selection.selectedFilters.filter((filterId) => filterId !== id),
       },
       renderVersion: state.renderVersion + 1,
-    })),
+    }));
+  },
 
   duplicateFilter: (id) => {
     const state = get();
     const filter = state.filters.find((f) => f.id === id);
     if (filter) {
+      state.pushToHistory();
       const { id: _, ...filterData } = filter;
       state.addFilter(filterData);
     }

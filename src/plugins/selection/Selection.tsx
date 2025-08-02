@@ -216,6 +216,302 @@ export const SelectionRectRenderer: React.FC = () => {
   );
 };
 
+// Detailed Selection Information Component
+const SelectionDetails: React.FC = () => {
+  const { selection, paths, texts, images, uses, groups, clipPaths, masks, filters, markers, symbols, textPaths } = useEditorStore();
+  
+  const getElementDetails = () => {
+    const details: any[] = [];
+    
+    // Paths
+    selection.selectedPaths.forEach(pathId => {
+      const path = paths.find(p => p.id === pathId);
+      if (path) {
+        details.push({
+          type: 'Path',
+          id: pathId,
+          info: `${path.subPaths.length} subpath${path.subPaths.length !== 1 ? 's' : ''}`,
+          style: path.style
+        });
+      }
+    });
+    
+    // SubPaths
+    selection.selectedSubPaths.forEach(subPathId => {
+      const parentPath = paths.find(p => p.subPaths.some(sp => sp.id === subPathId));
+      const subPath = parentPath?.subPaths.find(sp => sp.id === subPathId);
+      if (subPath) {
+        details.push({
+          type: 'SubPath',
+          id: subPathId,
+          info: `${subPath.commands.length} command${subPath.commands.length !== 1 ? 's' : ''}`,
+          parent: `Path: ${parentPath?.id.slice(-8)}`
+        });
+      }
+    });
+    
+    // Commands
+    selection.selectedCommands.forEach(commandId => {
+      let commandInfo = null;
+      for (const path of paths) {
+        for (const subPath of path.subPaths) {
+          const command = subPath.commands.find(cmd => cmd.id === commandId);
+          if (command) {
+            commandInfo = {
+              type: 'Command',
+              id: commandId,
+              info: `${command.command} (${command.x?.toFixed(1) || 0}, ${command.y?.toFixed(1) || 0})`,
+              parent: `SubPath: ${subPath.id.slice(-8)}`
+            };
+            break;
+          }
+        }
+        if (commandInfo) break;
+      }
+      if (commandInfo) details.push(commandInfo);
+    });
+    
+    // Texts
+    selection.selectedTexts.forEach(textId => {
+      const text = texts.find(t => t.id === textId);
+      if (text) {
+        const content = text.type === 'text' ? text.content : 
+          text.spans?.map(span => span.content).join(' ') || '';
+        details.push({
+          type: 'Text',
+          id: textId,
+          info: `"${content.slice(0, 20)}${content.length > 20 ? '...' : ''}"`,
+          style: { fontSize: text.fontSize, fontFamily: text.fontFamily }
+        });
+      }
+    });
+    
+    // TextPaths
+    selection.selectedTextPaths?.forEach(textPathId => {
+      const textPath = textPaths.find(tp => tp.id === textPathId);
+      if (textPath) {
+        details.push({
+          type: 'TextPath',
+          id: textPathId,
+          info: `"${textPath.content.slice(0, 20)}${textPath.content.length > 20 ? '...' : ''}"`,
+          parent: `Path: ${textPath.pathRef?.slice(-8)}`
+        });
+      }
+    });
+    
+    // Images
+    selection.selectedImages.forEach(imageId => {
+      const image = images.find(i => i.id === imageId);
+      if (image) {
+        details.push({
+          type: 'Image',
+          id: imageId,
+          info: `${image.width}×${image.height}px`,
+          source: image.href
+        });
+      }
+    });
+    
+    // Use elements
+    selection.selectedUses.forEach(useId => {
+      const use = uses.find(u => u.id === useId);
+      if (use) {
+        details.push({
+          type: 'Use',
+          id: useId,
+          info: `${use.width || 100}×${use.height || 100}px`,
+          href: use.href
+        });
+      }
+    });
+    
+    // Groups
+    selection.selectedGroups.forEach(groupId => {
+      const group = groups.find(g => g.id === groupId);
+      if (group) {
+        const childTypes = group.children.reduce((acc, child) => {
+          acc[child.type] = (acc[child.type] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        
+        const childInfo = Object.entries(childTypes)
+          .map(([type, count]) => `${count} ${type}${count !== 1 ? 's' : ''}`)
+          .join(', ');
+        
+        details.push({
+          type: 'Group',
+          id: groupId,
+          info: childInfo,
+          children: group.children,
+          style: group.style
+        });
+      }
+    });
+    
+    // SVG Elements
+    ['clipPaths', 'masks', 'filters', 'markers', 'symbols'].forEach(elementType => {
+      const selectionKey = `selected${elementType.charAt(0).toUpperCase() + elementType.slice(1)}` as keyof typeof selection;
+      const storeKey = elementType as keyof typeof useEditorStore.getState;
+      
+      (selection[selectionKey] as string[])?.forEach(elementId => {
+        const elements = (useEditorStore.getState()[storeKey] as any[]);
+        const element = elements.find((e: any) => e.id === elementId);
+        if (element) {
+          details.push({
+            type: elementType.slice(0, -1).charAt(0).toUpperCase() + elementType.slice(1, -1),
+            id: elementId,
+            info: element.name || `${elementType.slice(0, -1)} element`,
+            ...(element.type && { elementType: element.type })
+          });
+        }
+      });
+    });
+    
+    return details;
+  };
+  
+  const elementDetails = getElementDetails();
+  
+  if (elementDetails.length === 0) {
+    return (
+      <div style={{
+        fontSize: '12px',
+        color: '#666',
+        textAlign: 'center',
+        padding: '8px',
+        background: '#f9f9f9',
+        borderRadius: '4px',
+        border: '1px solid #ddd',
+        fontStyle: 'italic'
+      }}>
+        No elements selected
+      </div>
+    );
+  }
+  
+  return (
+    <div style={{
+      fontSize: '11px',
+      maxHeight: '300px',
+      overflowY: 'auto',
+      border: '1px solid #ddd',
+      borderRadius: '4px',
+      background: '#fff'
+    }}>
+      <div style={{
+        position: 'sticky',
+        top: 0,
+        background: '#f5f5f5',
+        padding: '8px',
+        borderBottom: '1px solid #ddd',
+        fontWeight: 'bold',
+        color: '#333'
+      }}>
+        Selection Details ({elementDetails.length} items)
+      </div>
+      
+      {elementDetails.map((detail, index) => (
+        <div key={`${detail.type}-${detail.id}-${index}`} style={{
+          padding: '8px',
+          borderBottom: index < elementDetails.length - 1 ? '1px solid #eee' : 'none'
+        }}>
+          <div style={{
+            fontWeight: 'bold',
+            color: '#007acc',
+            marginBottom: '2px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <span>{detail.type}</span>
+            <span style={{
+              fontSize: '9px',
+              color: '#666',
+              fontFamily: 'monospace',
+              background: '#f0f0f0',
+              padding: '1px 4px',
+              borderRadius: '2px'
+            }}>
+              {detail.id.slice(-8)}
+            </span>
+          </div>
+          
+          <div style={{ color: '#333', marginBottom: '4px' }}>
+            {detail.info}
+          </div>
+          
+          {detail.parent && (
+            <div style={{ color: '#666', fontSize: '10px' }}>
+              ↳ {detail.parent}
+            </div>
+          )}
+          
+          {detail.children && (
+            <div style={{ 
+              marginTop: '4px',
+              padding: '4px 8px',
+              background: '#f8f8f8',
+              borderRadius: '3px',
+              border: '1px solid #e0e0e0'
+            }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '2px', color: '#555' }}>Group Contents:</div>
+              {detail.children.map((child: any, childIndex: number) => (
+                <div key={childIndex} style={{ 
+                  fontSize: '10px',
+                  color: '#666',
+                  padding: '1px 0',
+                  display: 'flex',
+                  justifyContent: 'space-between'
+                }}>
+                  <span>{child.type}</span>
+                  <span style={{ fontFamily: 'monospace' }}>{child.id.slice(-6)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {detail.style && (
+            <div style={{ 
+              marginTop: '4px',
+              fontSize: '10px',
+              color: '#666',
+              background: '#f8f8f8',
+              padding: '2px 4px',
+              borderRadius: '2px'
+            }}>
+              {detail.style.fill && `Fill: ${detail.style.fill} `}
+              {detail.style.stroke && `Stroke: ${detail.style.stroke} `}
+              {detail.style.strokeWidth && `SW: ${detail.style.strokeWidth} `}
+              {detail.style.fontSize && `Font: ${detail.style.fontSize}px `}
+            </div>
+          )}
+          
+          {detail.source && (
+            <div style={{ 
+              fontSize: '10px',
+              color: '#007acc',
+              marginTop: '2px',
+              wordBreak: 'break-all'
+            }}>
+              {detail.source.slice(0, 40)}...
+            </div>
+          )}
+          
+          {detail.href && (
+            <div style={{ 
+              fontSize: '10px',
+              color: '#007acc',
+              marginTop: '2px'
+            }}>
+              → {detail.href}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // Selection Tools UI Components
 interface SelectionToolsProps {
   currentMode: string;
@@ -268,6 +564,8 @@ export const SelectionTools: React.FC<SelectionToolsProps> = ({
       }}>
         <strong>{selectedCount}</strong> item{selectedCount !== 1 ? 's' : ''} selected
       </div>
+      
+      <SelectionDetails />
     </div>
   );
 };
