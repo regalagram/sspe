@@ -58,6 +58,9 @@ export interface AnimationActions {
   // Synchronized animation support
   createAnimationChain: (name: string, animations: { animationId: string; delay?: number; trigger?: 'start' | 'end' | 'repeat'; dependsOn?: string }[]) => void;
   removeAnimationChain: (chainId: string) => void;
+  updateAnimationChain: (chainId: string, updates: { name?: string; animations?: { animationId: string; delay?: number; trigger?: 'start' | 'end' | 'repeat'; dependsOn?: string }[] }) => void;
+  updateChainAnimationDelay: (chainId: string, animationId: string, newDelay: number) => void;
+  updateChainAnimationTrigger: (chainId: string, animationId: string, newTrigger: 'start' | 'end' | 'repeat') => void;
   addAnimationEvent: (event: AnimationEvent) => void;
   processAnimationEvents: () => void;
   
@@ -130,11 +133,46 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
 
   // Animation playback control
   playAnimations: () => {
+    const state = get();
+    const currentTime = Date.now();
+    
+    // Process animation chains to calculate proper begin times
+    const processedAnimations = new Map<string, number>(); // animationId -> begin time in ms
+    
+    state.animationSync.chains.forEach((chain: any) => {
+      let chainStartTime = 0;
+      
+      chain.animations.forEach((chainAnim: any, index: number) => {
+        let beginTime = chainStartTime;
+        
+        if (chainAnim.dependsOn) {
+          // If this animation depends on another, calculate when it should start
+          const dependencyDelay = processedAnimations.get(chainAnim.dependsOn) || 0;
+          const dependencyAnimation = state.animations.find((a: any) => a.id === chainAnim.dependsOn);
+          if (dependencyAnimation) {
+            // Parse duration more robustly
+            const durValue = dependencyAnimation.dur || '2s';
+            const durMatch = durValue.match(/^(\d+(?:\.\d+)?)(s|ms)?$/i);
+            const durNumber = durMatch ? parseFloat(durMatch[1]) : 2;
+            const durUnit = durMatch ? (durMatch[2] || 's').toLowerCase() : 's';
+            const dependencyDuration = (durUnit === 'ms' ? durNumber : durNumber * 1000);
+            beginTime = Math.max(beginTime, dependencyDelay + dependencyDuration);
+          }
+        }
+        
+        // Add any additional delay specified in the chain
+        beginTime += (chainAnim.delay || 0) * 1000;
+        
+        processedAnimations.set(chainAnim.animationId, beginTime);
+      });
+    });
+    
     set((state: any) => ({
       animationState: {
         ...state.animationState,
         isPlaying: true,
-        startTime: Date.now(), // Record when playback started
+        startTime: currentTime,
+        chainDelays: processedAnimations, // Store calculated delays
       },
     }));
   },
@@ -154,6 +192,7 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
         ...state.animationState,
         isPlaying: false,
         currentTime: 0,
+        chainDelays: new Map(), // Clear chain delays when stopping
       },
     }));
   },
@@ -726,6 +765,57 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
       animationSync: {
         ...state.animationSync,
         chains: state.animationSync.chains.filter((chain: any) => chain.id !== chainId),
+      },
+    }));
+  },
+  
+  updateAnimationChain: (chainId: string, updates: { name?: string; animations?: { animationId: string; delay?: number; trigger?: 'start' | 'end' | 'repeat'; dependsOn?: string }[] }) => {
+    set((state: any) => ({
+      animationSync: {
+        ...state.animationSync,
+        chains: state.animationSync.chains.map((chain: any) => 
+          chain.id === chainId ? { ...chain, ...updates } : chain
+        ),
+      },
+    }));
+  },
+  
+  updateChainAnimationDelay: (chainId: string, animationId: string, newDelay: number) => {
+    set((state: any) => ({
+      animationSync: {
+        ...state.animationSync,
+        chains: state.animationSync.chains.map((chain: any) => {
+          if (chain.id !== chainId) return chain;
+          
+          return {
+            ...chain,
+            animations: chain.animations.map((chainAnim: any) => 
+              chainAnim.animationId === animationId 
+                ? { ...chainAnim, delay: newDelay }
+                : chainAnim
+            )
+          };
+        }),
+      },
+    }));
+  },
+  
+  updateChainAnimationTrigger: (chainId: string, animationId: string, newTrigger: 'start' | 'end' | 'repeat') => {
+    set((state: any) => ({
+      animationSync: {
+        ...state.animationSync,
+        chains: state.animationSync.chains.map((chain: any) => {
+          if (chain.id !== chainId) return chain;
+          
+          return {
+            ...chain,
+            animations: chain.animations.map((chainAnim: any) => 
+              chainAnim.animationId === animationId 
+                ? { ...chainAnim, trigger: newTrigger }
+                : chainAnim
+            )
+          };
+        }),
       },
     }));
   },

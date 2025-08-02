@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ChevronRight, ArrowLeft, Settings, Palette, Layers, Zap, Play } from 'lucide-react';
 import { UIComponentDefinition } from '../core/PluginSystem';
 import { usePanelModeStore } from '../plugins/panelmode/PanelManager';
+import { ContextActionsCarousel } from './ContextActionsCarousel';
 
 interface MobilePluginMenuProps {
   plugins: UIComponentDefinition[];
@@ -227,8 +228,12 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
         overflow: 'auto',
         WebkitOverflowScrolling: 'touch',
         touchAction: 'pan-y',
-        padding: '16px 16px 40px 16px' // Extra padding, especially bottom
+        padding: '0px 0px 40px 0px' // No top/side padding for carousel
       }}>
+      {/* Context Actions Carousel at the top */}
+      <ContextActionsCarousel />
+      
+      <div style={{ padding: '0px 16px' }}>
       {nonEmptyCategories.map(category => (
         <div key={category.id} style={{ marginBottom: '8px' }}>
           <button
@@ -361,6 +366,7 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
         marginTop: '16px'
       }}>
         • • •
+      </div>
       </div>
     </div>
   );

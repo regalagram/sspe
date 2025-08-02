@@ -4,7 +4,6 @@ import { TextElementType, TextElement, MultilineTextElement } from '../../types'
 import { getStyleValue } from '../../utils/gradient-utils';
 import { getContrastColor } from '../../utils/path-utils';
 import { calculateTextBoundsDOM } from '../../utils/text-utils';
-import { useAnimationsForElement } from '../../components/AnimationRenderer';
 
 export const TextRenderer: React.FC = () => {
   const { 
@@ -15,11 +14,97 @@ export const TextRenderer: React.FC = () => {
     enabledFeatures
   } = useEditorStore();
 
+  // Get animations directly from store to avoid hook ordering issues
+  const { animations: allAnimations, animationState } = useEditorStore();
+  const [animationKey, setAnimationKey] = React.useState(0);
+  
+  // Force re-render of animations when playback state changes
+  React.useEffect(() => {
+    setAnimationKey(prev => prev + 1);
+  }, [animationState.isPlaying]);
+  
+  const getAnimationsForText = React.useCallback((textId: string) => {
+    const textAnimations = allAnimations.filter(animation => animation.targetElementId === textId);
+    
+    return textAnimations.map((animation, index) => {
+      // Control playback based on animation state
+      const beginValue = animationState.isPlaying ? '0s' : 'indefinite';
+      
+      const key = `${animation.id}-${index}-${animationKey}`;
+      const commonProps = {
+        dur: animation.dur || '2s',
+        begin: beginValue,
+        end: animation.end,
+        fill: animation.fill || 'freeze',
+        repeatCount: animation.repeatCount || 'indefinite',
+        calcMode: animation.calcMode || 'linear',
+        keyTimes: animation.keyTimes,
+        keySplines: animation.keySplines,
+      };
+
+      switch (animation.type) {
+        case 'animate':
+          return (
+            <animate
+              key={key}
+              {...commonProps}
+              attributeName={animation.attributeName}
+              values={animation.values}
+              from={animation.from}
+              to={animation.to}
+            />
+          );
+
+        case 'animateTransform':
+          return (
+            <animateTransform
+              key={key}
+              {...commonProps}
+              attributeName={animation.attributeName}
+              type={animation.transformType}
+              values={animation.values}
+              from={animation.from}
+              to={animation.to}
+              additive={animation.additive || 'replace'}
+              accumulate={animation.accumulate || 'none'}
+            />
+          );
+
+        case 'animateMotion':
+          return (
+            <animateMotion
+              key={key}
+              {...commonProps}
+              path={animation.mpath ? undefined : animation.path}
+              rotate={animation.rotate || 'auto'}
+              keyPoints={animation.keyPoints}
+            >
+              {animation.mpath && (
+                <mpath href={`#${animation.mpath}`} />
+              )}
+            </animateMotion>
+          );
+          
+        case 'set':
+          return (
+            <set
+              key={key}
+              {...commonProps}
+              attributeName={animation.attributeName}
+              to={animation.to}
+            />
+          );
+
+        default:
+          return <React.Fragment key={`empty-${(animation as any).id || 'unknown'}-${index}-${animationKey}`}></React.Fragment>;
+      }
+    });
+  }, [allAnimations, animationState.isPlaying, animationKey]);
 
   const renderTextElement = (text: TextElement) => {
     const isSelected = selection.selectedTexts.includes(text.id);
     const isWireframeMode = enabledFeatures.wireframeEnabled;
-    const animations = useAnimationsForElement(text.id);
+    const animations = getAnimationsForText(text.id);
     
     return (
       <g key={`text-group-${text.id}`}>
@@ -134,7 +219,7 @@ export const TextRenderer: React.FC = () => {
   const renderMultilineTextElement = (text: MultilineTextElement) => {
     const isSelected = selection.selectedTexts.includes(text.id);
     const isWireframeMode = enabledFeatures.wireframeEnabled;
-    const animations = useAnimationsForElement(text.id);
+    const animations = getAnimationsForText(text.id);
     
     return (
       <g key={`multiline-text-group-${text.id}`}>

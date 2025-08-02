@@ -119,6 +119,7 @@ const loadInitialState = (): EditorState => {
       // Synchronization
       syncGroups: new Map(),
       timeline: [],
+      chainDelays: new Map(),
     },
     selection: {
       selectedPaths: [],

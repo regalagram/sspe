@@ -52,6 +52,15 @@ export function executeDelete(editorState?: any) {
   // Save current state to history before deletion
   state.pushToHistory();
 
+  // Collect all element IDs that will be deleted for cleanup
+  const elementsToDelete = new Set<string>([
+    ...state.selection.selectedPaths,
+    ...state.selection.selectedTexts || [],
+    ...state.selection.selectedGroups || [],
+    ...state.selection.selectedImages || [],
+    ...state.selection.selectedUses || []
+  ]);
+
   // Delete selected paths
   state.selection.selectedPaths.forEach((pathId: string) => {
     state.removePath(pathId);
@@ -112,8 +121,50 @@ export function executeDelete(editorState?: any) {
     });
   }, 500);
 
+  // Clean up orphaned references after deletion
+  cleanupOrphanedReferences(state, elementsToDelete);
+
   // Clear selection after deletion
   state.clearSelection();
+}
+
+// Function to clean up orphaned references in animations and filters
+function cleanupOrphanedReferences(state: any, deletedElementIds: Set<string>) {
+  // Clean up orphaned animations
+  const orphanedAnimations = state.animations.filter((animation: any) => 
+    deletedElementIds.has(animation.targetElementId)
+  );
+  
+  orphanedAnimations.forEach((animation: any) => {
+    console.log(`🧹 Cleaning up orphaned animation ${animation.id} for deleted element ${animation.targetElementId}`);
+    state.removeAnimation(animation.id);
+  });
+
+  // Clean up filters that are only referenced by deleted elements
+  // This is more complex as filters might be shared between elements
+  // For now, we'll log the filters that might need cleanup
+  const potentialOrphanedFilters = state.filters.filter((filter: any) => {
+    // Check if this filter is only used by deleted elements
+    const allElements = [
+      ...state.paths,
+      ...state.texts,
+      ...state.groups,
+      ...state.images
+    ];
+    
+    const elementsUsingFilter = allElements.filter((element: any) => 
+      element.style?.filter === `url(#${filter.id})`
+    );
+    
+    // If no elements are using this filter, it might be orphaned
+    return elementsUsingFilter.length === 0;
+  });
+  
+  potentialOrphanedFilters.forEach((filter: any) => {
+    console.log(`🧹 Found potentially orphaned filter ${filter.id}, consider cleanup`);
+    // For safety, we won't auto-delete filters as they might be used elsewhere
+    // Users can manually clean them up if needed
+  });
 }
 
 export const DeleteComponent: React.FC = () => {

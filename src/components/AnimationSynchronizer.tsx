@@ -10,6 +10,9 @@ export const AnimationSynchronizer: React.FC = () => {
     animationSync,
     createAnimationChain,
     removeAnimationChain,
+    updateAnimationChain,
+    updateChainAnimationDelay,
+    updateChainAnimationTrigger,
     processAnimationEvents,
     playAnimations,
     pauseAnimations,
@@ -22,6 +25,8 @@ export const AnimationSynchronizer: React.FC = () => {
   const [newChainName, setNewChainName] = useState('');
   const [selectedAnimations, setSelectedAnimations] = useState<string[]>([]);
   const [chainType, setChainType] = useState<'sequential' | 'parallel' | 'custom'>('sequential');
+  const [editingChainName, setEditingChainName] = useState<string | null>(null);
+  const [editChainNameValue, setEditChainNameValue] = useState('');
 
   const buttonStyle: React.CSSProperties = {
     padding: '4px 8px',
@@ -248,9 +253,53 @@ export const AnimationSynchronizer: React.FC = () => {
                   justifyContent: 'space-between',
                   cursor: 'pointer'
                 }} onClick={() => toggleChainExpanded(chain.id)}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
                     {expandedChains.has(chain.id) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                    <span style={{ fontWeight: 'bold', fontSize: '10px' }}>{chain.name || `Chain ${chain.id.slice(-8)}`}</span>
+                    
+                    {/* Editable chain name */}
+                    {editingChainName === chain.id ? (
+                      <input
+                        type="text"
+                        value={editChainNameValue}
+                        onChange={(e) => setEditChainNameValue(e.target.value)}
+                        onBlur={() => {
+                          updateAnimationChain(chain.id, { name: editChainNameValue });
+                          setEditingChainName(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            updateAnimationChain(chain.id, { name: editChainNameValue });
+                            setEditingChainName(null);
+                          }
+                          if (e.key === 'Escape') {
+                            setEditingChainName(null);
+                            setEditChainNameValue(chain.name || `Chain ${chain.id.slice(-8)}`);
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          fontWeight: 'bold',
+                          fontSize: '10px',
+                          padding: '2px 4px',
+                          border: '1px solid #007bff',
+                          borderRadius: '2px',
+                          minWidth: '100px'
+                        }}
+                        autoFocus
+                      />
+                    ) : (
+                      <span 
+                        style={{ fontWeight: 'bold', fontSize: '10px', cursor: 'text' }}
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          setEditingChainName(chain.id);
+                          setEditChainNameValue(chain.name || `Chain ${chain.id.slice(-8)}`);
+                        }}
+                      >
+                        {chain.name || `Chain ${chain.id.slice(-8)}`}
+                      </span>
+                    )}
+                    
                     <span style={{ color: '#666', fontSize: '9px' }}>({chain.animations.length} animations)</span>
                   </div>
                   <button
@@ -269,22 +318,75 @@ export const AnimationSynchronizer: React.FC = () => {
                   <div style={{ padding: '6px' }}>
                     {chain.animations.map((chainAnim, index) => (
                       <div key={`${chainAnim.animationId}-${index}`} style={{
-                        padding: '4px',
-                        marginBottom: '4px',
+                        padding: '6px',
+                        marginBottom: '6px',
                         backgroundColor: '#f8f9fa',
                         borderRadius: '3px',
-                        fontSize: '9px'
+                        fontSize: '9px',
+                        border: '1px solid #e9ecef'
                       }}>
-                        <div style={{ fontWeight: 'bold' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
                           {index + 1}. {getAnimationName(chainAnim.animationId)}
                         </div>
-                        <div style={{ color: '#666' }}>
+                        <div style={{ color: '#666', marginBottom: '4px' }}>
                           Target: {getAnimationTarget(chainAnim.animationId)}
                         </div>
-                        <div style={{ color: '#666' }}>
-                          Delay: {chainAnim.delay || 0}s | Trigger: {chainAnim.trigger || 'start'}
-                          {chainAnim.dependsOn && ` | Depends on: ${getAnimationName(chainAnim.dependsOn).slice(0, 20)}...`}
+                        
+                        {/* Editable delay */}
+                        <div style={{ marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <label style={{ minWidth: '35px', fontSize: '9px', color: '#666' }}>
+                            Delay:
+                          </label>
+                          <input
+                            type="number"
+                            value={chainAnim.delay || 0}
+                            onChange={(e) => {
+                              const newDelay = parseFloat(e.target.value) || 0;
+                              updateChainAnimationDelay(chain.id, chainAnim.animationId, newDelay);
+                            }}
+                            step="0.1"
+                            min="0"
+                            max="10"
+                            style={{
+                              width: '50px',
+                              padding: '2px',
+                              fontSize: '9px',
+                              border: '1px solid #ddd',
+                              borderRadius: '2px'
+                            }}
+                          />
+                          <span style={{ fontSize: '9px', color: '#666' }}>s</span>
                         </div>
+                        
+                        {/* Editable trigger */}
+                        <div style={{ marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <label style={{ minWidth: '35px', fontSize: '9px', color: '#666' }}>
+                            Trigger:
+                          </label>
+                          <select
+                            value={chainAnim.trigger || 'start'}
+                            onChange={(e) => {
+                              updateChainAnimationTrigger(chain.id, chainAnim.animationId, e.target.value as 'start' | 'end' | 'repeat');
+                            }}
+                            style={{
+                              padding: '2px',
+                              fontSize: '9px',
+                              border: '1px solid #ddd',
+                              borderRadius: '2px',
+                              backgroundColor: '#fff'
+                            }}
+                          >
+                            <option value="start">Start</option>
+                            <option value="end">End</option>
+                            <option value="repeat">Repeat</option>
+                          </select>
+                        </div>
+                        
+                        {chainAnim.dependsOn && (
+                          <div style={{ color: '#666', fontSize: '8px' }}>
+                            Depends on: {getAnimationName(chainAnim.dependsOn).slice(0, 20)}...
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

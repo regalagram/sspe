@@ -970,6 +970,7 @@ export interface AnimationState {
   // Synchronization
   syncGroups: Map<string, string[]>; // Groups of synchronized animations
   timeline: AnimationTimelineEntry[]; // Timeline of all animation events
+  chainDelays?: Map<string, number>; // Calculated delays for chained animations in ms
 }
 
 export interface AnimationTimelineEntry {

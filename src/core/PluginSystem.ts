@@ -135,14 +135,6 @@ export class PluginManager {
         pluginsToProcess = [contextMenuPlugin, ...otherPlugins];
         contextMenuPrioritized = true;
       }
-    } else if (eventType === 'pointerDown' && (e as PointerEvent<SVGElement>).pointerType !== 'mouse') {
-      // For touch/pen events, also prioritize context menu for long press detection
-      const contextMenuPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'context-menu');
-      const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'context-menu');
-      if (contextMenuPlugin) {
-        pluginsToProcess = [contextMenuPlugin, ...otherPlugins];
-        contextMenuPrioritized = true;
-      }
     }
 
     if ((handleType === 'transform' || handleType === 'rotation') && eventType === 'pointerDown' && !contextMenuPrioritized) {
@@ -172,14 +164,6 @@ export class PluginManager {
         const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'pointer-interaction');
         if (pointerInteractionPlugin) {
           pluginsToProcess = [pointerInteractionPlugin, ...otherPlugins];
-        }
-      } else if (elementType === 'subpath' && !commandId) {
-        // When clicking on subpath body (not command points), prioritize context-menu for long press
-        const contextMenuPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'context-menu');
-        const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'context-menu');
-        if (contextMenuPlugin) {
-          pluginsToProcess = [contextMenuPlugin, ...otherPlugins];
-          contextMenuPrioritized = true;
         }
       } else if (commandId && !elementType) {
         // When clicking on a command (path commands), process PointerInteraction first

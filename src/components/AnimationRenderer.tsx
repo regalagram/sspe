@@ -207,18 +207,26 @@ export const useAnimationsForElement = (elementId: string) => {
   const { animations, animationState } = useEditorStore();
   const [animationKey, setAnimationKey] = React.useState(0);
   
-  // Force re-render of animations when playback state changes
+  // Force re-render of animations when playback state or chain delays change
   React.useEffect(() => {
     setAnimationKey(prev => prev + 1);
-  }, [animationState.isPlaying]);
+  }, [animationState.isPlaying, animationState.chainDelays]);
   
   const createAnimationElement = React.useCallback((animation: SVGAnimation) => {
     // Control playback based on animation state - use direct timing instead of refs
     let beginValue: string;
     
     if (animationState.isPlaying) {
-      // Start immediately when playing
-      beginValue = '0s';
+      // Check if this animation is part of a chain with calculated delays
+      const chainDelay = animationState.chainDelays?.get(animation.id);
+      if (chainDelay !== undefined) {
+        // Convert delay from ms to seconds and add to current time
+        const delayInSeconds = chainDelay / 1000;
+        beginValue = `${delayInSeconds}s`;
+      } else {
+        // Start immediately when playing (no chain delay)
+        beginValue = '0s';
+      }
     } else {
       // Don't start when not playing
       beginValue = 'indefinite';
@@ -293,7 +301,7 @@ export const useAnimationsForElement = (elementId: string) => {
       default:
         return <React.Fragment key={`empty-${(animation as any).id}-${animationKey}`}></React.Fragment>;
     }
-  }, [animationState.isPlaying, animationKey]);
+  }, [animationState.isPlaying, animationState.chainDelays, animationKey]);
   
   return React.useMemo(() => {
     const elementAnimations = animations.filter(animation => animation.targetElementId === elementId);
