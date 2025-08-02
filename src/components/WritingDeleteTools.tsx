@@ -23,7 +23,6 @@ export const WritingDeleteTools: React.FC = () => {
 
   return (
     <ToolbarSection title="Delete">
-      <div style={{ width: '4px' }} />
       <ToolbarButton
         icon={<Trash2 size={16} />}
         onClick={handleDelete}
@@ -33,7 +32,6 @@ export const WritingDeleteTools: React.FC = () => {
         title="Delete Selection (Del/Backspace)"
         size="medium"
       />
-      <div style={{ width: '4px' }} />
     </ToolbarSection>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Square } from 'lucide-react';
+import { Play, Square } from 'lucide-react';
 import { useEditorStore } from '../store/editorStore';
 import { MobileToolbarButton, MobileToolbarSection } from './ToolbarButton';
 
@@ -8,7 +8,6 @@ export const AnimationPlayButton: React.FC = () => {
     animations, 
     animationState, 
     playAnimations, 
-    pauseAnimations, 
     stopAnimations 
   } = useEditorStore();
 
@@ -17,12 +16,8 @@ export const AnimationPlayButton: React.FC = () => {
     return null;
   }
 
-  const handlePlayPause = () => {
-    if (animationState.isPlaying) {
-      pauseAnimations();
-    } else {
-      playAnimations();
-    }
+  const handlePlay = () => {
+    playAnimations();
   };
 
   const handleStop = () => {
@@ -31,16 +26,15 @@ export const AnimationPlayButton: React.FC = () => {
 
   return (
     <MobileToolbarSection title="Animation Controls">
-      <MobileToolbarButton
-        icon={animationState.isPlaying ? <Pause /> : <Play />}
-        onClick={handlePlayPause}
-        active={animationState.isPlaying}
-        color="#007acc"
-        title={animationState.isPlaying ? 'Pause Animations' : 'Play Animations'}
-        size="medium"
-      />
-      
-      {animationState.isPlaying && (
+      {!animationState.isPlaying ? (
+        <MobileToolbarButton
+          icon={<Play />}
+          onClick={handlePlay}
+          color="#007acc"
+          title="Play Animations"
+          size="medium"
+        />
+      ) : (
         <MobileToolbarButton
           icon={<Square />}
           onClick={handleStop}

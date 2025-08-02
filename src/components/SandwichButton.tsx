@@ -29,8 +29,6 @@ export const SandwichButton: React.FC<SandwichButtonProps> = ({
     }
   };
 
-  // Determine if the button should appear "active" (panel/sheet is open)
-  const isActive = isMobileDevice ? isMobileBottomSheetOpen : accordionVisible;
 
   return (
     <>
@@ -42,10 +40,10 @@ export const SandwichButton: React.FC<SandwichButtonProps> = ({
           justifyContent: 'center',
           width: '40px',
           height: '40px',
-          background: isActive ? '#007acc' : 'white',
+          background: 'white',
           fontSize: '12px',
           fontWeight: 600,
-          color: isActive ? 'white' : '#007acc',
+          color: '#007acc',
           border: 'none',
           gap: '4px',
           padding: '0 4px',
@@ -59,14 +57,10 @@ export const SandwichButton: React.FC<SandwichButtonProps> = ({
             : (accordionVisible ? 'Close sidebar' : 'Open sidebar')
         }
         onPointerEnter={(e) => {
-          if (!isActive) {
-            (e.currentTarget as HTMLDivElement).style.background = '#f3f4f6';
-          }
+          (e.currentTarget as HTMLDivElement).style.background = '#f3f4f6';
         }}
         onPointerLeave={(e) => {
-          if (!isActive) {
-            (e.currentTarget as HTMLDivElement).style.background = 'white';
-          }
+          (e.currentTarget as HTMLDivElement).style.background = 'white';
         }}
       >
         <Menu size={16} />
