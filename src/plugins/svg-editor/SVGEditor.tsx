@@ -1689,13 +1689,47 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         const currentAnimations = [...animations];
         currentAnimations.forEach(animation => removeAnimation(animation.id));
         
+        // Create element ID mapping to track original -> final IDs
+        const elementIdMapping: { [key: string]: string } = {};
+        
+        // Map element IDs from imported content to final IDs
+        newPaths.forEach(path => {
+          elementIdMapping[path.id] = path.id; // For now, paths keep their IDs
+        });
+        newTexts.forEach(text => {
+          elementIdMapping[text.id] = text.id; // For now, texts keep their IDs  
+        });
+        newGroups.forEach(group => {
+          elementIdMapping[group.id] = group.id; // For now, groups keep their IDs
+        });
+        
+        console.log(`🔗 Element ID mapping:`, elementIdMapping);
+
         // Create animation ID mapping for chains
         const animationIdMapping: { [key: string]: string } = {};
         
         // Import new animations with deduplication and track ID mapping
         newAnimations.forEach((animation: any) => {
+          // Update target element ID if it exists in our element mapping
+          const updatedAnimation = { ...animation };
+          if (elementIdMapping[animation.targetElementId]) {
+            updatedAnimation.targetElementId = elementIdMapping[animation.targetElementId];
+            console.log(`🎯 Updated animation target: ${animation.targetElementId} -> ${updatedAnimation.targetElementId}`);
+          } else {
+            console.warn(`⚠️  Animation target not found in mapping: ${animation.targetElementId}`);
+          }
+          
+          // Also update mpath reference if it exists and is in our mapping
+          if (updatedAnimation.mpath && elementIdMapping[updatedAnimation.mpath]) {
+            const originalMpath = updatedAnimation.mpath;
+            updatedAnimation.mpath = elementIdMapping[updatedAnimation.mpath];
+            console.log(`🎯 Updated mpath reference: ${originalMpath} -> ${updatedAnimation.mpath}`);
+          } else if (updatedAnimation.mpath) {
+            console.warn(`⚠️  Mpath reference not found in mapping: ${updatedAnimation.mpath}`);
+          }
+          
           // Remove the parsed ID to allow addAnimation to generate a new one and apply deduplication
-          const { id: originalId, ...animationWithoutId } = animation;
+          const { id: originalId, ...animationWithoutId } = updatedAnimation;
           const newId = addAnimation(animationWithoutId);
           animationIdMapping[originalId] = newId;
           console.log(`🔗 Animation ID mapping: ${originalId} -> ${newId}`);
@@ -1760,13 +1794,47 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         
         console.log(`➕ Adding ${updatedNewImages.length} new images to existing ${currentImages.length} images (SVGEditor append)`);
         
+        // Create element ID mapping to track original -> final IDs (append mode)
+        const elementIdMapping: { [key: string]: string } = {};
+        
+        // Map element IDs from imported content to final IDs
+        newPaths.forEach(path => {
+          elementIdMapping[path.id] = path.id; // For now, paths keep their IDs
+        });
+        newTexts.forEach(text => {
+          elementIdMapping[text.id] = text.id; // For now, texts keep their IDs  
+        });
+        newGroups.forEach(group => {
+          elementIdMapping[group.id] = group.id; // For now, groups keep their IDs
+        });
+        
+        console.log(`🔗 Element ID mapping (append):`, elementIdMapping);
+
         // Create animation ID mapping for chains  
         const animationIdMapping: { [key: string]: string } = {};
         
         // Import new animations (append mode doesn't clear existing animations) with deduplication
         newAnimations.forEach((animation: any) => {
+          // Update target element ID if it exists in our element mapping
+          const updatedAnimation = { ...animation };
+          if (elementIdMapping[animation.targetElementId]) {
+            updatedAnimation.targetElementId = elementIdMapping[animation.targetElementId];
+            console.log(`🎯 Updated animation target (append): ${animation.targetElementId} -> ${updatedAnimation.targetElementId}`);
+          } else {
+            console.warn(`⚠️  Animation target not found in mapping (append): ${animation.targetElementId}`);
+          }
+          
+          // Also update mpath reference if it exists and is in our mapping
+          if (updatedAnimation.mpath && elementIdMapping[updatedAnimation.mpath]) {
+            const originalMpath = updatedAnimation.mpath;
+            updatedAnimation.mpath = elementIdMapping[updatedAnimation.mpath];
+            console.log(`🎯 Updated mpath reference (append): ${originalMpath} -> ${updatedAnimation.mpath}`);
+          } else if (updatedAnimation.mpath) {
+            console.warn(`⚠️  Mpath reference not found in mapping (append): ${updatedAnimation.mpath}`);
+          }
+          
           // Remove the parsed ID to allow addAnimation to generate a new one and apply deduplication
-          const { id: originalId, ...animationWithoutId } = animation;
+          const { id: originalId, ...animationWithoutId } = updatedAnimation;
           const newId = addAnimation(animationWithoutId);
           animationIdMapping[originalId] = newId;
           console.log(`🔗 Animation ID mapping (append): ${originalId} -> ${newId}`);

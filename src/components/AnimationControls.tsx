@@ -158,16 +158,60 @@ export const AnimationControls: React.FC = () => {
       targetElementId: targetId,
       attributeName,
       dur: `${duration}s`,
-      values: animationType === 'animateMotion' ? 'M 0,0 L 100,0' : undefined,
+      values: animationType === 'animateMotion' ? (mpathRef ? undefined : pathData) : undefined,
       from: animationType === 'animateMotion' ? undefined : fromValue,
       to: animationType === 'animateMotion' ? undefined : toValue,
-      path: animationType === 'animateMotion' ? 'M 0,0 L 100,0' : undefined,
+      path: animationType === 'animateMotion' ? (mpathRef ? undefined : pathData) : undefined,
+      mpath: animationType === 'animateMotion' && mpathRef ? mpathRef : undefined,
       repeatCount: 'indefinite',
       ...(animationType === 'animateTransform' && { transformType: 'translate' })
     };
 
     addAnimation(animationData);
     setShowCreateForm(false);
+  };
+
+  const handleCreateMotionWithColorTemplate = () => {
+    const targetId = getAnimationTargetId();
+    
+    if (!targetId) {
+      alert('Please select an element to animate');
+      return;
+    }
+
+    // Check if there are any paths to use as motion path
+    if (paths.length === 0) {
+      alert('You need at least one path in your canvas to use as a motion path. Create a path first.');
+      return;
+    }
+
+    // Use the first available path as motion path
+    const motionPathId = paths[0].id;
+
+    // Create the motion animation
+    const motionAnimation = {
+      type: 'animateMotion' as const,
+      targetElementId: targetId,
+      mpath: motionPathId,
+      dur: '8s',
+      repeatCount: 'indefinite',
+      rotate: 'auto'
+    };
+
+    // Create the color change animation
+    const colorAnimation = {
+      type: 'animate' as const,
+      targetElementId: targetId,
+      attributeName: 'stroke',
+      values: '#ff0000;#00ffcc;#0000ff;#ff9900;#ff0000',
+      dur: '8s',
+      repeatCount: 'indefinite'
+    };
+
+    addAnimation(motionAnimation);
+    addAnimation(colorAnimation);
+    
+    alert(`Created motion animation following path: ${motionPathId.slice(-8)} with synchronized color changes!`);
   };
 
   const getAnimationTargetId = () => {
@@ -414,6 +458,7 @@ export const AnimationControls: React.FC = () => {
     if (animation.type === 'animateMotion') {
       setPathData(animation.path || 'M 0,0 L 100,0');
       setRotate(animation.rotate || 'auto');
+      setMpathRef(animation.mpath || '');
     }
     
     setShowEditForm(true);
@@ -467,7 +512,8 @@ export const AnimationControls: React.FC = () => {
         updates.values = undefined;
       }
     } else if (animationType === 'animateMotion') {
-      updates.path = pathData;
+      updates.path = mpathRef ? undefined : pathData;
+      updates.mpath = mpathRef || undefined;
       updates.rotate = rotate === 'auto' || rotate === 'auto-reverse' ? rotate : parseFloat(rotate) || 0;
       updates.attributeName = undefined;
       updates.from = undefined;
@@ -854,6 +900,20 @@ export const AnimationControls: React.FC = () => {
         </div>
       </div>
 
+      {/* Animation Templates */}
+      <div style={{ marginBottom: '12px' }}>
+        <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333' }}>
+          Animation Templates
+        </div>
+        <PluginButton
+          icon={<MapPin size={16} />}
+          text="Motion with Color Change"
+          color="#ff6b35"
+          onPointerDown={() => handleCreateMotionWithColorTemplate()}
+          fullWidth={true}
+        />
+      </div>
+
       <div style={{ marginBottom: '12px' }}>
         <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333' }}>
           Create Animation
@@ -1125,6 +1185,28 @@ export const AnimationControls: React.FC = () => {
                   />
                 </div>
               )}
+              {animationType === 'animateMotion' && (
+                <div style={{ marginBottom: '8px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '10px', fontWeight: 'bold' }}>
+                    Path Reference (mpath):
+                  </label>
+                  <select 
+                    value={mpathRef} 
+                    onChange={(e) => setMpathRef(e.target.value)}
+                    style={{ width: '100%', padding: '4px', fontSize: '10px' }}
+                  >
+                    <option value="">Use custom path data above</option>
+                    {paths.map(path => (
+                      <option key={path.id} value={path.id}>
+                        Path: {path.id.slice(-8)}
+                      </option>
+                    ))}
+                  </select>
+                  <div style={{ fontSize: '8px', color: '#666', marginTop: '2px' }}>
+                    Select an existing path to follow, or leave empty to use custom path data
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Timing Properties */}
@@ -1308,6 +1390,27 @@ export const AnimationControls: React.FC = () => {
                     <option value="180">180 degrees</option>
                     <option value="270">270 degrees</option>
                   </select>
+                </div>
+                
+                <div style={{ marginBottom: '8px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '10px', fontWeight: 'bold' }}>
+                    Path Reference (mpath):
+                  </label>
+                  <select 
+                    value={mpathRef} 
+                    onChange={(e) => setMpathRef(e.target.value)}
+                    style={{ width: '100%', padding: '4px', fontSize: '10px' }}
+                  >
+                    <option value="">Use custom path data above</option>
+                    {paths.map(path => (
+                      <option key={path.id} value={path.id}>
+                        Path: {path.id.slice(-8)}
+                      </option>
+                    ))}
+                  </select>
+                  <div style={{ fontSize: '8px', color: '#666', marginTop: '2px' }}>
+                    Select an existing path to follow, or leave empty to use custom path data
+                  </div>
                 </div>
               </div>
             )}

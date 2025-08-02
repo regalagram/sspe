@@ -2891,8 +2891,8 @@ export function parseCompleteSVG(svgString: string): {
     
     console.log('🎬 Parsed animations:', animations.length, animations);
     
-    // Parse other elements
-    const paths = parseSVGToSubPaths(svgString);
+    // Parse other elements using the modified svgElement (with temp IDs)
+    const paths = parseSVGToSubPaths(svgElement.outerHTML);
     const texts = parseTextElements(svgElement);
     const textPaths = parseTextPaths(svgElement, paths);
     const images = parseImages(svgElement);
