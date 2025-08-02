@@ -218,7 +218,70 @@ export const SelectionRectRenderer: React.FC = () => {
 
 // Detailed Selection Information Component
 const SelectionDetails: React.FC = () => {
-  const { selection, paths, texts, images, uses, groups, clipPaths, masks, filters, markers, symbols, textPaths } = useEditorStore();
+  const { selection, paths, texts, images, uses, groups, clipPaths, masks, filters, markers, symbols, textPaths, animations, animationState } = useEditorStore();
+  
+  // Helper function to check if an element has animations
+  const getElementAnimations = (elementId: string) => {
+    return animations.filter(animation => 
+      animation.targetElementId === elementId
+    );
+  };
+  
+  // Helper function to check if an element has filters applied
+  const getElementFilters = (style: any) => {
+    if (!style) return [];
+    const appliedFilters: string[] = [];
+    
+    if (style.filter) {
+      // Parse filter string to extract filter names/IDs
+      const filterMatch = style.filter.match(/url\(#([^)]+)\)/g);
+      if (filterMatch) {
+        filterMatch.forEach((match: string) => {
+          const filterId = match.replace(/url\(#(.+)\)/, '$1');
+          const filter = filters.find(f => f.id === filterId);
+          if (filter) {
+            appliedFilters.push(filter.id);
+          } else {
+            appliedFilters.push(filterId);
+          }
+        });
+      } else if (style.filter !== 'none') {
+        appliedFilters.push(style.filter);
+      }
+    }
+    
+    return appliedFilters;
+  };
+  
+  // Helper function to get position information
+  const getPositionInfo = (element: any, type: string) => {
+    switch (type) {
+      case 'Path':
+        // For paths, get the first command's position
+        if (element.subPaths?.[0]?.commands?.[0]) {
+          const firstCmd = element.subPaths[0].commands[0];
+          return { x: firstCmd.x || 0, y: firstCmd.y || 0 };
+        }
+        return null;
+      case 'Text':
+        return { x: element.x || 0, y: element.y || 0 };
+      case 'Image':
+      case 'Use':
+        return { x: element.x || 0, y: element.y || 0, width: element.width, height: element.height };
+      case 'Group':
+        // For groups, calculate bounding box from children or use transform
+        if (element.transform) {
+          // Parse transform for translate values
+          const translateMatch = element.transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+          if (translateMatch) {
+            return { x: parseFloat(translateMatch[1]), y: parseFloat(translateMatch[2]) };
+          }
+        }
+        return { x: 0, y: 0 }; // Default group position
+      default:
+        return null;
+    }
+  };
   
   const getElementDetails = () => {
     const details: any[] = [];
@@ -227,11 +290,19 @@ const SelectionDetails: React.FC = () => {
     selection.selectedPaths.forEach(pathId => {
       const path = paths.find(p => p.id === pathId);
       if (path) {
+        const elementAnimations = getElementAnimations(pathId);
+        const elementFilters = getElementFilters(path.style);
+        const position = getPositionInfo(path, 'Path');
+        
         details.push({
           type: 'Path',
           id: pathId,
           info: `${path.subPaths.length} subpath${path.subPaths.length !== 1 ? 's' : ''}`,
-          style: path.style
+          position,
+          animations: elementAnimations,
+          filters: elementFilters,
+          style: path.style,
+          locked: path.subPaths.some(sp => sp.locked)
         });
       }
     });
@@ -240,12 +311,20 @@ const SelectionDetails: React.FC = () => {
     selection.selectedSubPaths.forEach(subPathId => {
       const parentPath = paths.find(p => p.subPaths.some(sp => sp.id === subPathId));
       const subPath = parentPath?.subPaths.find(sp => sp.id === subPathId);
-      if (subPath) {
+      if (subPath && parentPath) {
+        const elementAnimations = getElementAnimations(parentPath.id);
+        const elementFilters = getElementFilters(parentPath.style);
+        const position = subPath.commands[0] ? { x: subPath.commands[0].x || 0, y: subPath.commands[0].y || 0 } : null;
+        
         details.push({
           type: 'SubPath',
           id: subPathId,
           info: `${subPath.commands.length} command${subPath.commands.length !== 1 ? 's' : ''}`,
-          parent: `Path: ${parentPath?.id.slice(-8)}`
+          position,
+          animations: elementAnimations,
+          filters: elementFilters,
+          parent: `Path: ${parentPath.id.slice(-8)}`,
+          locked: subPath.locked
         });
       }
     });
@@ -257,11 +336,26 @@ const SelectionDetails: React.FC = () => {
         for (const subPath of path.subPaths) {
           const command = subPath.commands.find(cmd => cmd.id === commandId);
           if (command) {
+            const elementAnimations = getElementAnimations(path.id);
+            const elementFilters = getElementFilters(path.style);
+            const position = { x: command.x || 0, y: command.y || 0 };
+            
+            let commandDetails = `${command.command}`;
+            if (command.command === 'C') {
+              commandDetails += ` (${command.x?.toFixed(1) || 0}, ${command.y?.toFixed(1) || 0}) CP1(${command.x1?.toFixed(1) || 0}, ${command.y1?.toFixed(1) || 0}) CP2(${command.x2?.toFixed(1) || 0}, ${command.y2?.toFixed(1) || 0})`;
+            } else {
+              commandDetails += ` (${command.x?.toFixed(1) || 0}, ${command.y?.toFixed(1) || 0})`;
+            }
+            
             commandInfo = {
               type: 'Command',
               id: commandId,
-              info: `${command.command} (${command.x?.toFixed(1) || 0}, ${command.y?.toFixed(1) || 0})`,
-              parent: `SubPath: ${subPath.id.slice(-8)}`
+              info: commandDetails,
+              position,
+              animations: elementAnimations,
+              filters: elementFilters,
+              parent: `SubPath: ${subPath.id.slice(-8)}`,
+              locked: subPath.locked
             };
             break;
           }
@@ -277,11 +371,21 @@ const SelectionDetails: React.FC = () => {
       if (text) {
         const content = text.type === 'text' ? text.content : 
           text.spans?.map(span => span.content).join(' ') || '';
+        const elementAnimations = getElementAnimations(textId);
+        const elementFilters = getElementFilters(text.style);
+        const position = getPositionInfo(text, 'Text');
+        
         details.push({
           type: 'Text',
           id: textId,
           info: `"${content.slice(0, 20)}${content.length > 20 ? '...' : ''}"`,
-          style: { fontSize: text.fontSize, fontFamily: text.fontFamily }
+          position,
+          animations: elementAnimations,
+          filters: elementFilters,
+          style: { fontSize: text.fontSize, fontFamily: text.fontFamily, ...text.style },
+          locked: text.locked,
+          rotation: text.rotation,
+          transform: text.transform
         });
       }
     });
@@ -290,11 +394,21 @@ const SelectionDetails: React.FC = () => {
     selection.selectedTextPaths?.forEach(textPathId => {
       const textPath = textPaths.find(tp => tp.id === textPathId);
       if (textPath) {
+        const elementAnimations = getElementAnimations(textPathId);
+        const elementFilters = getElementFilters(textPath.style);
+        
         details.push({
           type: 'TextPath',
           id: textPathId,
           info: `"${textPath.content.slice(0, 20)}${textPath.content.length > 20 ? '...' : ''}"`,
-          parent: `Path: ${textPath.pathRef?.slice(-8)}`
+          animations: elementAnimations,
+          filters: elementFilters,
+          parent: `Path: ${textPath.pathRef?.slice(-8)}`,
+          startOffset: textPath.startOffset,
+          method: textPath.method,
+          side: textPath.side,
+          locked: textPath.locked,
+          transform: textPath.transform
         });
       }
     });
@@ -303,11 +417,20 @@ const SelectionDetails: React.FC = () => {
     selection.selectedImages.forEach(imageId => {
       const image = images.find(i => i.id === imageId);
       if (image) {
+        const elementAnimations = getElementAnimations(imageId);
+        const position = getPositionInfo(image, 'Image');
+        
         details.push({
           type: 'Image',
           id: imageId,
           info: `${image.width}×${image.height}px`,
-          source: image.href
+          position,
+          animations: elementAnimations,
+          source: image.href,
+          locked: image.locked,
+          transform: image.transform,
+          opacity: image.style?.opacity,
+          preserveAspectRatio: image.preserveAspectRatio
         });
       }
     });
@@ -316,11 +439,18 @@ const SelectionDetails: React.FC = () => {
     selection.selectedUses.forEach(useId => {
       const use = uses.find(u => u.id === useId);
       if (use) {
+        const elementAnimations = getElementAnimations(useId);
+        const position = getPositionInfo(use, 'Use');
+        
         details.push({
           type: 'Use',
           id: useId,
           info: `${use.width || 100}×${use.height || 100}px`,
-          href: use.href
+          position,
+          animations: elementAnimations,
+          href: use.href,
+          locked: use.locked,
+          transform: use.transform
         });
       }
     });
@@ -338,12 +468,22 @@ const SelectionDetails: React.FC = () => {
           .map(([type, count]) => `${count} ${type}${count !== 1 ? 's' : ''}`)
           .join(', ');
         
+        const elementAnimations = getElementAnimations(groupId);
+        const position = getPositionInfo(group, 'Group');
+        
         details.push({
           type: 'Group',
           id: groupId,
           info: childInfo,
+          position,
+          animations: elementAnimations,
           children: group.children,
-          style: group.style
+          style: group.style,
+          locked: group.locked,
+          lockLevel: group.lockLevel,
+          visible: group.visible,
+          transform: group.transform,
+          name: group.name
         });
       }
     });
@@ -440,8 +580,70 @@ const SelectionDetails: React.FC = () => {
             {detail.info}
           </div>
           
+          {detail.position && (
+            <div style={{ 
+              fontSize: '10px',
+              color: '#007acc',
+              background: '#f0f8ff',
+              padding: '2px 4px',
+              borderRadius: '2px',
+              marginBottom: '2px',
+              display: 'inline-block'
+            }}>
+              📍 ({detail.position.x.toFixed(1)}, {detail.position.y.toFixed(1)})
+              {detail.position.width && detail.position.height && 
+                ` • ${detail.position.width}×${detail.position.height}px`
+              }
+            </div>
+          )}
+          
+          {detail.animations && detail.animations.length > 0 && (
+            <div style={{ 
+              fontSize: '10px',
+              color: '#ff6b35',
+              background: '#fff5f3',
+              padding: '2px 4px',
+              borderRadius: '2px',
+              marginBottom: '2px',
+              display: 'inline-block',
+              marginLeft: detail.position ? '4px' : '0'
+            }}>
+              🎬 {detail.animations.length} animation{detail.animations.length !== 1 ? 's' : ''}
+            </div>
+          )}
+          
+          {detail.filters && detail.filters.length > 0 && (
+            <div style={{ 
+              fontSize: '10px',
+              color: '#8b5cf6',
+              background: '#f5f3ff',
+              padding: '2px 4px',
+              borderRadius: '2px',
+              marginBottom: '2px',
+              display: 'inline-block',
+              marginLeft: (detail.position || detail.animations?.length) ? '4px' : '0'
+            }}>
+              🎨 {detail.filters.join(', ')}
+            </div>
+          )}
+          
+          {detail.locked && (
+            <div style={{ 
+              fontSize: '10px',
+              color: '#dc2626',
+              background: '#fef2f2',
+              padding: '2px 4px',
+              borderRadius: '2px',
+              marginBottom: '2px',
+              display: 'inline-block',
+              marginLeft: (detail.position || detail.animations?.length || detail.filters?.length) ? '4px' : '0'
+            }}>
+              🔒 Locked
+            </div>
+          )}
+          
           {detail.parent && (
-            <div style={{ color: '#666', fontSize: '10px' }}>
+            <div style={{ color: '#666', fontSize: '10px', marginTop: '2px' }}>
               ↳ {detail.parent}
             </div>
           )}
@@ -470,6 +672,55 @@ const SelectionDetails: React.FC = () => {
             </div>
           )}
           
+          {/* Additional element-specific information */}
+          {detail.rotation && (
+            <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
+              🔄 Rotation: {detail.rotation}°
+            </div>
+          )}
+          
+          {detail.opacity !== undefined && detail.opacity !== 1 && (
+            <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
+              🌊 Opacity: {(detail.opacity * 100).toFixed(0)}%
+            </div>
+          )}
+          
+          {detail.transform && (
+            <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
+              🔄 Transform: {detail.transform.slice(0, 30)}...
+            </div>
+          )}
+          
+          {detail.startOffset !== undefined && (
+            <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
+              🏁 Start Offset: {detail.startOffset}
+            </div>
+          )}
+          
+          {detail.method && (
+            <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
+              🔗 Method: {detail.method} | Side: {detail.side || 'left'}
+            </div>
+          )}
+          
+          {detail.lockLevel && detail.lockLevel !== 'none' && (
+            <div style={{ fontSize: '10px', color: '#dc2626', marginTop: '2px' }}>
+              🔒 Lock Level: {detail.lockLevel}
+            </div>
+          )}
+          
+          {detail.visible === false && (
+            <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '2px' }}>
+              👁 Hidden
+            </div>
+          )}
+          
+          {detail.name && (
+            <div style={{ fontSize: '10px', color: '#059669', marginTop: '2px' }}>
+              🏷 Name: {detail.name}
+            </div>
+          )}
+          
           {detail.style && (
             <div style={{ 
               marginTop: '4px',
@@ -483,6 +734,7 @@ const SelectionDetails: React.FC = () => {
               {detail.style.stroke && `Stroke: ${detail.style.stroke} `}
               {detail.style.strokeWidth && `SW: ${detail.style.strokeWidth} `}
               {detail.style.fontSize && `Font: ${detail.style.fontSize}px `}
+              {detail.style.fontFamily && `Family: ${detail.style.fontFamily} `}
             </div>
           )}
           

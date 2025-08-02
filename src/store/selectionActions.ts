@@ -115,67 +115,110 @@ const findGroupContainingPath = (state: EditorState, pathId: string): string | n
   return findGroupContainingElement(state, pathId, 'path');
 };
 
-// Utility function to promote element selection to group selection (traditional behavior)
+// Utility function to promote element selection to group selection (preserving other selections)
 const promoteElementToGroup = (state: EditorState, elementId: string, elementType: string): EditorState['selection'] => {
   const groupId = findGroupContainingElement(state, elementId, elementType);
   if (!groupId) {
     return state.selection; // Element is not in a group
   }
   
+  // If group is already selected, no need to promote
+  if (state.selection.selectedGroups.includes(groupId)) {
+    return state.selection;
+  }
+  
   console.log(`🔄 Promoting ${elementType} ${elementId} to group: ${groupId}`);
   
-  // Clear all individual selections and select the group
-  return {
-    ...state.selection,
-    selectedPaths: [],
-    selectedSubPaths: [],
-    selectedCommands: [],
-    selectedTexts: [],
-    selectedTextSpans: [],
-    selectedTextPaths: [],
-    selectedImages: [],
-    selectedUses: [],
-    selectedGroups: [groupId],
-    selectedClipPaths: [],
-    selectedMasks: [],
-    selectedFilters: [],
-    selectedMarkers: [],
-    selectedSymbols: [],
-    selectedAnimations: [],
-  };
+  const group = state.groups.find(g => g.id === groupId);
+  if (!group) return state.selection;
+  
+  // Start with current selection
+  let newSelection = { ...state.selection };
+  
+  // Remove all elements that belong to this group from individual selections
+  group.children.forEach(child => {
+    switch (child.type) {
+      case 'path':
+        newSelection.selectedPaths = newSelection.selectedPaths.filter(id => id !== child.id);
+        // Also remove sub-paths and commands from this path
+        const path = state.paths.find(p => p.id === child.id);
+        if (path) {
+          path.subPaths.forEach(subPath => {
+            newSelection.selectedSubPaths = newSelection.selectedSubPaths.filter(id => id !== subPath.id);
+            subPath.commands.forEach(command => {
+              newSelection.selectedCommands = newSelection.selectedCommands.filter(id => id !== command.id);
+            });
+          });
+        }
+        break;
+      case 'text':
+        newSelection.selectedTexts = newSelection.selectedTexts.filter(id => id !== child.id);
+        newSelection.selectedTextSpans = newSelection.selectedTextSpans.filter(spanId => {
+          // Check if this span belongs to the text
+          const text = state.texts.find(t => t.id === child.id);
+          if (text && text.type === 'multiline-text') {
+            return !text.spans?.some(span => span.id === spanId);
+          }
+          return true;
+        });
+        break;
+      case 'textPath':
+        newSelection.selectedTextPaths = newSelection.selectedTextPaths?.filter(id => id !== child.id) || [];
+        break;
+      case 'image':
+        newSelection.selectedImages = newSelection.selectedImages.filter(id => id !== child.id);
+        break;
+      case 'use':
+        newSelection.selectedUses = newSelection.selectedUses.filter(id => id !== child.id);
+        break;
+      case 'group':
+        // Nested group case - remove the child group from selection
+        newSelection.selectedGroups = newSelection.selectedGroups.filter(id => id !== child.id);
+        break;
+    }
+  });
+  
+  // Add the group to selection (preserving other selected groups)
+  if (!newSelection.selectedGroups.includes(groupId)) {
+    newSelection.selectedGroups = [...newSelection.selectedGroups, groupId];
+  }
+  
+  return newSelection;
 };
 
 // Utility function to check for traditional group selection behavior
 const checkAndPromoteToGroup = (state: EditorState): EditorState['selection'] => {
-  let newSelection = { ...state.selection };
+  let currentSelection = { ...state.selection };
+  let hasPromotions = false;
   
-  // Check if any selected element belongs to a group and promote to group selection
+  // Collect all elements that need group promotion
+  const promotions = new Set<string>();
   
   // Check selected paths
-  for (const pathId of newSelection.selectedPaths) {
+  for (const pathId of currentSelection.selectedPaths) {
     const groupId = findGroupContainingElement(state, pathId, 'path');
-    if (groupId) {
-      return promoteElementToGroup(state, pathId, 'path');
+    if (groupId && !currentSelection.selectedGroups.includes(groupId)) {
+      promotions.add(groupId);
+      hasPromotions = true;
     }
   }
   
   // Check selected sub-paths (find their parent path, then check if that path is in a group)
-  for (const subPathId of newSelection.selectedSubPaths) {
-    // Find the parent path of this sub-path
+  for (const subPathId of currentSelection.selectedSubPaths) {
     const parentPath = state.paths.find(path => 
       path.subPaths.some(sp => sp.id === subPathId)
     );
     if (parentPath) {
       const groupId = findGroupContainingElement(state, parentPath.id, 'path');
-      if (groupId) {
-        return promoteElementToGroup(state, parentPath.id, 'path');
+      if (groupId && !currentSelection.selectedGroups.includes(groupId)) {
+        promotions.add(groupId);
+        hasPromotions = true;
       }
     }
   }
   
   // Check selected commands (find their parent path, then check if that path is in a group)
-  for (const commandId of newSelection.selectedCommands) {
-    // Find the parent path of this command
+  for (const commandId of currentSelection.selectedCommands) {
     let parentPath = null;
     for (const path of state.paths) {
       for (const subPath of path.subPaths) {
@@ -188,46 +231,66 @@ const checkAndPromoteToGroup = (state: EditorState): EditorState['selection'] =>
     }
     if (parentPath) {
       const groupId = findGroupContainingElement(state, parentPath.id, 'path');
-      if (groupId) {
-        return promoteElementToGroup(state, parentPath.id, 'path');
+      if (groupId && !currentSelection.selectedGroups.includes(groupId)) {
+        promotions.add(groupId);
+        hasPromotions = true;
       }
     }
   }
   
   // Check selected texts
-  for (const textId of newSelection.selectedTexts) {
+  for (const textId of currentSelection.selectedTexts) {
     const groupId = findGroupContainingElement(state, textId, 'text');
-    if (groupId) {
-      return promoteElementToGroup(state, textId, 'text');
+    if (groupId && !currentSelection.selectedGroups.includes(groupId)) {
+      promotions.add(groupId);
+      hasPromotions = true;
     }
   }
   
   // Check selected text paths
-  for (const textPathId of newSelection.selectedTextPaths || []) {
+  for (const textPathId of currentSelection.selectedTextPaths || []) {
     const groupId = findGroupContainingElement(state, textPathId, 'textPath');
-    if (groupId) {
-      return promoteElementToGroup(state, textPathId, 'textPath');
+    if (groupId && !currentSelection.selectedGroups.includes(groupId)) {
+      promotions.add(groupId);
+      hasPromotions = true;
     }
   }
   
   // Check selected images
-  for (const imageId of newSelection.selectedImages) {
+  for (const imageId of currentSelection.selectedImages) {
     const groupId = findGroupContainingElement(state, imageId, 'image');
-    if (groupId) {
-      return promoteElementToGroup(state, imageId, 'image');
+    if (groupId && !currentSelection.selectedGroups.includes(groupId)) {
+      promotions.add(groupId);
+      hasPromotions = true;
     }
   }
   
   // Check selected use elements
-  for (const useId of newSelection.selectedUses) {
+  for (const useId of currentSelection.selectedUses) {
     const groupId = findGroupContainingElement(state, useId, 'use');
-    if (groupId) {
-      return promoteElementToGroup(state, useId, 'use');
+    if (groupId && !currentSelection.selectedGroups.includes(groupId)) {
+      promotions.add(groupId);
+      hasPromotions = true;
     }
   }
   
-  // No group promotion needed
-  return newSelection;
+  // If no promotions needed, return current selection
+  if (!hasPromotions) {
+    return currentSelection;
+  }
+  
+  // Apply all promotions
+  let finalSelection = { ...currentSelection };
+  for (const groupId of promotions) {
+    // Find any element in this group to trigger promotion
+    const group = state.groups.find(g => g.id === groupId);
+    if (group && group.children.length > 0) {
+      const firstChild = group.children[0];
+      finalSelection = promoteElementToGroup({ ...state, selection: finalSelection }, firstChild.id, firstChild.type);
+    }
+  }
+  
+  return finalSelection;
 };
 
 export interface SelectionActions {
