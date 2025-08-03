@@ -459,6 +459,7 @@ export const AnimationControls: React.FC = () => {
       setPathData(animation.path || 'M 0,0 L 100,0');
       setRotate(animation.rotate || 'auto');
       setMpathRef(animation.mpath || '');
+      setKeyPoints(animation.keyPoints || '');
     }
     
     setShowEditForm(true);
@@ -515,6 +516,7 @@ export const AnimationControls: React.FC = () => {
       updates.path = mpathRef ? undefined : pathData;
       updates.mpath = mpathRef || undefined;
       updates.rotate = rotate === 'auto' || rotate === 'auto-reverse' ? rotate : parseFloat(rotate) || 0;
+      updates.keyPoints = keyPoints || undefined;
       updates.attributeName = undefined;
       updates.from = undefined;
       updates.to = undefined;
@@ -1207,6 +1209,24 @@ export const AnimationControls: React.FC = () => {
                   </div>
                 </div>
               )}
+              
+              {animationType === 'animateMotion' && (
+                <div style={{ marginBottom: '8px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '10px', fontWeight: 'bold' }}>
+                    Key Points:
+                  </label>
+                  <input 
+                    type="text" 
+                    value={keyPoints} 
+                    onChange={(e) => setKeyPoints(e.target.value)}
+                    placeholder="0;1;0"
+                    style={{ width: '100%', padding: '4px', fontSize: '10px' }}
+                  />
+                  <div style={{ fontSize: '8px', color: '#666', marginTop: '2px' }}>
+                    Progress values along the path (0-1 range). Controls which parts of the path to follow.
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Timing Properties */}
@@ -1303,20 +1323,23 @@ export const AnimationControls: React.FC = () => {
                 </div>
               </div>
 
-              {calcMode === 'spline' && (
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '10px', fontWeight: 'bold' }}>
-                      Key Times:
-                    </label>
-                    <input 
-                      type="text" 
-                      value={keyTimes} 
-                      onChange={(e) => setKeyTimes(e.target.value)}
-                      placeholder="0;0.5;1"
-                      style={{ width: '100%', padding: '4px', fontSize: '10px' }}
-                    />
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '10px', fontWeight: 'bold' }}>
+                    Key Times:
+                  </label>
+                  <input 
+                    type="text" 
+                    value={keyTimes} 
+                    onChange={(e) => setKeyTimes(e.target.value)}
+                    placeholder="0;0.5;1"
+                    style={{ width: '100%', padding: '4px', fontSize: '10px' }}
+                  />
+                  <div style={{ fontSize: '8px', color: '#666', marginTop: '2px' }}>
+                    Timing distribution for animation values (0-1 range)
                   </div>
+                </div>
+                {calcMode === 'spline' && (
                   <div style={{ flex: 1 }}>
                     <label style={{ display: 'block', marginBottom: '4px', fontSize: '10px', fontWeight: 'bold' }}>
                       Key Splines:
@@ -1328,9 +1351,12 @@ export const AnimationControls: React.FC = () => {
                       placeholder="0.25 0 0.75 1;0.25 0 0.75 1"
                       style={{ width: '100%', padding: '4px', fontSize: '10px' }}
                     />
+                    <div style={{ fontSize: '8px', color: '#666', marginTop: '2px' }}>
+                      Bezier control points for spline interpolation
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* Transform-specific Properties */}
@@ -1410,6 +1436,22 @@ export const AnimationControls: React.FC = () => {
                   </select>
                   <div style={{ fontSize: '8px', color: '#666', marginTop: '2px' }}>
                     Select an existing path to follow, or leave empty to use custom path data
+                  </div>
+                </div>
+                
+                <div style={{ marginBottom: '8px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '10px', fontWeight: 'bold' }}>
+                    Key Points:
+                  </label>
+                  <input 
+                    type="text" 
+                    value={keyPoints} 
+                    onChange={(e) => setKeyPoints(e.target.value)}
+                    placeholder="0;1;0"
+                    style={{ width: '100%', padding: '4px', fontSize: '10px' }}
+                  />
+                  <div style={{ fontSize: '8px', color: '#666', marginTop: '2px' }}>
+                    Progress values along the path (0-1 range). Controls which parts of the path to follow.
                   </div>
                 </div>
               </div>

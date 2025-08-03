@@ -10,6 +10,7 @@ import { PluginButton } from '../../components/PluginButton';
 import { SVGDropZone } from '../../components/SVGDropZone';
 import { SVGImportOptions, ImportSettings } from '../../components/SVGImportOptions';
 import { RotateCcw, CheckCircle2, Trash2, Upload, Download } from 'lucide-react';
+import { generateSVGCode as generateUnifiedSVG, downloadSVGFile } from '../../utils/svg-export';
 
 interface PrecisionControlProps {
   precision: number;
@@ -1941,25 +1942,24 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
   };
 
   const handleDownloadSVG = () => {
-    const svgContent = generateSVGCode();
-    const blob = new Blob([svgContent], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
+    // Use the unified SVG export function
+    const editorState = { 
+      paths, texts, textPaths, groups, gradients, images, symbols, markers, 
+      clipPaths, masks, filters, uses, animations, precision, calculateChainDelays 
+    };
     
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'svg-editor-export.svg';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Clean up the object URL
-    URL.revokeObjectURL(url);
+    const svgContent = generateUnifiedSVG(editorState);
+    downloadSVGFile(svgContent, 'svg-editor-export.svg');
   };
 
 
   const currentSVG = useMemo(() => {
-    return generateSVGCode();
-  }, [paths, texts, textPaths, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, animations]);
+    const editorState = { 
+      paths, texts, textPaths, groups, gradients, images, symbols, markers, 
+      clipPaths, masks, filters, uses, animations, precision, calculateChainDelays 
+    };
+    return generateUnifiedSVG(editorState);
+  }, [paths, texts, textPaths, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, animations, precision]);
 
   return (
     <div>

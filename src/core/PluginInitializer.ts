@@ -40,6 +40,7 @@ import { SymbolPlugin } from '../plugins/symbols';
 import { TextPathPlugin } from '../plugins/textpath';
 import { AnimationSystemPlugin } from '../plugins/animation-system';
 import { ContextMenuPlugin } from '../plugins/context-menu';
+import { KeyboardMovementPlugin } from '../plugins/keyboard-movement';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -93,6 +94,7 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(ArrangePlugin);
   pluginManager.registerPlugin(ReorderPlugin);
   pluginManager.registerPlugin(PanelModePlugin);
+  pluginManager.registerPlugin(KeyboardMovementPlugin); // Keyboard movement for selected elements
   pluginManager.registerPlugin(ShortcutsPlugin);
   
   // Register sandbox plugins (experimental features)

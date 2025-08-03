@@ -9,6 +9,7 @@ import { generateSmoothPath, simplifySegmentWithPointsOnPath, areCommandsInSameS
 import { snapToGrid } from '../utils/path-utils';
 import { generateId } from '../utils/id-utils';
 import { parseCompleteSVG } from '../utils/svg-parser';
+import { generateSVGCode, downloadSVGFile } from '../utils/svg-export';
 
 interface ContextMenuOption {
   id: string;
@@ -612,70 +613,11 @@ export const ContextMenuComponent: React.FC = () => {
     // Import/Export
     options.push(
       { id: 'export-svg', label: 'Export SVG', action: () => { 
-        // Generate SVG using the same function as SVGEditor
-        const generateSVGCode = () => {
-          const editorState = useEditorStore.getState();
-          const { paths, texts, textPaths, groups, gradients, images, symbols, markers, clipPaths, masks, filters, uses, animations, precision } = editorState;
-          
-          // Helper function to convert fill/stroke values to SVG format
-          const convertStyleValue = (value: any): string => {
-            if (!value || value === 'none') return 'none';
-            if (typeof value === 'string') return value;
-            if (typeof value === 'object' && value.id) {
-              return `url(#${value.id})`;
-            }
-            return 'none';
-          };
-
-          // Helper function to render paths
-          const renderPath = (path: any) => {
-            const pathData = path.subPaths.map((subPath: any) => {
-              return subPath.commands.map((cmd: any) => {
-                switch (cmd.command) {
-                  case 'M': return `M ${cmd.x} ${cmd.y}`;
-                  case 'L': return `L ${cmd.x} ${cmd.y}`;
-                  case 'C': return `C ${cmd.x1} ${cmd.y1} ${cmd.x2} ${cmd.y2} ${cmd.x} ${cmd.y}`;
-                  case 'Z': return 'Z';
-                  default: return '';
-                }
-              }).join(' ');
-            }).join(' ');
-            
-            const style = path.style;
-            const fillValue = convertStyleValue(style.fill);
-            const strokeValue = convertStyleValue(style.stroke);
-            
-            const attributes = [
-              `id="${path.id}"`,
-              `d="${pathData}"`,
-              fillValue !== 'none' ? `fill="${fillValue}"` : 'fill="none"',
-              strokeValue !== 'none' ? `stroke="${strokeValue}"` : '',
-              style.strokeWidth ? `stroke-width="${style.strokeWidth}"` : '',
-            ].filter(Boolean).join(' ');
-            
-            return `<path ${attributes} />`;
-          };
-
-          // Generate path elements
-          const pathElements = paths.map(path => `  ${renderPath(path)}`).join('\\n');
-          
-          const finalSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
-${pathElements}
-</svg>`;
-          return finalSVG;
-        };
+        // Use the unified SVG export function (same as SVG Editor panel)
+        const editorState = useEditorStore.getState();
         
-        const svgContent = generateSVGCode();
-        const blob = new Blob([svgContent], { type: 'image/svg+xml' });
-        const url = URL.createObjectURL(blob);
-        
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'exported-svg.svg';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        const svgContent = generateSVGCode(editorState);
+        downloadSVGFile(svgContent, 'context-menu-export.svg');
         
         setTimeout(() => hideContextMenu(), 50); 
       }},
