@@ -402,12 +402,6 @@ export const createGroupActions: StateCreator<
     const group = state.groups.find(g => g.id === groupId);
     if (!group) return;
 
-    console.log('[MOVEGROUP DEBUG] Starting moveGroup:', {
-      groupId,
-      delta,
-      groupChildren: group.children.map(c => ({ id: c.id, type: c.type }))
-    });
-
     // Move paths directly, but use moveText for text elements to handle all edge cases
     const storeState = get();
     const targetGroup = storeState.groups.find(g => g.id === groupId);

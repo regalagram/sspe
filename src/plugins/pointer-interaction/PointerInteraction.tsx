@@ -6,113 +6,238 @@ import { transformManager } from '../transform/TransformManager';
 import { handleManager } from '../handles/HandleManager';
 import { stickyManager } from '../sticky-guidelines/StickyManager';
 
-interface PointerInteractionState {
-  draggingCommand: string | null;
-  draggingControlPoint: any;
-  draggingElement: any;
-  isPanning: boolean;
-  isSpacePressed: boolean;
-  lastPointerPosition: { x: number; y: number };
-  dragStartPositions: { [id: string]: { x: number; y: number } };
-  dragStartTextPositions: { [id: string]: { x: number; y: number } };
-  dragStartTextPathPositions: { [id: string]: any };
-  dragStartImagePositions: { [id: string]: { x: number; y: number } };
-  dragStartUsePositions: { [id: string]: { x: number; y: number; width?: number; height?: number } };
-  dragStartGroupPositions: { [id: string]: { transform?: string } };
-  dragOrigin: { x: number; y: number } | null;
-  dragStartSelectionBounds: any | null;  // Store initial selection bounds
-  lastGroupPositions?: { [id: string]: { x: number; y: number } };  // Track last group movement
+// ================== TYPES & INTERFACES ==================
+
+type ElementType = 'image' | 'use' | 'text' | 'textPath' | 'group' | 'command';
+
+interface Point {
+  x: number;
+  y: number;
 }
 
-class PointerInteractionManager {
-  private state: PointerInteractionState = {
-    draggingCommand: null,
-    draggingControlPoint: null,
-    draggingElement: null,
-    isPanning: false,
-    isSpacePressed: false,
-    lastPointerPosition: { x: 0, y: 0 },
-    dragStartPositions: {},
-    dragStartTextPositions: {},
-    dragStartTextPathPositions: {},
-    dragStartImagePositions: {},
-    dragStartUsePositions: {},
-    dragStartGroupPositions: {},
-    dragOrigin: null,
-    dragStartSelectionBounds: null,
-    lastGroupPositions: {},
-  };
+interface ElementBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
+interface ControlPoint {
+  commandId: string;
+  point: string;
+}
+
+interface DraggedElement {
+  id: string;
+  type: ElementType;
+  initialBounds?: ElementBounds;
+}
+
+interface KeyModifiers {
+  shift: boolean;
+  ctrl: boolean;
+  alt: boolean;
+  meta: boolean;
+}
+
+interface ElementSnapshot {
+  id: string;
+  type: ElementType;
+  initialPosition: Point;
+  currentPosition: Point;
+  bounds?: ElementBounds;
+}
+
+interface SelectedElements {
+  commands: string[];
+  texts: string[];
+  images: string[];
+  uses: string[];
+  textPaths: string[];
+  groups: string[];
+}
+
+interface PointerInteractionConfig {
+  snapToGrid: boolean;
+  gridSize: number;
+  enableStickyGuidelines: boolean;
+  doubleClickThreshold: number;
+  dragThreshold: number;
+  debugMode: boolean;
+}
+
+interface DragState {
+  isDragging: boolean;
+  draggedElements: Map<string, ElementSnapshot>;
+  origin: Point | null;
+  current: Point | null;
+  type: 'command' | 'element' | 'controlPoint' | null;
+}
+
+type DragAction = 
+  | { type: 'START_DRAG'; elements: SelectedElements; origin: Point; dragType: 'command' | 'element' | 'controlPoint' }
+  | { type: 'UPDATE_DRAG'; position: Point }
+  | { type: 'END_DRAG' }
+  | { type: 'RESET' };
+
+interface PointerInteractionState {
+  draggingCommand: string | null;
+  draggingControlPoint: ControlPoint | null;
+  draggingElement: DraggedElement | null;
+  isPanning: boolean;
+  isSpacePressed: boolean;
+  lastPointerPosition: Point;
+  dragState: DragState;
+  selectionBounds: ElementBounds | null;
+}
+
+// ================== UTILITY FUNCTIONS ==================
+
+function debounce<T extends (...args: any[]) => any>(func: T, wait: number): T {
+  let timeout: NodeJS.Timeout;
+  return ((...args: any[]) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  }) as T;
+}
+
+function createInitialDragState(): DragState {
+  return {
+    isDragging: false,
+    draggedElements: new Map(),
+    origin: null,
+    current: null,
+    type: null,
+  };
+}
+
+function dragReducer(state: DragState, action: DragAction): DragState {
+  switch (action.type) {
+    case 'START_DRAG':
+      return {
+        ...state,
+        isDragging: true,
+        origin: action.origin,
+        current: action.origin,
+        type: action.dragType,
+      };
+    case 'UPDATE_DRAG':
+      return {
+        ...state,
+        current: action.position,
+      };
+    case 'END_DRAG':
+    case 'RESET':
+      return createInitialDragState();
+    default:
+      return state;
+  }
+}
+
+// ================== SPECIALIZED CLASSES ==================
+
+class ElementSelector {
   private editorStore: any;
+  private config: PointerInteractionConfig;
+  private debugManager: DebugManager;
 
-  constructor() {
-    this.setupKeyboardListeners();
+  constructor(editorStore: any, config: PointerInteractionConfig, debugManager: DebugManager) {
+    this.editorStore = editorStore;
+    this.config = config;
+    this.debugManager = debugManager;
   }
 
-  private setupKeyboardListeners() {
-    document.addEventListener('keydown', this.handleKeyDown);
-    document.addEventListener('keyup', this.handleKeyUp);
-  }
-
-  private handleKeyDown = (e: KeyboardEvent) => {
-    const target = e.target as HTMLElement | null;
-    const isEditable = target && (
-      target.tagName === 'INPUT' ||
-      target.tagName === 'TEXTAREA' ||
-      (target as HTMLElement).isContentEditable
-    );
-    if (e.code === 'Space' && !e.repeat && !isEditable) {
-      e.preventDefault();
-      this.state.isSpacePressed = true;
-      this.updateCursorForSpaceMode(true);
-    }
-  };
-
-  private handleKeyUp = (e: KeyboardEvent) => {
-    const target = e.target as HTMLElement | null;
-    const isEditable = target && (
-      target.tagName === 'INPUT' ||
-      target.tagName === 'TEXTAREA' ||
-      (target as HTMLElement).isContentEditable
-    );
-    if (e.code === 'Space' && !isEditable) {
-      e.preventDefault();
-      this.state.isSpacePressed = false;
-      this.state.isPanning = false;
-      this.updateCursorForSpaceMode(false);
-    }
-  };
-
-  private updateCursorForSpaceMode(isSpacePressed: boolean) {
-    const svgElements = document.querySelectorAll('svg');
-    svgElements.forEach(svg => {
-      if (isSpacePressed) {
-        svg.style.cursor = 'grab';
-      } else {
-        svg.style.cursor = 'default';
-      }
-    });
-  }
-
-  setEditorStore(store: any) {
+  updateStore(store: any): void {
     this.editorStore = store;
   }
 
-  private hasAnySelection(): boolean {
-    if (!this.editorStore) return false;
+  selectElement(elementId: string, elementType: ElementType, modifiers: KeyModifiers): void {
     const { selection } = this.editorStore;
-    return selection.selectedCommands.length > 0 || 
-           selection.selectedSubPaths.length > 0 || 
-           selection.selectedPaths.length > 0 ||
-           selection.selectedTexts.length > 0 ||
-           selection.selectedTextPaths?.length > 0 ||
-           selection.selectedImages?.length > 0 ||
-           selection.selectedUses?.length > 0 ||
-           selection.selectedGroups?.length > 0;
+    
+    this.debugManager.logSelection('ElementSelector.selectElement called with', {
+      elementId,
+      elementType,
+      currentSelection: {
+        texts: selection.selectedTexts || [],
+        images: selection.selectedImages || [],
+        uses: selection.selectedUses || [],
+        groups: selection.selectedGroups || []
+      }
+    });
+
+    if (modifiers.shift) {
+      this.handleShiftSelection(elementId, elementType);
+    } else {
+      this.handleNormalSelection(elementId, elementType);
+    }
+    
+    // Log selection after operation
+    const newSelection = this.editorStore.selection;
+    this.debugManager.logSelection('Selection after operation', {
+      texts: newSelection.selectedTexts || [],
+      images: newSelection.selectedImages || [],
+      uses: newSelection.selectedUses || [],
+      groups: newSelection.selectedGroups || []
+    });
+  }
+
+  private handleShiftSelection(elementId: string, elementType: ElementType): void {
+    const isSelected = this.isElementSelected(elementId, elementType);
+    
+    if (isSelected) {
+      this.removeFromSelection(elementId, elementType);
+    } else {
+      this.addToSelection(elementId, elementType);
+    }
+  }
+
+  private handleNormalSelection(elementId: string, elementType: ElementType): void {
+    const isSelected = this.isElementSelected(elementId, elementType);
+    const hasMultiSelection = this.hasMultiSelection();
+    const belongsToSelectedGroup = this.isElementInSelectedGroup(elementId, elementType);
+
+    this.debugManager.logSelection('handleNormalSelection', {
+      elementId,
+      elementType,
+      isSelected,
+      hasMultiSelection,
+      belongsToSelectedGroup
+    });
+
+    if (!isSelected) {
+      if (belongsToSelectedGroup) {
+        // Element belongs to selected group, don't change selection
+        this.debugManager.logSelection('Element belongs to selected group, not changing selection', {});
+        return;
+      } else if (hasMultiSelection) {
+        // Add to existing multi-selection
+        this.debugManager.logSelection('Adding to existing multi-selection', {});
+        this.addToSelectionWithoutPromotion(elementId, elementType);
+      } else {
+        // Normal single selection
+        this.debugManager.logSelection('Performing normal single selection', {});
+        this.selectSingle(elementId, elementType);
+      }
+    } else {
+      this.debugManager.logSelection('Element already selected, no action taken', {});
+    }
+  }
+
+  private isElementSelected(elementId: string, elementType: ElementType): boolean {
+    const { selection } = this.editorStore;
+    
+    switch (elementType) {
+      case 'image': return selection.selectedImages?.includes(elementId) || false;
+      case 'use': return selection.selectedUses?.includes(elementId) || false;
+      case 'text': return selection.selectedTexts?.includes(elementId) || false;
+      case 'textPath': return selection.selectedTextPaths?.includes(elementId) || false;
+      case 'group': return selection.selectedGroups?.includes(elementId) || false;
+      case 'command': return selection.selectedCommands?.includes(elementId) || false;
+      default: return false;
+    }
   }
 
   private hasMultiSelection(): boolean {
-    if (!this.editorStore) return false;
     const { selection } = this.editorStore;
     const totalSelected = (selection.selectedCommands?.length || 0) + 
                          (selection.selectedSubPaths?.length || 0) + 
@@ -125,8 +250,59 @@ class PointerInteractionManager {
     return totalSelected > 1;
   }
 
-  private addToSelectionWithoutPromotion(elementId: string, elementType: 'image' | 'use' | 'text' | 'textPath' | 'group' | 'command'): void {
-    // Directly modify selection state without triggering group promotion
+  private isElementInSelectedGroup(elementId: string, elementType: ElementType): boolean {
+    const { selection, groups } = this.editorStore;
+    
+    for (const groupId of selection.selectedGroups || []) {
+      const group = groups.find((g: any) => g.id === groupId);
+      if (group?.children?.some((child: any) => 
+        child.id === elementId && child.type === elementType)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private addToSelection(elementId: string, elementType: ElementType): void {
+    this.editorStore.addToSelection(elementId, elementType);
+  }
+
+  private removeFromSelection(elementId: string, elementType: ElementType): void {
+    this.editorStore.removeFromSelection(elementId, elementType);
+  }
+
+  private selectSingle(elementId: string, elementType: ElementType): void {
+    this.debugManager.logSelection('selectSingle called with', { elementId, elementType });
+    
+    switch (elementType) {
+      case 'image': 
+        this.debugManager.logSelection('Calling selectImage', {});
+        this.editorStore.selectImage(elementId); 
+        break;
+      case 'use': 
+        this.debugManager.logSelection('Calling selectUse', {});
+        this.editorStore.selectUse(elementId); 
+        break;
+      case 'text': 
+        this.debugManager.logSelection('Calling selectText', {});
+        this.editorStore.selectText(elementId); 
+        break;
+      case 'textPath': 
+        this.debugManager.logSelection('Calling selectTextPath', {});
+        this.editorStore.selectTextPath(elementId); 
+        break;
+      case 'group': 
+        this.debugManager.logSelection('Calling selectGroup', {});
+        this.editorStore.selectGroup(elementId); 
+        break;
+      case 'command': 
+        this.debugManager.logSelection('Calling selectCommand', {});
+        this.editorStore.selectCommand(elementId); 
+        break;
+    }
+  }
+
+  private addToSelectionWithoutPromotion(elementId: string, elementType: ElementType): void {
     const currentState = this.editorStore.getState();
     const newSelection = { ...currentState.selection };
     
@@ -163,155 +339,330 @@ class PointerInteractionManager {
         break;
     }
     
-    // Set the state directly bypassing all selection methods
     this.editorStore.setState({ selection: newSelection });
-    
-      }
+  }
+}
 
-  private isElementInSelectedGroup(elementId: string, elementType: 'image' | 'use' | 'text' | 'textPath' | 'path' | 'group'): boolean {
-    if (!this.editorStore) return false;
-    const { selection, groups } = this.editorStore;
-    
-    // Check if this element belongs to any currently selected group
-    for (const groupId of selection.selectedGroups) {
-      const group = groups.find((g: any) => g.id === groupId);
-      if (group) {
-        const belongsToGroup = group.children.some((child: any) => 
-          child.id === elementId && child.type === elementType
-        );
-        if (belongsToGroup) {
-          return true;
-        }
-      }
-    }
-    return false;
+class DragManager {
+  private editorStore: any;
+  private config: PointerInteractionConfig;
+  private elementSnapshots: Map<string, ElementSnapshot> = new Map();
+  private instanceId: string;
+  private debugManager: DebugManager;
+
+  constructor(editorStore: any, config: PointerInteractionConfig, debugManager: DebugManager) {
+    this.editorStore = editorStore;
+    this.config = config;
+    this.debugManager = debugManager;
+    this.instanceId = `DragManager-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    this.debugManager.logDragManager('created with instanceId', this.instanceId);
   }
 
-  private isCommandInSelectedGroup(commandId: string): boolean {
-    if (!this.editorStore) return false;
-    const { selection, groups, paths } = this.editorStore;
-    
-    // Find which path this command belongs to
-    let parentPathId: string | null = null;
-    for (const path of paths) {
-      for (const subPath of path.subPaths) {
-        if (subPath.commands.some((cmd: any) => cmd.id === commandId)) {
-          parentPathId = path.id;
-          break;
-        }
-      }
-      if (parentPathId) break;
-    }
-    
-    if (!parentPathId) return false;
-    
-    // Check if the parent path belongs to any currently selected group
-    return this.isElementInSelectedGroup(parentPathId, 'path');
+  updateStore(store: any): void {
+    this.editorStore = store;
   }
 
-  getSVGPoint(e: PointerEvent<SVGElement>, svgRef: React.RefObject<SVGSVGElement | null>): { x: number; y: number } {
-    return getSVGPoint(e, svgRef, this.editorStore.viewport);
+  startDrag(elements: SelectedElements, origin: Point): void {
+    this.debugManager.logDragOperation('Starting drag with elements', elements);
+    this.debugManager.logDragManager('instanceId in startDrag', this.instanceId);
+    this.captureElementSnapshots(elements);
+    this.debugManager.logDragOperation('Captured snapshots', Array.from(this.elementSnapshots.keys()));
+    this.debugManager.logDragOperation('Snapshots size after capture', this.elementSnapshots.size);
+    transformManager.setMoving(true);
+    this.editorStore.pushToHistory();
   }
 
-  private captureAllSelectedPositions() {
-    const { selection, images, uses, texts, textPaths, paths, groups } = this.editorStore;
+  updateDrag(delta: Point): void {
+    this.debugManager.logDragOperation('Updating drag with delta', delta);
+    this.debugManager.logDragManager('instanceId in updateDrag', this.instanceId);
+    this.debugManager.logDragOperation('Element snapshots count', this.elementSnapshots.size);
     
-    // Capture image positions
-    const imagePositions: { [id: string]: { x: number; y: number; width: number; height: number } } = {};
-    selection.selectedImages?.forEach((imageId: string) => {
-      const image = images.find((img: any) => img.id === imageId);
-      if (image) {
-        imagePositions[imageId] = { 
-          x: image.x, 
-          y: image.y, 
-          width: image.width, 
-          height: image.height 
-        };
-      }
-    });
-    this.state.dragStartImagePositions = imagePositions;
-
-    // Capture use positions
-    const usePositions: { [id: string]: { x: number; y: number; width?: number; height?: number } } = {};
-    selection.selectedUses?.forEach((useId: string) => {
-      const use = uses.find((u: any) => u.id === useId);
-      if (use) {
-        usePositions[useId] = { 
-          x: use.x || 0, 
-          y: use.y || 0, 
-          width: use.width, 
-          height: use.height 
-        };
-      }
-    });
-    this.state.dragStartUsePositions = usePositions;
-
-    // Capture text positions
-    const textPositions: { [id: string]: { x: number; y: number } } = {};
-    selection.selectedTexts?.forEach((textId: string) => {
-      const text = texts.find((t: any) => t.id === textId);
-      if (text) {
-        textPositions[textId] = { x: text.x, y: text.y };
-      }
-    });
-    this.state.dragStartTextPositions = textPositions;
-
-    // Capture textPath positions
-    const textPathPositions: { [id: string]: { startOffset: number | string; transform?: string } } = {};
-    selection.selectedTextPaths?.forEach((textPathId: string) => {
-      const textPath = textPaths.find((tp: any) => tp.id === textPathId);
-      if (textPath) {
-        textPathPositions[textPathId] = { 
-          startOffset: textPath.startOffset || 0,
-          transform: textPath.transform
-        };
-      }
-    });
-    this.state.dragStartTextPathPositions = textPathPositions;
-
-    // Capture command positions (from selected commands and selected subpaths)
-    const commandPositions: { [id: string]: { x: number; y: number } } = {};
+    // Don't use sticky guidelines for now - just apply the raw delta
+    // const snappedDelta = this.applyStickyGuidelines(delta);
+    const snappedDelta = delta;
     
-    // Direct command selections
-    selection.selectedCommands?.forEach((commandId: string) => {
-      const command = this.findCommandById(commandId, paths);
-      if (command) {
-        const pos = getCommandPosition(command);
-        if (pos) commandPositions[commandId] = { x: pos.x, y: pos.y };
-      }
+    this.elementSnapshots.forEach((snapshot, elementId) => {
+      this.debugManager.logMovement('Moving element', { elementId, type: snapshot.type });
+      this.moveElement(snapshot, snappedDelta);
     });
+
+    transformManager.updateTransformState();
+  }
+
+  endDrag(): void {
+    this.debugManager.logDragOperation('endDrag called, clearing snapshots', this.elementSnapshots.size);
+    this.debugManager.logDragManager('instanceId in endDrag', this.instanceId);
+    this.elementSnapshots.clear();
+    transformManager.setMoving(false);
+    stickyManager.clearGuidelines();
+  }
+
+  private captureElementSnapshots(elements: SelectedElements): void {
+    this.elementSnapshots.clear();
     
-    // Commands from selected subpaths
-    selection.selectedSubPaths?.forEach((subPathId: string) => {
-      paths.forEach((path: any) => {
-        const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
-        if (subPath) {
-          subPath.commands.forEach((cmd: any) => {
-            if (!commandPositions[cmd.id]) {
-              const pos = getCommandPosition(cmd);
-              if (pos) commandPositions[cmd.id] = { x: pos.x, y: pos.y };
-            }
+    this.debugManager.logElementProcessing('captureElementSnapshots called with', elements);
+    
+    // Get fresh store data
+    const store = this.editorStore;
+    const images = store.images || [];
+    const uses = store.uses || [];
+    const texts = store.texts || [];
+    const textPaths = store.textPaths || [];
+    const paths = store.paths || [];
+    const groups = store.groups || [];
+    
+    this.debugManager.logElementProcessing('Available store data', {
+      images: images.length,
+      uses: uses.length,
+      texts: texts.length,
+      textPaths: textPaths.length,
+      paths: paths.length,
+      groups: groups.length
+    });
+
+    // Capture images
+    if (elements.images && elements.images.length > 0) {
+      elements.images.forEach(imageId => {
+        this.debugManager.logElementProcessing('Processing image', imageId);
+        const image = images.find((img: any) => img.id === imageId);
+        this.debugManager.logElementProcessing('Looking for image', { imageId, found: !!image });
+        if (image) {
+          this.debugManager.logElementProcessing('Image data', { id: image.id, x: image.x, y: image.y });
+          this.elementSnapshots.set(imageId, {
+            id: imageId,
+            type: 'image',
+            initialPosition: { x: image.x, y: image.y },
+            currentPosition: { x: image.x, y: image.y },
+            bounds: { x: image.x, y: image.y, width: image.width, height: image.height }
           });
+          this.debugManager.logElementProcessing('Added image snapshot, total snapshots', this.elementSnapshots.size);
         }
       });
-    });
-    
-    this.state.dragStartPositions = commandPositions;
+    }
 
-    // Capture group positions
-    const groupPositions: { [id: string]: { transform?: string } } = {};
-    selection.selectedGroups?.forEach((groupId: string) => {
+    // Capture use elements
+    if (elements.uses && elements.uses.length > 0) {
+      elements.uses.forEach(useId => {
+        this.debugManager.logElementProcessing('Processing use', useId);
+        const use = uses.find((u: any) => u.id === useId);
+        this.debugManager.logElementProcessing('Looking for use', { useId, found: !!use });
+        if (use) {
+          this.debugManager.logElementProcessing('Use data', { id: use.id, x: use.x, y: use.y });
+          this.elementSnapshots.set(useId, {
+            id: useId,
+            type: 'use',
+            initialPosition: { x: use.x || 0, y: use.y || 0 },
+            currentPosition: { x: use.x || 0, y: use.y || 0 },
+            bounds: { x: use.x || 0, y: use.y || 0, width: use.width || 0, height: use.height || 0 }
+          });
+          this.debugManager.logElementProcessing('Added use snapshot, total snapshots', this.elementSnapshots.size);
+        }
+      });
+    }
+
+    // Capture texts
+    if (elements.texts && elements.texts.length > 0) {
+      elements.texts.forEach(textId => {
+        this.debugManager.logElementProcessing('Processing text', textId);
+        const text = texts.find((t: any) => t.id === textId);
+        this.debugManager.logElementProcessing('Looking for text', { textId, found: !!text });
+        if (text) {
+          this.debugManager.logElementProcessing('Text data', { id: text.id, x: text.x, y: text.y });
+          this.elementSnapshots.set(textId, {
+            id: textId,
+            type: 'text',
+            initialPosition: { x: text.x, y: text.y },
+            currentPosition: { x: text.x, y: text.y }
+          });
+          this.debugManager.logElementProcessing('Added text snapshot, total snapshots', this.elementSnapshots.size);
+        }
+      });
+    }
+
+    // Capture textPaths
+    if (elements.textPaths && elements.textPaths.length > 0) {
+      elements.textPaths.forEach(textPathId => {
+        this.debugManager.logElementProcessing('Processing textPath', textPathId);
+        const textPath = textPaths?.find((tp: any) => tp.id === textPathId);
+        this.debugManager.logElementProcessing('Looking for textPath', { textPathId, found: !!textPath });
+        this.debugManager.logElementProcessing('textPaths array', textPaths);
+        if (textPath) {
+          this.debugManager.logElementProcessing('TextPath data', { id: textPath.id });
+          this.elementSnapshots.set(textPathId, {
+            id: textPathId,
+            type: 'textPath',
+            initialPosition: { x: 0, y: 0 }, // TextPaths follow their path
+            currentPosition: { x: 0, y: 0 }
+          });
+          this.debugManager.logElementProcessing('Added textPath snapshot, total snapshots', this.elementSnapshots.size);
+        }
+      });
+    }
+
+    // Capture groups
+    elements.groups.forEach(groupId => {
       const group = groups.find((g: any) => g.id === groupId);
       if (group) {
-        groupPositions[groupId] = { 
-          transform: group.transform 
-        };
+        this.elementSnapshots.set(groupId, {
+          id: groupId,
+          type: 'group',
+          initialPosition: { x: 0, y: 0 }, // Groups use transform
+          currentPosition: { x: 0, y: 0 }
+        });
       }
     });
-    this.state.dragStartGroupPositions = groupPositions;
+
+    // Capture commands
+    elements.commands.forEach(commandId => {
+      const command = this.findCommandById(commandId, paths);
+      this.debugManager.logElementProcessing('Looking for command', { commandId, found: !!command });
+      if (command) {
+        const pos = getCommandPosition(command);
+        if (pos) {
+          this.elementSnapshots.set(commandId, {
+            id: commandId,
+            type: 'command',
+            initialPosition: { x: pos.x, y: pos.y },
+            currentPosition: { x: pos.x, y: pos.y }
+          });
+        }
+      }
+    });
     
-    // Capture selection bounds for sticky guidelines
-    this.state.dragStartSelectionBounds = stickyManager.calculateSelectionBounds();
+    this.debugManager.logElementProcessing('Total snapshots captured', this.elementSnapshots.size);
+    this.debugManager.logElementProcessing('Snapshot keys', Array.from(this.elementSnapshots.keys()));
+  }
+
+  private applyStickyGuidelines(delta: Point): Point {
+    if (!this.shouldUseSticky()) {
+      return delta;
+    }
+
+    // Calculate selection bounds and apply sticky guidelines
+    const selectionBounds = stickyManager.calculateSelectionBounds();
+    if (selectionBounds) {
+      const targetPosition = {
+        x: selectionBounds.x + delta.x,
+        y: selectionBounds.y + delta.y
+      };
+
+      const result = stickyManager.handleSelectionMoving(targetPosition, selectionBounds);
+      if (result.snappedBounds) {
+        return {
+          x: result.snappedBounds.x - selectionBounds.x,
+          y: result.snappedBounds.y - selectionBounds.y
+        };
+      }
+    }
+
+    return delta;
+  }
+
+  private shouldUseSticky(): boolean {
+    if (!this.config.enableStickyGuidelines) return false;
+    
+    const { enabledFeatures, selection } = this.editorStore;
+    if (!enabledFeatures?.guidelinesEnabled) return false;
+
+    // Skip sticky guidelines if groups are involved in multi-selection
+    const hasGroupsInSelection = selection.selectedGroups && selection.selectedGroups.length > 0;
+    const hasMultiSelection = this.elementSnapshots.size > 1;
+    
+    return !(hasGroupsInSelection && hasMultiSelection);
+  }
+
+  private moveElement(snapshot: ElementSnapshot, delta: Point): void {
+    let newX = snapshot.initialPosition.x + delta.x;
+    let newY = snapshot.initialPosition.y + delta.y;
+
+    this.debugManager.logMovement('Moving element', { id: snapshot.id, type: snapshot.type });
+    this.debugManager.logMovement('Initial position', snapshot.initialPosition);
+    this.debugManager.logMovement('Delta', delta);
+    this.debugManager.logMovement('New position', { x: newX, y: newY });
+
+    // Apply grid snapping if enabled
+    if (this.config.snapToGrid) {
+      const snapped = snapToGrid({ x: newX, y: newY }, this.config.gridSize);
+      newX = snapped.x;
+      newY = snapped.y;
+    }
+
+    // Update current position
+    snapshot.currentPosition = { x: newX, y: newY };
+
+    // Move the actual element
+    this.moveElementInStore(snapshot, { x: newX, y: newY });
+  }
+
+  private moveElementInStore(snapshot: ElementSnapshot, newPosition: Point): void {
+    const { moveImage, moveUse, moveText, moveGroup, moveCommand } = this.editorStore;
+    
+    this.debugManager.logMovement('moveElementInStore called for', { id: snapshot.id, type: snapshot.type });
+
+    switch (snapshot.type) {
+      case 'image':
+        const currentImage = this.editorStore.images.find((img: any) => img.id === snapshot.id);
+        if (currentImage) {
+          const deltaX = newPosition.x - currentImage.x;
+          const deltaY = newPosition.y - currentImage.y;
+          this.debugManager.logMovement('Image delta', { deltaX, deltaY });
+          if (Math.abs(deltaX) > 0.001 || Math.abs(deltaY) > 0.001) {
+            moveImage(snapshot.id, { x: deltaX, y: deltaY });
+          }
+        } else {
+          this.debugManager.logMovement('Image not found', snapshot.id);
+        }
+        break;
+
+      case 'use':
+        const currentUse = this.editorStore.uses.find((u: any) => u.id === snapshot.id);
+        if (currentUse) {
+          const deltaX = newPosition.x - (currentUse.x || 0);
+          const deltaY = newPosition.y - (currentUse.y || 0);
+          this.debugManager.logMovement('Use delta', { deltaX, deltaY });
+          if (Math.abs(deltaX) > 0.001 || Math.abs(deltaY) > 0.001) {
+            moveUse(snapshot.id, { x: deltaX, y: deltaY });
+          }
+        } else {
+          this.debugManager.logMovement('Use not found', snapshot.id);
+        }
+        break;
+
+      case 'text':
+        const currentText = this.editorStore.texts.find((t: any) => t.id === snapshot.id);
+        if (currentText) {
+          const deltaX = newPosition.x - currentText.x;
+          const deltaY = newPosition.y - currentText.y;
+          this.debugManager.logMovement('Text delta', { deltaX, deltaY });
+          if (Math.abs(deltaX) > 0.001 || Math.abs(deltaY) > 0.001) {
+            moveText(snapshot.id, { x: deltaX, y: deltaY });
+          }
+        } else {
+          this.debugManager.logMovement('Text not found', snapshot.id);
+        }
+        break;
+
+      case 'group':
+        // Groups use relative movement - calculate delta from last movement
+        const deltaFromCurrent = {
+          x: newPosition.x - snapshot.currentPosition.x,
+          y: newPosition.y - snapshot.currentPosition.y
+        };
+        
+        this.debugManager.logMovement('Group delta', deltaFromCurrent);
+        if (Math.abs(deltaFromCurrent.x) > 0.001 || Math.abs(deltaFromCurrent.y) > 0.001) {
+          moveGroup(snapshot.id, deltaFromCurrent);
+        }
+        break;
+
+      case 'command':
+        this.debugManager.logMovement('Command move to', newPosition);
+        moveCommand(snapshot.id, newPosition);
+        break;
+        
+      default:
+        this.debugManager.logMovement('Unknown element type', snapshot.type);
+    }
   }
 
   private findCommandById(commandId: string, paths: any[]): any {
@@ -326,98 +677,284 @@ class PointerInteractionManager {
     }
     return null;
   }
+}
+
+class PanZoomManager {
+  private editorStore: any;
+  private config: PointerInteractionConfig;
+
+  constructor(editorStore: any, config: PointerInteractionConfig) {
+    this.editorStore = editorStore;
+    this.config = config;
+  }
+
+  updateStore(store: any): void {
+    this.editorStore = store;
+  }
+
+  handlePan(delta: Point): void {
+    this.editorStore.pan(delta);
+  }
+
+  handleZoom(factor: number, center: Point): void {
+    const { setZoom, viewport } = this.editorStore;
+    const newZoom = Math.max(0.1, Math.min(viewport.zoom * factor, 20));
+    setZoom(newZoom, center);
+  }
+}
+
+class DebugManager {
+  private config: PointerInteractionConfig;
+
+  constructor(config: PointerInteractionConfig) {
+    this.config = config;
+  }
+
+  logElementDetection(data: any): void {
+    if (this.config.debugMode) {
+      console.log('[DEBUG] Element detected:', data);
+    }
+  }
+
+  logDragOperation(operation: string, data: any): void {
+    if (this.config.debugMode) {
+      console.log(`[DEBUG] ${operation}:`, data);
+    }
+  }
+
+  logSelection(operation: string, data: any): void {
+    if (this.config.debugMode) {
+      console.log(`[DEBUG] ${operation}:`, data);
+    }
+  }
+
+  logDragManager(operation: string, data: any): void {
+    if (this.config.debugMode) {
+      console.log(`[DEBUG] DragManager ${operation}:`, data);
+    }
+  }
+
+  logElementProcessing(operation: string, data: any): void {
+    if (this.config.debugMode) {
+      console.log(`[DEBUG] ${operation}:`, data);
+    }
+  }
+
+  logMovement(operation: string, data: any): void {
+    if (this.config.debugMode) {
+      console.log(`[DEBUG] ${operation}:`, data);
+    }
+  }
+
+  logGeneric(message: string, data?: any): void {
+    if (this.config.debugMode) {
+      if (data !== undefined) {
+        console.log(`[DEBUG] ${message}:`, data);
+      } else {
+        console.log(`[DEBUG] ${message}`);
+      }
+    }
+  }
+}
+
+// ================== MAIN MANAGER CLASS ==================
+
+class PointerInteractionManager {
+  private state: PointerInteractionState;
+  private editorStore: any;
+  private config: PointerInteractionConfig;
+  
+  // Specialized managers
+  private elementSelector!: ElementSelector;
+  private dragManager!: DragManager;
+  private panZoomManager!: PanZoomManager;
+  private debugManager!: DebugManager;
+  
+  // Performance optimizations
+  private elementCache = new Map<string, SVGElement>();
+  private updateStickyGuidelines!: ReturnType<typeof debounce>;
+
+  constructor() {
+    this.config = {
+      snapToGrid: false,
+      gridSize: 10,
+      enableStickyGuidelines: true,
+      doubleClickThreshold: 300,
+      dragThreshold: 3,
+      debugMode: false
+    };
+
+    this.state = {
+      draggingCommand: null,
+      draggingControlPoint: null,
+      draggingElement: null,
+      isPanning: false,
+      isSpacePressed: false,
+      lastPointerPosition: { x: 0, y: 0 },
+      dragState: createInitialDragState(),
+      selectionBounds: null,
+    };
+
+    // Initialize debounced function after config is set
+    this.updateStickyGuidelines = debounce(this.doUpdateStickyGuidelines.bind(this), 16);
+
+    this.setupKeyboardListeners();
+    this.initializeManagers();
+  }
+
+  private initializeManagers(): void {
+    // DebugManager can be initialized immediately
+    this.debugManager = new DebugManager(this.config);
+    // Other managers will be initialized when editorStore is set
+  }
+
+  setEditorStore(store: any): void {
+    this.editorStore = store;
+    
+    // Only create managers if they don't exist yet to preserve state
+    if (!this.elementSelector) {
+      this.elementSelector = new ElementSelector(store, this.config, this.debugManager);
+    } else {
+      // Update the store reference in existing instance
+      this.elementSelector.updateStore(store);
+    }
+    
+    if (!this.dragManager) {
+      this.dragManager = new DragManager(store, this.config, this.debugManager);
+    } else {
+      // Update the store reference in existing instance
+      this.dragManager.updateStore(store);
+    }
+    
+    if (!this.panZoomManager) {
+      this.panZoomManager = new PanZoomManager(store, this.config);
+    } else {
+      // Update the store reference in existing instance
+      this.panZoomManager.updateStore(store);
+    }
+  }
+
+  private setupKeyboardListeners(): void {
+    document.addEventListener('keydown', this.handleKeyDown);
+    document.addEventListener('keyup', this.handleKeyUp);
+  }
+
+  private handleKeyDown = (e: KeyboardEvent): void => {
+    if (this.isEditableElementFocused(e.target)) return;
+
+    if (e.code === 'Space' && !e.repeat) {
+      e.preventDefault();
+      this.state.isSpacePressed = true;
+      this.updateCursorForSpaceMode(true);
+    }
+  };
+
+  private handleKeyUp = (e: KeyboardEvent): void => {
+    if (this.isEditableElementFocused(e.target)) return;
+
+    if (e.code === 'Space') {
+      e.preventDefault();
+      this.state.isSpacePressed = false;
+      this.state.isPanning = false;
+      this.updateCursorForSpaceMode(false);
+    }
+  };
+
+  private isEditableElementFocused(target: EventTarget | null): boolean {
+    const element = target as HTMLElement | null;
+    return Boolean(element && (
+      element.tagName === 'INPUT' ||
+      element.tagName === 'TEXTAREA' ||
+      element.isContentEditable
+    ));
+  }
+
+  private updateCursorForSpaceMode(isSpacePressed: boolean): void {
+    const svgElements = document.querySelectorAll('svg');
+    svgElements.forEach(svg => {
+      svg.style.cursor = isSpacePressed ? 'grab' : 'default';
+    });
+  }
+
+  private getKeyModifiers(e: PointerEvent<SVGElement>): KeyModifiers {
+    return {
+      shift: e.shiftKey,
+      ctrl: e.ctrlKey,
+      alt: e.altKey,
+      meta: e.metaKey,
+    };
+  }
+
+  private findElementWithData(element: SVGElement, svgRef: React.RefObject<SVGSVGElement | null>): { elementType: string | null; elementId: string | null } {
+    let current: Element | null = element;
+    
+    while (current && current !== svgRef.current) {
+      const elementType = current.getAttribute('data-element-type');
+      const elementId = current.getAttribute('data-element-id');
+      
+      if (elementType && elementId) {
+        return { elementType, elementId };
+      }
+      
+      current = current.parentElement;
+    }
+    
+    return { elementType: null, elementId: null };
+  }
+
+  private getSelectedElements(): SelectedElements {
+    const { selection } = this.editorStore;
+    return {
+      commands: selection.selectedCommands || [],
+      texts: selection.selectedTexts || [],
+      images: selection.selectedImages || [],
+      uses: selection.selectedUses || [],
+      textPaths: selection.selectedTextPaths || [],
+      groups: selection.selectedGroups || [],
+    };
+  }
+
+  private dispatchDragAction(action: DragAction): void {
+    this.state.dragState = dragReducer(this.state.dragState, action);
+  }
+
+  private doUpdateStickyGuidelines(): void {
+    // Implementation for sticky guidelines update
+    if (this.config.enableStickyGuidelines && this.state.dragState.isDragging) {
+      // Update sticky guidelines based on current drag state
+    }
+  }
+
+  getSVGPoint(e: PointerEvent<SVGElement>, svgRef: React.RefObject<SVGSVGElement | null>): Point {
+    return getSVGPoint(e, svgRef, this.editorStore.viewport);
+  }
+
+  // ================== EVENT HANDLERS ==================
 
   handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     const { commandId, controlPoint } = context;
-    const { selection, viewport, grid, mode, paths, texts, images, uses, selectCommand, selectMultiple, clearSelection, pushToHistory, selectImage, selectUse, addToSelection } = this.editorStore;
-    
-    // DEBUG: Log current selection before any changes
-        
-    // Only handle specific cases, don't block all pointer events
     const target = e.target as SVGElement;
+    const modifiers = this.getKeyModifiers(e);
     
-    // Helper function to find element with data attributes by traversing up the DOM
-    const findElementWithData = (element: SVGElement): { elementType: string | null, elementId: string | null } => {
-      let current: Element | null = element;
-      while (current && current !== context.svgRef.current) {
-        const elementType = current.getAttribute('data-element-type');
-        const elementId = current.getAttribute('data-element-id');
-        if (elementType && elementId) {
-          return { elementType, elementId };
-        }
-        current = current.parentElement;
-      }
-      return { elementType: null, elementId: null };
-    };
-    
-    const { elementType, elementId } = findElementWithData(target);
-    
-    // Debug: Find what's actually under the mouse at this position
-    const mouseX = e.clientX;
-    const mouseY = e.clientY;
-    const elementsAtPoint = document.elementsFromPoint(mouseX, mouseY);
-    
-    console.log('[DEBUG] Element detection:', {
-      commandId,
-      controlPoint,
-      elementType,
-      elementId,
-      targetTagName: target.tagName,
-      targetDataAttributes: {
-        elementType: target.getAttribute('data-element-type'),
-        elementId: target.getAttribute('data-element-id')
-      },
-      // Show what's actually under the mouse
-      elementsAtPoint: elementsAtPoint.slice(0, 5).map(el => ({
-        tagName: el.tagName,
-        dataElementType: el.getAttribute('data-element-type'),
-        dataElementId: el.getAttribute('data-element-id'),
-        className: (el as any).className?.baseVal || el.className,
-        id: el.id,
-        pointerEvents: window.getComputedStyle(el).pointerEvents
-      })),
-      // Debug DOM traversal
-      domPath: (() => {
-        const path = [];
-        let current = target;
-        let depth = 0;
-        while (current && current !== context.svgRef.current && depth < 10) {
-          path.push({
-            tagName: current.tagName,
-            dataElementType: current.getAttribute('data-element-type'),
-            dataElementId: current.getAttribute('data-element-id'),
-            className: current.className?.baseVal || current.className
-          });
-          current = current.parentElement as unknown as SVGElement;
-          depth++;
-        }
-        return path;
-      })()
-    });
-        
-    const isEmptySpaceClick = !commandId && !controlPoint && !elementType && !this.state.isSpacePressed && e.button === 0;
-    if (this.state.draggingControlPoint && !controlPoint && !this.state.isSpacePressed) {
-      handleManager.endDragHandle();
-      this.state.draggingControlPoint = null;
-      transformManager.setMoving(false);
-    }
-    // Note: Don't clear selection on empty space click here
-    // Let the SelectionPlugin handle rectangle selection first
-    // Selection clearing will be handled by SelectionPlugin if no drag occurs
+    // Handle space + click for panning
     if (this.state.isSpacePressed && e.button === 0) {
       e.stopPropagation();
       this.state.isPanning = true;
       this.state.lastPointerPosition = { x: e.clientX, y: e.clientY };
-      const svg = (e.target as Element).closest('svg');
+      const svg = target.closest('svg');
       if (svg) svg.style.cursor = 'grabbing';
       return true;
     }
+
+    // Handle middle mouse button for panning
     if (e.button === 1) {
       e.stopPropagation();
       this.state.isPanning = true;
       this.state.lastPointerPosition = { x: e.clientX, y: e.clientY };
       return true;
     }
+
+    // Handle control point dragging
     if (commandId && controlPoint && !this.state.isSpacePressed) {
       e.stopPropagation();
       this.state.draggingControlPoint = { commandId, point: controlPoint };
@@ -425,604 +962,184 @@ class PointerInteractionManager {
       const handleType = controlPoint === 'x1y1' ? 'outgoing' : 'incoming';
       handleManager.startDragHandle(commandId, handleType, startPoint);
       transformManager.setMoving(true);
-      pushToHistory();
+      this.editorStore.pushToHistory();
       return true;
     }
+
+    // Find element under cursor
+    const { elementType, elementId } = this.findElementWithData(target, context.svgRef);
     
-    // Check for image or use element clicks
-    if (elementType === 'image' && elementId && !this.state.isSpacePressed) {
+    this.debugManager.logElementDetection({
+      commandId,
+      controlPoint,
+      elementType,
+      elementId,
+      modifiers,
+    });
+
+    // Handle element selection and dragging
+    if (elementType && elementId && !this.state.isSpacePressed) {
       e.stopPropagation();
-      // Handle image selection and dragging
-      if (e.shiftKey) {
-        if (selection.selectedImages?.includes(elementId)) {
-          // Remove from selection
-          this.editorStore.removeFromSelection(elementId, 'image');
-        } else {
-          // Add to selection
-          addToSelection(elementId, 'image');
-        }
-        // For shift-click, only change selection, don't start dragging
-        return true;
-      } else {
-        // Handle image selection while preserving multi-selection when appropriate
-        if (!selection.selectedImages?.includes(elementId)) {
-          // Check if this image belongs to an already selected group
-          if (this.isElementInSelectedGroup(elementId, 'image')) {
-            // Element belongs to selected group, don't change selection at all
-            // This preserves the group selection and any other multi-selections
-          } else if (this.hasMultiSelection()) {
-            // When multi-selection exists, add to selection without promotion
-            this.addToSelectionWithoutPromotion(elementId, 'image');
-          } else {
-            // Normal single selection behavior
-            selectImage(elementId);
-          }
-        }
-        // If the image is already selected, keep the current multi-selection
-        
-        // Only prepare for dragging if not shift-clicking
-        this.state.draggingElement = { id: elementId, type: 'image' };
-        this.captureAllSelectedPositions();
-        this.state.dragOrigin = this.getSVGPoint(e, context.svgRef);
-        transformManager.setMoving(true);
-        pushToHistory();
+      
+      const elementTypeTyped = elementType as ElementType;
+      
+      // DEBUG: Log what's being detected and selected
+      this.debugManager.logElementDetection({
+        elementType: elementTypeTyped,
+        elementId,
+        modifiers
+      });
+      
+      // Handle shift-click for multi-selection
+      if (modifiers.shift) {
+        this.elementSelector.selectElement(elementId, elementTypeTyped, modifiers);
         return true;
       }
-    } else if (elementType === 'use' && elementId && !this.state.isSpacePressed) {
-      e.stopPropagation();
-      // Handle use element selection and dragging
-      if (e.shiftKey) {
-        if (selection.selectedUses?.includes(elementId)) {
-          // Remove from selection
-          this.editorStore.removeFromSelection(elementId, 'use');
-        } else {
-          // Add to selection
-          addToSelection(elementId, 'use');
-        }
-        // For shift-click, only change selection, don't start dragging
-        return true;
-      } else {
-        // Handle use element selection while preserving multi-selection when appropriate
-        if (!selection.selectedUses?.includes(elementId)) {
-          // Check if this use element belongs to an already selected group
-          if (this.isElementInSelectedGroup(elementId, 'use')) {
-            // Element belongs to selected group, don't change selection at all
-            // This preserves the group selection and any other multi-selections
-          } else if (this.hasMultiSelection()) {
-            // When multi-selection exists, add to selection without promotion
-            this.addToSelectionWithoutPromotion(elementId, 'use');
-          } else {
-            // Normal single selection behavior
-            selectUse(elementId);
-          }
-        }
-        // If the use element is already selected, keep the current multi-selection
-        
-        // Only prepare for dragging if not shift-clicking
-        this.state.draggingElement = { id: elementId, type: 'use' };
-        this.captureAllSelectedPositions();
-        this.state.dragOrigin = this.getSVGPoint(e, context.svgRef);
-        transformManager.setMoving(true);
-        pushToHistory();
-        return true;
-      }
-    } else if ((elementType === 'text' || elementType === 'multiline-text') && elementId && !this.state.isSpacePressed) {
-            e.stopPropagation();
-      // Handle text selection and dragging
-      if (e.shiftKey) {
-        if (selection.selectedTexts?.includes(elementId)) {
-          // Remove from selection
-          this.editorStore.removeFromSelection(elementId, 'text');
-        } else {
-          // Add to selection
-          addToSelection(elementId, 'text');
-        }
-        // For shift-click, only change selection, don't start dragging
-        return true;
-      } else {
-        // Handle text selection while preserving multi-selection when appropriate
-                
-        if (!selection.selectedTexts?.includes(elementId)) {
-          // Check if this text belongs to an already selected group
-          if (this.isElementInSelectedGroup(elementId, 'text')) {
-            // Element belongs to selected group, don't change selection at all
-            // This preserves the group selection and any other multi-selections
-                      } else if (this.hasMultiSelection()) {
-            // When multi-selection exists, add to selection without promotion
-                        this.addToSelectionWithoutPromotion(elementId, 'text');
-          } else {
-            // Normal single selection behavior
-                        this.editorStore.selectText(elementId);
-          }
-        } else {
-                  }
-        // If the text is already selected, keep the current multi-selection
-        
-        // Only prepare for dragging if not shift-clicking
-        this.state.draggingElement = { id: elementId, type: 'text' };
-        this.captureAllSelectedPositions();
-        this.state.dragOrigin = this.getSVGPoint(e, context.svgRef);
-        transformManager.setMoving(true);
-        pushToHistory();
-        return true;
-      }
-    } else if (elementType === 'textPath' && elementId && !this.state.isSpacePressed) {
-            e.stopPropagation();
-      // Handle textPath selection and dragging
-      if (e.shiftKey) {
-        if (selection.selectedTextPaths?.includes(elementId)) {
-          // Remove from selection
-          this.editorStore.removeFromSelection(elementId, 'textPath');
-        } else {
-          // Add to selection
-          addToSelection(elementId, 'textPath');
-        }
-        // For shift-click, only change selection, don't start dragging
-        return true;
-      } else {
-        // Handle textPath selection while preserving multi-selection when appropriate
-        if (!selection.selectedTextPaths?.includes(elementId)) {
-          // Check if this textPath belongs to an already selected group
-          if (this.isElementInSelectedGroup(elementId, 'textPath')) {
-            // Element belongs to selected group, don't change selection at all
-            // This preserves the group selection and any other multi-selections
-          } else if (this.hasMultiSelection()) {
-            // When multi-selection exists, add to selection without promotion
-            this.addToSelectionWithoutPromotion(elementId, 'textPath');
-          } else {
-            // Normal single selection behavior
-            this.editorStore.selectTextPath(elementId);
-          }
-        }
-        // If the textPath is already selected, keep the current multi-selection
-        
-        // Note: TextPath elements don't drag independently - they follow their path
-        // But we can still support multi-selection and transform operations
-        // The actual dragging will be applied to the underlying path
-        
-        // Prepare for potential transform operations
-        this.state.draggingElement = { id: elementId, type: 'textPath' };
-        this.captureAllSelectedPositions();
-        this.state.dragOrigin = this.getSVGPoint(e, context.svgRef);
-        transformManager.setMoving(true);
-        pushToHistory();
-        return true;
-      }
-    } else if (elementType === 'group' && elementId && !this.state.isSpacePressed) {
-      e.stopPropagation();
-      // Handle group selection and dragging
-      if (e.shiftKey) {
-        if (selection.selectedGroups?.includes(elementId)) {
-          // Remove from selection
-          this.editorStore.removeFromSelection(elementId, 'group');
-        } else {
-          // Add to selection
-          addToSelection(elementId, 'group');
-        }
-        // For shift-click, only change selection, don't start dragging
-        return true;
-      } else {
-        // Handle group selection while preserving multi-selection when appropriate
-                
-        if (!selection.selectedGroups?.includes(elementId)) {
-          if (this.hasMultiSelection()) {
-            // When multi-selection exists, add to selection without promotion
-                        this.addToSelectionWithoutPromotion(elementId, 'group');
-          } else {
-            // Normal single selection behavior
-                        this.editorStore.selectGroup(elementId);
-          }
-        } else {
-                  }
-        // If the group is already selected, keep the current multi-selection
-        
-        // Only prepare for dragging if not shift-clicking
-        this.state.draggingElement = { id: elementId, type: 'group' };
-        this.captureAllSelectedPositions();
-        this.state.dragOrigin = this.getSVGPoint(e, context.svgRef);
-        transformManager.setMoving(true);
-        pushToHistory();
-        return true;
-      }
+
+      // Normal selection and drag preparation
+      this.elementSelector.selectElement(elementId, elementTypeTyped, modifiers);
+      
+      // DEBUG: Log selection after element selection
+      const selectedElements = this.getSelectedElements();
+      this.debugManager.logSelection('Selected elements after selection', selectedElements);
+      
+      this.state.draggingElement = { id: elementId, type: elementTypeTyped };
+      
+      // Start drag operation
+      const origin = this.getSVGPoint(e, context.svgRef);
+      
+      this.dragManager.startDrag(selectedElements, origin);
+      this.dispatchDragAction({
+        type: 'START_DRAG',
+        elements: selectedElements,
+        origin,
+        dragType: 'element'
+      });
+
+      return true;
     }
-    
+
+    // Handle command selection and dragging
     if (commandId && !this.state.isSpacePressed) {
       e.stopPropagation();
       
-      let finalSelectedIds: string[] = [];
-      if (e.shiftKey) {
-        if (selection.selectedCommands.includes(commandId)) {
-          finalSelectedIds = selection.selectedCommands.filter((id: string) => id !== commandId);
-          selectMultiple(finalSelectedIds, 'commands');
-        } else {
-          finalSelectedIds = [...selection.selectedCommands, commandId];
-          selectMultiple(finalSelectedIds, 'commands');
-        }
-      } else {
-        if (selection.selectedCommands.includes(commandId)) {
-          // Command is already selected - preserve all current selections
-          // This allows dragging a command along with other selected elements
-          finalSelectedIds = selection.selectedCommands;
-          // Don't change selection when command already selected and we have multi-selection
-        } else {
-          // New command selection - check if it belongs to a selected group first
-          if (this.isCommandInSelectedGroup(commandId)) {
-            // Command belongs to selected group, don't change selection at all
-            // This preserves the group selection and any other multi-selections
-            finalSelectedIds = selection.selectedCommands;
-          } else if (this.hasMultiSelection()) {
-            // Add to existing selection to preserve multi-selection
-            this.addToSelectionWithoutPromotion(commandId, 'command');
-            finalSelectedIds = [...selection.selectedCommands, commandId];
-          } else {
-            // Normal single selection behavior
-            finalSelectedIds = [commandId];
-            selectCommand(commandId);
-          }
-        }
-      }
-      handleManager.onSelectionChanged();
+      this.elementSelector.selectElement(commandId, 'command', modifiers);
       this.state.draggingCommand = commandId;
       
-      // Capture positions of all selected elements
-      this.captureAllSelectedPositions();
+      const selectedElements = this.getSelectedElements();
+      const origin = this.getSVGPoint(e, context.svgRef);
       
-      this.state.dragOrigin = this.getSVGPoint(e, context.svgRef);
-      transformManager.setMoving(true);
-      pushToHistory();
+      this.dragManager.startDrag(selectedElements, origin);
+      this.dispatchDragAction({
+        type: 'START_DRAG',
+        elements: selectedElements,
+        origin,
+        dragType: 'command'
+      });
+
+      handleManager.onSelectionChanged();
       return true;
-    } else if (mode.current === 'create' && mode.createMode && !this.state.isSpacePressed) {
-      return false;
-    } else if (isEmptySpaceClick && !e.shiftKey) {
-      return false;
-    } else if (isEmptySpaceClick && e.shiftKey) {
-      return false;
     }
+
     return false;
   };
 
   handlePointerMove = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     if (!this.editorStore) return false;
-    const { grid, selection, pan, updateCommand, moveCommand, moveText, moveImage, moveUse, textPaths, paths } = this.editorStore;
+
+    // Handle panning
     if (this.state.isPanning) {
       const dx = e.clientX - this.state.lastPointerPosition.x;
       const dy = e.clientY - this.state.lastPointerPosition.y;
-      pan({ x: dx, y: dy });
+      this.panZoomManager.handlePan({ x: dx, y: dy });
       this.state.lastPointerPosition = { x: e.clientX, y: e.clientY };
       return true;
     }
+
+    // Handle control point dragging
     if (this.state.draggingControlPoint) {
       const point = this.getSVGPoint(e, context.svgRef);
       handleManager.updateDragHandle(point);
       return true;
     }
-    if ((this.state.draggingCommand || this.state.draggingElement) && this.state.dragOrigin) {
-      const point = this.getSVGPoint(e, context.svgRef);
-      let dx = point.x - this.state.dragOrigin.x;
-      let dy = point.y - this.state.dragOrigin.y;
-      
-      // Check if we have any elements being dragged
-      const hasDraggedElements = Object.keys(this.state.dragStartPositions).length > 0 ||
-                                Object.keys(this.state.dragStartTextPositions).length > 0 ||
-                                Object.keys(this.state.dragStartImagePositions).length > 0 ||
-                                Object.keys(this.state.dragStartUsePositions).length > 0 ||
-                                Object.keys(this.state.dragStartGroupPositions).length > 0 ||
-                                Object.keys(this.state.dragStartTextPathPositions).length > 0;
-      
-      // If we have multiple elements or sticky guidelines are enabled, use StickyManager
-      // But skip sticky guidelines if groups are involved in multi-selection as their bounds are dynamic
-      const { enabledFeatures, selection } = this.editorStore;
-      const hasGroupsInSelection = selection.selectedGroups && selection.selectedGroups.length > 0;
-      const hasMultiSelection = Object.keys(this.state.dragStartPositions).length > 0 ||
-                               Object.keys(this.state.dragStartTextPositions).length > 0 ||
-                               Object.keys(this.state.dragStartImagePositions).length > 0 ||
-                               Object.keys(this.state.dragStartUsePositions).length > 0 ||
-                               Object.keys(this.state.dragStartTextPathPositions).length > 0;
-      
-      if (hasDraggedElements && enabledFeatures.guidelinesEnabled && this.state.dragStartSelectionBounds && 
-          !(hasGroupsInSelection && hasMultiSelection)) {
-        if (this.state.dragOrigin) {
-          // Calculate where the selection should be positioned (not where the mouse is)
-          const targetSelectionX = this.state.dragStartSelectionBounds.x + dx;
-          const targetSelectionY = this.state.dragStartSelectionBounds.y + dy;
-          const targetSelectionPosition = { x: targetSelectionX, y: targetSelectionY };
-          
-          // Use StickyManager to get snapped position using the target selection position
-          const result = stickyManager.handleSelectionMoving(
-            targetSelectionPosition,
-            this.state.dragStartSelectionBounds
-          );
-          
-          // If we have snapped bounds, calculate the delta based on how much the selection moved
-          if (result.snappedBounds) {
-            dx = result.snappedBounds.x - this.state.dragStartSelectionBounds.x;
-            dy = result.snappedBounds.y - this.state.dragStartSelectionBounds.y;
-                      } else {
-            // This shouldn't happen with the new implementation, but keep as fallback
-            console.warn('PointerInteraction: No snapped bounds returned from StickyManager');
-          }
-        }
-      }
-      
-      // Move selected commands
-      Object.keys(this.state.dragStartPositions).forEach((cmdId: string) => {
-        const start = this.state.dragStartPositions[cmdId];
-        if (start) {
-          let newX = start.x + dx;
-          let newY = start.y + dy;
-          if (grid.snapToGrid) {
-            const snapped = snapToGrid({ x: newX, y: newY }, grid.size);
-            newX = snapped.x;
-            newY = snapped.y;
-          }
-          moveCommand(cmdId, { x: newX, y: newY });
-        }
-      });
-      
-      // Move selected texts
-      Object.keys(this.state.dragStartTextPositions).forEach((textId: string) => {
-        const start = this.state.dragStartTextPositions[textId];
-        if (start) {
-                    
-          let newX = start.x + dx;
-          let newY = start.y + dy;
-          
-          // Apply grid snapping if enabled
-          if (grid.snapToGrid) {
-            const snapped = snapToGrid({ x: newX, y: newY }, grid.size);
-            newX = snapped.x;
-            newY = snapped.y;
-          }
-          
-          // Apply guidelines snapping if enabled
-          const { enabledFeatures, texts: allTexts } = this.editorStore;
-          if (enabledFeatures.guidelinesEnabled) {
-            // Find the text element being dragged
-            const currentText = allTexts.find((t: any) => t.id === textId);
-            if (currentText) {
-              const fontSize = currentText.style?.fontSize || 16;
-              const textWidth = 100; // Simplified text width calculation
-              
-              const textBounds = {
-                x: currentText.x,
-                y: currentText.y - fontSize * 0.8,
-                width: textWidth,
-                height: fontSize,
-                centerX: currentText.x + textWidth / 2,
-                centerY: currentText.y - fontSize * 0.3,
-                left: currentText.x,
-                right: currentText.x + textWidth,
-                top: currentText.y - fontSize * 0.8,
-                bottom: currentText.y,
-                topCenter: currentText.x + textWidth / 2,
-                bottomCenter: currentText.x + textWidth / 2,
-                leftCenter: currentText.y - fontSize * 0.3,
-                rightCenter: currentText.y - fontSize * 0.3
-              };
-              
-              const result = stickyManager.handleElementMoving(
-                textId,
-                'text',
-                textBounds,
-                { x: newX, y: newY }
-              );
-              newX = result.snappedPoint.x;
-              newY = result.snappedPoint.y;
-            }
-          }
-          
-          // Calculate delta from current position to apply movement
-          const finalText = allTexts.find((t: any) => t.id === textId);
-          if (finalText) {
-            const deltaX = newX - finalText.x;
-            const deltaY = newY - finalText.y;
-            if (Math.abs(deltaX) > 0.001 || Math.abs(deltaY) > 0.001) {
-              moveText(textId, { x: deltaX, y: deltaY });
-            }
-          }
-        }
-      });
-      
-      Object.keys(this.state.dragStartImagePositions).forEach((imageId: string) => {
-        const start = this.state.dragStartImagePositions[imageId];
-        if (start) {
-          let newX = start.x + dx;
-          let newY = start.y + dy;
-          
-          // Apply grid snapping if enabled
-          if (grid.snapToGrid) {
-            const snapped = snapToGrid({ x: newX, y: newY }, grid.size);
-            newX = snapped.x;
-            newY = snapped.y;
-          }
-          
-          // Calculate delta for moveImage function
-          const currentImage = this.editorStore.images.find((img: any) => img.id === imageId);
-          if (currentImage) {
-            const deltaX = newX - currentImage.x;
-            const deltaY = newY - currentImage.y;
-            if (Math.abs(deltaX) > 0.001 || Math.abs(deltaY) > 0.001) {
-              moveImage(imageId, { x: deltaX, y: deltaY });
-            }
-          }
-        }
-      });
-      
-      // Move selected use elements
-      Object.keys(this.state.dragStartUsePositions).forEach((useId: string) => {
-        const start = this.state.dragStartUsePositions[useId];
-        if (start) {
-          let newX = start.x + dx;
-          let newY = start.y + dy;
-          
-          // Apply grid snapping if enabled
-          if (grid.snapToGrid) {
-            const snapped = snapToGrid({ x: newX, y: newY }, grid.size);
-            newX = snapped.x;
-            newY = snapped.y;
-          }
-          
-          // Calculate delta for moveUse function
-          const currentUse = this.editorStore.uses.find((u: any) => u.id === useId);
-          if (currentUse) {
-            const deltaX = newX - (currentUse.x || 0);
-            const deltaY = newY - (currentUse.y || 0);
-            if (Math.abs(deltaX) > 0.001 || Math.abs(deltaY) > 0.001) {
-              moveUse(useId, { x: deltaX, y: deltaY });
-            }
-          }
-        }
-      });
-      
-      // Move selected groups using the store's moveGroup method for consistency
-      Object.keys(this.state.dragStartGroupPositions).forEach((groupId: string) => {
-        const start = this.state.dragStartGroupPositions[groupId];
-        if (start) {
-          // IMPORTANT: Groups need relative delta movement, not absolute positioning
-          // We need to track the last position and calculate relative movement
-          if (!this.state.lastGroupPositions) {
-            this.state.lastGroupPositions = {};
-          }
-          
-          // Initialize last position if this is the first movement
-          if (!this.state.lastGroupPositions[groupId]) {
-            this.state.lastGroupPositions[groupId] = { x: 0, y: 0 };
-          }
-          
-          const lastPos = this.state.lastGroupPositions[groupId];
-          let translationX = dx - lastPos.x;
-          let translationY = dy - lastPos.y;
-          
-                    
-          // Apply grid snapping if enabled
-          if (grid.snapToGrid) {
-            const snapped = snapToGrid({ x: translationX, y: translationY }, grid.size);
-                        translationX = snapped.x;
-            translationY = snapped.y;
-          }
-          
-          // Only move if there's actual movement
-          if (Math.abs(translationX) > 0.001 || Math.abs(translationY) > 0.001) {
-            const { moveGroup } = this.editorStore;
-            if (moveGroup) {
-                            moveGroup(groupId, { x: translationX, y: translationY });
-            }
-          }
-          
-          // Update last position for next movement
-          this.state.lastGroupPositions[groupId] = { x: dx, y: dy };
-        }
-      });
-      
-      // Handle TextPath dragging by moving the underlying path
-      Object.keys(this.state.dragStartTextPathPositions).forEach((textPathId: string) => {
-        const textPath = textPaths.find((tp: any) => tp.id === textPathId);
-        if (textPath && textPath.pathRef) {
-          // Find the referenced subpath and move its commands
-          const referencedPath = paths.find((path: any) => 
-            path.subPaths.some((subPath: any) => subPath.id === textPath.pathRef)
-          );
-          
-          if (referencedPath) {
-            const referencedSubPath = referencedPath.subPaths.find((subPath: any) => subPath.id === textPath.pathRef);
-            if (referencedSubPath) {
-              // Move all commands in the referenced subpath
-              referencedSubPath.commands.forEach((cmd: any) => {
-                const cmdId = cmd.id;
-                // Only move if we haven't already captured this command's position
-                if (!this.state.dragStartPositions[cmdId]) {
-                  const currentPos = { x: cmd.x || 0, y: cmd.y || 0 };
-                  let newX = currentPos.x + dx;
-                  let newY = currentPos.y + dy;
-                  
-                  if (grid.snapToGrid) {
-                    const snapped = snapToGrid({ x: newX, y: newY }, grid.size);
-                    newX = snapped.x;
-                    newY = snapped.y;
-                  }
-                  
-                  const { moveCommand } = this.editorStore;
-                  moveCommand(cmdId, { x: newX, y: newY });
-                }
-              });
-            }
-          }
-        }
-      });
-      
-      // Update transform bounds in real-time during movement
-      transformManager.updateTransformState();
-      
+
+    // Handle element/command dragging
+    if (this.state.dragState.isDragging && this.state.dragState.origin) {
+      const currentPoint = this.getSVGPoint(e, context.svgRef);
+      const delta = {
+        x: currentPoint.x - this.state.dragState.origin.x,
+        y: currentPoint.y - this.state.dragState.origin.y
+      };
+
+      this.dispatchDragAction({ type: 'UPDATE_DRAG', position: currentPoint });
+      this.dragManager.updateDrag(delta);
+      this.updateStickyGuidelines();
+
       return true;
     }
+
     return false;
   };
 
   handlePointerUp = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
-    const wasHandling = !!(this.state.draggingCommand || this.state.draggingControlPoint || this.state.draggingElement || this.state.isPanning);
-    const wasDraggingCommand = !!this.state.draggingCommand;
-    const wasDraggingControlPoint = !!this.state.draggingControlPoint;
-    const wasDraggingElement = !!this.state.draggingElement;
-    if (wasDraggingControlPoint && this.state.draggingControlPoint) {
+    const wasHandling = this.state.isPanning || 
+                       !!this.state.draggingControlPoint || 
+                       this.state.dragState.isDragging;
+
+    // End control point dragging
+    if (this.state.draggingControlPoint) {
       handleManager.endDragHandle();
-    }
-    this.state.draggingCommand = null;
-    this.state.draggingControlPoint = null;
-    this.state.draggingElement = null;
-    this.state.isPanning = false;
-    this.state.dragStartPositions = {};
-    this.state.dragStartTextPositions = {};
-    this.state.dragStartTextPathPositions = {};
-    this.state.dragStartImagePositions = {};
-    this.state.dragStartUsePositions = {};
-    this.state.dragStartGroupPositions = {};
-    this.state.dragOrigin = null;
-    this.state.dragStartSelectionBounds = null; // Clear selection bounds
-    this.state.lastGroupPositions = {}; // Clear group movement tracking
-    
-    // Clear guidelines when dragging stops
-    const { enabledFeatures } = this.editorStore;
-    if (enabledFeatures?.stickyGuidelinesEnabled) {
-      stickyManager.clearGuidelines();
-    }
-    
-    if (wasDraggingCommand || wasDraggingControlPoint || wasDraggingElement) {
+      this.state.draggingControlPoint = null;
       transformManager.setMoving(false);
     }
+
+    // End element/command dragging
+    if (this.state.dragState.isDragging) {
+      this.dragManager.endDrag();
+      this.dispatchDragAction({ type: 'END_DRAG' });
+    }
+
+    // Reset state
+    this.state.draggingCommand = null;
+    this.state.draggingElement = null;
+    this.state.isPanning = false;
+
+    // Update cursor for space mode
     if (this.state.isSpacePressed) {
       const svg = (e.target as Element).closest('svg');
       if (svg) svg.style.cursor = 'grab';
     }
+
     return wasHandling;
   };
 
   handleWheel = (e: WheelEvent<SVGElement>, context: PointerEventContext): boolean => {
-    const { setZoom, viewport } = this.editorStore;
-    
-    // Only preventDefault if the event is cancelable (not in a passive listener)
     if (e.cancelable) {
       e.preventDefault();
     }
-    
-    // Usar clientX/clientY del WheelEvent para calcular el punto
-    const point = { x: e.clientX, y: e.clientY };
+
+    const center = { x: e.clientX, y: e.clientY };
     const zoomFactor = 1 - e.deltaY * 0.001;
-    setZoom(viewport.zoom * zoomFactor, point);
+    this.panZoomManager.handleZoom(zoomFactor, center);
+    
     return true;
   };
 
   getCursor(): string {
     if (this.state.isPanning) return 'grabbing';
     if (this.state.isSpacePressed) return 'grab';
-    if (this.state.draggingCommand || this.state.draggingControlPoint || this.state.draggingElement) return 'grabbing';
+    if (this.state.dragState.isDragging || this.state.draggingControlPoint) return 'grabbing';
     return 'default';
   }
 
-  cleanup() {
+  cleanup(): void {
     document.removeEventListener('keydown', this.handleKeyDown);
     document.removeEventListener('keyup', this.handleKeyUp);
+    this.elementCache.clear();
   }
 }
+
+// ================== EXPORTS ==================
 
 const pointerManager = new PointerInteractionManager();
 
@@ -1035,7 +1152,7 @@ export const usePointerInteraction = () => {
 export const PointerInteractionPlugin: Plugin = {
   id: 'pointer-interaction',
   name: 'Pointer Interaction',
-  version: '1.0.0',
+  version: '2.0.0',
   enabled: true,
   initialize: (editor) => {
     pointerManager.setEditorStore(editor);
