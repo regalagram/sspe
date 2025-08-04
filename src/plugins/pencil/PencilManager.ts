@@ -2,7 +2,7 @@ import { PointerEvent } from 'react';
 import { PointerEventContext } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { SVGCommand, Point } from '../../types';
-import { tldrawSmoother, SmoothedPoint } from './TldrawSmoother';
+import { smoother, SmoothedPoint } from './Smoother';
 import { PencilStorage, PencilStorageData } from './PencilStorage';
 import { toolModeManager } from '../../managers/ToolModeManager';
 
@@ -60,11 +60,11 @@ class PencilManager {
       this.state.strokeStyle = { ...savedData.strokeStyle };
 
       // Apply smoother parameters
-      tldrawSmoother.setSimplifyTolerance(savedData.smootherParams.simplifyTolerance);
-      tldrawSmoother.setSmoothingFactor(savedData.smootherParams.smoothingFactor);
-      tldrawSmoother.setMinDistance(savedData.smootherParams.minDistance);
-      tldrawSmoother.setPressureDecay(savedData.smootherParams.pressureDecay);
-      tldrawSmoother.setLowPassAlpha(savedData.smootherParams.lowPassAlpha);
+      smoother.setSimplifyTolerance(savedData.smootherParams.simplifyTolerance);
+      smoother.setSmoothingFactor(savedData.smootherParams.smoothingFactor);
+      smoother.setMinDistance(savedData.smootherParams.minDistance);
+      smoother.setPressureDecay(savedData.smootherParams.pressureDecay);
+      smoother.setLowPassAlpha(savedData.smootherParams.lowPassAlpha);
     }
   }
 
@@ -74,7 +74,7 @@ class PencilManager {
   private saveToStorage() {
     const data: PencilStorageData = {
       strokeStyle: { ...this.state.strokeStyle },
-      smootherParams: tldrawSmoother.getParameters()
+      smootherParams: smoother.getParameters()
     };
     PencilStorage.save(data);
   }
@@ -320,11 +320,11 @@ class PencilManager {
       return;
     }
 
-    // Apply tldraw-style smoothing and simplification
-    const smoothedPoints = tldrawSmoother.smoothPoints(this.state.rawPoints);
+    // Apply smoothing and simplification
+    const smoothedPoints = smoother.smoothPoints(this.state.rawPoints);
 
     // Calculate pressure for potential variable stroke width
-    const pointsWithPressure = tldrawSmoother.calculatePressure(smoothedPoints);
+    const pointsWithPressure = smoother.calculatePressure(smoothedPoints);
 
     // Convert smoothed points to SVG commands
     const svgCommands: Omit<SVGCommand, 'id'>[] = [];
@@ -414,48 +414,48 @@ class PencilManager {
 
   // Methods for accessing smoother parameters
   getSmootherParameters() {
-    return tldrawSmoother.getParameters();
+    return smoother.getParameters();
   }
 
   setSmootherParameter(param: string, value: number) {
     switch (param) {
       case 'simplifyTolerance':
-        tldrawSmoother.setSimplifyTolerance(value);
+        smoother.setSimplifyTolerance(value);
         break;
       case 'smoothingFactor':
-        tldrawSmoother.setSmoothingFactor(value);
+        smoother.setSmoothingFactor(value);
         break;
       case 'minDistance':
-        tldrawSmoother.setMinDistance(value);
+        smoother.setMinDistance(value);
         break;
       case 'pressureDecay':
-        tldrawSmoother.setPressureDecay(value);
+        smoother.setPressureDecay(value);
         break;
       case 'lowPassAlpha':
-        tldrawSmoother.setLowPassAlpha(value);
+        smoother.setLowPassAlpha(value);
         break;
     }
     this.saveToStorage(); // Auto-save when parameters change
   }
 
   resetSmootherToDefaults() {
-    tldrawSmoother.resetToDefaults();
+    smoother.resetToDefaults();
     this.saveToStorage(); // Auto-save when reset
   }
 
   // Preset methods
   applyPreciseDrawingPreset() {
-    tldrawSmoother.applyPreciseDrawingPreset();
+    smoother.applyPreciseDrawingPreset();
     this.saveToStorage(); // Auto-save when preset applied
   }
 
   applyFluidDrawingPreset() {
-    tldrawSmoother.applyFluidDrawingPreset();
+    smoother.applyFluidDrawingPreset();
     this.saveToStorage(); // Auto-save when preset applied
   }
 
   applyQuickSketchPreset() {
-    tldrawSmoother.applyQuickSketchPreset();
+    smoother.applyQuickSketchPreset();
     this.saveToStorage(); // Auto-save when preset applied
   }
 
@@ -469,11 +469,11 @@ class PencilManager {
     const defaults = PencilStorage.getDefaults();
     this.state.strokeStyle = { ...defaults.strokeStyle };
 
-    tldrawSmoother.setSimplifyTolerance(defaults.smootherParams.simplifyTolerance);
-    tldrawSmoother.setSmoothingFactor(defaults.smootherParams.smoothingFactor);
-    tldrawSmoother.setMinDistance(defaults.smootherParams.minDistance);
-    tldrawSmoother.setPressureDecay(defaults.smootherParams.pressureDecay);
-    tldrawSmoother.setLowPassAlpha(defaults.smootherParams.lowPassAlpha);
+    smoother.setSimplifyTolerance(defaults.smootherParams.simplifyTolerance);
+    smoother.setSmoothingFactor(defaults.smootherParams.smoothingFactor);
+    smoother.setMinDistance(defaults.smootherParams.minDistance);
+    smoother.setPressureDecay(defaults.smootherParams.pressureDecay);
+    smoother.setLowPassAlpha(defaults.smootherParams.lowPassAlpha);
   }
 
   // Clean up method

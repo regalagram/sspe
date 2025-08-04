@@ -1,7 +1,7 @@
 import { Point } from '../../types';
 
 /**
- * Advanced smoothing algorithm inspired by tldraw
+ * Advanced smoothing algorithm for pencil drawing
  * Provides better point simplification and adaptive smoothing
  */
 
@@ -10,7 +10,7 @@ export interface SmoothedPoint extends Point {
   timestamp?: number;
 }
 
-export class TldrawStyleSmoother {
+export class Smoother {
   private simplifyTolerance = 2.0; // Increased for better simplification
   private smoothingFactor = 0.85; // Higher for smoother curves
   private minDistance = 1.5; // Reduced for more detail
@@ -28,7 +28,7 @@ export class TldrawStyleSmoother {
   }
 
   /**
-   * Apply tldraw-style smoothing to a series of points
+   * Apply smoothing to a series of points
    */
   smoothPoints(points: Point[]): Point[] {
     if (points.length < 3) return points;
@@ -322,4 +322,4 @@ export class TldrawStyleSmoother {
   }
 }
 
-export const tldrawSmoother = new TldrawStyleSmoother();
+export const smoother = new Smoother();
