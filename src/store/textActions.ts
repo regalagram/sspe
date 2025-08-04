@@ -313,9 +313,13 @@ export const createTextActions: StateCreator<
               const oldCx = parseFloat(rotateWithCenterMatch[2]);
               const oldCy = parseFloat(rotateWithCenterMatch[3]);
               
-              // Update the rotation center to match the new text position
-              const newCx = oldCx + delta.x;
-              const newCy = oldCy + delta.y;
+              // Calculate the relative offset between rotation center and text position
+              const relativeOffsetX = oldCx - currentText.x;
+              const relativeOffsetY = oldCy - currentText.y;
+              
+              // Update the rotation center to maintain the same relative position to the new text position
+              const newCx = newX + relativeOffsetX;
+              const newCy = newY + relativeOffsetY;
               
               newTransform = currentText.transform.replace(
                 /rotate\([^)]+\)/,

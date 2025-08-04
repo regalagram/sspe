@@ -419,9 +419,34 @@ export function moveAllCapturedElementsByDelta(
             const newX = text.x + finalDelta.x;
             const newY = text.y + finalDelta.y;
             
+            // Handle rotation transforms properly
+            let newTransform = text.transform;
+            if (text.transform) {
+              // Match rotate with center coordinates: rotate(angle, cx, cy)
+              const rotateWithCenterMatch = text.transform.match(/rotate\(([^,]+),\s*([^,]+),\s*([^)]+)\)/);
+              if (rotateWithCenterMatch) {
+                const angle = rotateWithCenterMatch[1];
+                const oldCx = parseFloat(rotateWithCenterMatch[2]);
+                const oldCy = parseFloat(rotateWithCenterMatch[3]);
+                
+                // Calculate the relative offset between rotation center and text position
+                const relativeOffsetX = oldCx - text.x;
+                const relativeOffsetY = oldCy - text.y;
+                
+                // Update the rotation center to maintain the same relative position to the new text position
+                const newCx = newX + relativeOffsetX;
+                const newCy = newY + relativeOffsetY;
+                
+                newTransform = text.transform.replace(
+                  /rotate\([^)]+\)/,
+                  `rotate(${angle}, ${newCx}, ${newCy})`
+                );
+              }
+            }
+            
             if (Math.abs(text.x - newX) >= 0.001 || Math.abs(text.y - newY) >= 0.001) {
               hasChanges = true;
-              return { ...text, x: newX, y: newY };
+              return { ...text, x: newX, y: newY, transform: newTransform };
             }
           }
           return text;

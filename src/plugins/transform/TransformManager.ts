@@ -5,6 +5,7 @@ import { SVGCommand, Point } from '../../types';
 import { calculateGlobalViewBox } from '../../utils/viewbox-utils';
 import { subPathToString } from '../../utils/path-utils';
 import { getControlPointSize, getMobileDetectionValues } from '../../hooks/useMobileDetection';
+import { calculateTextBoundsDOM } from '../../utils/text-utils';
 
 export interface TransformBounds {
   x: number;
@@ -19,6 +20,29 @@ export interface TransformHandle {
   type: 'corner' | 'edge' | 'rotation';
   position: Point;
   cursor: string;
+}
+
+// Transformation matrix interface for robust matrix operations
+interface TransformMatrix {
+  a: number; b: number; c: number; d: number; e: number; f: number;
+}
+
+interface TransformOperation {
+  type: 'scale' | 'rotate';
+  scaleX?: number;
+  scaleY?: number;
+  originX?: number;
+  originY?: number;
+  angle?: number;
+  centerX?: number;
+  centerY?: number;
+}
+
+interface FinalValues {
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number; // in degrees
 }
 
 export type TransformMode = 'scale' | 'rotate' | null;
@@ -216,99 +240,22 @@ export class TransformManager {
       }
     }
 
-    // For selected text elements
+    // For selected text elements - use calculateTextBoundsDOM to get exact bounds
     if (selection.selectedTexts?.length > 0 && texts) {
       for (const textId of selection.selectedTexts) {
         const text = texts.find((t: any) => t.id === textId);
         if (text) {
-          const textElement = document.createElementNS(svgNS, 'text');
-          textElement.setAttribute('x', text.x.toString());
-          textElement.setAttribute('y', text.y.toString());
-          
-          if (text.style?.fontSize) {
-            textElement.setAttribute('font-size', text.style.fontSize.toString());
-          }
-          if (text.style?.fontFamily) {
-            textElement.setAttribute('font-family', text.style.fontFamily);
-          }
-          
-          // Apply transform if present
-          if (text.transform) {
-            textElement.setAttribute('transform', text.transform);
-          }
-          
-          if (text.type === 'text') {
-            textElement.textContent = text.content;
-            tempSvg.appendChild(textElement);
+          // Use the same method as the yellow selection rectangle
+          const bounds = calculateTextBoundsDOM(text);
+          if (bounds) {
+            // Create a rectangle path that represents the text bounds
+            const pathElement = document.createElementNS(svgNS, 'path');
+            const pathData = `M ${bounds.x},${bounds.y} L ${bounds.x + bounds.width},${bounds.y} L ${bounds.x + bounds.width},${bounds.y + bounds.height} L ${bounds.x},${bounds.y + bounds.height} Z`;
+            pathElement.setAttribute('d', pathData);
+            pathElement.setAttribute('fill', 'none');
+            pathElement.setAttribute('stroke', 'none');
+            tempSvg.appendChild(pathElement);
             hasContent = true;
-          } else if (text.type === 'multiline-text') {
-            // For multiline text, use the exact same logic as calculateTextBoundsDOM
-            // to ensure the transform bounds match the yellow selection rectangle
-            const fontSize = text.style?.fontSize || 16;
-            const lineHeight = fontSize * 1.2;
-            
-            // Create the same structure as calculateTextBoundsDOM
-            text.spans.forEach((span: any, index: number, spans: any[]) => {
-              // Only add spans with content
-              if (span.content && span.content.trim()) {
-                // Calculate the actual line number for dy (count non-empty spans before this one)
-                const lineNumber = spans.slice(0, index).filter((s: any) => s.content && s.content.trim()).length;
-                
-                const tspanElement = document.createElementNS(svgNS, 'tspan');
-                tspanElement.textContent = span.content;
-                tspanElement.setAttribute('x', text.x.toString());
-                if (lineNumber === 0) {
-                  tspanElement.setAttribute('dy', '0');
-                } else {
-                  tspanElement.setAttribute('dy', lineHeight.toString());
-                }
-                textElement.appendChild(tspanElement);
-              }
-            });
-            
-            tempSvg.appendChild(textElement);
-            
-            // Now measure each tspan individually to get max width (same as calculateTextBoundsDOM)
-            let maxWidth = 0;
-            const tspans = textElement.querySelectorAll('tspan');
-            const nonEmptySpansCount = tspans.length;
-            
-            // Measure each tspan individually
-            tspans.forEach((tspan) => {
-              try {
-                const tspanBbox = tspan.getBBox();
-                maxWidth = Math.max(maxWidth, tspanBbox.width);
-              } catch (e) {
-                // Fallback to text length estimation if getBBox fails
-                const content = tspan.textContent || '';
-                const estimatedWidth = content.length * fontSize * 0.6;
-                maxWidth = Math.max(maxWidth, estimatedWidth);
-              }
-            });
-            
-            const totalHeight = nonEmptySpansCount * lineHeight;
-            
-            // Remove the text element and create a path element with the measured bounds
-            tempSvg.removeChild(textElement);
-            
-            if (maxWidth > 0 && totalHeight > 0) {
-              // Create a path element that represents a rectangle with the measured bounds
-              const x = text.x;
-              const y = text.y - fontSize;
-              const width = maxWidth;
-              const height = totalHeight;
-              
-              // Create rectangle path: M x,y L x+w,y L x+w,y+h L x,y+h Z
-              const pathData = `M ${x},${y} L ${x + width},${y} L ${x + width},${y + height} L ${x},${y + height} Z`;
-              
-              const pathElement = document.createElementNS(svgNS, 'path');
-              pathElement.setAttribute('d', pathData);
-              pathElement.setAttribute('fill', 'none');
-              pathElement.setAttribute('stroke', 'none');
-              tempSvg.appendChild(pathElement);
-              
-              hasContent = true;
-            }
           }
         }
       }
@@ -450,47 +397,16 @@ export class TransformManager {
               case 'text': {
                 const text = texts?.find((t: any) => t.id === child.id);
                 if (text) {
-                  const textElement = document.createElementNS(svgNS, 'text');
-                  textElement.setAttribute('x', text.x.toString());
-                  textElement.setAttribute('y', text.y.toString());
-                  
-                  if (text.style?.fontSize) {
-                    textElement.setAttribute('font-size', text.style.fontSize.toString());
-                  }
-                  if (text.style?.fontFamily) {
-                    textElement.setAttribute('font-family', text.style.fontFamily);
-                  }
-                  
-                  if (text.transform) {
-                    textElement.setAttribute('transform', text.transform);
-                  }
-                  
-                  if (text.type === 'text') {
-                    textElement.textContent = text.content;
-                    tempSvg.appendChild(textElement);
-                    hasContent = true;
-                  } else if (text.type === 'multiline-text') {
-                    // Handle multiline text for groups (same logic as above)
-                    const fontSize = text.style?.fontSize || 16;
-                    const lineHeight = fontSize * 1.2;
-                    
-                    text.spans.forEach((span: any, index: number, spans: any[]) => {
-                      if (span.content && span.content.trim()) {
-                        const lineNumber = spans.slice(0, index).filter((s: any) => s.content && s.content.trim()).length;
-                        
-                        const tspanElement = document.createElementNS(svgNS, 'tspan');
-                        tspanElement.textContent = span.content;
-                        tspanElement.setAttribute('x', text.x.toString());
-                        if (lineNumber === 0) {
-                          tspanElement.setAttribute('dy', '0');
-                        } else {
-                          tspanElement.setAttribute('dy', lineHeight.toString());
-                        }
-                        textElement.appendChild(tspanElement);
-                      }
-                    });
-                    
-                    tempSvg.appendChild(textElement);
+                  // Use the same method as the yellow selection rectangle for groups too
+                  const bounds = calculateTextBoundsDOM(text);
+                  if (bounds) {
+                    // Create a rectangle path that represents the text bounds
+                    const pathElement = document.createElementNS(svgNS, 'path');
+                    const pathData = `M ${bounds.x},${bounds.y} L ${bounds.x + bounds.width},${bounds.y} L ${bounds.x + bounds.width},${bounds.y + bounds.height} L ${bounds.x},${bounds.y + bounds.height} Z`;
+                    pathElement.setAttribute('d', pathData);
+                    pathElement.setAttribute('fill', 'none');
+                    pathElement.setAttribute('stroke', 'none');
+                    tempSvg.appendChild(pathElement);
                     hasContent = true;
                   }
                 }
@@ -1133,21 +1049,67 @@ export class TransformManager {
       }
     }
 
-    // Transform selected texts using SVG transform attribute
+    // Transform selected texts using a robust matrix-based system
     for (const textId of Object.keys(this.state.initialTexts)) {
       const initialText = this.state.initialTexts[textId];
       
-      // Calculate the transformation matrix for this text
+      // Build transformation matrix step by step for predictable results
       let transformString = '';
       
       if (this.state.mode === 'scale') {
         // Get scale factors and origin
         const { scaleX, scaleY, originX, originY } = this.getScaleParams();
-        transformString = `matrix(${scaleX}, 0, 0, ${scaleY}, ${originX * (1 - scaleX)}, ${originY * (1 - scaleY)})`;
+        
+        // Create current transformation matrix
+        const currentMatrix = this.buildTransformMatrix(
+          initialText.x,
+          initialText.y, 
+          1, // base scale X
+          1, // base scale Y
+          0, // base rotation
+          initialText.transform || ''
+        );
+        
+        // Apply new scale transformation
+        const newMatrix = this.combineTransformations(
+          currentMatrix,
+          { 
+            type: 'scale', 
+            scaleX, 
+            scaleY, 
+            originX, 
+            originY 
+          }
+        );
+        
+        transformString = this.matrixToString(newMatrix);
+        
       } else if (this.state.mode === 'rotate') {
         // Get rotation angle and center
         const { angle, centerX, centerY } = this.getRotationParams();
-        transformString = `rotate(${angle * 180 / Math.PI}, ${centerX}, ${centerY})`;
+        
+        // Create current transformation matrix
+        const currentMatrix = this.buildTransformMatrix(
+          initialText.x,
+          initialText.y,
+          1, // base scale X  
+          1, // base scale Y
+          0, // base rotation
+          initialText.transform || ''
+        );
+        
+        // Apply new rotation transformation
+        const newMatrix = this.combineTransformations(
+          currentMatrix,
+          { 
+            type: 'rotate', 
+            angle, 
+            centerX, 
+            centerY 
+          }
+        );
+        
+        transformString = this.matrixToString(newMatrix);
       }
       
       // Apply the transform
@@ -1172,59 +1134,72 @@ export class TransformManager {
       // No rotation or translation transforms for textPath - they follow the path
     }
 
-    // Transform selected images
+    // Transform selected images using a robust matrix-based system
     for (const imageId of Object.keys(this.state.initialImages)) {
       const initialImage = this.state.initialImages[imageId];
       
+      // Build transformation matrix step by step for predictable results
+      let transformString = '';
+      
       if (this.state.mode === 'scale') {
-        // For scaling, transform all corners of the image
+        // Get scale factors and origin
         const { scaleX, scaleY, originX, originY } = this.getScaleParams();
         
-        const topLeft = transform(initialImage.x, initialImage.y);
-        const bottomRight = transform(initialImage.x + initialImage.width, initialImage.y + initialImage.height);
+        // Create current transformation matrix
+        const currentMatrix = this.buildTransformMatrix(
+          initialImage.x + initialImage.width / 2,  // use image center
+          initialImage.y + initialImage.height / 2,
+          1, // base scale X
+          1, // base scale Y
+          0, // base rotation
+          initialImage.transform || ''
+        );
         
-        const newX = Math.min(topLeft.x, bottomRight.x);
-        const newY = Math.min(topLeft.y, bottomRight.y);
-        const newWidth = Math.abs(bottomRight.x - topLeft.x);
-        const newHeight = Math.abs(bottomRight.y - topLeft.y);
+        // Apply new scale transformation
+        const newMatrix = this.combineTransformations(
+          currentMatrix,
+          { 
+            type: 'scale', 
+            scaleX, 
+            scaleY, 
+            originX, 
+            originY 
+          }
+        );
         
-        // Use the optimized store action instead of direct setState
-        // This prevents infinite loops by using the same pattern as sub-paths
-        store.resizeImage(imageId, newWidth, newHeight);
-        // Update position separately if needed
-        if (Math.abs(newX - initialImage.x) > 0.001 || Math.abs(newY - initialImage.y) > 0.001) {
-          const deltaX = newX - initialImage.x;
-          const deltaY = newY - initialImage.y;
-          store.moveImage(imageId, { x: deltaX, y: deltaY }, true); // Skip group sync during transform
-        }
+        transformString = this.matrixToString(newMatrix);
+        
       } else if (this.state.mode === 'rotate') {
-        // For rotation, transform the center and maintain size, plus add rotation transform
-        const centerX = initialImage.x + initialImage.width / 2;
-        const centerY = initialImage.y + initialImage.height / 2;
-        const transformedCenter = transform(centerX, centerY);
+        // Get rotation angle and center
+        const { angle, centerX, centerY } = this.getRotationParams();
         
-        // Get rotation angle
-        const { angle } = this.getRotationParams();
-        const rotationDegrees = angle * 180 / Math.PI;
+        // Create current transformation matrix
+        const currentMatrix = this.buildTransformMatrix(
+          initialImage.x + initialImage.width / 2,  // use image center
+          initialImage.y + initialImage.height / 2,
+          1, // base scale X
+          1, // base scale Y
+          0, // base rotation
+          initialImage.transform || ''
+        );
         
-        // Calculate new position and create transform
-        const newX = transformedCenter.x - initialImage.width / 2;
-        const newY = transformedCenter.y - initialImage.height / 2;
-        const transformString = `rotate(${rotationDegrees}, ${transformedCenter.x}, ${transformedCenter.y})`;
+        // Apply new rotation transformation
+        const newMatrix = this.combineTransformations(
+          currentMatrix,
+          { 
+            type: 'rotate', 
+            angle, 
+            centerX, 
+            centerY 
+          }
+        );
         
-        // Use the optimized store action instead of direct setState
-        // This prevents infinite loops by using the same pattern as sub-paths
-        const deltaX = newX - initialImage.x;
-        const deltaY = newY - initialImage.y;
-        
-        // First update position if needed
-        if (Math.abs(deltaX) > 0.001 || Math.abs(deltaY) > 0.001) {
-          store.moveImage(imageId, { x: deltaX, y: deltaY }, true); // Skip group sync during transform
-        }
-        
-        // Then update transform using updateImage (which has the early return optimization)
-        store.updateImage(imageId, { transform: transformString });
+        transformString = this.matrixToString(newMatrix);
       }
+      
+      // Apply the transform using updateImage
+      const { updateImage } = store;
+      updateImage(imageId, { transform: transformString });
     }
 
     // Transform selected use elements
@@ -1269,51 +1244,89 @@ export class TransformManager {
   private endTransform() {
     const store = this.editorStore || useEditorStore.getState();
     
+    // Apply final transformations by consolidating the matrix into permanent properties
+    // This prevents accumulation of complex transforms and ensures clean state for future transforms
+    
     // Apply final transformations permanently to text elements
     for (const textId of Object.keys(this.state.initialTexts)) {
       const initialText = this.state.initialTexts[textId];
       
-      if (this.state.mode === 'scale') {
-        // For scaling, update position and potentially font size
-        const { scaleX, scaleY, originX, originY } = this.getScaleParams();
-        const finalX = originX + (initialText.x - originX) * scaleX;
-        const finalY = originY + (initialText.y - originY) * scaleY;
+      // Get the current text element with the applied transform
+      const currentText = store.texts?.find((t: any) => t.id === textId);
+      if (currentText && currentText.transform) {
+        // Extract the final consolidated values from the transform matrix
+        const finalValues = this.extractFinalValues(
+          currentText.transform,
+          initialText.x,
+          initialText.y,
+          1, // initial scale
+          0  // initial rotation
+        );
         
+        // Apply the consolidated values as permanent properties
         const { updateTextPosition, updateTextTransform } = store;
-        updateTextPosition(textId, finalX, finalY);
+        updateTextPosition(textId, finalValues.x, finalValues.y);
         
-        // For text scaling, we might want to scale the font size instead of using transform
-        // This makes the text clearer and behaves more like users expect
-        if (initialText.style?.fontSize) {
-          const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2;
-          const newFontSize = initialText.style.fontSize * avgScale;
-          store.updateTextStyle(textId, { fontSize: Math.max(1, newFontSize) });
+        // Only keep rotation as transform, everything else becomes permanent properties
+        if (Math.abs(finalValues.rotation) > 0.01) {
+          const rotationTransform = `rotate(${finalValues.rotation}, ${finalValues.x}, ${finalValues.y})`;
+          updateTextTransform(textId, rotationTransform);
+        } else {
+          updateTextTransform(textId, ''); // Clear transform if no significant rotation
         }
         
-        updateTextTransform(textId, ''); // Clear transform after applying
-      } else if (this.state.mode === 'rotate') {
-        // For rotation, calculate the new position and apply rotation to the text coordinate system
-        const { angle, centerX, centerY } = this.getRotationParams();
+        // Apply scaling to font size for better text rendering
+        if (this.state.mode === 'scale' && initialText.style?.fontSize && Math.abs(finalValues.scale - 1) > 0.01) {
+          const newFontSize = initialText.style.fontSize * finalValues.scale;
+          store.updateTextStyle(textId, { fontSize: Math.max(1, newFontSize) });
+        }
+      }
+    }
+
+    // Apply final transformations permanently to images
+    for (const imageId of Object.keys(this.state.initialImages)) {
+      const initialImage = this.state.initialImages[imageId];
+      
+      // Get the current image element with the applied transform
+      const currentImage = store.images?.find((img: any) => img.id === imageId);
+      if (currentImage && currentImage.transform) {
+        // Extract the final consolidated values from the transform matrix
+        const finalValues = this.extractFinalValues(
+          currentImage.transform,
+          initialImage.x + initialImage.width / 2,  // image center
+          initialImage.y + initialImage.height / 2,
+          1, // initial scale
+          0  // initial rotation
+        );
         
-        // Calculate the new rotated position
-        const dx = initialText.x - centerX;
-        const dy = initialText.y - centerY;
-        const cos = Math.cos(angle);
-        const sin = Math.sin(angle);
-        const finalX = centerX + dx * cos - dy * sin;
-        const finalY = centerY + dx * sin + dy * cos;
+        // Calculate new image properties based on the transformation
+        const newWidth = initialImage.width * finalValues.scale;
+        const newHeight = initialImage.height * finalValues.scale;
+        const newX = finalValues.x - newWidth / 2;  // back to top-left corner
+        const newY = finalValues.y - newHeight / 2;
         
-        // Update position to the rotated location
-        const { updateTextPosition, updateTextTransform } = store;
-        updateTextPosition(textId, finalX, finalY);
+        // Apply the consolidated values as permanent properties
+        const { updateImage } = store;
         
-        // Calculate cumulative rotation including any existing rotation
-        const existingRotation = this.parseExistingRotation(initialText.transform || '');
-        const totalRotationDegrees = existingRotation + (angle * 180 / Math.PI);
-        
-        // Apply the cumulative rotation around the text's new position
-        const rotationTransform = `rotate(${totalRotationDegrees}, ${finalX}, ${finalY})`;
-        updateTextTransform(textId, rotationTransform);
+        // Only keep rotation as transform, everything else becomes permanent properties
+        if (Math.abs(finalValues.rotation) > 0.01) {
+          const rotationTransform = `rotate(${finalValues.rotation}, ${finalValues.x}, ${finalValues.y})`;
+          updateImage(imageId, { 
+            x: newX,
+            y: newY,
+            width: newWidth,
+            height: newHeight,
+            transform: rotationTransform 
+          });
+        } else {
+          updateImage(imageId, { 
+            x: newX,
+            y: newY,
+            width: newWidth,
+            height: newHeight,
+            transform: '' // Clear transform if no significant rotation
+          });
+        }
       }
     }
 
@@ -1645,6 +1658,304 @@ export class TransformManager {
         x: x + width / 2,
         y: y + height / 2
       }
+    };
+  }
+
+  // Helper methods to extract transformation components from SVG transform strings
+  private extractPositionFromTransform(transform: string, originalX: number, originalY: number): { x: number; y: number } {
+    if (!transform) return { x: originalX, y: originalY };
+
+    // Create a temporary SVG element to compute the transform
+    if (typeof document === 'undefined') return { x: originalX, y: originalY };
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const element = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    element.setAttribute('transform', transform);
+    svg.appendChild(element);
+    document.body.appendChild(svg);
+
+    try {
+      const matrix = element.transform.baseVal.consolidate()?.matrix;
+      if (matrix) {
+        // Apply the transform to the original position
+        const transformedX = matrix.a * originalX + matrix.c * originalY + matrix.e;
+        const transformedY = matrix.b * originalX + matrix.d * originalY + matrix.f;
+        return { x: transformedX, y: transformedY };
+      }
+    } catch (e) {
+      console.warn('Failed to extract position from transform:', e);
+    } finally {
+      document.body.removeChild(svg);
+    }
+
+    return { x: originalX, y: originalY };
+  }
+
+  private extractRotationFromTransform(transform: string): { angle: number } {
+    if (!transform) return { angle: 0 };
+
+    // Look for rotate() function in the transform string
+    const rotateMatch = transform.match(/rotate\(([^,)]+)/);
+    if (rotateMatch) {
+      const angle = parseFloat(rotateMatch[1]) || 0;
+      return { angle };
+    }
+
+    // If no explicit rotate(), try to extract from matrix
+    if (typeof document === 'undefined') return { angle: 0 };
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const element = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    element.setAttribute('transform', transform);
+    svg.appendChild(element);
+    document.body.appendChild(svg);
+
+    try {
+      const matrix = element.transform.baseVal.consolidate()?.matrix;
+      if (matrix) {
+        // Extract rotation angle from matrix
+        const angle = Math.atan2(matrix.b, matrix.a) * 180 / Math.PI;
+        return { angle };
+      }
+    } catch (e) {
+      console.warn('Failed to extract rotation from transform:', e);
+    } finally {
+      document.body.removeChild(svg);
+    }
+
+    return { angle: 0 };
+  }
+
+  private extractScaleFromTransform(transform: string): { x: number; y: number } {
+    if (!transform) return { x: 1, y: 1 };
+
+    if (typeof document === 'undefined') return { x: 1, y: 1 };
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const element = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    element.setAttribute('transform', transform);
+    svg.appendChild(element);
+    document.body.appendChild(svg);
+
+    try {
+      const matrix = element.transform.baseVal.consolidate()?.matrix;
+      if (matrix) {
+        // Extract scale from matrix
+        const scaleX = Math.sqrt(matrix.a * matrix.a + matrix.b * matrix.b);
+        const scaleY = Math.sqrt(matrix.c * matrix.c + matrix.d * matrix.d);
+        return { x: scaleX, y: scaleY };
+      }
+    } catch (e) {
+      console.warn('Failed to extract scale from transform:', e);
+    } finally {
+      document.body.removeChild(svg);
+    }
+
+    return { x: 1, y: 1 };
+  }
+
+  private calculateTransformedBounds(x: number, y: number, width: number, height: number, transform: string): { x: number; y: number; width: number; height: number } {
+    if (!transform) return { x, y, width, height };
+
+    if (typeof document === 'undefined') return { x, y, width, height };
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const element = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    element.setAttribute('transform', transform);
+    svg.appendChild(element);
+    document.body.appendChild(svg);
+
+    try {
+      const matrix = element.transform.baseVal.consolidate()?.matrix;
+      if (matrix) {
+        // Transform all four corners of the rectangle
+        const corners = [
+          { x: x, y: y },
+          { x: x + width, y: y },
+          { x: x + width, y: y + height },
+          { x: x, y: y + height }
+        ];
+
+        const transformedCorners = corners.map(corner => ({
+          x: matrix.a * corner.x + matrix.c * corner.y + matrix.e,
+          y: matrix.b * corner.x + matrix.d * corner.y + matrix.f
+        }));
+
+        // Find the bounding box of the transformed corners
+        const minX = Math.min(...transformedCorners.map(c => c.x));
+        const maxX = Math.max(...transformedCorners.map(c => c.x));
+        const minY = Math.min(...transformedCorners.map(c => c.y));
+        const maxY = Math.max(...transformedCorners.map(c => c.y));
+
+        return {
+          x: minX,
+          y: minY,
+          width: maxX - minX,
+          height: maxY - minY
+        };
+      }
+    } catch (e) {
+      console.warn('Failed to calculate transformed bounds:', e);
+    } finally {
+      document.body.removeChild(svg);
+    }
+
+    return { x, y, width, height };
+  }
+
+  // Robust transformation system methods for multiple applications support
+
+  // Build a transformation matrix from current element state
+  private buildTransformMatrix(
+    elementX: number, 
+    elementY: number, 
+    baseScaleX: number, 
+    baseScaleY: number, 
+    baseRotation: number, 
+    existingTransform: string
+  ): TransformMatrix {
+    // Start with identity matrix
+    let matrix: TransformMatrix = { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 };
+
+    // If there's an existing transform, extract its matrix
+    if (existingTransform && existingTransform.trim()) {
+      const extractedMatrix = this.parseTransformToMatrix(existingTransform);
+      if (extractedMatrix) {
+        matrix = extractedMatrix;
+      }
+    }
+
+    return matrix;
+  }
+
+  // Combine two transformations properly
+  private combineTransformations(
+    currentMatrix: TransformMatrix, 
+    operation: TransformOperation
+  ): TransformMatrix {
+    let newMatrix: TransformMatrix;
+
+    if (operation.type === 'scale') {
+      const { scaleX = 1, scaleY = 1, originX = 0, originY = 0 } = operation;
+      
+      // Create scale matrix with proper origin handling
+      const translateToOrigin = { a: 1, b: 0, c: 0, d: 1, e: -originX, f: -originY };
+      const scale = { a: scaleX, b: 0, c: 0, d: scaleY, e: 0, f: 0 };
+      const translateBack = { a: 1, b: 0, c: 0, d: 1, e: originX, f: originY };
+      
+      // Combine: translateBack * scale * translateToOrigin * currentMatrix
+      const temp1 = this.multiplyMatrices(translateToOrigin, currentMatrix);
+      const temp2 = this.multiplyMatrices(scale, temp1);
+      newMatrix = this.multiplyMatrices(translateBack, temp2);
+      
+    } else if (operation.type === 'rotate') {
+      const { angle = 0, centerX = 0, centerY = 0 } = operation;
+      
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      
+      // Create rotation matrix with proper center handling
+      const translateToCenter = { a: 1, b: 0, c: 0, d: 1, e: -centerX, f: -centerY };
+      const rotate = { a: cos, b: sin, c: -sin, d: cos, e: 0, f: 0 };
+      const translateBack = { a: 1, b: 0, c: 0, d: 1, e: centerX, f: centerY };
+      
+      // Combine: translateBack * rotate * translateToCenter * currentMatrix
+      const temp1 = this.multiplyMatrices(translateToCenter, currentMatrix);
+      const temp2 = this.multiplyMatrices(rotate, temp1);
+      newMatrix = this.multiplyMatrices(translateBack, temp2);
+      
+    } else {
+      newMatrix = currentMatrix;
+    }
+
+    return newMatrix;
+  }
+
+  // Convert matrix to SVG transform string
+  private matrixToString(matrix: TransformMatrix): string {
+    return `matrix(${matrix.a}, ${matrix.b}, ${matrix.c}, ${matrix.d}, ${matrix.e}, ${matrix.f})`;
+  }
+
+  // Extract final consolidated values from a transform matrix
+  private extractFinalValues(
+    transformString: string,
+    originalX: number,
+    originalY: number,
+    originalScale: number,
+    originalRotation: number
+  ): FinalValues {
+    const matrix = this.parseTransformToMatrix(transformString);
+    
+    if (!matrix) {
+      return {
+        x: originalX,
+        y: originalY,
+        scale: originalScale,
+        rotation: originalRotation
+      };
+    }
+
+    // Extract final position by applying matrix to original position
+    const finalX = matrix.a * originalX + matrix.c * originalY + matrix.e;
+    const finalY = matrix.b * originalX + matrix.d * originalY + matrix.f;
+
+    // Extract scale (average of X and Y scales)
+    const scaleX = Math.sqrt(matrix.a * matrix.a + matrix.b * matrix.b);
+    const scaleY = Math.sqrt(matrix.c * matrix.c + matrix.d * matrix.d);
+    const finalScale = (scaleX + scaleY) / 2;
+
+    // Extract rotation (in degrees)
+    const finalRotation = Math.atan2(matrix.b, matrix.a) * 180 / Math.PI;
+
+    return {
+      x: finalX,
+      y: finalY,
+      scale: finalScale,
+      rotation: finalRotation
+    };
+  }
+
+  // Parse SVG transform string to matrix
+  private parseTransformToMatrix(transform: string): TransformMatrix | null {
+    if (!transform || typeof document === 'undefined') return null;
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const element = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    element.setAttribute('transform', transform);
+    svg.appendChild(element);
+    document.body.appendChild(svg);
+
+    try {
+      const svgMatrix = element.transform.baseVal.consolidate()?.matrix;
+      if (svgMatrix) {
+        const matrix: TransformMatrix = {
+          a: svgMatrix.a,
+          b: svgMatrix.b,
+          c: svgMatrix.c,
+          d: svgMatrix.d,
+          e: svgMatrix.e,
+          f: svgMatrix.f
+        };
+        return matrix;
+      }
+    } catch (e) {
+      console.warn('Failed to parse transform to matrix:', e);
+    } finally {
+      document.body.removeChild(svg);
+    }
+
+    return null;
+  }
+
+  // Multiply two transformation matrices
+  private multiplyMatrices(m1: TransformMatrix, m2: TransformMatrix): TransformMatrix {
+    return {
+      a: m1.a * m2.a + m1.c * m2.b,
+      b: m1.b * m2.a + m1.d * m2.b,
+      c: m1.a * m2.c + m1.c * m2.d,
+      d: m1.b * m2.c + m1.d * m2.d,
+      e: m1.a * m2.e + m1.c * m2.f + m1.e,
+      f: m1.b * m2.e + m1.d * m2.f + m1.f
     };
   }
 }
