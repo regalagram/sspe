@@ -143,7 +143,8 @@ export const PathRenderer: React.FC = () => {
     moveUse,
     pushToHistory, 
     renderVersion, 
-    enabledFeatures 
+    enabledFeatures,
+    grid
   } = useEditorStore();
   const svgRef = useRef<SVGSVGElement>(null);
   
@@ -328,8 +329,8 @@ export const PathRenderer: React.FC = () => {
       moveAllCapturedElementsByDelta(
         dragState.capturedElements,
         delta,
-        false, // Grid snapping disabled for now
-        10     // Grid size (not used since snapping is disabled)
+        grid.snapToGrid, // Use grid snapping setting
+        grid.size        // Use grid size
       );
     }
     

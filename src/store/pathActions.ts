@@ -10,7 +10,7 @@ export interface PathActions {
   removePath: (pathId: string) => void;
   addSubPath: (pathId: string) => string;
   removeSubPath: (subPathId: string) => void;
-  moveSubPath: (subPathId: string, delta: Point, skipGroupSync?: boolean) => void;
+  moveSubPath: (subPathId: string, delta: Point, skipGroupSync?: boolean, skipGridSnapping?: boolean) => void;
   updateSubPath: (subPathId: string, updates: Partial<SVGSubPath>) => void;
   updatePathStyle: (pathId: string, style: Partial<PathStyle>) => void;
   replacePaths: (newPaths: SVGPath[]) => void;
@@ -78,13 +78,18 @@ export const createPathActions: StateCreator<
       },
     })),
 
-  moveSubPath: (subPathId, delta, skipGroupSync = false) => {
+  moveSubPath: (subPathId, delta, skipGroupSync = false, skipGridSnapping = false) => {
+    // Skip update if delta is too small to prevent unnecessary re-renders
+    if (Math.abs(delta.x) < 0.001 && Math.abs(delta.y) < 0.001) {
+      return;
+    }
+    
     set((state) => {
       const isLocked = state.paths.some(path =>
         path.subPaths.some(subPath => subPath.id === subPathId && subPath.locked)
       );
       if (isLocked) {
-        return {};
+        return state;
       }
       
       // Find the parent path of this subpath
@@ -117,16 +122,17 @@ export const createPathActions: StateCreator<
             if (isFirstSubPath) {
               state.moveGroup(syncGroup.id, delta);
             }
-            return {}; // Don't move individual subpath
+            return state; // Don't move individual subpath, return unchanged state
           } else {
             // Single subpath, move the whole group
             const wasMoved = state.moveSyncGroupByElement(parentPath.id, 'path', delta);
             if (wasMoved) {
-              return {}; // Group was moved instead
+              return state; // Group was moved instead, return unchanged state
             }
           }
         }
       }
+      
       return {
         paths: state.paths.map((path) => ({
           ...path,
@@ -141,7 +147,7 @@ export const createPathActions: StateCreator<
                   let newY1 = cmd.y1 !== undefined ? cmd.y1 + delta.y : cmd.y1;
                   let newX2 = cmd.x2 !== undefined ? cmd.x2 + delta.x : cmd.x2;
                   let newY2 = cmd.y2 !== undefined ? cmd.y2 + delta.y : cmd.y2;
-                  if (state.grid.snapToGrid) {
+                  if (state.grid.snapToGrid && !skipGridSnapping) {
                     if (newX !== undefined && newY !== undefined) {
                       const snapped = snapToGrid({ x: newX, y: newY }, state.grid.size);
                       newX = snapped.x;

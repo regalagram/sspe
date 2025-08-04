@@ -307,7 +307,7 @@ export function moveAllCapturedElementsByDelta(
 
   // Move sub-paths using delta
   Object.keys(capturedData.subPaths).forEach((subPathId: string) => {
-    moveSubPath(subPathId, finalDelta);
+    moveSubPath(subPathId, finalDelta, true, enableGridSnapping); // Skip group sync and conditionally skip grid snapping
   });
 }
 

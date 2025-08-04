@@ -50,7 +50,7 @@ export interface GroupActions {
 }
 
 export const createGroupActions: StateCreator<
-  EditorState & GroupActions & TextActions & SVGElementActions & { moveSubPath: (subPathId: string, delta: Point, skipGroupSync?: boolean) => void; },
+  EditorState & GroupActions & TextActions & SVGElementActions & { moveSubPath: (subPathId: string, delta: Point, skipGroupSync?: boolean, skipGridSnapping?: boolean) => void; },
   [],
   [],
   GroupActions

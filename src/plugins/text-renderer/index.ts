@@ -98,8 +98,8 @@ const handleTextPointerMove = (e: React.PointerEvent<SVGElement>, context: Point
     moveAllCapturedElementsByDelta(
       textDragState.capturedElements,
       delta,
-      false,
-      10
+      store.grid.snapToGrid,
+      store.grid.size
     );
   }
 
