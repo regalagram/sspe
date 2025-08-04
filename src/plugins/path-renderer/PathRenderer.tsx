@@ -5,7 +5,7 @@ import { subPathToString, getContrastColor, subPathToStringInContext, findSubPat
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
 import { getStyleValue } from '../../utils/gradient-utils';
-import { guidelinesManager } from '../guidelines/GuidelinesManager';
+import { stickyManager } from '../sticky-guidelines/StickyManager';
 import { Point } from '../../types';
 import { captureAllSelectedElementsPositions, moveAllCapturedElementsByDelta, DraggedElementsData } from '../../utils/drag-utils';
 import { useAnimationsForElement } from '../../components/AnimationRenderer';
@@ -243,7 +243,7 @@ export const PathRenderer: React.FC = () => {
     
     // Apply snapping if guidelines are enabled
     let snappedPoint = currentPoint;
-    if (enabledFeatures.guidelinesEnabled) {
+    if (enabledFeatures.stickyGuidelinesEnabled) {
       // Find the element we're currently dragging to exclude it from snapping calculations
       const draggedSubPathId = dragState.subPathId;
       const draggedPath = paths.find(p => p.subPaths.some(sp => sp.id === draggedSubPathId));
@@ -272,15 +272,43 @@ export const PathRenderer: React.FC = () => {
             width: maxX - minX,
             height: maxY - minY,
             centerX: minX + (maxX - minX) / 2,
-            centerY: minY + (maxY - minY) / 2
+            centerY: minY + (maxY - minY) / 2,
+            left: minX,
+            right: maxX,
+            top: minY,
+            bottom: maxY
           };
           
-          snappedPoint = guidelinesManager.handleElementMoving(
+          // Calculate where the element would be based on the total movement from start
+          const totalDelta = {
+            x: currentPoint.x - dragState.startPoint.x,
+            y: currentPoint.y - dragState.startPoint.y
+          };
+          
+          // Calculate the new position of the element's top-left corner
+          const newElementPosition = {
+            x: pathBounds.x + totalDelta.x,
+            y: pathBounds.y + totalDelta.y
+          };
+          
+          const result = stickyManager.handleElementMoving(
             draggedPath.id,
             'path',
             pathBounds,
-            currentPoint
+            newElementPosition
           );
+          
+          // The result.snappedPoint is the corrected element position
+          // We need to convert this back to a mouse position
+          const correctedDelta = {
+            x: result.snappedPoint.x - pathBounds.x,
+            y: result.snappedPoint.y - pathBounds.y
+          };
+          
+          snappedPoint = {
+            x: dragState.startPoint.x + correctedDelta.x,
+            y: dragState.startPoint.y + correctedDelta.y
+          };
         }
       }
     }
@@ -307,7 +335,7 @@ export const PathRenderer: React.FC = () => {
       ...prev,
       lastPoint: snappedPoint,
     }));
-  }, [dragState, moveSubPath, selection.selectedSubPaths, viewport, pushToHistory, enabledFeatures.guidelinesEnabled, paths, texts, groups]);
+  }, [dragState, moveSubPath, selection.selectedSubPaths, viewport, pushToHistory, enabledFeatures.stickyGuidelinesEnabled, paths, texts, groups]);
 
   // Handle pointer up to stop dragging
   const handlePointerUp = useCallback((e?: React.PointerEvent<SVGElement>) => {
@@ -317,8 +345,8 @@ export const PathRenderer: React.FC = () => {
     }
     
     // Clear guidelines when dragging stops
-    if (enabledFeatures.guidelinesEnabled) {
-      guidelinesManager.clearSnap();
+    if (enabledFeatures.stickyGuidelinesEnabled) {
+      stickyManager.clearGuidelines();
     }
     
     setDragState({
@@ -330,7 +358,7 @@ export const PathRenderer: React.FC = () => {
       dragStarted: false,
       capturedElements: null,
     });
-  }, [dragState.isDragging, dragState.dragStarted, enabledFeatures.guidelinesEnabled]);
+  }, [dragState.isDragging, dragState.dragStarted, enabledFeatures.stickyGuidelinesEnabled]);
 
   // Add global pointer event listeners for dragging
   React.useEffect(() => {

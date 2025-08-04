@@ -4,7 +4,7 @@ import { snapToGrid, getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
 import { handleManager } from '../handles/HandleManager';
-import { guidelinesManager } from '../guidelines/GuidelinesManager';
+import { stickyManager } from '../sticky-guidelines/StickyManager';
 
 interface PointerInteractionState {
   draggingCommand: string | null;
@@ -524,17 +524,21 @@ class PointerInteractionManager {
                 width: textWidth,
                 height: fontSize,
                 centerX: currentText.x + textWidth / 2,
-                centerY: currentText.y - fontSize * 0.3
+                centerY: currentText.y - fontSize * 0.3,
+                left: currentText.x,
+                right: currentText.x + textWidth,
+                top: currentText.y - fontSize * 0.8,
+                bottom: currentText.y
               };
               
-              const snappedPoint = guidelinesManager.handleElementMoving(
+              const result = stickyManager.handleElementMoving(
                 textId,
                 'text',
                 textBounds,
                 { x: newX, y: newY }
               );
-              newX = snappedPoint.x;
-              newY = snappedPoint.y;
+              newX = result.snappedPoint.x;
+              newY = result.snappedPoint.y;
             }
           }
           
@@ -709,8 +713,8 @@ class PointerInteractionManager {
     
     // Clear guidelines when dragging stops
     const { enabledFeatures } = this.editorStore;
-    if (enabledFeatures?.guidelinesEnabled) {
-      guidelinesManager.clearSnap();
+    if (enabledFeatures?.stickyGuidelinesEnabled) {
+      stickyManager.clearGuidelines();
     }
     
     if (wasDraggingCommand || wasDraggingControlPoint || wasDraggingElement) {

@@ -31,7 +31,7 @@ import { TextControlsPlugin } from '../plugins/text-controls';
 import { TextStylePlugin } from '../plugins/text-style';
 import { GroupRendererPlugin } from '../plugins/group-renderer';
 import { GroupControlsPlugin } from '../plugins/group-controls';
-import { GuidelinesPlugin } from '../plugins/guidelines';
+import { StickyGuidelinesPlugin } from '../plugins/sticky-guidelines';
 import { ImagePlugin } from '../plugins/images';
 import { FilterPlugin } from '../plugins/filters';
 import { ClippingPlugin } from '../plugins/clipping';
@@ -65,7 +65,7 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(MarkerPlugin); // Marker definitions
   pluginManager.registerPlugin(ImagePlugin); // Image rendering and controls
   pluginManager.registerPlugin(SymbolPlugin); // Symbol definitions and use instances
-  pluginManager.registerPlugin(GuidelinesPlugin);
+  pluginManager.registerPlugin(StickyGuidelinesPlugin);
   pluginManager.registerPlugin(VisualDebugPlugin);
   pluginManager.registerPlugin(CommandPlugin);
   pluginManager.registerPlugin(CreationPlugin);
