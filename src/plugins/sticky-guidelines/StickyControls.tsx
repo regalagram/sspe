@@ -96,12 +96,63 @@ export const StickyControls: React.FC = () => {
               <input
                 type="range"
                 min="3"
-                max="10"
+                max="20"
                 step="1"
                 value={config.snapDistance}
                 onChange={(e) => handleConfigChange({ snapDistance: parseInt(e.target.value) })}
                 style={sliderStyle}
               />
+            </div>
+
+            {/* Alignment Options */}
+            <div style={{ marginTop: '12px' }}>
+              <label style={labelStyle}>
+                <input
+                  type="checkbox"
+                  checked={config.enableEdgeSnapping}
+                  onChange={(e) => handleConfigChange({ enableEdgeSnapping: e.target.checked })}
+                  style={checkboxStyle}
+                />
+                Edge Alignment
+              </label>
+              
+              <label style={labelStyle}>
+                <input
+                  type="checkbox"
+                  checked={config.enableCenterSnapping}
+                  onChange={(e) => handleConfigChange({ enableCenterSnapping: e.target.checked })}
+                  style={checkboxStyle}
+                />
+                Center Alignment
+              </label>
+              
+              <label style={labelStyle}>
+                <input
+                  type="checkbox"
+                  checked={config.enableMidpointSnapping}
+                  onChange={(e) => handleConfigChange({ enableMidpointSnapping: e.target.checked })}
+                  style={checkboxStyle}
+                />
+                Midpoint Alignment
+              </label>
+
+              {/* Debug Mode Toggle */}
+              <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #eee' }}>
+                <label style={{ ...labelStyle, color: '#00aa00', fontWeight: 'bold' }}>
+                  <input
+                    type="checkbox"
+                    checked={config.debugMode}
+                    onChange={(e) => handleConfigChange({ debugMode: e.target.checked })}
+                    style={{ ...checkboxStyle, accentColor: '#00aa00' }}
+                  />
+                  🐛 Debug Mode
+                </label>
+                {config.debugMode && (
+                  <div style={{ fontSize: '10px', color: '#666', marginTop: '4px', paddingLeft: '20px' }}>
+                    Shows all bbox projections for debugging
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </>

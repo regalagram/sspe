@@ -8,18 +8,19 @@ import { stickyManager } from '../sticky-guidelines/StickyManager';
 
 interface PointerInteractionState {
   draggingCommand: string | null;
-  draggingControlPoint: { commandId: string; point: 'x1y1' | 'x2y2' } | null;
-  draggingElement: { id: string; type: 'text' | 'textPath' | 'image' | 'use' | 'group' } | null;
+  draggingControlPoint: any;
+  draggingElement: any;
   isPanning: boolean;
   isSpacePressed: boolean;
   lastPointerPosition: { x: number; y: number };
   dragStartPositions: { [id: string]: { x: number; y: number } };
   dragStartTextPositions: { [id: string]: { x: number; y: number } };
-  dragStartTextPathPositions: { [id: string]: { startOffset: number | string; transform?: string } };
-  dragStartImagePositions: { [id: string]: { x: number; y: number; width: number; height: number } };
+  dragStartTextPathPositions: { [id: string]: any };
+  dragStartImagePositions: { [id: string]: { x: number; y: number } };
   dragStartUsePositions: { [id: string]: { x: number; y: number; width?: number; height?: number } };
   dragStartGroupPositions: { [id: string]: { transform?: string } };
   dragOrigin: { x: number; y: number } | null;
+  dragStartSelectionBounds: any | null;  // Store initial selection bounds
 }
 
 class PointerInteractionManager {
@@ -37,6 +38,7 @@ class PointerInteractionManager {
     dragStartUsePositions: {},
     dragStartGroupPositions: {},
     dragOrigin: null,
+    dragStartSelectionBounds: null,
   };
 
   private editorStore: any;
@@ -207,6 +209,9 @@ class PointerInteractionManager {
       }
     });
     this.state.dragStartGroupPositions = groupPositions;
+    
+    // Capture selection bounds for sticky guidelines
+    this.state.dragStartSelectionBounds = stickyManager.calculateSelectionBounds();
   }
 
   private findCommandById(commandId: string, paths: any[]): any {
@@ -477,8 +482,47 @@ class PointerInteractionManager {
     }
     if ((this.state.draggingCommand || this.state.draggingElement) && this.state.dragOrigin) {
       const point = this.getSVGPoint(e, context.svgRef);
-      const dx = point.x - this.state.dragOrigin.x;
-      const dy = point.y - this.state.dragOrigin.y;
+      let dx = point.x - this.state.dragOrigin.x;
+      let dy = point.y - this.state.dragOrigin.y;
+      
+      // Check if we have any elements being dragged
+      const hasDraggedElements = Object.keys(this.state.dragStartPositions).length > 0 ||
+                                Object.keys(this.state.dragStartTextPositions).length > 0 ||
+                                Object.keys(this.state.dragStartImagePositions).length > 0 ||
+                                Object.keys(this.state.dragStartUsePositions).length > 0 ||
+                                Object.keys(this.state.dragStartGroupPositions).length > 0 ||
+                                Object.keys(this.state.dragStartTextPathPositions).length > 0;
+      
+      // If we have multiple elements or sticky guidelines are enabled, use StickyManager
+      const { enabledFeatures } = this.editorStore;
+      if (hasDraggedElements && enabledFeatures.guidelinesEnabled && this.state.dragStartSelectionBounds) {
+        if (this.state.dragOrigin) {
+          // Calculate where the selection should be positioned (not where the mouse is)
+          const targetSelectionX = this.state.dragStartSelectionBounds.x + dx;
+          const targetSelectionY = this.state.dragStartSelectionBounds.y + dy;
+          const targetSelectionPosition = { x: targetSelectionX, y: targetSelectionY };
+          
+          // Use StickyManager to get snapped position using the target selection position
+          const result = stickyManager.handleSelectionMoving(
+            targetSelectionPosition,
+            this.state.dragStartSelectionBounds
+          );
+          
+          // If we have snapped bounds, calculate the delta based on how much the selection moved
+          if (result.snappedBounds) {
+            dx = result.snappedBounds.x - this.state.dragStartSelectionBounds.x;
+            dy = result.snappedBounds.y - this.state.dragStartSelectionBounds.y;
+            console.log('PointerInteraction: Using snapped bounds delta:', { 
+              dx, dy,
+              originalBounds: this.state.dragStartSelectionBounds,
+              snappedBounds: result.snappedBounds
+            });
+          } else {
+            // This shouldn't happen with the new implementation, but keep as fallback
+            console.warn('PointerInteraction: No snapped bounds returned from StickyManager');
+          }
+        }
+      }
       
       // Move selected commands
       Object.keys(this.state.dragStartPositions).forEach((cmdId: string) => {
@@ -528,7 +572,11 @@ class PointerInteractionManager {
                 left: currentText.x,
                 right: currentText.x + textWidth,
                 top: currentText.y - fontSize * 0.8,
-                bottom: currentText.y
+                bottom: currentText.y,
+                topCenter: currentText.x + textWidth / 2,
+                bottomCenter: currentText.x + textWidth / 2,
+                leftCenter: currentText.y - fontSize * 0.3,
+                rightCenter: currentText.y - fontSize * 0.3
               };
               
               const result = stickyManager.handleElementMoving(
@@ -710,6 +758,7 @@ class PointerInteractionManager {
     this.state.dragStartUsePositions = {};
     this.state.dragStartGroupPositions = {};
     this.state.dragOrigin = null;
+    this.state.dragStartSelectionBounds = null; // Clear selection bounds
     
     // Clear guidelines when dragging stops
     const { enabledFeatures } = this.editorStore;

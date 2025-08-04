@@ -276,19 +276,24 @@ export const PathRenderer: React.FC = () => {
             left: minX,
             right: maxX,
             top: minY,
-            bottom: maxY
+            bottom: maxY,
+            topCenter: minX + (maxX - minX) / 2,
+            bottomCenter: minX + (maxX - minX) / 2,
+            leftCenter: minY + (maxY - minY) / 2,
+            rightCenter: minY + (maxY - minY) / 2
           };
           
-          // Calculate where the element would be based on the total movement from start
-          const totalDelta = {
-            x: currentPoint.x - dragState.startPoint.x,
-            y: currentPoint.y - dragState.startPoint.y
+          // Calculate the incremental movement from the last frame
+          const incrementalDelta = {
+            x: currentPoint.x - dragState.lastPoint.x,
+            y: currentPoint.y - dragState.lastPoint.y
           };
           
-          // Calculate the new position of the element's top-left corner
+          // Calculate where the element would be if we apply this incremental movement
+          // This matches the visual movement that the user sees
           const newElementPosition = {
-            x: pathBounds.x + totalDelta.x,
-            y: pathBounds.y + totalDelta.y
+            x: pathBounds.x + incrementalDelta.x,
+            y: pathBounds.y + incrementalDelta.y
           };
           
           const result = stickyManager.handleElementMoving(
@@ -306,8 +311,8 @@ export const PathRenderer: React.FC = () => {
           };
           
           snappedPoint = {
-            x: dragState.startPoint.x + correctedDelta.x,
-            y: dragState.startPoint.y + correctedDelta.y
+            x: dragState.lastPoint.x + correctedDelta.x,
+            y: dragState.lastPoint.y + correctedDelta.y
           };
         }
       }
