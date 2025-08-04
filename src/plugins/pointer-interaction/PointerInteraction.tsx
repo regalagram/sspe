@@ -3,13 +3,20 @@ import { Plugin, PointerEventContext } from '../../core/PluginSystem';
 import { snapToGrid, getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { moveAllCapturedElementsByDelta, captureAllSelectedElementsPositions, DraggedElementsData } from '../../utils/drag-utils';
+import { 
+  ElementType, 
+  SelectionContext, 
+  isElementSelected, 
+  hasMultiSelection, 
+  isElementInSelectedGroup, 
+  shouldPreserveSelection,
+  logSelectionDebug 
+} from '../../utils/selection-utils';
 import { transformManager } from '../transform/TransformManager';
 import { handleManager } from '../handles/HandleManager';
 import { stickyManager } from '../sticky-guidelines/StickyManager';
 
 // ================== TYPES & INTERFACES ==================
-
-type ElementType = 'image' | 'use' | 'text' | 'textPath' | 'group' | 'command';
 
 interface Point {
   x: number;
@@ -56,6 +63,7 @@ interface SelectedElements {
   uses: string[];
   textPaths: string[];
   groups: string[];
+  subPaths: string[];
 }
 
 interface PointerInteractionConfig {
@@ -183,7 +191,13 @@ class ElementSelector {
   }
 
   private handleShiftSelection(elementId: string, elementType: ElementType): void {
-    const isSelected = this.isElementSelected(elementId, elementType);
+    const context: SelectionContext = {
+      selection: this.editorStore.selection,
+      groups: this.editorStore.groups,
+      paths: this.editorStore.paths
+    };
+    
+    const isSelected = isElementSelected(elementId, elementType, context.selection);
     
     if (isSelected) {
       this.removeFromSelection(elementId, elementType);
@@ -193,75 +207,29 @@ class ElementSelector {
   }
 
   private handleNormalSelection(elementId: string, elementType: ElementType): void {
-    const isSelected = this.isElementSelected(elementId, elementType);
-    const hasMultiSelection = this.hasMultiSelection();
-    const belongsToSelectedGroup = this.isElementInSelectedGroup(elementId, elementType);
+    const context: SelectionContext = {
+      selection: this.editorStore.selection,
+      groups: this.editorStore.groups,
+      paths: this.editorStore.paths
+    };
 
-    this.debugManager.logSelection('handleNormalSelection', {
-      elementId,
-      elementType,
-      isSelected,
-      hasMultiSelection,
-      belongsToSelectedGroup
-    });
+    logSelectionDebug('handleNormalSelection', elementId, elementType, context, this.config.debugMode);
 
-    if (!isSelected) {
-      if (belongsToSelectedGroup) {
-        // Element belongs to selected group, don't change selection
-        this.debugManager.logSelection('Element belongs to selected group, not changing selection', {});
-        return;
-      } else if (hasMultiSelection) {
-        // Add to existing multi-selection
-        this.debugManager.logSelection('Adding to existing multi-selection', {});
-        this.addToSelectionWithoutPromotion(elementId, elementType);
-      } else {
-        // Normal single selection
-        this.debugManager.logSelection('Performing normal single selection', {});
-        this.selectSingle(elementId, elementType);
-      }
+    if (shouldPreserveSelection(elementId, elementType, context)) {
+      this.debugManager.logSelection('Selection preserved - element belongs to selected group or already selected', {});
+      return;
+    }
+
+    const hasMulti = hasMultiSelection(context.selection);
+    if (hasMulti) {
+      // Add to existing multi-selection
+      this.debugManager.logSelection('Adding to existing multi-selection', {});
+      this.addToSelectionWithoutPromotion(elementId, elementType);
     } else {
-      this.debugManager.logSelection('Element already selected, no action taken', {});
+      // Normal single selection
+      this.debugManager.logSelection('Performing normal single selection', {});
+      this.selectSingle(elementId, elementType);
     }
-  }
-
-  private isElementSelected(elementId: string, elementType: ElementType): boolean {
-    const { selection } = this.editorStore;
-    
-    switch (elementType) {
-      case 'image': return selection.selectedImages?.includes(elementId) || false;
-      case 'use': return selection.selectedUses?.includes(elementId) || false;
-      case 'text': return selection.selectedTexts?.includes(elementId) || false;
-      case 'textPath': return selection.selectedTextPaths?.includes(elementId) || false;
-      case 'group': return selection.selectedGroups?.includes(elementId) || false;
-      case 'command': return selection.selectedCommands?.includes(elementId) || false;
-      default: return false;
-    }
-  }
-
-  private hasMultiSelection(): boolean {
-    const { selection } = this.editorStore;
-    const totalSelected = (selection.selectedCommands?.length || 0) + 
-                         (selection.selectedSubPaths?.length || 0) + 
-                         (selection.selectedPaths?.length || 0) +
-                         (selection.selectedTexts?.length || 0) +
-                         (selection.selectedTextPaths?.length || 0) +
-                         (selection.selectedImages?.length || 0) +
-                         (selection.selectedUses?.length || 0) +
-                         (selection.selectedGroups?.length || 0);
-    return totalSelected > 1;
-  }
-
-  private isElementInSelectedGroup(elementId: string, elementType: ElementType): boolean {
-    const { selection, groups } = this.editorStore;
-    
-    for (const groupId of selection.selectedGroups || []) {
-      const group = groups.find((g: any) => g.id === groupId);
-      if (group?.children?.some((child: any) => 
-        child.id === elementId && child.type === elementType)) {
-        return true;
-      }
-    }
-    return false;
   }
 
   private addToSelection(elementId: string, elementType: ElementType): void {
@@ -300,6 +268,10 @@ class ElementSelector {
         this.debugManager.logSelection('Calling selectCommand', {});
         this.editorStore.selectCommand(elementId); 
         break;
+      case 'subpath': 
+        this.debugManager.logSelection('Calling selectSubPath', {});
+        this.editorStore.selectSubPath(elementId); 
+        break;
     }
   }
 
@@ -336,6 +308,11 @@ class ElementSelector {
       case 'command':
         if (!newSelection.selectedCommands.includes(elementId)) {
           newSelection.selectedCommands = [...newSelection.selectedCommands, elementId];
+        }
+        break;
+      case 'subpath':
+        if (!newSelection.selectedSubPaths.includes(elementId)) {
+          newSelection.selectedSubPaths = [...newSelection.selectedSubPaths, elementId];
         }
         break;
     }
@@ -929,17 +906,56 @@ class PointerInteractionManager {
   private findElementWithData(element: SVGElement, svgRef: React.RefObject<SVGSVGElement | null>): { elementType: string | null; elementId: string | null } {
     let current: Element | null = element;
     
+    const getClassName = (el: Element) => {
+      if (el instanceof SVGElement && el.className && typeof el.className === 'object' && 'baseVal' in el.className) {
+        return el.className.baseVal;
+      }
+      return (el as any).className || '';
+    };
+    
+    this.debugManager.logGeneric('findElementWithData called with element', {
+      tagName: element.tagName,
+      className: getClassName(element),
+      id: element.id,
+      attributes: Array.from(element.attributes).map(attr => ({ name: attr.name, value: attr.value }))
+    });
+    
+    // Special check for subpaths at the start
+    if (current && current.getAttribute('data-element-type') === 'subpath') {
+      this.debugManager.logGeneric('🔥 FOUND SUBPATH DIRECTLY!', {
+        elementType: 'subpath',
+        elementId: current.getAttribute('data-element-id'),
+        tagName: current.tagName
+      });
+    }
+    
     while (current && current !== svgRef.current) {
       const elementType = current.getAttribute('data-element-type');
       const elementId = current.getAttribute('data-element-id');
       
+      this.debugManager.logGeneric('Checking element', {
+        tagName: current.tagName,
+        elementType,
+        elementId,
+        className: getClassName(current),
+        id: current.id,
+        attributes: Array.from(current.attributes).map(attr => ({ name: attr.name, value: attr.value }))
+      });
+      
+      // Special logging for subpaths
+      if (elementType === 'subpath') {
+        this.debugManager.logGeneric('🔥 SUBPATH DETECTED!', { elementType, elementId });
+      }
+      
       if (elementType && elementId) {
+        this.debugManager.logGeneric('Found element with data', { elementType, elementId });
         return { elementType, elementId };
       }
       
       current = current.parentElement;
     }
     
+    this.debugManager.logGeneric('No element with data found');
     return { elementType: null, elementId: null };
   }
 
@@ -952,6 +968,7 @@ class PointerInteractionManager {
       uses: selection.selectedUses || [],
       textPaths: selection.selectedTextPaths || [],
       groups: selection.selectedGroups || [],
+      subPaths: selection.selectedSubPaths || [],
     };
   }
 
@@ -976,6 +993,72 @@ class PointerInteractionManager {
     const { commandId, controlPoint } = context;
     const target = e.target as SVGElement;
     const modifiers = this.getKeyModifiers(e);
+    
+    // Always log pointer down to verify the method is called
+    this.debugManager.logGeneric('🔥 POINTER DOWN FIRED!', {
+      targetTag: target.tagName,
+      targetDataType: target.getAttribute('data-element-type'),
+      targetDataId: target.getAttribute('data-element-id'),
+      clickX: e.clientX,
+      clickY: e.clientY
+    });
+    
+    // DEBUG: Log the click target
+    this.debugManager.logGeneric('Pointer down on target', {
+      tagName: target.tagName,
+      id: target.id,
+      classList: Array.from(target.classList || []),
+      dataAttributes: Array.from(target.attributes)
+        .filter(attr => attr.name.startsWith('data-'))
+        .map(attr => ({ name: attr.name, value: attr.value }))
+    });
+    
+    // DEBUG: Log what elements are near the click point
+    const point = this.getSVGPoint(e, context.svgRef);
+    this.debugManager.logGeneric('SVG click coordinates', point);
+    
+    // DEBUG: Check what elements exist in the SVG
+    if (context.svgRef.current) {
+      const allImages = context.svgRef.current.querySelectorAll('image[data-element-id]');
+      const allTexts = context.svgRef.current.querySelectorAll('text[data-element-id]');
+      const allGroups = context.svgRef.current.querySelectorAll('g[data-element-id]');
+      const allSubpaths = context.svgRef.current.querySelectorAll('path[data-element-type="subpath"]');
+      
+      this.debugManager.logGeneric('Elements in SVG', {
+        images: allImages.length,
+        texts: allTexts.length,
+        groups: allGroups.length,
+        subpaths: allSubpaths.length,
+        imageIds: Array.from(allImages).map(img => img.getAttribute('data-element-id')),
+        textIds: Array.from(allTexts).map(text => text.getAttribute('data-element-id')),
+        subpathIds: Array.from(allSubpaths).map(sp => sp.getAttribute('data-element-id'))
+      });
+      
+      // DEBUG: Check if any image/text is at the click coordinates
+      const elementsAtPoint = document.elementsFromPoint(e.clientX, e.clientY);
+      this.debugManager.logGeneric('Elements from point', {
+        count: elementsAtPoint.length,
+        elements: elementsAtPoint.map(el => ({
+          tagName: el.tagName,
+          id: el.id,
+          className: el.className,
+          dataType: el.getAttribute('data-element-type'),
+          dataId: el.getAttribute('data-element-id')
+        }))
+      });
+      
+      // Special check for subpaths at point
+      const subpathsAtPoint = elementsAtPoint.filter(el => el.getAttribute('data-element-type') === 'subpath');
+      if (subpathsAtPoint.length > 0) {
+        this.debugManager.logGeneric('🔥 SUBPATHS AT CLICK POINT!', {
+          count: subpathsAtPoint.length,
+          subpaths: subpathsAtPoint.map(sp => ({
+            elementId: sp.getAttribute('data-element-id'),
+            tagName: sp.tagName
+          }))
+        });
+      }
+    }
     
     // Handle space + click for panning
     if (this.state.isSpacePressed && e.button === 0) {
@@ -1030,6 +1113,15 @@ class PointerInteractionManager {
         elementId,
         modifiers
       });
+      
+      // Special logging for subpaths
+      if (elementTypeTyped === 'subpath') {
+        this.debugManager.logGeneric('🔥 SUBPATH SELECTION ATTEMPT!', {
+          elementId,
+          elementType: elementTypeTyped,
+          modifiers
+        });
+      }
       
       // Handle shift-click for multi-selection
       if (modifiers.shift) {

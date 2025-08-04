@@ -1,5 +1,25 @@
 import { EditorState, SVGPath, SVGSubPath } from '../types';
 
+// ElementType definition for selection utilities
+export type ElementType = 'image' | 'use' | 'text' | 'textPath' | 'group' | 'command' | 'subpath';
+
+export interface SelectionState {
+  selectedCommands: string[];
+  selectedSubPaths: string[];
+  selectedPaths: string[];
+  selectedTexts: string[];
+  selectedTextPaths: string[];
+  selectedImages: string[];
+  selectedUses: string[];
+  selectedGroups: string[];
+}
+
+export interface SelectionContext {
+  selection: SelectionState;
+  groups: any[];
+  paths: any[];
+}
+
 /**
  * Find the sub-path that contains a specific command
  */
@@ -68,4 +88,131 @@ export function getCreationInsertionContext(
   return {
     type: 'new-path',
   };
+}
+
+/**
+ * Checks if an element is currently selected
+ */
+export function isElementSelected(elementId: string, elementType: ElementType, selection: SelectionState): boolean {
+  switch (elementType) {
+    case 'image': return selection.selectedImages?.includes(elementId) || false;
+    case 'use': return selection.selectedUses?.includes(elementId) || false;
+    case 'text': return selection.selectedTexts?.includes(elementId) || false;
+    case 'textPath': return selection.selectedTextPaths?.includes(elementId) || false;
+    case 'group': return selection.selectedGroups?.includes(elementId) || false;
+    case 'command': return selection.selectedCommands?.includes(elementId) || false;
+    case 'subpath': return selection.selectedSubPaths?.includes(elementId) || false;
+    default: return false;
+  }
+}
+
+/**
+ * Checks if there's currently a multi-selection (more than one element selected)
+ */
+export function hasMultiSelection(selection: SelectionState): boolean {
+  const totalSelected = (selection.selectedCommands?.length || 0) + 
+                       (selection.selectedSubPaths?.length || 0) + 
+                       (selection.selectedPaths?.length || 0) +
+                       (selection.selectedTexts?.length || 0) +
+                       (selection.selectedTextPaths?.length || 0) +
+                       (selection.selectedImages?.length || 0) +
+                       (selection.selectedUses?.length || 0) +
+                       (selection.selectedGroups?.length || 0);
+  return totalSelected > 1;
+}
+
+/**
+ * Checks if an element belongs to a currently selected group
+ */
+export function isElementInSelectedGroup(
+  elementId: string, 
+  elementType: ElementType, 
+  context: SelectionContext
+): boolean {
+  const { selection, groups, paths } = context;
+  
+  // Special case for subpaths: find the parent path and check if it's in a selected group
+  if (elementType === 'subpath') {
+    const parentPath = paths.find((path: any) => 
+      path.subPaths?.some((subPath: any) => subPath.id === elementId)
+    );
+    
+    if (parentPath) {
+      for (const groupId of selection.selectedGroups || []) {
+        const group = groups.find((g: any) => g.id === groupId);
+        if (group?.children?.some((child: any) => 
+          child.id === parentPath.id && child.type === 'path')) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  
+  // Regular case for other element types
+  for (const groupId of selection.selectedGroups || []) {
+    const group = groups.find((g: any) => g.id === groupId);
+    if (group?.children?.some((child: any) => 
+      child.id === elementId && child.type === elementType)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Determines if selection should be preserved based on group membership and multi-selection state
+ * Returns true if selection should be preserved (don't call selection functions)
+ */
+export function shouldPreserveSelection(
+  elementId: string,
+  elementType: ElementType,
+  context: SelectionContext
+): boolean {
+  const isSelected = isElementSelected(elementId, elementType, context.selection);
+  const hasMulti = hasMultiSelection(context.selection);
+  const belongsToSelectedGroup = isElementInSelectedGroup(elementId, elementType, context);
+  
+  // If element is already selected, don't change selection
+  if (isSelected) {
+    return true;
+  }
+  
+  // If element belongs to selected group and we have multi-selection, preserve selection
+  if (belongsToSelectedGroup && hasMulti) {
+    return true;
+  }
+  
+  // If element belongs to selected group but no multi-selection, preserve selection
+  if (belongsToSelectedGroup && !hasMulti) {
+    return true;
+  }
+  
+  // Otherwise, allow selection change
+  return false;
+}
+
+/**
+ * Debug logging helper for selection operations
+ */
+export function logSelectionDebug(
+  message: string,
+  elementId: string,
+  elementType: ElementType,
+  context: SelectionContext,
+  debugMode: boolean = false
+) {
+  if (!debugMode) return;
+  
+  const isSelected = isElementSelected(elementId, elementType, context.selection);
+  const hasMulti = hasMultiSelection(context.selection);
+  const belongsToSelectedGroup = isElementInSelectedGroup(elementId, elementType, context);
+  
+  console.log(`[DEBUG] ${message}:`, {
+    elementId,
+    elementType,
+    isSelected,
+    hasMultiSelection: hasMulti,
+    belongsToSelectedGroup
+  });
 }

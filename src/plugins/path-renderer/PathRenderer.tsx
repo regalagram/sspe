@@ -9,6 +9,7 @@ import { stickyManager } from '../sticky-guidelines/StickyManager';
 import { Point } from '../../types';
 import { captureAllSelectedElementsPositions, moveAllCapturedElementsByDelta, DraggedElementsData } from '../../utils/drag-utils';
 import { useAnimationsForElement } from '../../components/AnimationRenderer';
+import { shouldPreserveSelection } from '../../utils/selection-utils';
 
 // Global path drag manager to handle pointer events from plugin system
 import { PointerEventContext } from '../../core/PluginSystem';
@@ -179,11 +180,21 @@ export const PathRenderer: React.FC = () => {
     
     const svgElement = (e.target as SVGPathElement).closest('svg');
     if (svgElement) {
-      // Always ensure the subpath being dragged is selected
-      // If it's not selected and shift is not pressed, select it replacing current selection
-      // If shift is pressed, add it to current selection
-      if (!selection.selectedSubPaths.includes(subPathId)) {
-        selectSubPathMultiple(subPathId, e.shiftKey);
+      const selectionContext = {
+        selection,
+        groups,
+        paths
+      };
+      
+      // Only select if not already selected and shouldn't preserve selection
+      const isSubPathSelected = selection.selectedSubPaths.includes(subPathId);
+      if (!isSubPathSelected) {
+        if (shouldPreserveSelection(subPathId, 'subpath', selectionContext)) {
+          // Preserve current selection - don't call selectSubPathMultiple
+        } else {
+          // Normal selection
+          selectSubPathMultiple(subPathId, e.shiftKey);
+        }
       }
       
       const point = getTransformedPoint(e, svgElement);
@@ -202,7 +213,7 @@ export const PathRenderer: React.FC = () => {
       // Note: We don't call pushToHistory() or transformManager.setMoving(true) here
       // That will be done when we detect actual dragging movement in handlePointerMove
     }
-  }, [viewport, selection.selectedSubPaths, selectSubPathMultiple]);
+  }, [viewport, selection.selectedSubPaths, selectSubPathMultiple, selection, paths, groups]);
 
   // Handle pointer move for dragging
   const handlePointerMove = useCallback((e: React.PointerEvent<SVGElement>) => {
