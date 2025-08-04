@@ -3,7 +3,6 @@ import { useEditorStore } from '../../store/editorStore';
 import { stickyManager, StickyConfig } from './StickyManager';
 
 export const StickyControls: React.FC = () => {
-  console.log('StickyControls: Component rendered');
   const { enabledFeatures, toggleFeature } = useEditorStore();
   const [config, setConfig] = useState<StickyConfig>(stickyManager.getConfig());
 

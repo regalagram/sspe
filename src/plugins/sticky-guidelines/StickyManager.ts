@@ -751,16 +751,7 @@ export class StickyManager {
     targetSelectionPosition: Point, 
     originalBounds: ElementBounds
   ): StickyResult {
-    console.log('StickyManager: handleSelectionMoving', {
-      targetSelectionPosition,
-      originalBounds,
-      enabled: this.config.enabled,
-      movement: {
-        dx: targetSelectionPosition.x - originalBounds.x,
-        dy: targetSelectionPosition.y - originalBounds.y
-      }
-    });
-
+    
     if (!this.config.enabled) {
       return {
         snappedPoint: targetSelectionPosition,
@@ -785,8 +776,7 @@ export class StickyManager {
 
     const selectedElements = this.getSelectedElementsIds();
     const otherElements = this.getAllOtherElements(selectedElements);
-    console.log('StickyManager: otherElements found:', otherElements.length);
-    
+        
     const guidelines: AlignmentGuide[] = [];
     const snappedElements: string[] = [];
     
@@ -811,19 +801,14 @@ export class StickyManager {
     // These will hold the snapped selection bounds
     let snappedBounds = { ...newBounds };
 
-    console.log('StickyManager: Original bounds:', originalBounds);
-    console.log('StickyManager: Target position:', targetSelectionPosition);
-    console.log('StickyManager: Projected bounds:', newBounds);
-
+            
     // Check alignment with each other element
     for (const element of otherElements) {
       const other = element.bounds;
-      console.log(`StickyManager: Checking alignment with element ${element.id}`);
-
+      
       // Vertical alignment checks
       if (this.config.enableCenterSnapping && this.isNearPosition(newBounds.centerX, other.centerX)) {
-        console.log('StickyManager: Vertical center alignment detected!');
-        snappedBounds.centerX = other.centerX;
+                snappedBounds.centerX = other.centerX;
         // Adjust all horizontal positions based on center snap
         const centerOffset = other.centerX - newBounds.centerX;
         snappedBounds.x = newBounds.x + centerOffset;
@@ -842,8 +827,7 @@ export class StickyManager {
         snappedElements.push(element.id);
       }
       if (this.config.enableEdgeSnapping && this.isNearPosition(newBounds.left, other.left)) {
-        console.log('StickyManager: Vertical left alignment detected!');
-        const leftOffset = other.left - newBounds.left;
+                const leftOffset = other.left - newBounds.left;
         snappedBounds.x = newBounds.x + leftOffset;
         snappedBounds.left = other.left;
         snappedBounds.right = newBounds.right + leftOffset;
@@ -861,8 +845,7 @@ export class StickyManager {
         snappedElements.push(element.id);
       }
       if (this.config.enableEdgeSnapping && this.isNearPosition(newBounds.right, other.right)) {
-        console.log('StickyManager: Vertical right alignment detected!');
-        const rightOffset = other.right - newBounds.right;
+                const rightOffset = other.right - newBounds.right;
         snappedBounds.x = newBounds.x + rightOffset;
         snappedBounds.left = newBounds.left + rightOffset;
         snappedBounds.right = other.right;
@@ -882,8 +865,7 @@ export class StickyManager {
 
       // Horizontal alignment checks
       if (this.config.enableCenterSnapping && this.isNearPosition(newBounds.centerY, other.centerY)) {
-        console.log('StickyManager: Horizontal center alignment detected!');
-        snappedBounds.centerY = other.centerY;
+                snappedBounds.centerY = other.centerY;
         // Adjust all vertical positions based on center snap
         const centerOffset = other.centerY - newBounds.centerY;
         snappedBounds.y = newBounds.y + centerOffset;
@@ -902,8 +884,7 @@ export class StickyManager {
         snappedElements.push(element.id);
       }
       if (this.config.enableEdgeSnapping && this.isNearPosition(newBounds.top, other.top)) {
-        console.log('StickyManager: Horizontal top alignment detected!');
-        const topOffset = other.top - newBounds.top;
+                const topOffset = other.top - newBounds.top;
         snappedBounds.y = newBounds.y + topOffset;
         snappedBounds.top = other.top;
         snappedBounds.bottom = newBounds.bottom + topOffset;
@@ -921,8 +902,7 @@ export class StickyManager {
         snappedElements.push(element.id);
       }
       if (this.config.enableEdgeSnapping && this.isNearPosition(newBounds.bottom, other.bottom)) {
-        console.log('StickyManager: Horizontal bottom alignment detected!');
-        const bottomOffset = other.bottom - newBounds.bottom;
+                const bottomOffset = other.bottom - newBounds.bottom;
         snappedBounds.y = newBounds.y + bottomOffset;
         snappedBounds.top = newBounds.top + bottomOffset;
         snappedBounds.bottom = other.bottom;
@@ -992,17 +972,11 @@ export class StickyManager {
     // Use the exact position where the selection should be (no additional calculations)
     const selectedElementIds = this.getSelectedElementsIds();
     const filteredOtherElements = otherElements.filter(element => !selectedElementIds.has(element.id));
-    console.log('StickyManager: Debug projections using newBounds:', {
-      newBounds: { x: newBounds.x, y: newBounds.y, centerX: newBounds.centerX, centerY: newBounds.centerY },
-      originalBounds: { x: originalBounds.x, y: originalBounds.y, centerX: originalBounds.centerX, centerY: originalBounds.centerY },
-      targetSelectionPosition: { x: targetSelectionPosition.x, y: targetSelectionPosition.y }
-    });
-    const debugProjections = this.generateDebugProjections(newBounds, 'selection', filteredOtherElements);
+        const debugProjections = this.generateDebugProjections(newBounds, 'selection', filteredOtherElements);
     this.activeDebugProjections = debugProjections;
 
     this.activeGuidelines = guidelines;
-    console.log('StickyManager: Final guidelines created:', guidelines);
-    this.notifyListeners();
+        this.notifyListeners();
 
     // Return the snapped selection bounds directly
     // The caller should use these bounds to position the elements
@@ -1014,12 +988,7 @@ export class StickyManager {
       debugProjections
     };
     
-    console.log('StickyManager: Returning result:', {
-      originalBounds: { x: originalBounds.x, y: originalBounds.y },
-      snappedBounds: { x: snappedBounds.x, y: snappedBounds.y },
-      selectionMoved: snappedBounds.x !== newBounds.x || snappedBounds.y !== newBounds.y
-    });
-    
+        
     return result;
   }
 
@@ -1029,18 +998,7 @@ export class StickyManager {
     currentBounds: ElementBounds,
     newPosition: Point
   ): StickyResult {
-    console.log('StickyManager: handleElementMoving', {
-      elementId,
-      elementType,
-      currentBounds: { x: currentBounds.x, y: currentBounds.y, centerX: currentBounds.centerX, centerY: currentBounds.centerY },
-      newPosition,
-      movement: {
-        dx: newPosition.x - currentBounds.x,
-        dy: newPosition.y - currentBounds.y
-      },
-      enabled: this.config.enabled
-    });
-
+    
     if (!this.config.enabled) {
       return {
         snappedPoint: newPosition,
@@ -1063,20 +1021,14 @@ export class StickyManager {
           y: selectionBounds.y + elementDy
         };
         
-        console.log('StickyManager: Delegating to handleSelectionMoving', {
-          elementMovement: { dx: elementDx, dy: elementDy },
-          originalSelectionBounds: { x: selectionBounds.x, y: selectionBounds.y },
-          targetSelectionPosition
-        });
-        
+                
         return this.handleSelectionMoving(targetSelectionPosition, selectionBounds);
       }
     }
 
     const excludeElements = new Set([elementId]);
     const otherElements = this.getAllOtherElements(excludeElements);
-    console.log('StickyManager: otherElements found:', otherElements.length);
-    const guidelines: AlignmentGuide[] = [];
+        const guidelines: AlignmentGuide[] = [];
     
     // Calculate new bounds at proposed position for snapping logic
     const newBounds = {
@@ -1101,29 +1053,14 @@ export class StickyManager {
     let snapX = newPosition.x;
     let snapY = newPosition.y;
 
-    console.log('StickyManager: Using newBounds for both projections and snapping:', newBounds);
-
+    
     // Check alignment with each other element using newBounds (same as projections)
     for (const element of otherElements) {
       const other = element.bounds;
-      console.log(`StickyManager: Checking alignment with element ${element.id}:`, {
-        newBounds: { centerX: newBounds.centerX, centerY: newBounds.centerY, left: newBounds.left, right: newBounds.right, top: newBounds.top, bottom: newBounds.bottom },
-        other: { centerX: other.centerX, centerY: other.centerY, left: other.left, right: other.right, top: other.top, bottom: other.bottom },
-        snapDistance: this.config.snapDistance,
-        distances: {
-          centerX: Math.abs(newBounds.centerX - other.centerX),
-          centerY: Math.abs(newBounds.centerY - other.centerY),
-          left: Math.abs(newBounds.left - other.left),
-          right: Math.abs(newBounds.right - other.right),
-          top: Math.abs(newBounds.top - other.top),
-          bottom: Math.abs(newBounds.bottom - other.bottom)
-        }
-      });
-
+      
       // Vertical alignment checks (use separate ifs to allow multiple alignments)
       if (this.config.enableCenterSnapping && this.isNearPosition(newBounds.centerX, other.centerX)) {
-        console.log('StickyManager: Vertical center alignment detected!');
-        // Snap to center alignment - adjust the element's position so its center aligns
+                // Snap to center alignment - adjust the element's position so its center aligns
         const targetCenterX = other.centerX;
         snapX = targetCenterX - currentBounds.width / 2;
         guidelines.push({
@@ -1135,8 +1072,7 @@ export class StickyManager {
         });
       }
       if (this.config.enableEdgeSnapping && this.isNearPosition(newBounds.left, other.left)) {
-        console.log('StickyManager: Vertical left alignment detected!');
-        // Snap to left edge alignment
+                // Snap to left edge alignment
         snapX = other.left;
         guidelines.push({
           id: `v-left-${element.id}`,
@@ -1147,8 +1083,7 @@ export class StickyManager {
         });
       }
       if (this.config.enableEdgeSnapping && this.isNearPosition(newBounds.right, other.right)) {
-        console.log('StickyManager: Vertical right alignment detected!');
-        // Snap to right edge alignment  
+                // Snap to right edge alignment  
         snapX = other.right - currentBounds.width;
         guidelines.push({
           id: `v-right-${element.id}`,
@@ -1161,8 +1096,7 @@ export class StickyManager {
 
       // Horizontal alignment checks (use separate ifs to allow multiple alignments)
       if (this.config.enableCenterSnapping && this.isNearPosition(newBounds.centerY, other.centerY)) {
-        console.log('StickyManager: Horizontal center alignment detected!');
-        // Snap to center alignment - adjust the element's position so its center aligns
+                // Snap to center alignment - adjust the element's position so its center aligns
         const targetCenterY = other.centerY;
         snapY = targetCenterY - currentBounds.height / 2;
         guidelines.push({
@@ -1174,8 +1108,7 @@ export class StickyManager {
         });
       }
       if (this.config.enableEdgeSnapping && this.isNearPosition(newBounds.top, other.top)) {
-        console.log('StickyManager: Horizontal top alignment detected!');
-        // Snap to top edge alignment
+                // Snap to top edge alignment
         snapY = other.top;
         guidelines.push({
           id: `h-top-${element.id}`,
@@ -1186,8 +1119,7 @@ export class StickyManager {
         });
       }
       if (this.config.enableEdgeSnapping && this.isNearPosition(newBounds.bottom, other.bottom)) {
-        console.log('StickyManager: Horizontal bottom alignment detected!');
-        // Snap to bottom edge alignment
+                // Snap to bottom edge alignment
         snapY = other.bottom - currentBounds.height;
         guidelines.push({
           id: `h-bottom-${element.id}`,
@@ -1244,21 +1176,12 @@ export class StickyManager {
       rightCenter: currentBounds.rightCenter + movementDelta.dy
     };
     
-    console.log('StickyManager: Debug projection details:', {
-      elementId,
-      newBounds: { x: newBounds.x, y: newBounds.y, centerX: newBounds.centerX, centerY: newBounds.centerY },
-      currentBounds: { x: currentBounds.x, y: currentBounds.y, centerX: currentBounds.centerX, centerY: currentBounds.centerY },
-      visualBounds: { x: visualBounds.x, y: visualBounds.y, centerX: visualBounds.centerX, centerY: visualBounds.centerY },
-      movement: movementDelta,
-      projectionUsing: 'visualBounds for 1:1 movement with mouse'
-    });
-    
+        
     const debugProjections = this.generateDebugProjections(visualBounds, elementId, filteredOtherElements);
     this.activeDebugProjections = debugProjections;
 
     this.activeGuidelines = guidelines;
-    console.log('StickyManager: Final guidelines created:', guidelines);
-    this.notifyListeners();
+        this.notifyListeners();
 
     const result = {
       snappedPoint: { x: snapX, y: snapY },
@@ -1266,18 +1189,12 @@ export class StickyManager {
       debugProjections
     };
     
-    console.log('StickyManager: Returning result:', {
-      originalPosition: newPosition,
-      snappedPoint: result.snappedPoint,
-      wasSnapped: snapX !== newPosition.x || snapY !== newPosition.y
-    });
-    
+        
     return result;
   }
 
   public clearGuidelines(): void {
-    console.log('StickyManager: clearGuidelines called');
-    this.activeGuidelines = [];
+        this.activeGuidelines = [];
     
     // In debug mode, maintain debug projections instead of clearing them
     if (this.config.debugMode) {

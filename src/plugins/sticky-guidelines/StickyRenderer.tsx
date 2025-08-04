@@ -3,16 +3,13 @@ import { useEditorStore } from '../../store/editorStore';
 import { stickyManager, AlignmentGuide, DebugProjection } from './StickyManager';
 
 export const StickyRenderer: React.FC = () => {
-  console.log('StickyRenderer: Component rendered');
-  const { enabledFeatures, viewport } = useEditorStore();
+    const { enabledFeatures, viewport } = useEditorStore();
   const [guidelines, setGuidelines] = useState<AlignmentGuide[]>([]);
   const [debugProjections, setDebugProjections] = useState<DebugProjection[]>([]);
   
   useEffect(() => {
     const unsubscribe = stickyManager.subscribe((newGuidelines, newDebugProjections) => {
-      console.log('StickyRenderer: Received guidelines:', newGuidelines);
-      console.log('StickyRenderer: Received debug projections:', newDebugProjections);
-      setGuidelines(newGuidelines);
+                  setGuidelines(newGuidelines);
       setDebugProjections(newDebugProjections);
     });
 
@@ -20,19 +17,10 @@ export const StickyRenderer: React.FC = () => {
   }, []);
 
 
-  console.log('StickyRenderer: Render state:', {
-    enabled: enabledFeatures.stickyGuidelinesEnabled,
-    showGuidelines: stickyManager.getConfig().showGuidelines,
-    guidelinesCount: guidelines.length,
-    debugProjectionsCount: debugProjections.length,
-    guidelines: guidelines,
-    debugProjections: debugProjections
-  });
-  
+    
   // Don't render if disabled
   if (!enabledFeatures.stickyGuidelinesEnabled || !stickyManager.getConfig().showGuidelines) {
-    console.log('StickyRenderer: Not rendering - disabled');
-    return null;
+        return null;
   }
 
   // Show debug projections if debug mode is enabled (even without guidelines)
@@ -46,13 +34,11 @@ export const StickyRenderer: React.FC = () => {
   const strokeWidth = 1 / viewport.zoom;
   const dashArray = `${4 / viewport.zoom} ${4 / viewport.zoom}`;
 
-  console.log('StickyRenderer: About to render', guidelines.length, 'guidelines');
-
+  
   return (
     <>
       {guidelines.map((guideline) => {
-        console.log('StickyRenderer: Rendering guideline:', guideline);
-        
+                
         // Different visual styles based on alignment type
         const getGuidelineStyle = (alignmentType: string) => {
           switch (alignmentType) {
@@ -200,106 +186,7 @@ export const StickyRenderer: React.FC = () => {
         return null;
       })}
 
-      {/* Debug legend when debug projections are active */}
-      {showDebugProjections && (
-        <g>
-          <rect
-            x={viewport.viewBox.x + viewport.viewBox.width - 180 / viewport.zoom}
-            y={viewport.viewBox.y + 20 / viewport.zoom}
-            width={160 / viewport.zoom}
-            height={70 / viewport.zoom}
-            fill="rgba(0, 0, 0, 0.8)"
-            stroke="#00ff00"
-            strokeWidth={1 / viewport.zoom}
-            rx={4 / viewport.zoom}
-            style={{ pointerEvents: 'none' }}
-          />
-          <text
-            x={viewport.viewBox.x + viewport.viewBox.width - 170 / viewport.zoom}
-            y={viewport.viewBox.y + 35 / viewport.zoom}
-            fill="#00ff00"
-            fontSize={10 / viewport.zoom}
-            style={{ pointerEvents: 'none' }}
-          >
-            DEBUG PROJECTIONS:
-          </text>
-          <text
-            x={viewport.viewBox.x + viewport.viewBox.width - 170 / viewport.zoom}
-            y={viewport.viewBox.y + 50 / viewport.zoom}
-            fill="#00ff00"
-            fontSize={8 / viewport.zoom}
-            style={{ pointerEvents: 'none' }}
-          >
-            Bright: Moving | Dim: Static
-          </text>
-          <text
-            x={viewport.viewBox.x + viewport.viewBox.width - 170 / viewport.zoom}
-            y={viewport.viewBox.y + 62 / viewport.zoom}
-            fill="#00ff00"
-            fontSize={8 / viewport.zoom}
-            style={{ pointerEvents: 'none' }}
-          >
-            Edges | Centers | Midpoints
-          </text>
-          <text
-            x={viewport.viewBox.x + viewport.viewBox.width - 170 / viewport.zoom}
-            y={viewport.viewBox.y + 74 / viewport.zoom}
-            fill="#666"
-            fontSize={8 / viewport.zoom}
-            style={{ pointerEvents: 'none' }}
-          >
-            Total: {debugProjections.length} projections
-          </text>
-        </g>
-      )}
 
-      {/* Alignment legend when guidelines are active */}
-      {guidelines.length > 0 && (
-        <g>
-          <rect
-            x={viewport.viewBox.x + 20 / viewport.zoom}
-            y={viewport.viewBox.y + 20 / viewport.zoom}
-            width={150 / viewport.zoom}
-            height={60 / viewport.zoom}
-            fill="rgba(255, 255, 255, 0.9)"
-            stroke="#ccc"
-            strokeWidth={1 / viewport.zoom}
-            rx={4 / viewport.zoom}
-            style={{ pointerEvents: 'none' }}
-          />
-          <text
-            x={viewport.viewBox.x + 30 / viewport.zoom}
-            y={viewport.viewBox.y + 35 / viewport.zoom}
-            fill="#666"
-            fontSize={10 / viewport.zoom}
-            style={{ pointerEvents: 'none' }}
-          >
-            Active Alignments:
-          </text>
-          {guidelines.slice(0, 3).map((guideline, index) => (
-            <g key={`legend-${guideline.id}`}>
-              <line
-                x1={viewport.viewBox.x + 35 / viewport.zoom}
-                y1={viewport.viewBox.y + (50 + index * 8) / viewport.zoom}
-                x2={viewport.viewBox.x + 55 / viewport.zoom}
-                y2={viewport.viewBox.y + (50 + index * 8) / viewport.zoom}
-                stroke={guideline.color}
-                strokeWidth={2 / viewport.zoom}
-                style={{ pointerEvents: 'none' }}
-              />
-              <text
-                x={viewport.viewBox.x + 60 / viewport.zoom}
-                y={viewport.viewBox.y + (52 + index * 8) / viewport.zoom}
-                fill="#666"
-                fontSize={8 / viewport.zoom}
-                style={{ pointerEvents: 'none' }}
-              >
-                {guideline.alignmentType}
-              </text>
-            </g>
-          ))}
-        </g>
-      )}
     </>
   );
 };

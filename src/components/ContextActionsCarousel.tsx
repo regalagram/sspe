@@ -7,6 +7,11 @@ import { generateId } from '../utils/id-utils';
 import { parseCompleteSVG } from '../utils/svg-parser';
 import { generateSVGCode, downloadSVGFile } from '../utils/svg-export';
 import { 
+  generateSmoothPath, 
+  areCommandsInSameSubPath,
+  simplifySegmentWithPointsOnPath
+} from '../utils/path-simplification-utils';
+import { 
   Copy, 
   Trash2, 
   Group, 
@@ -27,7 +32,9 @@ import {
   Eye,
   EyeOff,
   Download,
-  Upload
+  Upload,
+  Waves,
+  Minimize2
 } from 'lucide-react';
 
 interface ContextAction {
@@ -76,7 +83,9 @@ export const ContextActionsCarousel: React.FC<ContextActionsCarouselProps> = ({ 
     setGradients,
     replaceGroups,
     updateImage,
-    updateSubPath
+    updateSubPath,
+    replaceSubPathCommands,
+    pushToHistory
   } = useEditorStore();
 
   // Initialize managers with editor store
@@ -193,6 +202,22 @@ export const ContextActionsCarousel: React.FC<ContextActionsCarouselProps> = ({ 
             });
           }
         });
+
+        // Add Smooth button for sub-paths
+        actions.splice(-1, 0, {
+          id: 'smooth-subpath',
+          icon: <Waves size={24} />,
+          label: 'Smooth',
+          action: handleSmooth
+        });
+
+        // Add Simplify button for sub-paths
+        actions.splice(-1, 0, {
+          id: 'simplify-subpath',
+          icon: <Minimize2 size={24} />,
+          label: 'Simplify',
+          action: handleSimplify
+        });
       }
     } else {
       // Canvas actions (no selection)
@@ -231,6 +256,104 @@ export const ContextActionsCarousel: React.FC<ContextActionsCarouselProps> = ({ 
     }
 
     return actions;
+  };
+
+  // Smoothing functionality for mobile context menu
+  const handleSmooth = () => {
+    const { selectedSubPaths } = selection;
+    
+    if (selectedSubPaths.length === 0) return;
+    
+    // Save current state to history before making changes
+    pushToHistory();
+    
+    // Process each selected subpath
+    selectedSubPaths.forEach(subPathId => {
+      for (const path of paths) {
+        const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
+        if (subPath && subPath.commands.length >= 2) {
+          const subPathCommands = subPath.commands;
+          
+          // Apply smoothing to entire subpath
+          const segmentToSmooth = [...subPathCommands];
+          
+          // Helper function to update this specific subpath
+          const updateSubPath = (newCommands: any[]) => {
+            // CRITICAL: Ensure the subpath ALWAYS starts with M
+            if (newCommands.length > 0 && newCommands[0].command !== 'M') {
+              const firstCmd = newCommands[0];
+              if ('x' in firstCmd && 'y' in firstCmd) {
+                newCommands[0] = {
+                  ...firstCmd,
+                  command: 'M'
+                };
+              }
+            }
+            
+            // Replace all commands in this subpath
+            replaceSubPathCommands(subPath.id, newCommands);
+          };
+          
+          // Apply smoothing using the generateSmoothPath function
+          generateSmoothPath(
+            segmentToSmooth,
+            subPathCommands,
+            updateSubPath,
+            grid.snapToGrid ? (value: number) => Math.round(value / grid.size) * grid.size : (value: number) => value
+          );
+          break;
+        }
+      }
+    });
+  };
+
+  // Simplification functionality for mobile context menu
+  const handleSimplify = () => {
+    const { selectedSubPaths } = selection;
+    
+    if (selectedSubPaths.length === 0) return;
+    
+    // Save current state to history before making changes
+    pushToHistory();
+    
+    // Use default simplification parameters
+    const simplifyTolerance = 0.1;
+    const simplifyDistance = 10;
+    
+    // Process each selected subpath
+    selectedSubPaths.forEach(subPathId => {
+      for (const path of paths) {
+        const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
+        if (subPath && subPath.commands.length >= 2) {
+          const commands = subPath.commands;
+          
+          // Use points-on-path algorithm for simplification (Ramer-Douglas-Peucker)
+          const simplifiedCommands = simplifySegmentWithPointsOnPath(
+            commands, 
+            simplifyTolerance, 
+            simplifyDistance, 
+            grid.snapToGrid ? grid.size : 0
+          );
+
+          if (simplifiedCommands.length === 0) continue;
+
+          // CRITICAL: Ensure the subpath ALWAYS starts with M
+          if (simplifiedCommands.length > 0 && simplifiedCommands[0].command !== 'M') {
+            const firstCmd = simplifiedCommands[0];
+            if ('x' in firstCmd && 'y' in firstCmd) {
+              simplifiedCommands[0] = {
+                ...firstCmd,
+                command: 'M'
+              };
+            }
+          }
+          
+          // Replace all commands in this subpath
+          replaceSubPathCommands(subPath.id, simplifiedCommands);
+          break;
+        }
+      }
+    });
   };
 
   // Helper functions
