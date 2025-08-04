@@ -441,7 +441,7 @@ export const createGroupActions: StateCreator<
       }
       if (child.type === 'image') {
         if (typeof get().moveImage === 'function') {
-          get().moveImage(child.id, delta);
+          get().moveImage(child.id, delta, true); // Skip group sync to avoid recursion
         }
       }
       if (child.type === 'use') {

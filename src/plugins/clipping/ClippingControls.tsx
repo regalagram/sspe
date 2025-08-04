@@ -11,6 +11,9 @@ export const ClippingControls: React.FC = () => {
     masks,
     selection, 
     paths,
+    texts,
+    images,
+    groups,
     addClipPath, 
     updateClipPath, 
     removeClipPath,
@@ -447,7 +450,7 @@ export const ClippingControls: React.FC = () => {
       const currentGroup = useEditorStore.getState().groups.find(group => group.id === groupId);
       if (!currentGroup) return;
 
-      const groupBbox = getGroupBoundingBox(currentGroup);
+      const groupBbox = getGroupBoundingBox(currentGroup, paths, texts, images, groups);
       const adjustment = calculateClipPathAlignment(groupBbox, clipPathBbox, alignmentMode);
       
       // Apply transform to move the group

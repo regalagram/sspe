@@ -1,4 +1,4 @@
-import { BoundingBox, Point, SVGPath, SVGSubPath, SVGCommand, TextElementType, SVGGroup } from '../types';
+import { BoundingBox, Point, SVGPath, SVGSubPath, SVGCommand, TextElementType, SVGGroup, SVGImage } from '../types';
 
 /**
  * Calculate bounding box for a single SVG command
@@ -142,15 +142,85 @@ export function getTextBoundingBox(text: TextElementType): BoundingBox {
 /**
  * Calculate bounding box for group
  */
-export function getGroupBoundingBox(group: SVGGroup): BoundingBox {
-  // For groups, we need to calculate the bounding box from child elements
-  // This is a simplified implementation - in reality you'd need to traverse all children
-  // For now, we'll use a default bounding box
+export function getGroupBoundingBox(
+  group: SVGGroup, 
+  allPaths: SVGPath[] = [], 
+  allTexts: TextElementType[] = [], 
+  allImages: SVGImage[] = [], 
+  allGroups: SVGGroup[] = []
+): BoundingBox {
+  if (!group.children || group.children.length === 0) {
+    return {
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100
+    };
+  }
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let hasValidBounds = false;
+
+  group.children.forEach(child => {
+    if (child.type === 'path') {
+      const path = allPaths.find(p => p.id === child.id);
+      if (path) {
+        const pathBbox = getPathBoundingBox(path);
+        if (pathBbox) {
+          minX = Math.min(minX, pathBbox.x);
+          minY = Math.min(minY, pathBbox.y);
+          maxX = Math.max(maxX, pathBbox.x + pathBbox.width);
+          maxY = Math.max(maxY, pathBbox.y + pathBbox.height);
+          hasValidBounds = true;
+        }
+      }
+    } else if (child.type === 'text') {
+      const text = allTexts.find(t => t.id === child.id);
+      if (text) {
+        const textBbox = getTextBoundingBox(text);
+        minX = Math.min(minX, textBbox.x);
+        minY = Math.min(minY, textBbox.y);
+        maxX = Math.max(maxX, textBbox.x + textBbox.width);
+        maxY = Math.max(maxY, textBbox.y + textBbox.height);
+        hasValidBounds = true;
+      }
+    } else if (child.type === 'image') {
+      const image = allImages.find(img => img.id === child.id);
+      if (image) {
+        const imageBbox = getImageBoundingBox(image);
+        minX = Math.min(minX, imageBbox.x);
+        minY = Math.min(minY, imageBbox.y);
+        maxX = Math.max(maxX, imageBbox.x + imageBbox.width);
+        maxY = Math.max(maxY, imageBbox.y + imageBbox.height);
+        hasValidBounds = true;
+      }
+    } else if (child.type === 'group') {
+      const childGroup = allGroups.find(g => g.id === child.id);
+      if (childGroup) {
+        const groupBbox = getGroupBoundingBox(childGroup, allPaths, allTexts, allImages, allGroups);
+        minX = Math.min(minX, groupBbox.x);
+        minY = Math.min(minY, groupBbox.y);
+        maxX = Math.max(maxX, groupBbox.x + groupBbox.width);
+        maxY = Math.max(maxY, groupBbox.y + groupBbox.height);
+        hasValidBounds = true;
+      }
+    }
+  });
+
+  if (!hasValidBounds) {
+    return {
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100
+    };
+  }
+
   return {
-    x: 0, // Groups don't have direct x,y coordinates
-    y: 0,
-    width: 100, // Default width
-    height: 100 // Default height
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY
   };
 }
 
@@ -205,7 +275,8 @@ export function getDraggedElementBoundingBox(
   paths: SVGPath[],
   texts: TextElementType[],
   groups: SVGGroup[],
-  dragOffset: Point
+  dragOffset: Point,
+  images: SVGImage[] = []
 ): BoundingBox | null {
   let originalBbox: BoundingBox | null = null;
 
@@ -222,7 +293,7 @@ export function getDraggedElementBoundingBox(
   } else if (elementType === 'group') {
     const group = groups.find(g => g.id === elementId);
     if (group) {
-      originalBbox = getGroupBoundingBox(group);
+      originalBbox = getGroupBoundingBox(group, paths, texts, images, groups);
     }
   }
 

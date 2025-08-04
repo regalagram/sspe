@@ -10,7 +10,7 @@ interface GroupRendererProps {
 }
 
 const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false, isParentSelected = false }) => {
-  const { paths, texts, groups, selection, viewport, getGroupLockLevel, isGroupLocked, enabledFeatures } = useEditorStore();
+  const { paths, texts, images, groups, selection, viewport, getGroupLockLevel, isGroupLocked, enabledFeatures } = useEditorStore();
   const animations = useAnimationsForElement(group.id);
 
   const handleSelectGroupElements = () => {
@@ -134,6 +134,15 @@ const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false,
         minY = Math.min(minY, text.y);
         maxX = Math.max(maxX, text.x + textWidth);
         maxY = Math.max(maxY, text.y + textHeight);
+        foundValidBounds = true;
+      }
+    } else if (child.type === 'image') {
+      const image = images.find(img => img.id === child.id);
+      if (image) {
+        minX = Math.min(minX, image.x);
+        minY = Math.min(minY, image.y);
+        maxX = Math.max(maxX, image.x + image.width);
+        maxY = Math.max(maxY, image.y + image.height);
         foundValidBounds = true;
       }
     } else if (child.type === 'group') {

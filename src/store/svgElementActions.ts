@@ -10,7 +10,7 @@ export interface SVGElementActions {
   removeImage: (id: string) => void;
   replaceImages: (images: SVGImage[]) => void;
   duplicateImage: (id: string, offset?: Point) => void;
-  moveImage: (id: string, delta: Point) => void;
+  moveImage: (id: string, delta: Point, skipGroupSync?: boolean) => void;
   resizeImage: (id: string, newWidth: number, newHeight: number) => void;
   scaleImage: (id: string, scaleX: number, scaleY: number, center?: Point) => void;
   
@@ -59,7 +59,7 @@ export interface SVGElementActions {
 }
 
 export const createSVGElementActions: StateCreator<
-  EditorState & SVGElementActions & HistoryActions,
+  EditorState & SVGElementActions & HistoryActions & { moveGroup: (groupId: string, delta: Point) => void; shouldMoveSyncGroup: (elementId: string, elementType: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => any; moveSyncGroupByElement: (elementId: string, elementType: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use', delta: Point) => boolean; },
   [],
   [],
   SVGElementActions
@@ -293,15 +293,50 @@ export const createSVGElementActions: StateCreator<
   },
 
   // Transform actions for images
-  moveImage: (id, delta) => {
-    const state = get();
-    const image = state.images.find(img => img.id === id);
-    if (image) {
-      state.updateImage(id, {
-        x: image.x + delta.x,
-        y: image.y + delta.y
-      });
-    }
+  moveImage: (id, delta, skipGroupSync = false) => {
+    set(state => {
+      // Check if the image is in a movement-sync group (only if not skipping)
+      if (!skipGroupSync && typeof state.moveSyncGroupByElement === 'function') {
+        const syncGroup = state.shouldMoveSyncGroup(id, 'image');
+        if (syncGroup) {
+          // Check if multiple elements of the same group are being moved
+          // If so, only move the group once (when processing the first element)
+          const groupElements = syncGroup.children.filter((child: any) => child.type === 'image').map((child: any) => child.id);
+          const selectedGroupElements = state.selection.selectedImages.filter(imageId => groupElements.includes(imageId));
+          
+          if (selectedGroupElements.length > 1) {
+            // Multiple elements of the same group are selected
+            // Only move the group if this is the first element being processed
+            const isFirstElement = selectedGroupElements[0] === id;
+            if (isFirstElement) {
+              state.moveGroup(syncGroup.id, delta);
+            }
+            return {}; // Don't move individual element
+          } else {
+            // Single element, move the whole group
+            const wasMoved = state.moveSyncGroupByElement(id, 'image', delta);
+            if (wasMoved) {
+              return {}; // Group was moved instead
+            }
+          }
+        }
+      }
+      
+      // Move individual image
+      const image = state.images.find(img => img.id === id);
+      if (image) {
+        return {
+          images: state.images.map((img) =>
+            img.id === id 
+              ? { ...img, x: img.x + delta.x, y: img.y + delta.y }
+              : img
+          ),
+          renderVersion: state.renderVersion + 1
+        };
+      }
+      
+      return {};
+    });
   },
 
   resizeImage: (id, newWidth, newHeight) => {

@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { EditorState, SVGTextPath, TextStyle } from '../types';
+import { EditorState, SVGTextPath, TextStyle, Point } from '../types';
 import { generateId } from '../utils/id-utils';
 
 export interface TextPathActions {
@@ -45,7 +45,7 @@ export interface TextPathActions {
 }
 
 export const createTextPathActions: StateCreator<
-  EditorState & TextPathActions,
+  EditorState & TextPathActions & { moveGroup: (groupId: string, delta: Point) => void; shouldMoveSyncGroup: (elementId: string, elementType: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => any; moveSyncGroupByElement: (elementId: string, elementType: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use', delta: Point) => boolean; },
   [],
   [],
   TextPathActions
@@ -167,13 +167,66 @@ export const createTextPathActions: StateCreator<
       renderVersion: state.renderVersion + 1
     })),
 
-  // TextPath doesn't need movement - it follows the path
-  // This function is kept for compatibility but does nothing for movement
-  // TextPath transformations should be applied to the underlying path instead
+  // TextPath movement implementation - handles group sync for textPath elements
+  // Even though textPaths follow their path, we need group sync for consistency
   moveTextPath: (textPathId: string, delta: { x: number; y: number }, skipGroupSync = false) => {
-    // TextPath elements don't move independently - they follow their path
-    // Any movement should be applied to the path that the textPath references
-    // This function is kept for API compatibility but performs no action
+    set(state => {
+      // Check if the textPath is in a movement-sync group (only if not skipping)
+      if (!skipGroupSync && typeof state.moveSyncGroupByElement === 'function') {
+        const syncGroup = state.shouldMoveSyncGroup(textPathId, 'textPath');
+        if (syncGroup) {
+          // Check if multiple elements of the same group are being moved
+          // If so, only move the group once (when processing the first element)
+          const groupElements = syncGroup.children.filter((child: any) => child.type === 'textPath').map((child: any) => child.id);
+          const selectedGroupElements = state.selection.selectedTextPaths.filter(textPathId => groupElements.includes(textPathId));
+          
+          if (selectedGroupElements.length > 1) {
+            // Multiple elements of the same group are selected
+            // Only move the group if this is the first element being processed
+            const isFirstElement = selectedGroupElements[0] === textPathId;
+            if (isFirstElement) {
+              state.moveGroup(syncGroup.id, delta);
+            }
+            return {}; // Don't move individual element
+          } else {
+            // Single element, move the whole group
+            const wasMoved = state.moveSyncGroupByElement(textPathId, 'textPath', delta);
+            if (wasMoved) {
+              return {}; // Group was moved instead
+            }
+          }
+        }
+      }
+      
+      // For individual textPath movement, we apply a transform since textPaths follow their path
+      // The transform will offset the textPath relative to its path
+      const textPath = state.textPaths.find(tp => tp.id === textPathId);
+      if (textPath) {
+        const currentTransform = textPath.transform || '';
+        const translateMatch = currentTransform.match(/translate\(([^)]+)\)/);
+        
+        let newTransform: string;
+        if (translateMatch) {
+          const [, coords] = translateMatch;
+          const [currentX = 0, currentY = 0] = coords.split(/[,\s]+/).map(Number);
+          newTransform = currentTransform.replace(
+            /translate\([^)]+\)/,
+            `translate(${currentX + delta.x}, ${currentY + delta.y})`
+          );
+        } else {
+          newTransform = currentTransform + ` translate(${delta.x}, ${delta.y})`;
+        }
+        
+        return {
+          textPaths: state.textPaths.map(tp => 
+            tp.id === textPathId ? { ...tp, transform: newTransform.trim() } : tp
+          ),
+          renderVersion: state.renderVersion + 1
+        };
+      }
+      
+      return {};
+    });
   },
 
   scaleTextPathFont: (textPathId: string, scaleFactor: number) =>

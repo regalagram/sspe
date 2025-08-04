@@ -2,6 +2,7 @@ import React, { PointerEvent, WheelEvent } from 'react';
 import { Plugin, PointerEventContext } from '../../core/PluginSystem';
 import { snapToGrid, getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
+import { moveAllCapturedElementsByDelta, captureAllSelectedElementsPositions, DraggedElementsData } from '../../utils/drag-utils';
 import { transformManager } from '../transform/TransformManager';
 import { handleManager } from '../handles/HandleManager';
 import { stickyManager } from '../sticky-guidelines/StickyManager';
@@ -347,6 +348,8 @@ class DragManager {
   private editorStore: any;
   private config: PointerInteractionConfig;
   private elementSnapshots: Map<string, ElementSnapshot> = new Map();
+  private capturedElementsData: DraggedElementsData | null = null;
+  private lastDelta: Point = { x: 0, y: 0 }; // Track last applied delta
   private instanceId: string;
   private debugManager: DebugManager;
 
@@ -365,9 +368,14 @@ class DragManager {
   startDrag(elements: SelectedElements, origin: Point): void {
     this.debugManager.logDragOperation('Starting drag with elements', elements);
     this.debugManager.logDragManager('instanceId in startDrag', this.instanceId);
-    this.captureElementSnapshots(elements);
-    this.debugManager.logDragOperation('Captured snapshots', Array.from(this.elementSnapshots.keys()));
-    this.debugManager.logDragOperation('Snapshots size after capture', this.elementSnapshots.size);
+    
+    // Use centralized utility to capture elements instead of individual snapshots
+    this.capturedElementsData = captureAllSelectedElementsPositions();
+    this.debugManager.logDragOperation('Captured elements data', this.capturedElementsData);
+    
+    // Reset last delta
+    this.lastDelta = { x: 0, y: 0 };
+    
     transformManager.setMoving(true);
     this.editorStore.pushToHistory();
   }
@@ -381,10 +389,31 @@ class DragManager {
     // const snappedDelta = this.applyStickyGuidelines(delta);
     const snappedDelta = delta;
     
-    this.elementSnapshots.forEach((snapshot, elementId) => {
-      this.debugManager.logMovement('Moving element', { elementId, type: snapshot.type });
-      this.moveElement(snapshot, snappedDelta);
-    });
+    // Calculate incremental delta (difference from last applied delta)
+    const incrementalDelta = {
+      x: snappedDelta.x - this.lastDelta.x,
+      y: snappedDelta.y - this.lastDelta.y
+    };
+    
+    this.debugManager.logDragOperation('Incremental delta', incrementalDelta);
+    
+    // Only apply movement if there's a meaningful change
+    if (Math.abs(incrementalDelta.x) > 0.001 || Math.abs(incrementalDelta.y) > 0.001) {
+      // Instead of moving elements individually, use the centralized utility
+      // that properly handles group synchronization
+      const selectedElements = this.getSelectedElementsData();
+      if (selectedElements) {
+        moveAllCapturedElementsByDelta(
+          selectedElements,
+          incrementalDelta, // Use incremental delta instead of total delta
+          this.config.snapToGrid,
+          this.config.gridSize
+        );
+      }
+      
+      // Update last applied delta
+      this.lastDelta = { ...snappedDelta };
+    }
 
     transformManager.updateTransformState();
   }
@@ -393,6 +422,7 @@ class DragManager {
     this.debugManager.logDragOperation('endDrag called, clearing snapshots', this.elementSnapshots.size);
     this.debugManager.logDragManager('instanceId in endDrag', this.instanceId);
     this.elementSnapshots.clear();
+    this.lastDelta = { x: 0, y: 0 }; // Reset delta tracking
     transformManager.setMoving(false);
     stickyManager.clearGuidelines();
   }
@@ -531,6 +561,17 @@ class DragManager {
     
     this.debugManager.logElementProcessing('Total snapshots captured', this.elementSnapshots.size);
     this.debugManager.logElementProcessing('Snapshot keys', Array.from(this.elementSnapshots.keys()));
+  }
+
+  private getSelectedElementsData(): DraggedElementsData {
+    return this.capturedElementsData || {
+      images: {},
+      uses: {},
+      groups: {},
+      texts: {},
+      commands: {},
+      subPaths: {}
+    };
   }
 
   private applyStickyGuidelines(delta: Point): Point {

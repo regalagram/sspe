@@ -33,6 +33,7 @@ export const GroupControls: React.FC = () => {
     addChildToGroup,
     paths,
     texts,
+    images,
     exportGroupSVG,
     setGroupLockLevel,
     getGroupLockLevel,
@@ -197,6 +198,15 @@ export const GroupControls: React.FC = () => {
           minY = Math.min(minY, groupBBox.y);
           maxX = Math.max(maxX, groupBBox.x + groupBBox.width);
           maxY = Math.max(maxY, groupBBox.y + groupBBox.height);
+        }
+      }
+      if (child.type === 'image') {
+        const imageObj = (images ?? []).find((img: any) => img.id === child.id);
+        if (imageObj) {
+          minX = Math.min(minX, imageObj.x);
+          minY = Math.min(minY, imageObj.y);
+          maxX = Math.max(maxX, imageObj.x + imageObj.width);
+          maxY = Math.max(maxY, imageObj.y + imageObj.height);
         }
       }
     });
