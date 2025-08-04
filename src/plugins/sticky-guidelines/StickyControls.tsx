@@ -36,7 +36,7 @@ export const StickyControls: React.FC = () => {
     gap: 4,
     fontSize: 11,
     cursor: 'pointer',
-    marginBottom: 12
+    marginBottom: '4px',
   };
 
   const checkboxStyle: React.CSSProperties = {
@@ -51,13 +51,10 @@ export const StickyControls: React.FC = () => {
   };
 
   const sectionStyle: React.CSSProperties = {
-    marginBottom: '16px',
-    paddingBottom: '12px',
-    borderBottom: '1px solid #eee'
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
       {/* Main Toggle */}
       <div style={sectionStyle}>
         <label style={labelStyle}>
@@ -137,7 +134,7 @@ export const StickyControls: React.FC = () => {
               </label>
 
               {/* Debug Mode Toggle */}
-              <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #eee' }}>
+              <div>
                 <label style={{ ...labelStyle, color: '#00aa00', fontWeight: 'bold' }}>
                   <input
                     type="checkbox"
