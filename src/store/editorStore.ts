@@ -235,5 +235,21 @@ if (typeof window !== 'undefined') {
       state => state,
       debouncedSave
     );
+
+    // Subscribe to selection changes to notify handle manager
+    let previousSelection: EditorState['selection'] | null = null;
+    useEditorStore.subscribe(
+      state => state.selection,
+      (selection) => {
+        // Import here to avoid circular dependency
+        import('../plugins/handles/HandleManager').then(({ handleManager }) => {
+          // Only notify if selection actually changed
+          if (previousSelection !== selection) {
+            previousSelection = selection;
+            handleManager.onSelectionChanged();
+          }
+        });
+      }
+    );
   }, 0);
 }

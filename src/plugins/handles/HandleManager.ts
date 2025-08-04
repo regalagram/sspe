@@ -91,7 +91,11 @@ export class HandleManager {
       return;
     }
     const currentSelectedCommands = this.editorStore.selection.selectedCommands || [];
-    this.updateControlPointsForSelection(currentSelectedCommands);
+    const currentSelectedSubPaths = this.editorStore.selection.selectedSubPaths || [];
+    
+    // Filter commands to only show those that belong to currently selected sub-paths
+    const validCommands = this.filterCommandsBySelectedSubPaths(currentSelectedCommands, currentSelectedSubPaths);
+    this.updateControlPointsForSelection(validCommands);
   }
   /**
    * Método público para que otros plugins puedan notificar cambios de selección
@@ -102,10 +106,15 @@ export class HandleManager {
       setTimeout(() => {
         if (this.editorStore) {
           const selectedCommands = this.editorStore.selection.selectedCommands || [];
+          const selectedSubPaths = this.editorStore.selection.selectedSubPaths || [];
           
+          // If we have selected commands, show their control points
           if (selectedCommands.length > 0) {
-            this.updateControlPointsForSelection(selectedCommands);
+            // Filter commands to only show those that belong to currently selected sub-paths
+            const validCommands = this.filterCommandsBySelectedSubPaths(selectedCommands, selectedSubPaths);
+            this.updateControlPointsForSelection(validCommands);
           } else {
+            // No commands selected, clear all control points
             this.state.controlPoints.clear();
             this.notifyListeners();
           }
@@ -113,6 +122,38 @@ export class HandleManager {
       }, 1); // Very small delay to ensure store update
     }
   }
+
+  /**
+   * Filter commands to only include those that belong to the currently selected sub-paths.
+   * This prevents showing control points for commands from previously selected sub-paths
+   * when switching to a different sub-path selection.
+   */
+  private filterCommandsBySelectedSubPaths(selectedCommands: string[], selectedSubPaths: string[]): string[] {
+    if (!this.editorStore || selectedSubPaths.length === 0) {
+      return selectedCommands;
+    }
+
+    const { paths } = this.editorStore;
+    const validCommands: string[] = [];
+
+    selectedCommands.forEach(commandId => {
+      // Find which sub-path this command belongs to
+      for (const path of paths) {
+        for (const subPath of path.subPaths) {
+          if (selectedSubPaths.includes(subPath.id)) {
+            const commandExists = subPath.commands.some((cmd: SVGCommand) => cmd.id === commandId);
+            if (commandExists) {
+              validCommands.push(commandId);
+              return; // Found the command in a selected sub-path, move to next command
+            }
+          }
+        }
+      }
+    });
+
+    return validCommands;
+  }
+
   /**
    * Analiza un comando para determinar el tipo de punto de control
    */

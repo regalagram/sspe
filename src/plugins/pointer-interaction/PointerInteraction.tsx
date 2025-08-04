@@ -428,7 +428,6 @@ class PointerInteractionManager {
         } else {
           finalSelectedIds = [...selection.selectedCommands, commandId];
           selectMultiple(finalSelectedIds, 'commands');
-          handleManager.onSelectionChanged();
         }
       } else {
         if (selection.selectedCommands.includes(commandId)) {
