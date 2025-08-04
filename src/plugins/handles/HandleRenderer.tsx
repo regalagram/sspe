@@ -2,7 +2,7 @@ import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { getAbsoluteCommandPosition, getAbsoluteControlPoints } from '../../utils/path-utils';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
-import { figmaHandleManager } from '../figma-handles/FigmaHandleManager';
+import { handleManager } from './HandleManager';
 import { ControlPointType } from '../../types';
 
 // Helper function to get control point size
@@ -14,91 +14,38 @@ const getControlPointSize = (isMobile: boolean, isTablet: boolean): number => {
 
 // Helper function to get handle colors based on type and display mode
 const getHandleColors = (type: ControlPointType, isOptionPressed: boolean, isNextCommandDisplay: boolean = false) => {
+  // Use consistent blue color for all control points
+  const baseColor = '#007acc';
+  const darkColor = '#005d99';
+  
   if (isOptionPressed) {
     return {
-      fill: '#fbbf24', // Amarillo cuando Option está presionado
+      fill: '#fbbf24', // Yellow when Option is pressed
       stroke: '#f59e0b',
-      lineColor: '#fbbf24'
+      lineColor: '#fbbf24',
+      opacity: 1.0
     };
   }
   
-  // Use more subtle colors for next command displays
-  if (isNextCommandDisplay) {
-    switch (type) {
-      case 'mirrored':
-        return {
-          fill: '#10b981', // Verde para simétrico
-          stroke: '#059669',
-          lineColor: '#10b981',
-          opacity: 0.6 // Reduced opacity for next command
-        };
-      case 'aligned':
-        return {
-          fill: '#3b82f6', // Azul para alineado
-          stroke: '#2563eb',
-          lineColor: '#3b82f6',
-          opacity: 0.6 // Reduced opacity for next command
-        };
-      case 'independent':
-        return {
-          fill: '#f59e0b', // Amarillo para independiente
-          stroke: '#d97706',
-          lineColor: '#f59e0b',
-          opacity: 0.6 // Reduced opacity for next command
-        };
-      default:
-        return {
-          fill: '#999',
-          stroke: '#666',
-          lineColor: '#999',
-          opacity: 0.6 // Reduced opacity for next command
-        };
-    }
-  }
-  
-  // Regular colors for directly selected commands
-  switch (type) {
-    case 'mirrored':
-      return {
-        fill: '#10b981', // Verde para simétrico
-        stroke: '#059669',
-        lineColor: '#10b981',
-        opacity: 1.0
-      };
-    case 'aligned':
-      return {
-        fill: '#3b82f6', // Azul para alineado
-        stroke: '#2563eb',
-        lineColor: '#3b82f6',
-        opacity: 1.0
-      };
-    case 'independent':
-      return {
-        fill: '#f59e0b', // Amarillo para independiente
-        stroke: '#d97706',
-        lineColor: '#f59e0b',
-        opacity: 1.0
-      };
-    default:
-      return {
-        fill: '#999',
-        stroke: '#666',
-        lineColor: '#999',
-        opacity: 1.0
-      };
-  }
+  // Same colors and full opacity for all control points
+  return {
+    fill: baseColor,
+    stroke: darkColor,
+    lineColor: baseColor,
+    opacity: 1.0
+  };
 };
 
-export const FigmaHandleRenderer: React.FC = () => {
+export const HandleRenderer: React.FC = () => {
   const { paths, enabledFeatures, viewport, selection, visualDebugSizes } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
-  const [handleState, setHandleState] = React.useState(figmaHandleManager.getState());
+  const [handleState, setHandleState] = React.useState(handleManager.getState());
   const [renderKey, setRenderKey] = React.useState(0);
 
   // Subscribe to handle state changes
   React.useEffect(() => {
-    const unsubscribe = figmaHandleManager.addListener(() => {
-      const newState = figmaHandleManager.getState();
+    const unsubscribe = handleManager.addListener(() => {
+      const newState = handleManager.getState();
       setHandleState(newState);
       
       // NO incrementar renderKey durante el drag - esto causa que React desmonte los elementos
@@ -122,7 +69,7 @@ export const FigmaHandleRenderer: React.FC = () => {
       dragCommandId,
       dragHandleType,
       pairedHandle: isDragging && dragCommandId && dragHandleType 
-        ? figmaHandleManager.findPairedHandle(dragCommandId, dragHandleType) 
+        ? handleManager.findPairedHandle(dragCommandId, dragHandleType) 
         : null
     };
   }, [handleState.dragState.isDragging, handleState.dragState.commandId, handleState.dragState.handleType]);
@@ -149,7 +96,7 @@ export const FigmaHandleRenderer: React.FC = () => {
   const { isDragging, dragCommandId, dragHandleType, pairedHandle } = dragStateInfo;
 
   // Use stable key during drag to prevent React from dismounting elements
-  const stableKey = isDragging ? `figma-handle-renderer-stable` : `figma-handle-renderer-${renderKey}`;
+  const stableKey = isDragging ? `handle-renderer-stable` : `handle-renderer-${renderKey}`;
 
   return (
     <g key={stableKey}>
@@ -176,7 +123,7 @@ export const FigmaHandleRenderer: React.FC = () => {
             // 1. Feature is enabled, OR
             // 2. Sub-path is selected, OR 
             // 3. This specific command is selected, OR
-            // 4. This command has control points to show (from FigmaHandleManager)
+            // 4. This command has control points to show (from HandleManager)
             const shouldShowCommand = shouldShowSubPath || isCommandSelected || hasControlPoints;
             if (!shouldShowCommand) return null;
             
@@ -194,7 +141,7 @@ export const FigmaHandleRenderer: React.FC = () => {
             const isCurrentDragCommand = isDragging && command.id === dragCommandId;
             const isPairedCommand = isDragging && pairedHandle && pairedHandle.commandId === command.id;
             
-            // Get control point info from Figma handle manager
+            // Get control point info from handle manager
             const controlPointInfo = handleState.controlPoints.get(command.id);
             const handleType = controlPointInfo?.type || 'independent';
             const isNextCommandDisplay = controlPointInfo?.isNextCommandDisplay || false;
@@ -212,7 +159,7 @@ export const FigmaHandleRenderer: React.FC = () => {
             const controlPoints = getAbsoluteControlPoints(command, subPath, path.subPaths);
             
             return (
-              <g key={`figma-control-${command.id}`}>
+              <g key={`handle-control-${command.id}`}>
                 {/* Render control points for cubic curves */}
                 {command.command === 'C' && controlPoints.length >= 2 ? (
                   <>
@@ -239,7 +186,7 @@ export const FigmaHandleRenderer: React.FC = () => {
                               strokeWidth={1 / viewport.zoom}
                               strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
                               pointerEvents="none"
-                              opacity={0.8 * (colors.opacity || 1)}
+                              opacity={1.0}
                             />
                             <circle
                               cx={controlPoints[0].x}
@@ -251,7 +198,7 @@ export const FigmaHandleRenderer: React.FC = () => {
                               style={{ cursor: 'grab' }}
                               data-command-id={command.id}
                               data-control-point="x1y1"
-                              opacity={isDragging && command.id === dragCommandId && dragHandleType === 'outgoing' ? 1.0 : (colors.opacity || 1)}
+                              opacity={1.0}
                               // Durante el drag, hacer el punto más visible
                               filter={isDragging && command.id === dragCommandId && dragHandleType === 'outgoing' ? 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' : undefined}
                             />
@@ -283,7 +230,7 @@ export const FigmaHandleRenderer: React.FC = () => {
                               strokeWidth={1 / viewport.zoom}
                               strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
                               pointerEvents="none"
-                              opacity={0.8 * (colors.opacity || 1)}
+                              opacity={1.0}
                             />
                             <circle
                               cx={controlPoints[1].x}
@@ -295,7 +242,7 @@ export const FigmaHandleRenderer: React.FC = () => {
                               style={{ cursor: 'grab' }}
                               data-command-id={command.id}
                               data-control-point="x2y2"
-                              opacity={isDragging && command.id === dragCommandId && dragHandleType === 'incoming' ? 1.0 : (colors.opacity || 1)}
+                              opacity={1.0}
                               // Durante el drag, hacer el punto más visible
                               filter={isDragging && command.id === dragCommandId && dragHandleType === 'incoming' ? 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' : undefined}
                             />

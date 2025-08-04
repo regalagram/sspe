@@ -1,23 +1,23 @@
 import { Plugin } from '../../core/PluginSystem';
-import { FigmaHandleControls } from './FigmaHandleUI';
-import { FigmaHandleRenderer } from './FigmaHandleRenderer';
-import { figmaHandleManager } from './FigmaHandleManager';
+import { HandleControls } from './HandleUI';
+import { HandleRenderer } from './HandleRenderer';
+import { handleManager } from './HandleManager';
 
-export const FigmaHandlesPlugin: Plugin = {
-  id: 'figma-handles',
-  name: 'Figma Handles',
+export const HandlesPlugin: Plugin = {
+  id: 'handles',
+  name: 'Handles',
   version: '1.0.0',
   enabled: true,
 
   ui: [
     {
-      id: 'figma-handle-controls',
-      component: FigmaHandleControls,
+      id: 'handle-controls',
+      component: HandleControls,
       position: 'svg-content'
     },
     {
-      id: 'figma-handle-renderer',
-      component: FigmaHandleRenderer,
+      id: 'handle-renderer',
+      component: HandleRenderer,
       position: 'svg-content',
       order: 15 // Render on top of regular control points
     }
@@ -26,16 +26,16 @@ export const FigmaHandlesPlugin: Plugin = {
   initialize: (editorStore) => {
     
     // Set up the editor store reference
-    figmaHandleManager.setEditorStore(editorStore);
+    handleManager.setEditorStore(editorStore);
     
     // Expose manager for debugging
-    (window as any).figmaHandleManager = figmaHandleManager;
+    (window as any).handleManager = handleManager;
     
     // Note: This plugin replaces the default control points renderer
-    // The FigmaHandleRenderer provides enhanced visual feedback
+    // The HandleRenderer provides enhanced visual feedback
     
     return () => {
-      figmaHandleManager.cleanup();
+      handleManager.cleanup();
     };
   },
 
@@ -44,11 +44,11 @@ export const FigmaHandlesPlugin: Plugin = {
       key: 'Alt+H',
       description: 'Convertir a handles simétricos',
       action: () => {
-        const state = figmaHandleManager.getState();
+        const state = handleManager.getState();
         const selectedCommands = Object.keys(state.controlPoints);
         
         if (selectedCommands.length === 1) {
-          figmaHandleManager.convertToMirrored(selectedCommands[0]);
+          handleManager.convertToMirrored(selectedCommands[0]);
         }
       }
     }

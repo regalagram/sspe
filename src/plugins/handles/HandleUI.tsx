@@ -2,21 +2,21 @@ import React, { useEffect, useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { PluginButton } from '../../components/PluginButton';
 import { Link, Unlink, CornerDownLeft } from 'lucide-react';
-import { figmaHandleManager } from './FigmaHandleManager';
+import { handleManager } from './HandleManager';
 import { ControlPointType } from '../../types';
 
-export const FigmaHandleControls: React.FC = () => {
+export const HandleControls: React.FC = () => {
   const editorStore = useEditorStore();
-  const [state, setState] = useState(figmaHandleManager.getState());
+  const [state, setState] = useState(handleManager.getState());
   const [selectedControlPoint, setSelectedControlPoint] = useState<string | null>(null);
 
   // Set up editor store reference - REMOVED: Now handled by plugin
-  // No longer calling figmaHandleManager.setEditorStore here to avoid reinitializations
+  // No longer calling handleManager.setEditorStore here to avoid reinitializations
 
   // Subscribe to state changes
   useEffect(() => {
-    const unsubscribe = figmaHandleManager.addListener(() => {
-      setState(figmaHandleManager.getState());
+    const unsubscribe = handleManager.addListener(() => {
+      setState(handleManager.getState());
     });
     
     return unsubscribe;
@@ -26,10 +26,10 @@ export const FigmaHandleControls: React.FC = () => {
   useEffect(() => {
     if (editorStore.selection.selectedCommands.length === 1) {
       const commandId = editorStore.selection.selectedCommands[0];
-      const controlPointInfo = figmaHandleManager.analyzeControlPoint(commandId);
+      const controlPointInfo = handleManager.analyzeControlPoint(commandId);
       if (controlPointInfo) {
         setSelectedControlPoint(commandId);
-        figmaHandleManager.updateControlPointsForOptionState();
+        handleManager.updateControlPointsForOptionState();
       }
     } else {
       setSelectedControlPoint(null);
@@ -85,7 +85,7 @@ export const FigmaHandleControls: React.FC = () => {
 
   const convertToMirrored = () => {
     if (selectedControlPoint) {
-      figmaHandleManager.convertToMirrored(selectedControlPoint);
+      handleManager.convertToMirrored(selectedControlPoint);
     }
   };
 

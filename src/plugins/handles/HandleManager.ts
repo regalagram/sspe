@@ -1,5 +1,5 @@
 import { SVGCommand, Point, ControlPointType, ControlPointInfo, BezierHandleState } from '../../types';
-export class FigmaHandleManager {
+export class HandleManager {
   private editorStore: any;
   private state: BezierHandleState = {
     controlPoints: new Map(),
@@ -335,12 +335,12 @@ export class FigmaHandleManager {
     if (!controlPointInfo) {
       return;
     }
-    this.applyNewFigmaHandleLogic(dragState.commandId, dragState.handleType, newPoint, dragState.pairInfo);
+    this.applyNewHandleLogic(dragState.commandId, dragState.handleType, newPoint, dragState.pairInfo);
   }
   /**
-   * Aplica la nueva lógica de manejo de handles tipo Figma
+   * Aplica la nueva lógica de manejo de handles
    */
-  private applyNewFigmaHandleLogic(
+  private applyNewHandleLogic(
     commandId: string,
     handleType: 'incoming' | 'outgoing',
     newPoint: Point,
@@ -484,10 +484,10 @@ export class FigmaHandleManager {
     }
   }
   /**
-   * Aplica la lógica de manejo de handles tipo Figma
-   * @deprecated - Usar applyNewFigmaHandleLogic en su lugar
+   * Aplica la lógica de manejo de handles
+   * @deprecated - Usar applyNewHandleLogic en su lugar
    */
-  private applyFigmaHandleLogic(
+  private applyHandleLogic(
     commandId: string,
     handleType: 'incoming' | 'outgoing',
     newPoint: Point,
@@ -739,7 +739,7 @@ export class FigmaHandleManager {
       updateCommand(commandId, { x2: finalPoint.x, y2: finalPoint.y });
     }
   }
-  private updateMirroredHandlesFigma(commandId: string, handleType: 'incoming' | 'outgoing', newPoint: Point, anchor: Point) {
+  private updateMirroredHandles(commandId: string, handleType: 'incoming' | 'outgoing', newPoint: Point, anchor: Point) {
     const { updateCommand } = this.editorStore;
     this.updateSingleHandle(commandId, handleType, newPoint);
     const vector = {
@@ -761,7 +761,7 @@ export class FigmaHandleManager {
       this.updateSingleHandleByControlPoint(pairedHandle.commandId, pairedHandle.controlPoint, oppositePoint);
     }
   }
-  private updateAlignedHandlesFigma(commandId: string, handleType: 'incoming' | 'outgoing', newPoint: Point, anchor: Point) {
+  private updateAlignedHandles(commandId: string, handleType: 'incoming' | 'outgoing', newPoint: Point, anchor: Point) {
     const { updateCommand } = this.editorStore;
     this.updateSingleHandle(commandId, handleType, newPoint);
     const vector = {
@@ -1260,4 +1260,4 @@ export class FigmaHandleManager {
     });
   }
 }
-export const figmaHandleManager = new FigmaHandleManager();
+export const handleManager = new HandleManager();

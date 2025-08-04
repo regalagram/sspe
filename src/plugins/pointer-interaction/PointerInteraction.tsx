@@ -3,7 +3,7 @@ import { Plugin, PointerEventContext } from '../../core/PluginSystem';
 import { snapToGrid, getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
-import { figmaHandleManager } from '../figma-handles/FigmaHandleManager';
+import { handleManager } from '../handles/HandleManager';
 import { guidelinesManager } from '../guidelines/GuidelinesManager';
 
 interface PointerInteractionState {
@@ -248,7 +248,7 @@ class PointerInteractionManager {
         
     const isEmptySpaceClick = !commandId && !controlPoint && !elementType && !this.state.isSpacePressed && e.button === 0;
     if (this.state.draggingControlPoint && !controlPoint && !this.state.isSpacePressed) {
-      figmaHandleManager.endDragHandle();
+      handleManager.endDragHandle();
       this.state.draggingControlPoint = null;
       transformManager.setMoving(false);
     }
@@ -274,7 +274,7 @@ class PointerInteractionManager {
       this.state.draggingControlPoint = { commandId, point: controlPoint };
       const startPoint = this.getSVGPoint(e, context.svgRef);
       const handleType = controlPoint === 'x1y1' ? 'outgoing' : 'incoming';
-      figmaHandleManager.startDragHandle(commandId, handleType, startPoint);
+      handleManager.startDragHandle(commandId, handleType, startPoint);
       transformManager.setMoving(true);
       pushToHistory();
       return true;
@@ -428,7 +428,7 @@ class PointerInteractionManager {
         } else {
           finalSelectedIds = [...selection.selectedCommands, commandId];
           selectMultiple(finalSelectedIds, 'commands');
-          figmaHandleManager.onSelectionChanged();
+          handleManager.onSelectionChanged();
         }
       } else {
         if (selection.selectedCommands.includes(commandId)) {
@@ -441,7 +441,7 @@ class PointerInteractionManager {
           selectCommand(commandId);
         }
       }
-      figmaHandleManager.onSelectionChanged();
+      handleManager.onSelectionChanged();
       this.state.draggingCommand = commandId;
       
       // Capture positions of all selected elements
@@ -473,7 +473,7 @@ class PointerInteractionManager {
     }
     if (this.state.draggingControlPoint) {
       const point = this.getSVGPoint(e, context.svgRef);
-      figmaHandleManager.updateDragHandle(point);
+      handleManager.updateDragHandle(point);
       return true;
     }
     if ((this.state.draggingCommand || this.state.draggingElement) && this.state.dragOrigin) {
@@ -694,7 +694,7 @@ class PointerInteractionManager {
     const wasDraggingControlPoint = !!this.state.draggingControlPoint;
     const wasDraggingElement = !!this.state.draggingElement;
     if (wasDraggingControlPoint && this.state.draggingControlPoint) {
-      figmaHandleManager.endDragHandle();
+      handleManager.endDragHandle();
     }
     this.state.draggingCommand = null;
     this.state.draggingControlPoint = null;

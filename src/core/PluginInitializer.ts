@@ -22,7 +22,7 @@ import { ArrangePlugin } from '../plugins/arrange/Arrange';
 import { ReorderPlugin } from '../plugins/reorder/Reorder';
 import { PanelModePlugin } from '../plugins/panelmode/PanelMode';
 import { DeletePlugin } from '../plugins/delete/Delete';
-import { FigmaHandlesPlugin } from '../plugins/figma-handles/FigmaHandles';
+import { HandlesPlugin } from '../plugins/handles/Handles';
 import { CurvesPlugin } from '../plugins/curves/Curves';
 import { GesturesPlugin } from '../plugins/gestures/Gestures';
 import { GradientPlugin } from '../plugins/gradients';
@@ -87,7 +87,7 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(CurvesPlugin); // Depends on mouse-interaction
   pluginManager.registerPlugin(SubPathTransformPlugin); // Depends on selection
   pluginManager.registerPlugin(PointTransformPlugin); // Depends on selection
-  pluginManager.registerPlugin(FigmaHandlesPlugin); // Depends on selection and mouse-interaction
+  pluginManager.registerPlugin(HandlesPlugin); // Depends on selection and mouse-interaction
   
   // Register remaining plugins
   pluginManager.registerPlugin(ShapesPlugin);
