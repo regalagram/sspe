@@ -153,7 +153,11 @@ export const Zoom: React.FC = () => {
         onZoomToSubPath={zoomToSubPath}
         onResetView={resetView}
         currentZoom={viewport.zoom}
-        hasSelection={selection.selectedCommands.length > 0}
+        hasSelection={selection.selectedCommands.length > 0 || 
+                      selection.selectedPaths.length > 0 || 
+                      selection.selectedTexts.length > 0 || 
+                      selection.selectedGroups.length > 0 || 
+                      selection.selectedImages.length > 0}
         hasSubPathSelection={selection.selectedSubPaths.length > 0}
       />
       {/* SVG invisible para calcular el centro real visible */}

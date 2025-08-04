@@ -16,7 +16,11 @@ export const ToolbarZoomControls: React.FC = () => {
 
   // Always show toolbar zoom controls (removed mobile-only restriction)
 
-  const hasSelection = selection.selectedCommands.length > 0;
+  const hasSelection = selection.selectedCommands.length > 0 || 
+                       selection.selectedPaths.length > 0 || 
+                       selection.selectedTexts.length > 0 || 
+                       selection.selectedGroups.length > 0 || 
+                       selection.selectedImages.length > 0;
   const hasSubPathSelection = selection.selectedSubPaths.length > 0;
 
   // Calcula el centro visible en pantalla y lo convierte a coordenadas SVG

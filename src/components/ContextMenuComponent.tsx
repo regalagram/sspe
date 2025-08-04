@@ -30,6 +30,7 @@ export const ContextMenuComponent: React.FC = () => {
     animationState,
     grid,
     createGroupFromSelection,
+    ungroupElements,
     viewport,
     paths,
     texts,
@@ -77,20 +78,31 @@ export const ContextMenuComponent: React.FC = () => {
     
     // Helper function to execute action with preserved selection
     const executeWithSelection = (actionFn: () => void, actionName: string) => {
-            
-      // Temporarily restore selection before calling action
+      // Get the store's action functions
       const editorState = useEditorStore.getState();
-      const currentSelection = editorState.selection;
+      const { selectMultiple, clearSelection } = editorState;
       
-      // Set the selection to what was captured when menu was shown
-      currentSelection.selectedSubPaths = [...contextSelection.subPaths];
-      currentSelection.selectedPaths = [...contextSelection.paths];
-      currentSelection.selectedCommands = [...contextSelection.commands];
-      currentSelection.selectedTexts = [...contextSelection.texts];
-      currentSelection.selectedGroups = [...contextSelection.groups];
-      currentSelection.selectedImages = [...contextSelection.images];
+      // Clear current selection first
+      clearSelection();
       
+      // Restore the selection that was captured when menu was shown
+      if (contextSelection.subPaths.length > 0) {
+        selectMultiple(contextSelection.subPaths, 'subpaths');
+      } else if (contextSelection.paths.length > 0) {
+        selectMultiple(contextSelection.paths, 'paths');
+      } else if (contextSelection.commands.length > 0) {
+        selectMultiple(contextSelection.commands, 'commands');
+      } else if (contextSelection.texts.length > 0) {
+        selectMultiple(contextSelection.texts, 'texts');
+      } else if (contextSelection.groups.length > 0) {
+        selectMultiple(contextSelection.groups, 'groups');
+      } else if (contextSelection.images.length > 0) {
+        selectMultiple(contextSelection.images, 'images');
+      }
+      
+      // Execute the action
       actionFn();
+      
       setTimeout(() => hideContextMenu(), 50);
     };
     
@@ -546,9 +558,33 @@ export const ContextMenuComponent: React.FC = () => {
       );
     }
 
-    // Group and Delete actions
+    // Group and Ungroup actions
+    const hasSelectedGroups = contextSelection.groups.length > 0;
+    const hasSelectableItems = contextSelection.paths.length > 0 || 
+                               contextSelection.texts.length > 0 || 
+                               contextSelection.subPaths.length > 0 ||
+                               contextSelection.images.length > 0;
+
+    if (hasSelectableItems && !hasSelectedGroups) {
+      // Show Group option when we have groupable items but no groups selected
+      options.push(
+        { id: 'group', label: 'Group Selection', action: () => executeWithSelection(() => createGroupFromSelection(), 'Group Selection') }
+      );
+    }
+    
+    if (hasSelectedGroups) {
+      // Show Ungroup option when we have groups selected
+      options.push(
+        { id: 'ungroup', label: 'Ungroup', action: () => executeWithSelection(() => {
+          // Ungroup all selected groups
+          contextSelection.groups.forEach(groupId => {
+            ungroupElements(groupId);
+          });
+        }, 'Ungroup') }
+      );
+    }
+    
     options.push(
-      { id: 'group', label: 'Group Selection', action: () => executeWithSelection(() => createGroupFromSelection(), 'Group Selection') },
       { id: 'separator-5', label: '', action: () => {}, separator: true },
       { id: 'delete', label: 'Delete', action: () => executeWithSelection(() => {
                 executeDelete(); 

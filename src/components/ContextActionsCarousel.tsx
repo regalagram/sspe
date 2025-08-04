@@ -10,6 +10,7 @@ import {
   Copy, 
   Trash2, 
   Group, 
+  Ungroup,
   Layers, 
   ArrowUp, 
   ArrowDown, 
@@ -65,6 +66,7 @@ export const ContextActionsCarousel: React.FC<ContextActionsCarouselProps> = ({ 
     removeImage,
     replaceImages,
     createGroupFromSelection,
+    ungroupElements,
     zoomToSelection,
     duplicateSelection,
     resetViewportCompletely,
@@ -112,7 +114,28 @@ export const ContextActionsCarousel: React.FC<ContextActionsCarouselProps> = ({ 
           id: 'group',
           icon: <Group size={24} />,
           label: 'Group',
-          action: () => createGroupFromSelection()
+          action: () => createGroupFromSelection(),
+          condition: () => {
+            // Show group when we have groupable items but no groups selected
+            const hasGroupableItems = selection.selectedPaths.length > 0 || 
+                                     selection.selectedTexts.length > 0 || 
+                                     selection.selectedSubPaths.length > 0 ||
+                                     selection.selectedImages.length > 0;
+            const hasSelectedGroups = selection.selectedGroups.length > 0;
+            return hasGroupableItems && !hasSelectedGroups;
+          }
+        },
+        {
+          id: 'ungroup',
+          icon: <Ungroup size={24} />,
+          label: 'Ungroup',
+          action: () => {
+            // Ungroup all selected groups
+            selection.selectedGroups.forEach(groupId => {
+              ungroupElements(groupId);
+            });
+          },
+          condition: () => selection.selectedGroups.length > 0
         },
         {
           id: 'bring-front',
@@ -544,7 +567,7 @@ export const ContextActionsCarousel: React.FC<ContextActionsCarouselProps> = ({ 
     input.click();
   };
 
-  const actions = getActions();
+  const actions = getActions().filter(action => !action.condition || action.condition());
 
   return (
     <div className={`context-actions-carousel ${className}`}>
