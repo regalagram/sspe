@@ -14,9 +14,10 @@ const getControlPointSize = (isMobile: boolean, isTablet: boolean): number => {
 
 // Helper function to get handle colors based on type and display mode
 const getHandleColors = (type: ControlPointType, isOptionPressed: boolean, isNextCommandDisplay: boolean = false) => {
-  // Use consistent blue color for all control points
-  const baseColor = '#007acc';
-  const darkColor = '#005d99';
+  // Control points: white fill with blue border
+  const fillColor = '#ffffff';
+  const strokeColor = '#007acc';
+  const lineColor = '#007acc';
   
   if (isOptionPressed) {
     return {
@@ -27,11 +28,11 @@ const getHandleColors = (type: ControlPointType, isOptionPressed: boolean, isNex
     };
   }
   
-  // Same colors and full opacity for all control points
+  // White fill with blue border for all control points
   return {
-    fill: baseColor,
-    stroke: darkColor,
-    lineColor: baseColor,
+    fill: fillColor,
+    stroke: strokeColor,
+    lineColor: lineColor,
     opacity: 1.0
   };
 };
