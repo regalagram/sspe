@@ -402,6 +402,12 @@ export const createGroupActions: StateCreator<
     const group = state.groups.find(g => g.id === groupId);
     if (!group) return;
 
+    console.log('[MOVEGROUP DEBUG] Starting moveGroup:', {
+      groupId,
+      delta,
+      groupChildren: group.children.map(c => ({ id: c.id, type: c.type }))
+    });
+
     // Move paths directly, but use moveText for text elements to handle all edge cases
     const storeState = get();
     const targetGroup = storeState.groups.find(g => g.id === groupId);
@@ -668,8 +674,6 @@ export const createGroupActions: StateCreator<
         const filename = `${(group.name || 'group').replace(/[^a-zA-Z0-9-_]/g, '_')}_${new Date().getTime()}.svg`;
         downloadGroupSVG(svgContent, filename);
         
-        // Show notification
-        console.log(`✅ Group "${group.name || group.id}" exported as ${filename}`);
       }
 
       return svgContent;

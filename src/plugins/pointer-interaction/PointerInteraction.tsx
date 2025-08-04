@@ -21,6 +21,7 @@ interface PointerInteractionState {
   dragStartGroupPositions: { [id: string]: { transform?: string } };
   dragOrigin: { x: number; y: number } | null;
   dragStartSelectionBounds: any | null;  // Store initial selection bounds
+  lastGroupPositions?: { [id: string]: { x: number; y: number } };  // Track last group movement
 }
 
 class PointerInteractionManager {
@@ -39,6 +40,7 @@ class PointerInteractionManager {
     dragStartGroupPositions: {},
     dragOrigin: null,
     dragStartSelectionBounds: null,
+    lastGroupPositions: {},
   };
 
   private editorStore: any;
@@ -121,6 +123,90 @@ class PointerInteractionManager {
                          (selection.selectedUses?.length || 0) +
                          (selection.selectedGroups?.length || 0);
     return totalSelected > 1;
+  }
+
+  private addToSelectionWithoutPromotion(elementId: string, elementType: 'image' | 'use' | 'text' | 'textPath' | 'group' | 'command'): void {
+    // Directly modify selection state without triggering group promotion
+    const currentState = this.editorStore.getState();
+    const newSelection = { ...currentState.selection };
+    
+    switch (elementType) {
+      case 'image':
+        if (!newSelection.selectedImages.includes(elementId)) {
+          newSelection.selectedImages = [...newSelection.selectedImages, elementId];
+        }
+        break;
+      case 'use':
+        if (!newSelection.selectedUses.includes(elementId)) {
+          newSelection.selectedUses = [...newSelection.selectedUses, elementId];
+        }
+        break;
+      case 'text':
+        if (!newSelection.selectedTexts.includes(elementId)) {
+          newSelection.selectedTexts = [...newSelection.selectedTexts, elementId];
+        }
+        break;
+      case 'textPath':
+        if (!newSelection.selectedTextPaths.includes(elementId)) {
+          newSelection.selectedTextPaths = [...newSelection.selectedTextPaths, elementId];
+        }
+        break;
+      case 'group':
+        if (!newSelection.selectedGroups.includes(elementId)) {
+          newSelection.selectedGroups = [...newSelection.selectedGroups, elementId];
+        }
+        break;
+      case 'command':
+        if (!newSelection.selectedCommands.includes(elementId)) {
+          newSelection.selectedCommands = [...newSelection.selectedCommands, elementId];
+        }
+        break;
+    }
+    
+    // Set the state directly bypassing all selection methods
+    this.editorStore.setState({ selection: newSelection });
+    
+      }
+
+  private isElementInSelectedGroup(elementId: string, elementType: 'image' | 'use' | 'text' | 'textPath' | 'path' | 'group'): boolean {
+    if (!this.editorStore) return false;
+    const { selection, groups } = this.editorStore;
+    
+    // Check if this element belongs to any currently selected group
+    for (const groupId of selection.selectedGroups) {
+      const group = groups.find((g: any) => g.id === groupId);
+      if (group) {
+        const belongsToGroup = group.children.some((child: any) => 
+          child.id === elementId && child.type === elementType
+        );
+        if (belongsToGroup) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private isCommandInSelectedGroup(commandId: string): boolean {
+    if (!this.editorStore) return false;
+    const { selection, groups, paths } = this.editorStore;
+    
+    // Find which path this command belongs to
+    let parentPathId: string | null = null;
+    for (const path of paths) {
+      for (const subPath of path.subPaths) {
+        if (subPath.commands.some((cmd: any) => cmd.id === commandId)) {
+          parentPathId = path.id;
+          break;
+        }
+      }
+      if (parentPathId) break;
+    }
+    
+    if (!parentPathId) return false;
+    
+    // Check if the parent path belongs to any currently selected group
+    return this.isElementInSelectedGroup(parentPathId, 'path');
   }
 
   getSVGPoint(e: PointerEvent<SVGElement>, svgRef: React.RefObject<SVGSVGElement | null>): { x: number; y: number } {
@@ -245,6 +331,8 @@ class PointerInteractionManager {
     const { commandId, controlPoint } = context;
     const { selection, viewport, grid, mode, paths, texts, images, uses, selectCommand, selectMultiple, clearSelection, pushToHistory, selectImage, selectUse, addToSelection } = this.editorStore;
     
+    // DEBUG: Log current selection before any changes
+        
     // Only handle specific cases, don't block all pointer events
     const target = e.target as SVGElement;
     
@@ -264,6 +352,48 @@ class PointerInteractionManager {
     
     const { elementType, elementId } = findElementWithData(target);
     
+    // Debug: Find what's actually under the mouse at this position
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+    const elementsAtPoint = document.elementsFromPoint(mouseX, mouseY);
+    
+    console.log('[DEBUG] Element detection:', {
+      commandId,
+      controlPoint,
+      elementType,
+      elementId,
+      targetTagName: target.tagName,
+      targetDataAttributes: {
+        elementType: target.getAttribute('data-element-type'),
+        elementId: target.getAttribute('data-element-id')
+      },
+      // Show what's actually under the mouse
+      elementsAtPoint: elementsAtPoint.slice(0, 5).map(el => ({
+        tagName: el.tagName,
+        dataElementType: el.getAttribute('data-element-type'),
+        dataElementId: el.getAttribute('data-element-id'),
+        className: (el as any).className?.baseVal || el.className,
+        id: el.id,
+        pointerEvents: window.getComputedStyle(el).pointerEvents
+      })),
+      // Debug DOM traversal
+      domPath: (() => {
+        const path = [];
+        let current = target;
+        let depth = 0;
+        while (current && current !== context.svgRef.current && depth < 10) {
+          path.push({
+            tagName: current.tagName,
+            dataElementType: current.getAttribute('data-element-type'),
+            dataElementId: current.getAttribute('data-element-id'),
+            className: current.className?.baseVal || current.className
+          });
+          current = current.parentElement as unknown as SVGElement;
+          depth++;
+        }
+        return path;
+      })()
+    });
         
     const isEmptySpaceClick = !commandId && !controlPoint && !elementType && !this.state.isSpacePressed && e.button === 0;
     if (this.state.draggingControlPoint && !controlPoint && !this.state.isSpacePressed) {
@@ -316,9 +446,17 @@ class PointerInteractionManager {
       } else {
         // Handle image selection while preserving multi-selection when appropriate
         if (!selection.selectedImages?.includes(elementId)) {
-          // Use addToSelection=true if we have multi-selection to preserve it
-          const shouldPreserveMulti = this.hasMultiSelection();
-          selectImage(elementId, shouldPreserveMulti);
+          // Check if this image belongs to an already selected group
+          if (this.isElementInSelectedGroup(elementId, 'image')) {
+            // Element belongs to selected group, don't change selection at all
+            // This preserves the group selection and any other multi-selections
+          } else if (this.hasMultiSelection()) {
+            // When multi-selection exists, add to selection without promotion
+            this.addToSelectionWithoutPromotion(elementId, 'image');
+          } else {
+            // Normal single selection behavior
+            selectImage(elementId);
+          }
         }
         // If the image is already selected, keep the current multi-selection
         
@@ -346,9 +484,17 @@ class PointerInteractionManager {
       } else {
         // Handle use element selection while preserving multi-selection when appropriate
         if (!selection.selectedUses?.includes(elementId)) {
-          // Use addToSelection=true if we have multi-selection to preserve it
-          const shouldPreserveMulti = this.hasMultiSelection();
-          selectUse(elementId, shouldPreserveMulti);
+          // Check if this use element belongs to an already selected group
+          if (this.isElementInSelectedGroup(elementId, 'use')) {
+            // Element belongs to selected group, don't change selection at all
+            // This preserves the group selection and any other multi-selections
+          } else if (this.hasMultiSelection()) {
+            // When multi-selection exists, add to selection without promotion
+            this.addToSelectionWithoutPromotion(elementId, 'use');
+          } else {
+            // Normal single selection behavior
+            selectUse(elementId);
+          }
         }
         // If the use element is already selected, keep the current multi-selection
         
@@ -375,11 +521,21 @@ class PointerInteractionManager {
         return true;
       } else {
         // Handle text selection while preserving multi-selection when appropriate
+                
         if (!selection.selectedTexts?.includes(elementId)) {
-          // Use addToSelection=true if we have multi-selection to preserve it
-          const shouldPreserveMulti = this.hasMultiSelection();
-          this.editorStore.selectText(elementId, shouldPreserveMulti);
-        }
+          // Check if this text belongs to an already selected group
+          if (this.isElementInSelectedGroup(elementId, 'text')) {
+            // Element belongs to selected group, don't change selection at all
+            // This preserves the group selection and any other multi-selections
+                      } else if (this.hasMultiSelection()) {
+            // When multi-selection exists, add to selection without promotion
+                        this.addToSelectionWithoutPromotion(elementId, 'text');
+          } else {
+            // Normal single selection behavior
+                        this.editorStore.selectText(elementId);
+          }
+        } else {
+                  }
         // If the text is already selected, keep the current multi-selection
         
         // Only prepare for dragging if not shift-clicking
@@ -406,10 +562,15 @@ class PointerInteractionManager {
       } else {
         // Handle textPath selection while preserving multi-selection when appropriate
         if (!selection.selectedTextPaths?.includes(elementId)) {
-          // Use addToSelection for textPath since selectTextPath doesn't have addToSelection parameter
-          if (this.hasMultiSelection()) {
-            addToSelection(elementId, 'textPath');
+          // Check if this textPath belongs to an already selected group
+          if (this.isElementInSelectedGroup(elementId, 'textPath')) {
+            // Element belongs to selected group, don't change selection at all
+            // This preserves the group selection and any other multi-selections
+          } else if (this.hasMultiSelection()) {
+            // When multi-selection exists, add to selection without promotion
+            this.addToSelectionWithoutPromotion(elementId, 'textPath');
           } else {
+            // Normal single selection behavior
             this.editorStore.selectTextPath(elementId);
           }
         }
@@ -442,11 +603,17 @@ class PointerInteractionManager {
         return true;
       } else {
         // Handle group selection while preserving multi-selection when appropriate
+                
         if (!selection.selectedGroups?.includes(elementId)) {
-          // Use addToSelection=true if we have multi-selection to preserve it
-          const shouldPreserveMulti = this.hasMultiSelection();
-          this.editorStore.selectGroup(elementId, shouldPreserveMulti);
-        }
+          if (this.hasMultiSelection()) {
+            // When multi-selection exists, add to selection without promotion
+                        this.addToSelectionWithoutPromotion(elementId, 'group');
+          } else {
+            // Normal single selection behavior
+                        this.editorStore.selectGroup(elementId);
+          }
+        } else {
+                  }
         // If the group is already selected, keep the current multi-selection
         
         // Only prepare for dragging if not shift-clicking
@@ -478,10 +645,14 @@ class PointerInteractionManager {
           finalSelectedIds = selection.selectedCommands;
           // Don't change selection when command already selected and we have multi-selection
         } else {
-          // New command selection - check if we should preserve multi-selection
-          if (this.hasMultiSelection()) {
+          // New command selection - check if it belongs to a selected group first
+          if (this.isCommandInSelectedGroup(commandId)) {
+            // Command belongs to selected group, don't change selection at all
+            // This preserves the group selection and any other multi-selections
+            finalSelectedIds = selection.selectedCommands;
+          } else if (this.hasMultiSelection()) {
             // Add to existing selection to preserve multi-selection
-            addToSelection(commandId, 'command');
+            this.addToSelectionWithoutPromotion(commandId, 'command');
             finalSelectedIds = [...selection.selectedCommands, commandId];
           } else {
             // Normal single selection behavior
@@ -539,8 +710,17 @@ class PointerInteractionManager {
                                 Object.keys(this.state.dragStartTextPathPositions).length > 0;
       
       // If we have multiple elements or sticky guidelines are enabled, use StickyManager
-      const { enabledFeatures } = this.editorStore;
-      if (hasDraggedElements && enabledFeatures.guidelinesEnabled && this.state.dragStartSelectionBounds) {
+      // But skip sticky guidelines if groups are involved in multi-selection as their bounds are dynamic
+      const { enabledFeatures, selection } = this.editorStore;
+      const hasGroupsInSelection = selection.selectedGroups && selection.selectedGroups.length > 0;
+      const hasMultiSelection = Object.keys(this.state.dragStartPositions).length > 0 ||
+                               Object.keys(this.state.dragStartTextPositions).length > 0 ||
+                               Object.keys(this.state.dragStartImagePositions).length > 0 ||
+                               Object.keys(this.state.dragStartUsePositions).length > 0 ||
+                               Object.keys(this.state.dragStartTextPathPositions).length > 0;
+      
+      if (hasDraggedElements && enabledFeatures.guidelinesEnabled && this.state.dragStartSelectionBounds && 
+          !(hasGroupsInSelection && hasMultiSelection)) {
         if (this.state.dragOrigin) {
           // Calculate where the selection should be positioned (not where the mouse is)
           const targetSelectionX = this.state.dragStartSelectionBounds.x + dx;
@@ -557,12 +737,7 @@ class PointerInteractionManager {
           if (result.snappedBounds) {
             dx = result.snappedBounds.x - this.state.dragStartSelectionBounds.x;
             dy = result.snappedBounds.y - this.state.dragStartSelectionBounds.y;
-            console.log('PointerInteraction: Using snapped bounds delta:', { 
-              dx, dy,
-              originalBounds: this.state.dragStartSelectionBounds,
-              snappedBounds: result.snappedBounds
-            });
-          } else {
+                      } else {
             // This shouldn't happen with the new implementation, but keep as fallback
             console.warn('PointerInteraction: No snapped bounds returned from StickyManager');
           }
@@ -588,6 +763,7 @@ class PointerInteractionManager {
       Object.keys(this.state.dragStartTextPositions).forEach((textId: string) => {
         const start = this.state.dragStartTextPositions[textId];
         if (start) {
+                    
           let newX = start.x + dx;
           let newY = start.y + dy;
           
@@ -702,22 +878,39 @@ class PointerInteractionManager {
       Object.keys(this.state.dragStartGroupPositions).forEach((groupId: string) => {
         const start = this.state.dragStartGroupPositions[groupId];
         if (start) {
-          let translationX = dx;
-          let translationY = dy;
+          // IMPORTANT: Groups need relative delta movement, not absolute positioning
+          // We need to track the last position and calculate relative movement
+          if (!this.state.lastGroupPositions) {
+            this.state.lastGroupPositions = {};
+          }
           
+          // Initialize last position if this is the first movement
+          if (!this.state.lastGroupPositions[groupId]) {
+            this.state.lastGroupPositions[groupId] = { x: 0, y: 0 };
+          }
+          
+          const lastPos = this.state.lastGroupPositions[groupId];
+          let translationX = dx - lastPos.x;
+          let translationY = dy - lastPos.y;
+          
+                    
           // Apply grid snapping if enabled
           if (grid.snapToGrid) {
             const snapped = snapToGrid({ x: translationX, y: translationY }, grid.size);
-            translationX = snapped.x;
+                        translationX = snapped.x;
             translationY = snapped.y;
           }
           
-          // Use the store's moveGroup method which moves all children individually
-          // This ensures consistent behavior with other element types
-          const { moveGroup } = this.editorStore;
-          if (moveGroup) {
-            moveGroup(groupId, { x: translationX, y: translationY });
+          // Only move if there's actual movement
+          if (Math.abs(translationX) > 0.001 || Math.abs(translationY) > 0.001) {
+            const { moveGroup } = this.editorStore;
+            if (moveGroup) {
+                            moveGroup(groupId, { x: translationX, y: translationY });
+            }
           }
+          
+          // Update last position for next movement
+          this.state.lastGroupPositions[groupId] = { x: dx, y: dy };
         }
       });
       
@@ -785,6 +978,7 @@ class PointerInteractionManager {
     this.state.dragStartGroupPositions = {};
     this.state.dragOrigin = null;
     this.state.dragStartSelectionBounds = null; // Clear selection bounds
+    this.state.lastGroupPositions = {}; // Clear group movement tracking
     
     // Clear guidelines when dragging stops
     const { enabledFeatures } = this.editorStore;

@@ -244,6 +244,7 @@ export const createTextActions: StateCreator<
   },
 
   moveText: (textId: string, delta: Point, skipGroupSync = false) => {
+        
     set(state => {
       // Check if the text is in a movement-sync group (only if not skipping)
       if (!skipGroupSync && typeof state.moveSyncGroupByElement === 'function') {
