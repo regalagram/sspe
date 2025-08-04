@@ -127,8 +127,6 @@ const promoteElementToGroup = (state: EditorState, elementId: string, elementTyp
     return state.selection;
   }
   
-  console.log(`🔄 Promoting ${elementType} ${elementId} to group: ${groupId}`);
-  
   const group = state.groups.find(g => g.id === groupId);
   if (!group) return state.selection;
   
