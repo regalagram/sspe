@@ -12,7 +12,6 @@ import { usePointerEventHandlers } from '../hooks/usePointerEventHandlers';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { pluginManager } from './PluginSystem';
 import { AccordionSidebar } from '../plugins/panelmode/AccordionSidebar';
-import { AccordionToggleButton } from '../components/AccordionToggleButton';
 import { SVGDefinitions } from '../components/SVGDefinitions';
 import { MobileContainer } from '../components/MobileContainer';
 import { Toolbar } from '../components/Toolbar';
