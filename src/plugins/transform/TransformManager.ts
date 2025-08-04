@@ -1188,15 +1188,15 @@ export class TransformManager {
         const newWidth = Math.abs(bottomRight.x - topLeft.x);
         const newHeight = Math.abs(bottomRight.y - topLeft.y);
         
-        // Use direct store update to avoid circular calls with updateImage
-        useEditorStore.setState((state) => ({
-          images: state.images.map((img: any) =>
-            img.id === imageId 
-              ? { ...img, x: newX, y: newY, width: newWidth, height: newHeight }
-              : img
-          ),
-          renderVersion: state.renderVersion + 1
-        }));
+        // Use the optimized store action instead of direct setState
+        // This prevents infinite loops by using the same pattern as sub-paths
+        store.resizeImage(imageId, newWidth, newHeight);
+        // Update position separately if needed
+        if (Math.abs(newX - initialImage.x) > 0.001 || Math.abs(newY - initialImage.y) > 0.001) {
+          const deltaX = newX - initialImage.x;
+          const deltaY = newY - initialImage.y;
+          store.moveImage(imageId, { x: deltaX, y: deltaY }, true); // Skip group sync during transform
+        }
       } else if (this.state.mode === 'rotate') {
         // For rotation, transform the center and maintain size, plus add rotation transform
         const centerX = initialImage.x + initialImage.width / 2;
@@ -1212,15 +1212,18 @@ export class TransformManager {
         const newY = transformedCenter.y - initialImage.height / 2;
         const transformString = `rotate(${rotationDegrees}, ${transformedCenter.x}, ${transformedCenter.y})`;
         
-        // Use direct store update to avoid circular calls with updateImage
-        useEditorStore.setState((state) => ({
-          images: state.images.map((img: any) =>
-            img.id === imageId 
-              ? { ...img, x: newX, y: newY, transform: transformString }
-              : img
-          ),
-          renderVersion: state.renderVersion + 1
-        }));
+        // Use the optimized store action instead of direct setState
+        // This prevents infinite loops by using the same pattern as sub-paths
+        const deltaX = newX - initialImage.x;
+        const deltaY = newY - initialImage.y;
+        
+        // First update position if needed
+        if (Math.abs(deltaX) > 0.001 || Math.abs(deltaY) > 0.001) {
+          store.moveImage(imageId, { x: deltaX, y: deltaY }, true); // Skip group sync during transform
+        }
+        
+        // Then update transform using updateImage (which has the early return optimization)
+        store.updateImage(imageId, { transform: transformString });
       }
     }
 

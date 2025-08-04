@@ -1,4 +1,5 @@
 import React, { useRef, useState, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { subPathToString, getContrastColor, subPathToStringInContext, findSubPathAtPoint } from '../../utils/path-utils';
@@ -180,14 +181,15 @@ export const PathRenderer: React.FC = () => {
     
     const svgElement = (e.target as SVGPathElement).closest('svg');
     if (svgElement) {
+      const currentState = useEditorStore.getState();
       const selectionContext = {
-        selection,
-        groups,
-        paths
+        selection: currentState.selection,
+        groups: currentState.groups,
+        paths: currentState.paths
       };
       
       // Only select if not already selected and shouldn't preserve selection
-      const isSubPathSelected = selection.selectedSubPaths.includes(subPathId);
+      const isSubPathSelected = currentState.selection.selectedSubPaths.includes(subPathId);
       if (!isSubPathSelected) {
         if (shouldPreserveSelection(subPathId, 'subpath', selectionContext)) {
           // Preserve current selection - don't call selectSubPathMultiple
@@ -213,173 +215,129 @@ export const PathRenderer: React.FC = () => {
       // Note: We don't call pushToHistory() or transformManager.setMoving(true) here
       // That will be done when we detect actual dragging movement in handlePointerMove
     }
-  }, [viewport, selection.selectedSubPaths, selectSubPathMultiple, selection, paths, groups]);
+  }, [viewport, selectSubPathMultiple]);
 
   // Handle pointer move for dragging
   const handlePointerMove = useCallback((e: React.PointerEvent<SVGElement>) => {
-    if (!dragState.isDragging || !dragState.subPathId || !dragState.startPoint || !dragState.svgElement) return;
-    
-    const currentPoint = getTransformedPoint(e, dragState.svgElement);
-    
-    // Check if we've moved enough to start actual dragging (threshold in SVG units)
-    if (!dragState.dragStarted) {
-      const distance = Math.sqrt(
-        Math.pow(currentPoint.x - dragState.startPoint.x, 2) + 
-        Math.pow(currentPoint.y - dragState.startPoint.y, 2)
-      );
-      
-      // Threshold of 5 SVG units to start dragging
-      const dragThreshold = 5;
-      
-      if (distance < dragThreshold) {
-        return; // Not enough movement yet
+    // Use functional state update to get current drag state without adding it to dependencies
+    setDragState(currentDragState => {
+      if (!currentDragState.isDragging || !currentDragState.subPathId || !currentDragState.startPoint || !currentDragState.svgElement) {
+        return currentDragState;
       }
       
-      // Start actual dragging
-      setDragState(prev => ({
-        ...prev,
-        dragStarted: true,
-        lastPoint: currentPoint,
-      }));
+      const currentPoint = getTransformedPoint(e, currentDragState.svgElement);
       
-      // Notify transform manager that movement started (subpath drag)
-      transformManager.setMoving(true);
-      
-      // Save to history when starting to drag
-      pushToHistory();
-      
-      return; // Don't move on the first frame where we detect drag start
-    }
-    
-    if (!dragState.lastPoint) return;
-    
-    // Apply snapping if guidelines are enabled
-    let snappedPoint = currentPoint;
-    if (enabledFeatures.stickyGuidelinesEnabled) {
-      // Find the element we're currently dragging to exclude it from snapping calculations
-      const draggedSubPathId = dragState.subPathId;
-      const draggedPath = paths.find(p => p.subPaths.some(sp => sp.id === draggedSubPathId));
-      
-      if (draggedPath) {
-        // Calculate simple bounds for the path (for guideline snapping)
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        let hasPoints = false;
+      // Check if we've moved enough to start actual dragging (threshold in SVG units)
+      if (!currentDragState.dragStarted) {
+        const distance = Math.sqrt(
+          Math.pow(currentPoint.x - currentDragState.startPoint.x, 2) + 
+          Math.pow(currentPoint.y - currentDragState.startPoint.y, 2)
+        );
         
-        draggedPath.subPaths.forEach((subPath: any) => {
-          subPath.commands.forEach((cmd: any) => {
-            if (cmd.x !== undefined && cmd.y !== undefined) {
-              minX = Math.min(minX, cmd.x);
-              minY = Math.min(minY, cmd.y);
-              maxX = Math.max(maxX, cmd.x);
-              maxY = Math.max(maxY, cmd.y);
-              hasPoints = true;
-            }
-          });
-        });
+        // Threshold of 5 SVG units to start dragging
+        const dragThreshold = 5;
         
-        if (hasPoints) {
-          const pathBounds = {
-            x: minX,
-            y: minY,
-            width: maxX - minX,
-            height: maxY - minY,
-            centerX: minX + (maxX - minX) / 2,
-            centerY: minY + (maxY - minY) / 2,
-            left: minX,
-            right: maxX,
-            top: minY,
-            bottom: maxY,
-            topCenter: minX + (maxX - minX) / 2,
-            bottomCenter: minX + (maxX - minX) / 2,
-            leftCenter: minY + (maxY - minY) / 2,
-            rightCenter: minY + (maxY - minY) / 2
-          };
+        if (distance < dragThreshold) {
+          return currentDragState; // Not enough movement yet
+        }
+        
+        // Start actual dragging
+        // Notify transform manager that movement started (subpath drag)
+        transformManager.setMoving(true);
+        
+        // Save to history when starting to drag
+        pushToHistory();
+        
+        // Calculate the total delta from start point to current point
+        // This ensures we don't lose the initial movement that triggered the drag
+        const initialDelta = {
+          x: currentPoint.x - currentDragState.startPoint.x,
+          y: currentPoint.y - currentDragState.startPoint.y,
+        };
+        
+        // Apply the initial movement immediately to avoid desync
+        if (currentDragState.capturedElements) {
+          const hasSubPaths = Object.keys(currentDragState.capturedElements.subPaths).length > 0;
           
-          // Calculate the incremental movement from the last frame
-          const incrementalDelta = {
-            x: currentPoint.x - dragState.lastPoint.x,
-            y: currentPoint.y - dragState.lastPoint.y
-          };
-          
-          // Calculate where the element would be if we apply this incremental movement
-          // This matches the visual movement that the user sees
-          const newElementPosition = {
-            x: pathBounds.x + incrementalDelta.x,
-            y: pathBounds.y + incrementalDelta.y
-          };
-          
-          const result = stickyManager.handleElementMoving(
-            draggedPath.id,
-            'path',
-            pathBounds,
-            newElementPosition
+          if (hasSubPaths && (Math.abs(initialDelta.x) > 0.001 || Math.abs(initialDelta.y) > 0.001)) {
+            moveAllCapturedElementsByDelta(
+              currentDragState.capturedElements,
+              initialDelta,
+              grid.snapToGrid,
+              grid.size
+            );
+          }
+        }
+        
+        return {
+          ...currentDragState,
+          dragStarted: true,
+          lastPoint: currentPoint,
+        };
+      }
+      
+      if (!currentDragState.lastPoint) return currentDragState;
+      
+      // Calculate delta directly without snapping logic for now to test synchronization
+      const delta = {
+        x: currentPoint.x - currentDragState.lastPoint.x,
+        y: currentPoint.y - currentDragState.lastPoint.y,
+      };
+      
+      // Handle sub-path movement specifically
+      if (currentDragState.capturedElements) {
+        const hasSubPaths = Object.keys(currentDragState.capturedElements.subPaths).length > 0;
+        
+        // PathRenderer handles sub-path dragging when initiated from sub-path overlay
+        // Only process movement if delta is significant
+        if (hasSubPaths && (Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001)) {
+          // Call moveAllCapturedElementsByDelta directly to maintain perfect synchronization
+          moveAllCapturedElementsByDelta(
+            currentDragState.capturedElements,
+            delta,
+            grid.snapToGrid,
+            grid.size
           );
-          
-          // The result.snappedPoint is the corrected element position
-          // We need to convert this back to a mouse position
-          const correctedDelta = {
-            x: result.snappedPoint.x - pathBounds.x,
-            y: result.snappedPoint.y - pathBounds.y
-          };
-          
-          snappedPoint = {
-            x: dragState.lastPoint.x + correctedDelta.x,
-            y: dragState.lastPoint.y + correctedDelta.y
-          };
         }
       }
-    }
-    
-    const delta = {
-      x: snappedPoint.x - dragState.lastPoint.x,
-      y: snappedPoint.y - dragState.lastPoint.y,
-    };
-    
-    // Use the centralized utility to move all selected elements with delta
-    if (dragState.capturedElements) {
-      moveAllCapturedElementsByDelta(
-        dragState.capturedElements,
-        delta,
-        grid.snapToGrid, // Use grid snapping setting
-        grid.size        // Use grid size
-      );
-    }
-    
-
-    
-    // Update last point (use snapped point to maintain consistent movement)
-    setDragState(prev => ({
-      ...prev,
-      lastPoint: snappedPoint,
-    }));
-  }, [dragState, moveSubPath, selection.selectedSubPaths, viewport, pushToHistory, enabledFeatures.stickyGuidelinesEnabled, paths, texts, groups]);
+      
+      // Update last point after moving elements
+      return {
+        ...currentDragState,
+        lastPoint: currentPoint,
+      };
+    });
+  }, [viewport, pushToHistory, grid.snapToGrid, grid.size]);
 
   // Handle pointer up to stop dragging
   const handlePointerUp = useCallback((e?: React.PointerEvent<SVGElement>) => {
-    // Notify transform manager that movement ended only if actual dragging occurred
-    if (dragState.isDragging && dragState.dragStarted) {
-      transformManager.setMoving(false);
-    }
-    
-    // Clear guidelines when dragging stops
-    if (enabledFeatures.stickyGuidelinesEnabled) {
-      stickyManager.clearGuidelines();
-    }
-    
-    setDragState({
-      isDragging: false,
-      subPathId: null,
-      startPoint: null,
-      lastPoint: null,
-      svgElement: null,
-      dragStarted: false,
-      capturedElements: null,
+    setDragState(currentDragState => {
+      // Notify transform manager that movement ended only if actual dragging occurred
+      if (currentDragState.isDragging && currentDragState.dragStarted) {
+        transformManager.setMoving(false);
+      }
+      
+      // Clear guidelines when dragging stops
+      if (enabledFeatures.stickyGuidelinesEnabled) {
+        stickyManager.clearGuidelines();
+      }
+      
+      return {
+        isDragging: false,
+        subPathId: null,
+        startPoint: null,
+        lastPoint: null,
+        svgElement: null,
+        dragStarted: false,
+        capturedElements: null,
+      };
     });
-  }, [dragState.isDragging, dragState.dragStarted, enabledFeatures.stickyGuidelinesEnabled]);
+  }, [enabledFeatures.stickyGuidelinesEnabled]);
 
   // Add global pointer event listeners for dragging
   React.useEffect(() => {
-    if (dragState.isDragging && dragState.svgElement) {
+    const currentDragState = dragState;
+    if (currentDragState.isDragging && currentDragState.svgElement) {
       // Register with global path drag manager
       pathDragManager.setDragHandlers({
         handlePointerMove
@@ -390,7 +348,7 @@ export const PathRenderer: React.FC = () => {
         const mockEvent = {
           clientX: e.clientX,
           clientY: e.clientY,
-          target: dragState.svgElement,
+          target: currentDragState.svgElement,
         } as any;
         handlePointerMove(mockEvent);
       };

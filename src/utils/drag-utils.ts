@@ -161,36 +161,76 @@ export function moveAllCapturedElements(
   const store = useEditorStore.getState();
   const { moveImage, moveUse, moveGroup, moveText, moveCommand, images, uses, groups, texts } = store;
   
-  // Move images
-  Object.keys(capturedData.images).forEach((imageId: string) => {
-    const start = capturedData.images[imageId];
-    if (start) {
-      let newX = start.x + totalOffset.x;
-      let newY = start.y + totalOffset.y;
+  // Move images (batch update to prevent loops)
+  const imageIds = Object.keys(capturedData.images);
+  if (imageIds.length > 0) {
+    const imageUpdates: Array<{id: string, newX: number, newY: number}> = [];
+    
+    // Calculate all new positions first
+    imageIds.forEach((imageId: string) => {
+      const start = capturedData.images[imageId];
+      if (start) {
+        let newX = start.x + totalOffset.x;
+        let newY = start.y + totalOffset.y;
+        
+        // Apply grid snapping if enabled
+        if (enableGridSnapping) {
+          const snapped = snapToGrid({ x: newX, y: newY }, gridSize);
+          newX = snapped.x;
+          newY = snapped.y;
+        }
+        
+        const currentImage = images.find((img: any) => img.id === imageId);
+        if (currentImage) {
+          let delta = { x: newX - currentImage.x, y: newY - currentImage.y };
+          
+          // If image has rotation transform, apply inverse rotation to delta
+          if (currentImage.transform) {
+            delta = transformDeltaForRotation(delta, currentImage.transform);
+          }
+          
+          if (Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001) {
+            const finalX = currentImage.x + delta.x;
+            const finalY = currentImage.y + delta.y;
+            imageUpdates.push({id: imageId, newX: finalX, newY: finalY});
+          }
+        }
+      }
+    });
+    
+    // Apply all updates in a single setState call
+    if (imageUpdates.length > 0) {
+      // Check if any image would actually change to avoid unnecessary updates
+      let hasRealChanges = false;
       
-      // Apply grid snapping if enabled
-      if (enableGridSnapping) {
-        const snapped = snapToGrid({ x: newX, y: newY }, gridSize);
-        newX = snapped.x;
-        newY = snapped.y;
+      for (const update of imageUpdates) {
+        const img = images.find(i => i.id === update.id);
+        if (img && (Math.abs(img.x - update.newX) >= 0.001 || Math.abs(img.y - update.newY) >= 0.001)) {
+          hasRealChanges = true;
+          break;
+        }
       }
       
-      // Calculate delta for moveImage function
-      const currentImage = images.find((img: any) => img.id === imageId);
-      if (currentImage) {
-        let delta = { x: newX - currentImage.x, y: newY - currentImage.y };
-        
-        // If image has rotation transform, apply inverse rotation to delta
-        if (currentImage.transform) {
-          delta = transformDeltaForRotation(delta, currentImage.transform);
-        }
-        
-        if (Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001) {
-          moveImage(imageId, delta);
-        }
+      // Only update if there are real changes
+      if (hasRealChanges) {
+        useEditorStore.setState((state) => ({
+          images: state.images.map((img) => {
+            const update = imageUpdates.find(u => u.id === img.id);
+            if (update) {
+              // Check if position would actually change
+              if (Math.abs(img.x - update.newX) < 0.001 && Math.abs(img.y - update.newY) < 0.001) {
+                return img; // No change
+              }
+              return { ...img, x: update.newX, y: update.newY };
+            }
+            return img;
+          })
+          // Don't increment renderVersion during frequent drag operations to prevent loops
+          // renderVersion: state.renderVersion + 1
+        }));
       }
     }
-  });
+  }
   
   // Move use elements
   Object.keys(capturedData.uses).forEach((useId: string) => {
@@ -291,6 +331,9 @@ export function moveAllCapturedElements(
   // since they need relative movement, not absolute positioning
 }
 
+// Robust execution guard to prevent infinite loops
+let isExecuting = false;
+
 /**
  * Moves all captured elements by the specified delta from their current positions
  */
@@ -298,56 +341,191 @@ export function moveAllCapturedElementsByDelta(
   capturedData: DraggedElementsData,
   delta: Point,
   enableGridSnapping: boolean = false,
-  gridSize: number = 10
+  gridSize: number = 10,
+  disableThrottling: boolean = false
 ) {
-  const store = useEditorStore.getState();
-  const { moveImage, moveUse, moveGroup, moveText, moveSubPath } = store;
-  
-  // Apply grid snapping if enabled
-  let finalDelta = delta;
-  if (enableGridSnapping) {
-    finalDelta = {
-      x: Math.round(delta.x / gridSize) * gridSize,
-      y: Math.round(delta.y / gridSize) * gridSize,
-    };
+  // Skip update if delta is too small to prevent unnecessary calls
+  if (Math.abs(delta.x) < 0.001 && Math.abs(delta.y) < 0.001) {
+        return;
   }
 
-  // Move images using delta
-  Object.keys(capturedData.images).forEach((imageId: string) => {
-    const store = useEditorStore.getState();
-    const currentImage = store.images.find((img: any) => img.id === imageId);
-    
-    let imageDelta = finalDelta;
-    // If image has rotation transform, apply inverse rotation to delta
-    if (currentImage && currentImage.transform) {
-      imageDelta = transformDeltaForRotation(finalDelta, currentImage.transform);
+  // Keep only essential protection against concurrent execution
+  // Remove throttling to fix mouse synchronization issues
+  if (isExecuting) {
+    return;
+  }
+
+  isExecuting = true;
+
+  try {
+    // Apply grid snapping if enabled
+    let finalDelta = delta;
+    if (enableGridSnapping) {
+      finalDelta = {
+        x: Math.round(delta.x / gridSize) * gridSize,
+        y: Math.round(delta.y / gridSize) * gridSize,
+      };
     }
-    
-    moveImage(imageId, imageDelta);
-  });
 
-  // Move texts using delta
-  Object.keys(capturedData.texts).forEach((textId: string) => {
-    moveText(textId, finalDelta);
-  });
+    // Get current store state
+    const store = useEditorStore.getState();
 
-  // TextPaths are not moved directly - they follow their paths
-  // Any movement should be applied to the path that the textPath references
+    // Collect all updates in a single batch
+    const imageIds = Object.keys(capturedData.images);
+    const textIds = Object.keys(capturedData.texts);
+    const useIds = Object.keys(capturedData.uses);
+    const groupIds = Object.keys(capturedData.groups);
+    const subPathIds = Object.keys(capturedData.subPaths);
 
-  // Move use elements using delta
-  Object.keys(capturedData.uses).forEach((useId: string) => {
-    moveUse(useId, finalDelta);
-  });
+        
+    // Only proceed if there are elements to move
+    if (imageIds.length === 0 && textIds.length === 0 && useIds.length === 0 && 
+        groupIds.length === 0 && subPathIds.length === 0) {
+      return;
+    }
 
-  // Move groups using delta
-  Object.keys(capturedData.groups).forEach((groupId: string) => {
-    moveGroup(groupId, finalDelta);
-  });
+    // Perform a single batch update for all simple elements (images, texts, uses)
+    useEditorStore.setState((state) => {
+      let newState = { ...state };
+      let hasChanges = false;
 
-  // Move sub-paths using delta
-  Object.keys(capturedData.subPaths).forEach((subPathId: string) => {
-    moveSubPath(subPathId, finalDelta, true, enableGridSnapping); // Skip group sync and conditionally skip grid snapping
-  });
+      // Update images
+      if (imageIds.length > 0) {
+        newState.images = state.images.map((img) => {
+          if (imageIds.includes(img.id)) {
+            let imageDelta = finalDelta;
+            // If image has rotation transform, apply inverse rotation to delta
+            if (img.transform) {
+              imageDelta = transformDeltaForRotation(finalDelta, img.transform);
+            }
+            
+            const newX = img.x + imageDelta.x;
+            const newY = img.y + imageDelta.y;
+            
+            // Only update if there's a meaningful change
+            if (Math.abs(img.x - newX) >= 0.001 || Math.abs(img.y - newY) >= 0.001) {
+              hasChanges = true;
+              return { ...img, x: newX, y: newY };
+            }
+          }
+          return img;
+        });
+      }
+
+      // Update texts
+      if (textIds.length > 0) {
+        newState.texts = state.texts.map((text) => {
+          if (textIds.includes(text.id)) {
+            const newX = text.x + finalDelta.x;
+            const newY = text.y + finalDelta.y;
+            
+            if (Math.abs(text.x - newX) >= 0.001 || Math.abs(text.y - newY) >= 0.001) {
+              hasChanges = true;
+              return { ...text, x: newX, y: newY };
+            }
+          }
+          return text;
+        });
+      }
+
+      // Update uses
+      if (useIds.length > 0) {
+        newState.uses = state.uses.map((use) => {
+          if (useIds.includes(use.id)) {
+            const newX = (use.x || 0) + finalDelta.x;
+            const newY = (use.y || 0) + finalDelta.y;
+            
+            if (Math.abs((use.x || 0) - newX) >= 0.001 || Math.abs((use.y || 0) - newY) >= 0.001) {
+              hasChanges = true;
+              return { ...use, x: newX, y: newY };
+            }
+          }
+          return use;
+        });
+      }
+
+      // Only return new state if there are actual changes
+      return hasChanges ? newState : state;
+    });
+
+    // Handle complex elements (groups and subpaths) separately with their own logic
+    // but use minimal calls to prevent loops
+    if (groupIds.length > 0 || subPathIds.length > 0) {
+      const { moveGroup } = store;
+      
+      // Move groups (only if delta is significant)
+      if (Math.abs(finalDelta.x) > 0.001 || Math.abs(finalDelta.y) > 0.001) {
+        groupIds.forEach((groupId: string) => {
+          moveGroup(groupId, finalDelta);
+        });
+        
+        // Move sub-paths using direct path updates to maintain synchronization
+        // This avoids the complex group logic in moveSubPath that causes conflicts
+        if (subPathIds.length > 0) {
+          const paths = store.paths;
+          let hasSubPathChanges = false;
+          
+          const newPaths = paths.map((path) => ({
+            ...path,
+            subPaths: path.subPaths.map((subPath) => {
+              if (subPathIds.includes(subPath.id)) {
+                hasSubPathChanges = true;
+                return {
+                  ...subPath,
+                  commands: subPath.commands.map((cmd) => {
+                    let newX = cmd.x !== undefined ? cmd.x + finalDelta.x : cmd.x;
+                    let newY = cmd.y !== undefined ? cmd.y + finalDelta.y : cmd.y;
+                    let newX1 = cmd.x1 !== undefined ? cmd.x1 + finalDelta.x : cmd.x1;
+                    let newY1 = cmd.y1 !== undefined ? cmd.y1 + finalDelta.y : cmd.y1;
+                    let newX2 = cmd.x2 !== undefined ? cmd.x2 + finalDelta.x : cmd.x2;
+                    let newY2 = cmd.y2 !== undefined ? cmd.y2 + finalDelta.y : cmd.y2;
+                    
+                    // Apply grid snapping if enabled
+                    if (enableGridSnapping) {
+                      if (newX !== undefined && newY !== undefined) {
+                        const snapped = snapToGrid({ x: newX, y: newY }, gridSize);
+                        newX = snapped.x;
+                        newY = snapped.y;
+                      }
+                      if (newX1 !== undefined && newY1 !== undefined) {
+                        const snapped = snapToGrid({ x: newX1, y: newY1 }, gridSize);
+                        newX1 = snapped.x;
+                        newY1 = snapped.y;
+                      }
+                      if (newX2 !== undefined && newY2 !== undefined) {
+                        const snapped = snapToGrid({ x: newX2, y: newY2 }, gridSize);
+                        newX2 = snapped.x;
+                        newY2 = snapped.y;
+                      }
+                    }
+                    
+                    return {
+                      ...cmd,
+                      x: newX,
+                      y: newY,
+                      x1: newX1,
+                      y1: newY1,
+                      x2: newX2,
+                      y2: newY2,
+                    };
+                  }),
+                };
+              }
+              return subPath;
+            }),
+          }));
+          
+          // Update paths directly to prevent recursive calls and maintain synchronization
+          if (hasSubPathChanges) {
+            useEditorStore.setState({ paths: newPaths });
+          }
+        }
+      }
+    }
+
+  } finally {
+    isExecuting = false;
+  }
 }
 
 // Helper function to get command position (copied from existing code)

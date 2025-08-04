@@ -72,12 +72,34 @@ export const createSVGElementActions: StateCreator<
     })),
 
   updateImage: (id, updates) =>
-    set((state) => ({
-      images: state.images.map((img) =>
-        img.id === id ? { ...img, ...updates } : img
-      ),
-      renderVersion: state.renderVersion + 1,
-    })),
+    set((state) => {
+      // Find the image first
+      const image = state.images.find(img => img.id === id);
+      if (!image) {
+        return state; // Return unchanged state if image not found
+      }
+      
+      // Check if any update would actually change the image
+      let hasChanges = false;
+      for (const [key, value] of Object.entries(updates)) {
+        if (image[key as keyof typeof image] !== value) {
+          hasChanges = true;
+          break;
+        }
+      }
+      
+      // Skip update if no changes to prevent unnecessary re-renders
+      if (!hasChanges) {
+        return state;
+      }
+      
+      return {
+        images: state.images.map((img) =>
+          img.id === id ? { ...img, ...updates } : img
+        ),
+        renderVersion: state.renderVersion + 1,
+      };
+    }),
 
   removeImage: (id) =>
     set((state) => ({
@@ -334,10 +356,18 @@ export const createSVGElementActions: StateCreator<
       }
       
       // Move individual image
+      const newX = image.x + delta.x;
+      const newY = image.y + delta.y;
+      
+      // Check if the new position would actually be different (avoid floating point precision issues)
+      if (Math.abs(image.x - newX) < 0.001 && Math.abs(image.y - newY) < 0.001) {
+        return state; // No meaningful change, return unchanged state
+      }
+      
       return {
         images: state.images.map((img) =>
           img.id === id 
-            ? { ...img, x: img.x + delta.x, y: img.y + delta.y }
+            ? { ...img, x: newX, y: newY }
             : img
         ),
         renderVersion: state.renderVersion + 1

@@ -3,6 +3,7 @@ import { Plugin, PointerEventContext } from '../../core/PluginSystem';
 import { snapToGrid, getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { moveAllCapturedElementsByDelta, captureAllSelectedElementsPositions, DraggedElementsData } from '../../utils/drag-utils';
+import { useEditorStore } from '../../store/editorStore';
 import { 
   ElementType, 
   SelectionContext, 
@@ -276,7 +277,7 @@ class ElementSelector {
   }
 
   private addToSelectionWithoutPromotion(elementId: string, elementType: ElementType): void {
-    const currentState = this.editorStore.getState();
+    const currentState = useEditorStore.getState();
     const newSelection = { ...currentState.selection };
     
     switch (elementType) {
@@ -317,7 +318,7 @@ class ElementSelector {
         break;
     }
     
-    this.editorStore.setState({ selection: newSelection });
+    useEditorStore.setState({ selection: newSelection });
   }
 }
 
@@ -392,7 +393,10 @@ class DragManager {
       this.lastDelta = { ...snappedDelta };
     }
 
-    transformManager.updateTransformState();
+    // Only update transform state if not currently moving to avoid infinite loops
+    if (!transformManager.isMoving()) {
+      transformManager.updateTransformState();
+    }
   }
 
   endDrag(): void {

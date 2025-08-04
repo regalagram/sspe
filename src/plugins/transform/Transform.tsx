@@ -25,13 +25,39 @@ const TransformPlugin: React.FC = () => {
     transformManager.setEditorStore(useEditorStore.getState());
     
     // Set up callback for transform state changes (hide/show handles)
+    // Use aggressive throttling to prevent infinite loops during rapid state changes
+    let lastUpdateTime = 0;
+    let updateTimeoutId: NodeJS.Timeout | null = null;
+    
     transformManager.setStateChangeCallback(() => {
+      const now = Date.now();
+      const isActive = transformManager.isTransforming() || transformManager.isMoving();
+      const throttleDelay = isActive ? 100 : 16; // More aggressive throttling during active transforms
+      
+      if (now - lastUpdateTime < throttleDelay) {
+        // Debounce: clear previous timeout and set a new one
+        if (updateTimeoutId) {
+          clearTimeout(updateTimeoutId);
+        }
+        updateTimeoutId = setTimeout(() => {
+          lastUpdateTime = Date.now();
+          setForceUpdate(prev => prev + 1);
+          setIsTransforming(transformManager.isTransforming());
+          setTransformMode(transformManager.getTransformMode());
+        }, throttleDelay);
+        return;
+      }
+      
+      lastUpdateTime = now;
       setForceUpdate(prev => prev + 1);
       setIsTransforming(transformManager.isTransforming());
       setTransformMode(transformManager.getTransformMode());
     });
     
     return () => {
+      if (updateTimeoutId) {
+        clearTimeout(updateTimeoutId);
+      }
       transformManager.clearStateChangeCallback();
       transformManager.cleanup();
     };
@@ -39,6 +65,11 @@ const TransformPlugin: React.FC = () => {
 
   // Update transform state when selection or paths change
   useEffect(() => {
+    // Don't update if currently transforming to avoid infinite loops
+    if (transformManager.isTransforming()) {
+      return;
+    }
+    
     // Always pass the current store state to transform manager
     transformManager.setEditorStore(useEditorStore.getState());
     
@@ -64,10 +95,14 @@ const TransformPlugin: React.FC = () => {
       
       if (isCurrentlyTransforming || isCurrentlyMoving) {
         // Update bounds/handles during transformation or movement for live feedback
+        // Don't call updateTransformState during active transformations to prevent loops
         transformManager.setEditorStore(useEditorStore.getState()); // Ensure latest state
-        transformManager.updateTransformState();
-        setBounds(transformManager.getBounds());
-        setHandles(transformManager.getHandles());
+        
+        // Only update bounds and handles without triggering state changes
+        const newBounds = transformManager.getBounds();
+        const newHandles = transformManager.getHandles();
+        setBounds(newBounds);
+        setHandles(newHandles);
       }
     }, 16); // ~60fps
 
