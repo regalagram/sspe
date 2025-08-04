@@ -35,8 +35,11 @@ interface Plugin {
 
 ### UI Component Positions
 Only these positions are valid:
-- `accordion` - Collapsible panels in sidebar
+- `toolbar` - Fixed toolbars (top/bottom)
+- `sidebar` - Accordion panels in sidebar
 - `svg-content` - Inside SVG canvas
+- `statusbar` - Status information
+- `contextmenu` - Context menus
 
 ### Directory Structure (STRICT)
 ```
@@ -47,12 +50,20 @@ src/
 │       ├── index.ts    # Plugin definition
 │       └── utils/      # Plugin-specific utils only
 ├── components/         # All UI components
-│   ├── AccordionToggleButton.tsx
-│   ├── PluginButton.tsx
-│   ├── SVGCommandIcons.tsx
+│   ├── Toolbar.tsx              # Main toolbar container
+│   ├── ToolbarButton.tsx        # Reusable toolbar button
+│   ├── ToolbarSubmenu.tsx       # Dropdown submenus
+│   ├── WritingToolbar.tsx       # Top writing tools toolbar
+│   ├── AccordionPanel.tsx       # Accordion panels for sidebar
+│   ├── PluginButton.tsx         # Plugin buttons
+│   ├── SVGCommandIcons.tsx      # SVG command icons
+│   ├── SandwichButton.tsx       # Mobile menu toggle
 │   └── [component-name].tsx
 ├── managers/           # Global managers
 ├── store/             # Zustand store
+│   ├── editorStore.ts           # Main editor state
+│   ├── toolbarStore.ts          # Toolbar state management
+│   └── [domain]Actions.ts       # Domain-specific actions
 ├── types/             # TypeScript types
 ├── utils/             # Shared utilities
 │   ├── path-utils.ts
@@ -72,6 +83,8 @@ src/
 - `utils/`: Shared utilities used by multiple plugins
 - `styles/`: Global CSS files only
 - `hooks/`: Custom React hooks shared across plugins
+- `store/`: Zustand stores with domain-specific actions
+- `managers/`: Global system managers (ToolModeManager, etc.)
 
 ### Pointer Event Management (MANDATORY)
 
@@ -121,7 +134,7 @@ export const MyPlugin: Plugin = {
     {
       id: 'my-plugin-controls',
       component: PluginControls,
-      position: 'accordion',
+      position: 'sidebar',
       order: 10
     },
     {
@@ -129,6 +142,12 @@ export const MyPlugin: Plugin = {
       component: PluginRenderer,
       position: 'svg-content',
       order: 20
+    },
+    {
+      id: 'my-plugin-toolbar',
+      component: PluginToolbar,
+      position: 'toolbar',
+      order: 30
     }
   ],
   
@@ -153,6 +172,64 @@ export const MyPlugin: Plugin = {
 };
 ```
 
+### Toolbar Implementation
+
+#### Main Toolbar Structure
+The application has two main toolbars:
+- **WritingToolbar** (top): Creation tools, pencil, shapes, curves, styles, delete
+- **Toolbar** (bottom): Undo/redo, zoom, animation controls
+
+#### Toolbar Components
+```typescript
+// ToolbarButton - Reusable button component
+import { ToolbarButton } from '../components/ToolbarButton';
+
+const MyToolbarButton = () => (
+  <ToolbarButton
+    icon={<MyIcon />}
+    label="Tool"
+    onClick={handleClick}
+    active={isActive}
+    title="Tool description"
+  />
+);
+
+// ToolbarSubmenu - Dropdown menus
+import { ToolbarSubmenu } from '../components/ToolbarSubmenu';
+
+const MySubmenu = () => (
+  <ToolbarSubmenu
+    trigger={<ToolbarButton icon={<MenuIcon />} />}
+    isOpen={isSubmenuOpen}
+    onToggle={toggleSubmenu}
+  >
+    <div>Submenu content</div>
+  </ToolbarSubmenu>
+);
+```
+
+#### Toolbar State Management
+```typescript
+// Use toolbar store for persistent states
+import { useToolbarStore } from '../store/toolbarStore';
+
+const MyToolbarComponent = () => {
+  const { 
+    activeCreationTool,
+    setActiveCreationTool,
+    isCreationSubmenuOpen,
+    setCreationSubmenuOpen 
+  } = useToolbarStore();
+  
+  return (
+    <ToolbarButton
+      active={activeCreationTool === 'my-tool'}
+      onClick={() => setActiveCreationTool('my-tool')}
+    />
+  );
+};
+```
+
 ### Tool Mode Implementation
 ```typescript
 // For exclusive tools (Creation, Pencil, etc.)
@@ -161,12 +238,12 @@ const MyTool: React.FC = () => {
   const isActive = currentTool === 'my-tool';
 
   return (
-    <button 
+    <ToolbarButton
+      icon={<MyIcon />}
       onClick={() => isActive ? clearTool() : setTool('my-tool')}
-      className={isActive ? 'active' : ''}
-    >
-      My Tool
-    </button>
+      active={isActive}
+      title="My Tool"
+    />
   );
 };
 ```
@@ -214,16 +291,18 @@ pointerHandlers: {
 
 ### DO ✅
 1. **One plugin = One feature** (no exceptions)
-2. **Use accordion panels** for all plugin controls
-3. **Use ToolModeManager** for exclusive tools
-4. **Complete TypeScript typing** (no `any`)
-5. **Pure functions** for data transformations
-6. **Central store** as single source of truth
-7. **Separate UI and logic** components
-8. **Scale elements** inversely to zoom
-9. **Use data attributes** for element identification
-10. **Return boolean** from pointer handlers
-11. **Always use pointer event management for all input**
+2. **Use toolbar/sidebar positions** for plugin UI
+3. **Use ToolbarButton component** for consistent styling
+4. **Use toolbar store** for persistent toolbar states
+5. **Use ToolModeManager** for exclusive tools
+6. **Complete TypeScript typing** (no `any`)
+7. **Pure functions** for data transformations
+8. **Central store** as single source of truth
+9. **Separate UI and logic** components
+10. **Scale elements** inversely to zoom
+11. **Use data attributes** for element identification
+12. **Return boolean** from pointer handlers
+13. **Always use pointer event management for all input**
 
 ### DON'T ❌
 1. **No business logic** in UI components
@@ -235,7 +314,9 @@ pointerHandlers: {
 7. **No multiple active tools**
 8. **No features outside plugins**
 9. **No imperative APIs**
-10. **Never use Mouse, Touch, or Pencil event handlers** (`onMouseDown`, `onTouchStart`, etc.)
+10. **No custom button styling** (use ToolbarButton)
+11. **No toolbar state in component state** (use toolbar store)
+12. **Never use Mouse, Touch, or Pencil event handlers** (`onMouseDown`, `onTouchStart`, etc.)
 
 ## Common Patterns
 
@@ -368,10 +449,12 @@ When generating code:
 5. Keep only plugin definition and specific utils in plugin folder
 6. Register in plugin system
 7. Use central store for state
-8. Scale SVG elements with zoom
-9. Handle pointer events properly
-10. Add keyboard shortcuts
-11. Test with enable/disable
-12. Always use pointer event management for all input (never Mouse, Touch, or Pencil events)
+8. Use toolbar store for toolbar states
+9. Use ToolbarButton for consistent styling
+10. Scale SVG elements with zoom
+11. Handle pointer events properly
+12. Add keyboard shortcuts
+13. Test with enable/disable
+14. Always use pointer event management for all input (never Mouse, Touch, or Pencil events)
 
 Remember: **Everything is a plugin, no exceptions.**
