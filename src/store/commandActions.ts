@@ -118,7 +118,45 @@ export const createCommandActions: StateCreator<
 
   updateCommand: (commandId, updates) =>
     set((state) => {
+      // Find the current command to compare with updates
+      let currentCommand = null;
+      for (const path of state.paths) {
+        for (const subPath of path.subPaths) {
+          const cmd = subPath.commands.find(c => c.id === commandId);
+          if (cmd) {
+            currentCommand = cmd;
+            break;
+          }
+        }
+        if (currentCommand) break;
+      }
+      
+      if (!currentCommand) {
+        return state;
+      }
+      
+      // Check if updates would actually change anything significant
+      let hasRealChange = false;
       const precision = state.precision;
+      
+      for (const [key, newValue] of Object.entries(updates)) {
+        const currentValue = currentCommand[key as keyof typeof currentCommand];
+        if (typeof newValue === 'number' && typeof currentValue === 'number') {
+          const preciseNew = Number(newValue.toFixed(precision));
+          const preciseCurrent = Number(currentValue.toFixed(precision));
+          if (Math.abs(preciseNew - preciseCurrent) > 0.001) {
+            hasRealChange = true;
+            break;
+          }
+        } else if (newValue !== currentValue) {
+          hasRealChange = true;
+          break;
+        }
+      }
+      
+      if (!hasRealChange) {
+        return state;
+      }
       return {
         paths: state.paths.map((path) => ({
           ...path,

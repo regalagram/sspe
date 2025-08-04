@@ -415,6 +415,123 @@ export class TransformManager {
       }
     }
 
+    // For selected groups - add all children of selected groups to the bounds calculation
+    if (selection.selectedGroups?.length > 0) {
+      const store = this.editorStore || useEditorStore.getState();
+      const { groups } = store;
+      
+      for (const groupId of selection.selectedGroups) {
+        const group = groups.find((g: any) => g.id === groupId);
+        if (group && group.children) {
+          // Add all children of the group to the temp SVG
+          for (const child of group.children) {
+            switch (child.type) {
+              case 'path': {
+                const path = paths.find((p: any) => p.id === child.id);
+                if (path) {
+                  // Add all subpaths from this path
+                  for (const subPath of path.subPaths) {
+                    const pathElement = document.createElementNS(svgNS, 'path');
+                    const pathData = subPathToString(subPath);
+                    if (pathData) {
+                      pathElement.setAttribute('d', pathData);
+                      tempSvg.appendChild(pathElement);
+                      hasContent = true;
+                    }
+                  }
+                }
+                break;
+              }
+              case 'text': {
+                const text = texts?.find((t: any) => t.id === child.id);
+                if (text) {
+                  const textElement = document.createElementNS(svgNS, 'text');
+                  textElement.setAttribute('x', text.x.toString());
+                  textElement.setAttribute('y', text.y.toString());
+                  
+                  if (text.style?.fontSize) {
+                    textElement.setAttribute('font-size', text.style.fontSize.toString());
+                  }
+                  if (text.style?.fontFamily) {
+                    textElement.setAttribute('font-family', text.style.fontFamily);
+                  }
+                  
+                  if (text.transform) {
+                    textElement.setAttribute('transform', text.transform);
+                  }
+                  
+                  if (text.type === 'text') {
+                    textElement.textContent = text.content;
+                    tempSvg.appendChild(textElement);
+                    hasContent = true;
+                  } else if (text.type === 'multiline-text') {
+                    // Handle multiline text for groups (same logic as above)
+                    const fontSize = text.style?.fontSize || 16;
+                    const lineHeight = fontSize * 1.2;
+                    
+                    text.spans.forEach((span: any, index: number, spans: any[]) => {
+                      if (span.content && span.content.trim()) {
+                        const lineNumber = spans.slice(0, index).filter((s: any) => s.content && s.content.trim()).length;
+                        
+                        const tspanElement = document.createElementNS(svgNS, 'tspan');
+                        tspanElement.textContent = span.content;
+                        tspanElement.setAttribute('x', text.x.toString());
+                        if (lineNumber === 0) {
+                          tspanElement.setAttribute('dy', '0');
+                        } else {
+                          tspanElement.setAttribute('dy', lineHeight.toString());
+                        }
+                        textElement.appendChild(tspanElement);
+                      }
+                    });
+                    
+                    tempSvg.appendChild(textElement);
+                    hasContent = true;
+                  }
+                }
+                break;
+              }
+              case 'image': {
+                const image = images?.find((img: any) => img.id === child.id);
+                if (image) {
+                  const imageElement = document.createElementNS(svgNS, 'image');
+                  imageElement.setAttribute('x', image.x.toString());
+                  imageElement.setAttribute('y', image.y.toString());
+                  imageElement.setAttribute('width', image.width.toString());
+                  imageElement.setAttribute('height', image.height.toString());
+                  imageElement.setAttribute('href', image.href);
+                  
+                  if (image.opacity !== undefined) {
+                    imageElement.setAttribute('opacity', image.opacity.toString());
+                  }
+                  
+                  tempSvg.appendChild(imageElement);
+                  hasContent = true;
+                }
+                break;
+              }
+              case 'use': {
+                const use = uses?.find((u: any) => u.id === child.id);
+                if (use) {
+                  const useElement = document.createElementNS(svgNS, 'use');
+                  useElement.setAttribute('href', use.href);
+                  if (use.x !== undefined) useElement.setAttribute('x', use.x.toString());
+                  if (use.y !== undefined) useElement.setAttribute('y', use.y.toString());
+                  if (use.width !== undefined) useElement.setAttribute('width', use.width.toString());
+                  if (use.height !== undefined) useElement.setAttribute('height', use.height.toString());
+                  
+                  tempSvg.appendChild(useElement);
+                  hasContent = true;
+                }
+                break;
+              }
+              // Note: Nested groups could be handled here recursively if needed
+            }
+          }
+        }
+      }
+    }
+
     if (!hasContent) {
       document.body.removeChild(tempSvg);
       return null;

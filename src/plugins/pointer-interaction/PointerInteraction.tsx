@@ -109,6 +109,20 @@ class PointerInteractionManager {
            selection.selectedGroups?.length > 0;
   }
 
+  private hasMultiSelection(): boolean {
+    if (!this.editorStore) return false;
+    const { selection } = this.editorStore;
+    const totalSelected = (selection.selectedCommands?.length || 0) + 
+                         (selection.selectedSubPaths?.length || 0) + 
+                         (selection.selectedPaths?.length || 0) +
+                         (selection.selectedTexts?.length || 0) +
+                         (selection.selectedTextPaths?.length || 0) +
+                         (selection.selectedImages?.length || 0) +
+                         (selection.selectedUses?.length || 0) +
+                         (selection.selectedGroups?.length || 0);
+    return totalSelected > 1;
+  }
+
   getSVGPoint(e: PointerEvent<SVGElement>, svgRef: React.RefObject<SVGSVGElement | null>): { x: number; y: number } {
     return getSVGPoint(e, svgRef, this.editorStore.viewport);
   }
@@ -300,9 +314,13 @@ class PointerInteractionManager {
         // For shift-click, only change selection, don't start dragging
         return true;
       } else {
+        // Handle image selection while preserving multi-selection when appropriate
         if (!selection.selectedImages?.includes(elementId)) {
-          selectImage(elementId);
+          // Use addToSelection=true if we have multi-selection to preserve it
+          const shouldPreserveMulti = this.hasMultiSelection();
+          selectImage(elementId, shouldPreserveMulti);
         }
+        // If the image is already selected, keep the current multi-selection
         
         // Only prepare for dragging if not shift-clicking
         this.state.draggingElement = { id: elementId, type: 'image' };
@@ -326,9 +344,13 @@ class PointerInteractionManager {
         // For shift-click, only change selection, don't start dragging
         return true;
       } else {
+        // Handle use element selection while preserving multi-selection when appropriate
         if (!selection.selectedUses?.includes(elementId)) {
-          selectUse(elementId);
+          // Use addToSelection=true if we have multi-selection to preserve it
+          const shouldPreserveMulti = this.hasMultiSelection();
+          selectUse(elementId, shouldPreserveMulti);
         }
+        // If the use element is already selected, keep the current multi-selection
         
         // Only prepare for dragging if not shift-clicking
         this.state.draggingElement = { id: elementId, type: 'use' };
@@ -352,9 +374,13 @@ class PointerInteractionManager {
         // For shift-click, only change selection, don't start dragging
         return true;
       } else {
+        // Handle text selection while preserving multi-selection when appropriate
         if (!selection.selectedTexts?.includes(elementId)) {
-          this.editorStore.selectText(elementId);
+          // Use addToSelection=true if we have multi-selection to preserve it
+          const shouldPreserveMulti = this.hasMultiSelection();
+          this.editorStore.selectText(elementId, shouldPreserveMulti);
         }
+        // If the text is already selected, keep the current multi-selection
         
         // Only prepare for dragging if not shift-clicking
         this.state.draggingElement = { id: elementId, type: 'text' };
@@ -378,9 +404,16 @@ class PointerInteractionManager {
         // For shift-click, only change selection, don't start dragging
         return true;
       } else {
+        // Handle textPath selection while preserving multi-selection when appropriate
         if (!selection.selectedTextPaths?.includes(elementId)) {
-          this.editorStore.selectTextPath(elementId);
+          // Use addToSelection for textPath since selectTextPath doesn't have addToSelection parameter
+          if (this.hasMultiSelection()) {
+            addToSelection(elementId, 'textPath');
+          } else {
+            this.editorStore.selectTextPath(elementId);
+          }
         }
+        // If the textPath is already selected, keep the current multi-selection
         
         // Note: TextPath elements don't drag independently - they follow their path
         // But we can still support multi-selection and transform operations
@@ -408,9 +441,13 @@ class PointerInteractionManager {
         // For shift-click, only change selection, don't start dragging
         return true;
       } else {
+        // Handle group selection while preserving multi-selection when appropriate
         if (!selection.selectedGroups?.includes(elementId)) {
-          this.editorStore.selectGroup(elementId);
+          // Use addToSelection=true if we have multi-selection to preserve it
+          const shouldPreserveMulti = this.hasMultiSelection();
+          this.editorStore.selectGroup(elementId, shouldPreserveMulti);
         }
+        // If the group is already selected, keep the current multi-selection
         
         // Only prepare for dragging if not shift-clicking
         this.state.draggingElement = { id: elementId, type: 'group' };
@@ -436,13 +473,21 @@ class PointerInteractionManager {
         }
       } else {
         if (selection.selectedCommands.includes(commandId)) {
-          // Already selected command - always maintain only command selection
+          // Command is already selected - preserve all current selections
+          // This allows dragging a command along with other selected elements
           finalSelectedIds = selection.selectedCommands;
-          selectMultiple(finalSelectedIds, 'commands');
+          // Don't change selection when command already selected and we have multi-selection
         } else {
-          // New command selection - always clear other selections
-          finalSelectedIds = [commandId];
-          selectCommand(commandId);
+          // New command selection - check if we should preserve multi-selection
+          if (this.hasMultiSelection()) {
+            // Add to existing selection to preserve multi-selection
+            addToSelection(commandId, 'command');
+            finalSelectedIds = [...selection.selectedCommands, commandId];
+          } else {
+            // Normal single selection behavior
+            finalSelectedIds = [commandId];
+            selectCommand(commandId);
+          }
         }
       }
       handleManager.onSelectionChanged();
@@ -653,14 +698,10 @@ class PointerInteractionManager {
         }
       });
       
-      // Move selected groups by updating their transform
+      // Move selected groups using the store's moveGroup method for consistency
       Object.keys(this.state.dragStartGroupPositions).forEach((groupId: string) => {
         const start = this.state.dragStartGroupPositions[groupId];
         if (start) {
-          // Use the initial transform captured at drag start
-          let newTransform = start.transform || '';
-          
-          // Calculate new translation based on drag delta
           let translationX = dx;
           let translationY = dy;
           
@@ -671,26 +712,11 @@ class PointerInteractionManager {
             translationY = snapped.y;
           }
           
-          // Parse existing transform from initial state
-          const translateMatch = newTransform.match(/translate\(([^,)]+)[,\s]+([^)]+)\)/);
-          if (translateMatch) {
-            // There was already a translate in the initial transform - add to it
-            const existingX = parseFloat(translateMatch[1]) || 0;
-            const existingY = parseFloat(translateMatch[2]) || 0;
-            const finalX = existingX + translationX;
-            const finalY = existingY + translationY;
-            
-            // Replace existing translate with new values
-            newTransform = newTransform.replace(/translate\([^)]+\)/, `translate(${finalX}, ${finalY})`);
-          } else {
-            // No existing translate - add new one at the beginning
-            newTransform = `translate(${translationX}, ${translationY}) ${newTransform}`.trim();
-          }
-          
-          // Update group transform
+          // Use the store's moveGroup method which moves all children individually
+          // This ensures consistent behavior with other element types
           const { moveGroup } = this.editorStore;
           if (moveGroup) {
-            moveGroup(groupId, { transform: newTransform });
+            moveGroup(groupId, { x: translationX, y: translationY });
           }
         }
       });

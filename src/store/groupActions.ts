@@ -108,24 +108,41 @@ export const createGroupActions: StateCreator<
     // Combine all path IDs (directly selected + from sub-paths)
     const allPathIds = new Set([...selectedPaths, ...pathsFromSubPaths]);
 
-    // Collect all selected elements
+    // Decompose selected groups into their individual elements
+    // This fixes the bug where group promotion would cause wrong elements to be grouped
+    const decomposedElements: SVGGroupChild[] = [];
+    
+    selectedGroups.forEach(groupId => {
+      const group = state.groups.find(g => g.id === groupId);
+      if (group) {
+        // Add all children of the selected group as individual elements
+        decomposedElements.push(...group.children);
+      }
+    });
+
+    // Collect all selected elements (including decomposed group elements)
     const children: SVGGroupChild[] = [
       ...Array.from(allPathIds).map(id => ({ type: 'path' as const, id })),
       ...selectedTexts.map(id => ({ type: 'text' as const, id })),
       ...selectedTextPaths.map(id => ({ type: 'textPath' as const, id })),
-      ...selectedGroups.map(id => ({ type: 'group' as const, id })),
       ...selectedImages.map(id => ({ type: 'image' as const, id })),
-      ...selectedUses.map(id => ({ type: 'use' as const, id }))
+      ...selectedUses.map(id => ({ type: 'use' as const, id })),
+      ...decomposedElements // Add the decomposed group elements
     ];
 
-    if (children.length === 0) {
+    // Remove duplicate elements (in case an element was selected both individually and as part of a group)
+    const uniqueChildren = children.filter((child, index, array) => 
+      array.findIndex(c => c.id === child.id && c.type === child.type) === index
+    );
+
+    if (uniqueChildren.length === 0) {
       return null;
     }
 
     const newGroup: SVGGroup = {
       id: generateId(),
       name: `Group ${state.groups.length + 1}`,
-      children,
+      children: uniqueChildren,
       visible: true,
       locked: false,
       lockLevel: 'movement-sync'

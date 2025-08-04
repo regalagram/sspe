@@ -80,25 +80,19 @@ export const ContextMenuComponent: React.FC = () => {
     const executeWithSelection = (actionFn: () => void, actionName: string) => {
       // Get the store's action functions
       const editorState = useEditorStore.getState();
-      const { selectMultiple, clearSelection } = editorState;
+      const { selectMultiple, clearSelection, addToSelection } = editorState;
       
       // Clear current selection first
       clearSelection();
       
-      // Restore the selection that was captured when menu was shown
-      if (contextSelection.subPaths.length > 0) {
-        selectMultiple(contextSelection.subPaths, 'subpaths');
-      } else if (contextSelection.paths.length > 0) {
-        selectMultiple(contextSelection.paths, 'paths');
-      } else if (contextSelection.commands.length > 0) {
-        selectMultiple(contextSelection.commands, 'commands');
-      } else if (contextSelection.texts.length > 0) {
-        selectMultiple(contextSelection.texts, 'texts');
-      } else if (contextSelection.groups.length > 0) {
-        selectMultiple(contextSelection.groups, 'groups');
-      } else if (contextSelection.images.length > 0) {
-        selectMultiple(contextSelection.images, 'images');
-      }
+      // Restore ALL types of selection that were captured when menu was shown
+      // Use individual addToSelection calls to build up the complete selection
+      contextSelection.subPaths.forEach(id => addToSelection(id, 'subpath'));
+      contextSelection.paths.forEach(id => addToSelection(id, 'path'));
+      contextSelection.commands.forEach(id => addToSelection(id, 'command'));
+      contextSelection.texts.forEach(id => addToSelection(id, 'text'));
+      contextSelection.groups.forEach(id => addToSelection(id, 'group'));
+      contextSelection.images.forEach(id => addToSelection(id, 'image'));
       
       // Execute the action
       actionFn();
