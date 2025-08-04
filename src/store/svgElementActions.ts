@@ -294,7 +294,18 @@ export const createSVGElementActions: StateCreator<
 
   // Transform actions for images
   moveImage: (id, delta, skipGroupSync = false) => {
+    // Skip update if delta is too small to prevent unnecessary re-renders
+    if (Math.abs(delta.x) < 0.001 && Math.abs(delta.y) < 0.001) {
+      return;
+    }
+    
     set(state => {
+      // Find the image first
+      const image = state.images.find(img => img.id === id);
+      if (!image) {
+        return state; // Return unchanged state if image not found
+      }
+      
       // Check if the image is in a movement-sync group (only if not skipping)
       if (!skipGroupSync && typeof state.moveSyncGroupByElement === 'function') {
         const syncGroup = state.shouldMoveSyncGroup(id, 'image');
@@ -311,46 +322,62 @@ export const createSVGElementActions: StateCreator<
             if (isFirstElement) {
               state.moveGroup(syncGroup.id, delta);
             }
-            return {}; // Don't move individual element
+            return state; // Don't move individual element, return unchanged state
           } else {
             // Single element, move the whole group
             const wasMoved = state.moveSyncGroupByElement(id, 'image', delta);
             if (wasMoved) {
-              return {}; // Group was moved instead
+              return state; // Group was moved instead, return unchanged state
             }
           }
         }
       }
       
       // Move individual image
-      const image = state.images.find(img => img.id === id);
-      if (image) {
-        return {
-          images: state.images.map((img) =>
-            img.id === id 
-              ? { ...img, x: img.x + delta.x, y: img.y + delta.y }
-              : img
-          ),
-          renderVersion: state.renderVersion + 1
-        };
-      }
-      
-      return {};
+      return {
+        images: state.images.map((img) =>
+          img.id === id 
+            ? { ...img, x: img.x + delta.x, y: img.y + delta.y }
+            : img
+        ),
+        renderVersion: state.renderVersion + 1
+      };
     });
   },
 
   resizeImage: (id, newWidth, newHeight) => {
-    const state = get();
-    state.updateImage(id, {
-      width: newWidth,
-      height: newHeight
+    set(state => {
+      const image = state.images.find(img => img.id === id);
+      if (!image) {
+        return state; // Return unchanged state if image not found
+      }
+      
+      // Skip update if dimensions are the same to prevent unnecessary re-renders
+      if (Math.abs(image.width - newWidth) < 0.001 && Math.abs(image.height - newHeight) < 0.001) {
+        return state;
+      }
+      
+      return {
+        images: state.images.map((img) =>
+          img.id === id ? { ...img, width: newWidth, height: newHeight } : img
+        ),
+        renderVersion: state.renderVersion + 1
+      };
     });
   },
 
   scaleImage: (id, scaleX, scaleY, center) => {
-    const state = get();
-    const image = state.images.find(img => img.id === id);
-    if (image) {
+    set(state => {
+      const image = state.images.find(img => img.id === id);
+      if (!image) {
+        return state; // Return unchanged state if image not found
+      }
+      
+      // Skip update if scale factors are too close to 1 to prevent unnecessary re-renders
+      if (Math.abs(scaleX - 1) < 0.001 && Math.abs(scaleY - 1) < 0.001) {
+        return state;
+      }
+      
       const centerX = center?.x ?? (image.x + image.width / 2);
       const centerY = center?.y ?? (image.y + image.height / 2);
       
@@ -359,13 +386,15 @@ export const createSVGElementActions: StateCreator<
       const newX = centerX - (newWidth / 2);
       const newY = centerY - (newHeight / 2);
       
-      state.updateImage(id, {
-        x: newX,
-        y: newY,
-        width: newWidth,
-        height: newHeight
-      });
-    }
+      return {
+        images: state.images.map((img) =>
+          img.id === id 
+            ? { ...img, x: newX, y: newY, width: newWidth, height: newHeight }
+            : img
+        ),
+        renderVersion: state.renderVersion + 1
+      };
+    });
   },
 
   // Transform actions for use elements

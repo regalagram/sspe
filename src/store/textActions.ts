@@ -136,11 +136,24 @@ export const createTextActions: StateCreator<
   },
 
   updateTextTransform: (textId: string, transform: string) => {
-    set(state => ({
-      texts: state.texts.map(text => 
-        text.id === textId ? { ...text, transform } : text
-      )
-    }));
+    set(state => {
+      // Find the text first
+      const text = state.texts.find(t => t.id === textId);
+      if (!text) {
+        return state; // Return unchanged state if text not found
+      }
+      
+      // Skip update if transform is the same to prevent unnecessary re-renders
+      if (text.transform === transform) {
+        return state;
+      }
+      
+      return {
+        texts: state.texts.map(currentText => 
+          currentText.id === textId ? { ...currentText, transform } : currentText
+        )
+      };
+    });
   },
 
   updateTextStyle: (textId: string, style: Partial<TextStyle>) => {
@@ -244,8 +257,18 @@ export const createTextActions: StateCreator<
   },
 
   moveText: (textId: string, delta: Point, skipGroupSync = false) => {
-        
+    // Skip update if delta is too small to prevent unnecessary re-renders
+    if (Math.abs(delta.x) < 0.001 && Math.abs(delta.y) < 0.001) {
+      return;
+    }
+    
     set(state => {
+      // Find the text first
+      const text = state.texts.find(t => t.id === textId);
+      if (!text) {
+        return state; // Return unchanged state if text not found
+      }
+      
       // Check if the text is in a movement-sync group (only if not skipping)
       if (!skipGroupSync && typeof state.moveSyncGroupByElement === 'function') {
         const syncGroup = state.shouldMoveSyncGroup(textId, 'text');
@@ -262,52 +285,52 @@ export const createTextActions: StateCreator<
             if (isFirstElement) {
               state.moveGroup(syncGroup.id, delta);
             }
-            return {}; // Don't move individual element
+            return state; // Don't move individual element, return unchanged state
           } else {
             // Single element, move the whole group
             const wasMoved = state.moveSyncGroupByElement(textId, 'text', delta);
             if (wasMoved) {
-              return {}; // Group was moved instead
+              return state; // Group was moved instead, return unchanged state
             }
           }
         }
       }
       
       return {
-        texts: state.texts.map(text => {
-          if (text.id !== textId) return text;
+        texts: state.texts.map(currentText => {
+          if (currentText.id !== textId) return currentText;
         
-        const newX = text.x + delta.x;
-        const newY = text.y + delta.y;
-        
-        // Check if the transform has rotation with specific center point
-        let newTransform = text.transform;
-        if (text.transform) {
-          // Match rotate with center coordinates: rotate(angle, cx, cy)
-          const rotateWithCenterMatch = text.transform.match(/rotate\(([^,]+),\s*([^,]+),\s*([^)]+)\)/);
-          if (rotateWithCenterMatch) {
-            const angle = rotateWithCenterMatch[1];
-            const oldCx = parseFloat(rotateWithCenterMatch[2]);
-            const oldCy = parseFloat(rotateWithCenterMatch[3]);
-            
-            // Update the rotation center to match the new text position
-            const newCx = oldCx + delta.x;
-            const newCy = oldCy + delta.y;
-            
-            newTransform = text.transform.replace(
-              /rotate\([^)]+\)/,
-              `rotate(${angle}, ${newCx}, ${newCy})`
-            );
+          const newX = currentText.x + delta.x;
+          const newY = currentText.y + delta.y;
+          
+          // Check if the transform has rotation with specific center point
+          let newTransform = currentText.transform;
+          if (currentText.transform) {
+            // Match rotate with center coordinates: rotate(angle, cx, cy)
+            const rotateWithCenterMatch = currentText.transform.match(/rotate\(([^,]+),\s*([^,]+),\s*([^)]+)\)/);
+            if (rotateWithCenterMatch) {
+              const angle = rotateWithCenterMatch[1];
+              const oldCx = parseFloat(rotateWithCenterMatch[2]);
+              const oldCy = parseFloat(rotateWithCenterMatch[3]);
+              
+              // Update the rotation center to match the new text position
+              const newCx = oldCx + delta.x;
+              const newCy = oldCy + delta.y;
+              
+              newTransform = currentText.transform.replace(
+                /rotate\([^)]+\)/,
+                `rotate(${angle}, ${newCx}, ${newCy})`
+              );
+            }
           }
-        }
-        
-        return { 
-          ...text, 
-          x: newX, 
-          y: newY,
-          transform: newTransform
-        };
-      })
+          
+          return { 
+            ...currentText, 
+            x: newX, 
+            y: newY,
+            transform: newTransform
+          };
+        })
       };
     });
   },

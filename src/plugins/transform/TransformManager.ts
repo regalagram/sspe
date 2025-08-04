@@ -391,6 +391,11 @@ export class TransformManager {
             imageElement.setAttribute('opacity', image.opacity.toString());
           }
           
+          // Apply transform if the image has one
+          if (image.transform) {
+            imageElement.setAttribute('transform', image.transform);
+          }
+          
           tempSvg.appendChild(imageElement);
           hasContent = true;
         }
@@ -1183,22 +1188,39 @@ export class TransformManager {
         const newWidth = Math.abs(bottomRight.x - topLeft.x);
         const newHeight = Math.abs(bottomRight.y - topLeft.y);
         
-        updateImage(imageId, {
-          x: newX,
-          y: newY,
-          width: newWidth,
-          height: newHeight
-        });
+        // Use direct store update to avoid circular calls with updateImage
+        useEditorStore.setState((state) => ({
+          images: state.images.map((img: any) =>
+            img.id === imageId 
+              ? { ...img, x: newX, y: newY, width: newWidth, height: newHeight }
+              : img
+          ),
+          renderVersion: state.renderVersion + 1
+        }));
       } else if (this.state.mode === 'rotate') {
-        // For rotation, transform the center and maintain size
+        // For rotation, transform the center and maintain size, plus add rotation transform
         const centerX = initialImage.x + initialImage.width / 2;
         const centerY = initialImage.y + initialImage.height / 2;
         const transformedCenter = transform(centerX, centerY);
         
-        updateImage(imageId, {
-          x: transformedCenter.x - initialImage.width / 2,
-          y: transformedCenter.y - initialImage.height / 2
-        });
+        // Get rotation angle
+        const { angle } = this.getRotationParams();
+        const rotationDegrees = angle * 180 / Math.PI;
+        
+        // Calculate new position and create transform
+        const newX = transformedCenter.x - initialImage.width / 2;
+        const newY = transformedCenter.y - initialImage.height / 2;
+        const transformString = `rotate(${rotationDegrees}, ${transformedCenter.x}, ${transformedCenter.y})`;
+        
+        // Use direct store update to avoid circular calls with updateImage
+        useEditorStore.setState((state) => ({
+          images: state.images.map((img: any) =>
+            img.id === imageId 
+              ? { ...img, x: newX, y: newY, transform: transformString }
+              : img
+          ),
+          renderVersion: state.renderVersion + 1
+        }));
       }
     }
 

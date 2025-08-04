@@ -612,6 +612,31 @@ class DragManager {
     this.moveElementInStore(snapshot, { x: newX, y: newY });
   }
 
+  /**
+   * Transform a delta point by applying the inverse of a rotation transform
+   * This allows proper movement of rotated elements
+   */
+  private transformDeltaForRotation(delta: Point, transform: string): Point {
+    if (!transform) return delta;
+    
+    // Handle rotate(angle, cx, cy) transform
+    const rotateMatch = transform.match(/rotate\(([^,]+),\s*([^,]+),\s*([^)]+)\)/);
+    if (rotateMatch) {
+      const angle = parseFloat(rotateMatch[1]) * Math.PI / 180; // Convert to radians
+      
+      // Apply inverse rotation to the delta (rotate by -angle)
+      const cos = Math.cos(-angle);
+      const sin = Math.sin(-angle);
+      
+      return {
+        x: delta.x * cos - delta.y * sin,
+        y: delta.x * sin + delta.y * cos
+      };
+    }
+    
+    return delta;
+  }
+
   private moveElementInStore(snapshot: ElementSnapshot, newPosition: Point): void {
     const { moveImage, moveUse, moveText, moveGroup, moveCommand } = this.editorStore;
     
@@ -621,11 +646,16 @@ class DragManager {
       case 'image':
         const currentImage = this.editorStore.images.find((img: any) => img.id === snapshot.id);
         if (currentImage) {
-          const deltaX = newPosition.x - currentImage.x;
-          const deltaY = newPosition.y - currentImage.y;
-          this.debugManager.logMovement('Image delta', { deltaX, deltaY });
-          if (Math.abs(deltaX) > 0.001 || Math.abs(deltaY) > 0.001) {
-            moveImage(snapshot.id, { x: deltaX, y: deltaY });
+          let delta = { x: newPosition.x - currentImage.x, y: newPosition.y - currentImage.y };
+          
+          // If image has rotation transform, apply inverse rotation to delta
+          if (currentImage.transform) {
+            delta = this.transformDeltaForRotation(delta, currentImage.transform);
+          }
+          
+          this.debugManager.logMovement('Image delta', delta);
+          if (Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001) {
+            moveImage(snapshot.id, delta);
           }
         } else {
           this.debugManager.logMovement('Image not found', snapshot.id);

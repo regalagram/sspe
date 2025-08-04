@@ -1,6 +1,31 @@
 import { Point } from '../types';
 import { useEditorStore } from '../store/editorStore';
 
+/**
+ * Transform a delta point by applying the inverse of a rotation transform
+ * This allows proper movement of rotated elements
+ */
+function transformDeltaForRotation(delta: Point, transform: string): Point {
+  if (!transform) return delta;
+  
+  // Handle rotate(angle, cx, cy) transform
+  const rotateMatch = transform.match(/rotate\(([^,]+),\s*([^,]+),\s*([^)]+)\)/);
+  if (rotateMatch) {
+    const angle = parseFloat(rotateMatch[1]) * Math.PI / 180; // Convert to radians
+    
+    // Apply inverse rotation to the delta (rotate by -angle)
+    const cos = Math.cos(-angle);
+    const sin = Math.sin(-angle);
+    
+    return {
+      x: delta.x * cos - delta.y * sin,
+      y: delta.x * sin + delta.y * cos
+    };
+  }
+  
+  return delta;
+}
+
 export interface DraggedElementsData {
   images: { [id: string]: { x: number; y: number; width: number; height: number } };
   uses: { [id: string]: { x: number; y: number; width?: number; height?: number } };
@@ -153,10 +178,15 @@ export function moveAllCapturedElements(
       // Calculate delta for moveImage function
       const currentImage = images.find((img: any) => img.id === imageId);
       if (currentImage) {
-        const deltaX = newX - currentImage.x;
-        const deltaY = newY - currentImage.y;
-        if (Math.abs(deltaX) > 0.001 || Math.abs(deltaY) > 0.001) {
-          moveImage(imageId, { x: deltaX, y: deltaY });
+        let delta = { x: newX - currentImage.x, y: newY - currentImage.y };
+        
+        // If image has rotation transform, apply inverse rotation to delta
+        if (currentImage.transform) {
+          delta = transformDeltaForRotation(delta, currentImage.transform);
+        }
+        
+        if (Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001) {
+          moveImage(imageId, delta);
         }
       }
     }
@@ -284,7 +314,16 @@ export function moveAllCapturedElementsByDelta(
 
   // Move images using delta
   Object.keys(capturedData.images).forEach((imageId: string) => {
-    moveImage(imageId, finalDelta);
+    const store = useEditorStore.getState();
+    const currentImage = store.images.find((img: any) => img.id === imageId);
+    
+    let imageDelta = finalDelta;
+    // If image has rotation transform, apply inverse rotation to delta
+    if (currentImage && currentImage.transform) {
+      imageDelta = transformDeltaForRotation(finalDelta, currentImage.transform);
+    }
+    
+    moveImage(imageId, imageDelta);
   });
 
   // Move texts using delta

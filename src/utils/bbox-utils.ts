@@ -311,14 +311,79 @@ export function getDraggedElementBoundingBox(
 }
 
 /**
+ * Apply a 2D transform matrix to a point
+ */
+function applyTransform(x: number, y: number, transform: string): Point {
+  // Parse the transform string and apply the transformation
+  if (!transform) return { x, y };
+  
+  // Handle rotate(angle, cx, cy) transform
+  const rotateMatch = transform.match(/rotate\(([^,]+),\s*([^,]+),\s*([^)]+)\)/);
+  if (rotateMatch) {
+    const angle = parseFloat(rotateMatch[1]) * Math.PI / 180; // Convert to radians
+    const cx = parseFloat(rotateMatch[2]);
+    const cy = parseFloat(rotateMatch[3]);
+    
+    // Translate to origin, rotate, translate back
+    const translatedX = x - cx;
+    const translatedY = y - cy;
+    
+    const rotatedX = translatedX * Math.cos(angle) - translatedY * Math.sin(angle);
+    const rotatedY = translatedX * Math.sin(angle) + translatedY * Math.cos(angle);
+    
+    return {
+      x: rotatedX + cx,
+      y: rotatedY + cy
+    };
+  }
+  
+  // If no known transform, return original point
+  return { x, y };
+}
+
+/**
  * Calculate bounding box for an image element
  */
 export function getImageBoundingBox(image: any): BoundingBox {
+  // If no transform, return simple bounding box
+  if (!image.transform) {
+    return {
+      x: image.x,
+      y: image.y,
+      width: image.width,
+      height: image.height
+    };
+  }
+  
+  // Calculate all four corners of the image
+  const corners = [
+    { x: image.x, y: image.y }, // top-left
+    { x: image.x + image.width, y: image.y }, // top-right
+    { x: image.x, y: image.y + image.height }, // bottom-left
+    { x: image.x + image.width, y: image.y + image.height } // bottom-right
+  ];
+  
+  // Apply transform to all corners
+  const transformedCorners = corners.map(corner => 
+    applyTransform(corner.x, corner.y, image.transform)
+  );
+  
+  // Find the bounding box of the transformed corners
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+  
+  transformedCorners.forEach(corner => {
+    minX = Math.min(minX, corner.x);
+    maxX = Math.max(maxX, corner.x);
+    minY = Math.min(minY, corner.y);
+    maxY = Math.max(maxY, corner.y);
+  });
+  
   return {
-    x: image.x,
-    y: image.y,
-    width: image.width,
-    height: image.height
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY
   };
 }
 

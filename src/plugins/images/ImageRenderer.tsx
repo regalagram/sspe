@@ -44,10 +44,11 @@ const ImageElementComponent: React.FC<{ image: any }> = ({ image }) => {
           width={image.width}
           height={image.height}
           fill="none"
-          stroke="#007bff"
+          stroke="#ffc107"
           strokeWidth={strokeWidth}
           strokeDasharray={`${2 / viewport.zoom} ${2 / viewport.zoom}`}
           pointerEvents="none"
+          transform={image.transform}
         />
       )}
     </g>
