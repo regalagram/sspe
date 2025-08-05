@@ -158,6 +158,7 @@ export const PathRenderer: React.FC = () => {
     svgElement: SVGSVGElement | null;
     dragStarted: boolean; // Track if actual dragging has begun
     capturedElements: DraggedElementsData | null;
+    lastAppliedDelta: { x: number; y: number }; // Track the last delta that was actually applied to elements
   }>({
     isDragging: false,
     subPathId: null,
@@ -166,6 +167,7 @@ export const PathRenderer: React.FC = () => {
     svgElement: null,
     dragStarted: false,
     capturedElements: null,
+    lastAppliedDelta: { x: 0, y: 0 },
   });
 
   const getTransformedPoint = (e: React.PointerEvent<SVGElement>, svgElement: SVGSVGElement) => {
@@ -239,6 +241,7 @@ export const PathRenderer: React.FC = () => {
         svgElement: svgElement,
         dragStarted: false, // Will be set to true when actual movement begins
         capturedElements,
+        lastAppliedDelta: { x: 0, y: 0 },
       });
       
       // Note: We don't call pushToHistory() or transformManager.setMoving(true) here
@@ -307,8 +310,8 @@ export const PathRenderer: React.FC = () => {
         }, 0);
         
         // Calculate the total delta from start point to current point
-        // This ensures we don't lose the initial movement that triggered the drag
-        const initialDelta = {
+        // This ensures we don't lose the initial movement that triggered the drag  
+        const totalDelta = {
           x: currentPoint.x - currentDragState.startPoint.x,
           y: currentPoint.y - currentDragState.startPoint.y,
         };
@@ -317,71 +320,64 @@ export const PathRenderer: React.FC = () => {
         if (currentDragState.capturedElements) {
           const hasSubPaths = Object.keys(currentDragState.capturedElements.subPaths).length > 0;
           
-          if (hasSubPaths && (Math.abs(initialDelta.x) > 0.001 || Math.abs(initialDelta.y) > 0.001)) {
+          if (hasSubPaths && (Math.abs(totalDelta.x) > 0.001 || Math.abs(totalDelta.y) > 0.001)) {
             // Capture variables before setTimeout to avoid closure issues
             const capturedElements = currentDragState.capturedElements;
-            let moveDelta = { ...initialDelta };
+            let snappedDelta = { ...totalDelta };
             
-            // Apply sticky guidelines if enabled - HYBRID APPROACH for sub-paths
-                        
-            if (enabledFeatures.stickyGuidelinesEnabled && stickyManager) {
-                            
-              const subPathId = currentDragState.subPathId;
-              if (subPathId) {
-                // HYBRID APPROACH: Get individual sub-path bounds and apply sticky snapping
-                const subPathBounds = stickyManager.getCurrentElementBounds(subPathId, 'subpath');
-                
-                if (subPathBounds) {
-                                    
-                  // Calculate target position with delta
-                  const targetPosition = {
-                    x: subPathBounds.x + initialDelta.x,
-                    y: subPathBounds.y + initialDelta.y
-                  };
-                  
-                  // Use handleSelectionMoving with individual bounds (like single-element selection)
-                  const result = stickyManager.handleSelectionMoving(targetPosition, subPathBounds);
-                  
-                  if (result.snappedBounds) {
-                    // Apply the snapped delta
-                    moveDelta = {
-                      x: result.snappedBounds.x - subPathBounds.x,
-                      y: result.snappedBounds.y - subPathBounds.y
-                    };
-                    
-                                      } else {
-                                      }
-                } else {
-                                    
-                  // Fallback to debug-only mode
-                  const targetPoint = {
-                    x: currentDragState.startPoint.x + initialDelta.x,
-                    y: currentDragState.startPoint.y + initialDelta.y
-                  };
-                  
-                  const debugResult = stickyManager.handleCursorDragMovement(
-                    targetPoint,
-                    currentDragState.startPoint,
-                    subPathId,
-                    'subpath'
-                  );
-                  
-                                  }
+            // Apply sticky guidelines if enabled - cursor-based for guidelines, incremental for movement
+            if (enabledFeatures.stickyGuidelinesEnabled && stickyManager && currentDragState.subPathId) {
+              // Always update guidelines with current cursor position for visual feedback
+              const targetPoint = {
+                x: currentDragState.startPoint.x + totalDelta.x,
+                y: currentDragState.startPoint.y + totalDelta.y
+              };
+              
+              const result = stickyManager.handleCursorDragMovement(
+                targetPoint,
+                currentDragState.startPoint,
+                currentDragState.subPathId,
+                'subpath'
+              );
+              
+              // If snapping occurred, adjust the delta
+              if (result.snappedPoint) {
+                snappedDelta = {
+                  x: result.snappedPoint.x - currentDragState.startPoint.x,
+                  y: result.snappedPoint.y - currentDragState.startPoint.y
+                };
               }
             }
             
-            const snapToGrid = grid.snapToGrid;
-            const gridSize = grid.size;
+            // Calculate incremental delta (only apply the difference from last applied delta)
+            const incrementalDelta = {
+              x: snappedDelta.x - currentDragState.lastAppliedDelta.x,
+              y: snappedDelta.y - currentDragState.lastAppliedDelta.y
+            };
             
-            // Schedule the move operation outside of render cycle to avoid setState during render
-            setTimeout(() => {
-              moveAllCapturedElementsByDelta(
-                capturedElements,
-                moveDelta,
-                snapToGrid,
-                gridSize
-              );
-            }, 0);
+            // Only apply movement if there's a meaningful change
+            if (Math.abs(incrementalDelta.x) > 0.001 || Math.abs(incrementalDelta.y) > 0.001) {
+              const snapToGrid = grid.snapToGrid;
+              const gridSize = grid.size;
+              
+              // Schedule the move operation outside of render cycle to avoid setState during render
+              setTimeout(() => {
+                moveAllCapturedElementsByDelta(
+                  capturedElements,
+                  incrementalDelta,
+                  snapToGrid,
+                  gridSize
+                );
+              }, 0);
+              
+              // Return updated state with new applied delta
+              return {
+                ...currentDragState,
+                dragStarted: true,
+                lastPoint: currentPoint,
+                lastAppliedDelta: snappedDelta,
+              };
+            }
           }
         }
         
@@ -394,10 +390,10 @@ export const PathRenderer: React.FC = () => {
       
       if (!currentDragState.lastPoint) return currentDragState;
       
-      // Calculate delta directly without snapping logic for now to test synchronization
-      const delta = {
-        x: currentPoint.x - currentDragState.lastPoint.x,
-        y: currentPoint.y - currentDragState.lastPoint.y,
+      // Calculate total delta from start point (like PointerInteraction)
+      const totalDelta = {
+        x: currentPoint.x - currentDragState.startPoint.x,
+        y: currentPoint.y - currentDragState.startPoint.y,
       };
       
       // Handle sub-path movement specifically
@@ -405,75 +401,67 @@ export const PathRenderer: React.FC = () => {
         const hasSubPaths = Object.keys(currentDragState.capturedElements.subPaths).length > 0;
         
         // PathRenderer handles sub-path dragging when initiated from sub-path overlay
-        // Process all movement - no threshold needed for continuous movement
         if (hasSubPaths) {
           // Capture variables before setTimeout to avoid closure issues
           const capturedElements = currentDragState.capturedElements;
-          let moveDelta = { ...delta };
+          let snappedDelta = { ...totalDelta };
           
-          // Apply sticky guidelines if enabled - HYBRID APPROACH for sub-paths
-                    
-          if (enabledFeatures.stickyGuidelinesEnabled && stickyManager) {
-                        
-            const subPathId = currentDragState.subPathId;
-            if (subPathId) {
-              // Calculate movement speed to make sticky guidelines less aggressive during fast movement
-              const deltaDistance = Math.sqrt(delta.x * delta.x + delta.y * delta.y);
-              const isSlowMovement = deltaDistance < 4; // More restrictive - only very slow movements activate sticky
-              
-              // HYBRID APPROACH: Get individual sub-path bounds and apply sticky snapping
-              const subPathBounds = stickyManager.getCurrentElementBounds(subPathId, 'subpath');
-              
-              if (subPathBounds && isSlowMovement) {
-                                
-                // Calculate target position with delta
-                const targetPosition = {
-                  x: subPathBounds.x + delta.x,
-                  y: subPathBounds.y + delta.y
-                };
-                
-                // Use handleSelectionMoving with individual bounds (like single-element selection)
-                const result = stickyManager.handleSelectionMoving(targetPosition, subPathBounds);
-                
-                if (result.snappedBounds) {
-                  // Apply the snapped delta
-                  moveDelta = {
-                    x: result.snappedBounds.x - subPathBounds.x,
-                    y: result.snappedBounds.y - subPathBounds.y
-                  };
-                  
-                                  } else {
-                                  }
-              } else {
-                                
-                // For fast movements or when bounds unavailable, use debug-only mode
-                const debugResult = stickyManager.handleCursorDragMovement(
-                  currentPoint,
-                  currentDragState.startPoint,
-                  subPathId,
-                  'subpath'
-                );
-                
-                              }
+          // Apply sticky guidelines if enabled - cursor-based for guidelines, incremental for movement
+          if (enabledFeatures.stickyGuidelinesEnabled && stickyManager && currentDragState.subPathId) {
+            // Always update guidelines with current cursor position for visual feedback
+            const targetPoint = {
+              x: currentDragState.startPoint.x + totalDelta.x,
+              y: currentDragState.startPoint.y + totalDelta.y
+            };
+            
+            const result = stickyManager.handleCursorDragMovement(
+              targetPoint,
+              currentDragState.startPoint,
+              currentDragState.subPathId,
+              'subpath'
+            );
+            
+            // If snapping occurred, adjust the delta
+            if (result.snappedPoint) {
+              snappedDelta = {
+                x: result.snappedPoint.x - currentDragState.startPoint.x,
+                y: result.snappedPoint.y - currentDragState.startPoint.y
+              };
             }
           }
           
-          const snapToGrid = grid.snapToGrid;
-          const gridSize = grid.size;
+          // Calculate incremental delta (only apply the difference from last applied delta)
+          const incrementalDelta = {
+            x: snappedDelta.x - currentDragState.lastAppliedDelta.x,
+            y: snappedDelta.y - currentDragState.lastAppliedDelta.y
+          };
           
-          // Schedule the move operation outside of render cycle to avoid setState during render
-          setTimeout(() => {
-            moveAllCapturedElementsByDelta(
-              capturedElements,
-              moveDelta,
-              snapToGrid,
-              gridSize
-            );
-          }, 0);
+          // Only apply movement if there's a meaningful change
+          if (Math.abs(incrementalDelta.x) > 0.001 || Math.abs(incrementalDelta.y) > 0.001) {
+            const snapToGrid = grid.snapToGrid;
+            const gridSize = grid.size;
+            
+            // Schedule the move operation outside of render cycle to avoid setState during render
+            setTimeout(() => {
+              moveAllCapturedElementsByDelta(
+                capturedElements,
+                incrementalDelta,
+                snapToGrid,
+                gridSize
+              );
+            }, 0);
+            
+            // Return updated state with new applied delta
+            return {
+              ...currentDragState,
+              lastPoint: currentPoint,
+              lastAppliedDelta: snappedDelta,
+            };
+          }
         }
       }
       
-      // Update last point after moving elements
+      // Update last point
       return {
         ...currentDragState,
         lastPoint: currentPoint,
@@ -502,6 +490,7 @@ export const PathRenderer: React.FC = () => {
         svgElement: null,
         dragStarted: false,
         capturedElements: null,
+        lastAppliedDelta: { x: 0, y: 0 },
       };
     });
   }, [enabledFeatures.stickyGuidelinesEnabled]);
