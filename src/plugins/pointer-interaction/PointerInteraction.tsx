@@ -358,8 +358,7 @@ class DragManager {
     
     // Initialize sticky guidelines drag operation to capture original bounds
     // This prevents amplification of sticky guidelines during text/image dragging
-    console.log('PointerInteraction: Starting sticky guidelines drag operation for elements:', elements);
-    stickyManager.startDragOperation();
+        stickyManager.startDragOperation();
     
     // Reset last delta
     this.lastDelta = { x: 0, y: 0 };
@@ -612,18 +611,15 @@ class DragManager {
       return delta;
     }
 
-    console.log('Applying sticky guidelines with delta:', delta);
-
+    
     // CRITICAL FIX: Use original selection bounds if available, otherwise current bounds
     // This prevents amplification during selection movement
     let selectionBounds = stickyManager.getOriginalSelectionBounds();
       
     if (!selectionBounds) {
-      console.log('PointerInteraction: Using current selection bounds for sticky guidelines');
-      selectionBounds = stickyManager.calculateSelectionBounds();
+            selectionBounds = stickyManager.calculateSelectionBounds();
     } else {
-      console.log('PointerInteraction: Using original selection bounds for sticky guidelines');
-    }
+          }
 
     if (selectionBounds) {
       const targetPosition = {
@@ -631,13 +627,7 @@ class DragManager {
         y: selectionBounds.y + delta.y
       };
 
-      console.log('PointerInteraction applyStickyGuidelines:', {
-        delta,
-        selectionBounds,
-        targetPosition,
-        usingOriginalBounds: !!stickyManager.getOriginalSelectionBounds()
-      });
-
+      
       const result = stickyManager.handleSelectionMoving(targetPosition, selectionBounds);
       if (result.snappedBounds) {
         return {
@@ -651,21 +641,14 @@ class DragManager {
   }
 
   private shouldUseSticky(): boolean {
-    console.log('shouldUseSticky check:', {
-      configEnabled: this.config.enableStickyGuidelines,
-      featureEnabled: this.editorStore.enabledFeatures?.stickyGuidelinesEnabled,
-      elementSnapshots: this.elementSnapshots.size
-    });
-    
+        
     if (!this.config.enableStickyGuidelines) {
-      console.log('Sticky guidelines disabled in config');
-      return false;
+            return false;
     }
     
     const { enabledFeatures, selection } = this.editorStore;
     if (!enabledFeatures?.stickyGuidelinesEnabled) {
-      console.log('Sticky guidelines disabled in store');
-      return false;
+            return false;
     }
 
     // Skip sticky guidelines if groups are involved in multi-selection
@@ -673,8 +656,7 @@ class DragManager {
     const hasMultiSelection = this.elementSnapshots.size > 1;
     
     const result = !(hasGroupsInSelection && hasMultiSelection);
-    console.log('shouldUseSticky result:', result);
-    return result;
+        return result;
   }
 
   private moveElement(snapshot: ElementSnapshot, delta: Point): void {
@@ -848,47 +830,39 @@ class DebugManager {
 
   logElementDetection(data: any): void {
     if (this.config.debugMode) {
-      console.log('[DEBUG] Element detected:', data);
-    }
+          }
   }
 
   logDragOperation(operation: string, data: any): void {
     if (this.config.debugMode) {
-      console.log(`[DEBUG] ${operation}:`, data);
-    }
+          }
   }
 
   logSelection(operation: string, data: any): void {
     if (this.config.debugMode) {
-      console.log(`[DEBUG] ${operation}:`, data);
-    }
+          }
   }
 
   logDragManager(operation: string, data: any): void {
     if (this.config.debugMode) {
-      console.log(`[DEBUG] DragManager ${operation}:`, data);
-    }
+          }
   }
 
   logElementProcessing(operation: string, data: any): void {
     if (this.config.debugMode) {
-      console.log(`[DEBUG] ${operation}:`, data);
-    }
+          }
   }
 
   logMovement(operation: string, data: any): void {
     if (this.config.debugMode) {
-      console.log(`[DEBUG] ${operation}:`, data);
-    }
+          }
   }
 
   logGeneric(message: string, data?: any): void {
     if (this.config.debugMode) {
       if (data !== undefined) {
-        console.log(`[DEBUG] ${message}:`, data);
-      } else {
-        console.log(`[DEBUG] ${message}`);
-      }
+              } else {
+              }
     }
   }
 }
