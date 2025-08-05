@@ -1,5 +1,6 @@
 import { Point } from '../types';
 import { useEditorStore } from '../store/editorStore';
+import { getCommandPosition } from './path-utils';
 
 /**
  * Transform a delta point by applying the inverse of a rotation transform
@@ -426,19 +427,6 @@ export function moveAllCapturedElementsByDelta(
 }
 
 
-// Helper function to get command position (copied from existing code)
-function getCommandPosition(command: any): Point | null {
-  if (command.type === 'M' || command.type === 'L') {
-    return { x: command.x, y: command.y };
-  } else if (command.type === 'C') {
-    return { x: command.x, y: command.y };
-  } else if (command.type === 'Q') {
-    return { x: command.x, y: command.y };
-  } else if (command.type === 'A') {
-    return { x: command.x, y: command.y };
-  }
-  return null;
-}
 
 // Helper function to check if grid utils exists
 function snapToGrid(point: Point, size: number): Point {

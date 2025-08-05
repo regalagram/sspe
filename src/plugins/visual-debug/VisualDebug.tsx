@@ -440,7 +440,7 @@ export const VisualDebugPlugin: Plugin = {
       id: 'command-points-renderer',
       component: CommandPointsRenderer,
       position: 'svg-content',
-      order: 30, // Render on top of paths but below control points
+      order: 110, // Render on top of selection and context menu
     }
   ]
 };

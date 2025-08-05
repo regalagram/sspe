@@ -377,19 +377,54 @@ class DragManager {
     
     // Only apply movement if there's a meaningful change
     if (Math.abs(incrementalDelta.x) > 0.001 || Math.abs(incrementalDelta.y) > 0.001) {
-      // Instead of moving elements individually, use the centralized utility
-      // that properly handles group synchronization
+      // Apply incremental movement directly using existing move functions
+      // This is more efficient than the batch utility for real-time dragging
+      const selection = this.editorStore.selection;
+      
+      // Move commands
+      selection.selectedCommands?.forEach((commandId: string) => {
+        // Find current command position
+        let currentPosition: { x: number; y: number } | null = null;
+        this.editorStore.paths.forEach((path: any) => {
+          path.subPaths.forEach((subPath: any) => {
+            const command = subPath.commands.find((cmd: any) => cmd.id === commandId);
+            if (command && command.x !== undefined && command.y !== undefined) {
+              currentPosition = { x: command.x, y: command.y };
+            }
+          });
+        });
+        
+        if (currentPosition) {
+          const newPosition = {
+            x: (currentPosition as { x: number; y: number }).x + incrementalDelta.x,  
+            y: (currentPosition as { x: number; y: number }).y + incrementalDelta.y
+          };
+          this.editorStore.moveCommand(commandId, newPosition);
+        }
+      });
+      
+      // For other element types, still use the batch utility since they handle deltas correctly
       const selectedElements = this.getSelectedElementsData();
-      if (selectedElements) {
+      if (selectedElements && (
+        Object.keys(selectedElements.images).length > 0 ||
+        Object.keys(selectedElements.texts).length > 0 ||
+        Object.keys(selectedElements.groups).length > 0 ||
+        Object.keys(selectedElements.uses).length > 0
+      )) {
+        // Remove commands from the data since we handled them above
+        const elementsWithoutCommands = {
+          ...selectedElements,
+          commands: {} // Clear commands to avoid double movement
+        };
         moveAllCapturedElementsByDelta(
-          selectedElements,
-          incrementalDelta, // Use incremental delta instead of total delta
+          elementsWithoutCommands,
+          incrementalDelta,
           this.config.snapToGrid,
           this.config.gridSize
         );
       }
       
-      // Update last applied delta
+      // Update last applied delta for next frame
       this.lastDelta = { ...snappedDelta };
     }
 

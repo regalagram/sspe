@@ -478,7 +478,16 @@ export class TransformManager {
     // Calculate sizes for each handle type using factors
     const resizeHandleSize = (baseHandleSize * visualDebugSizes.globalFactor * visualDebugSizes.transformResizeFactor) / viewport.zoom;
     const rotateHandleSize = (baseHandleSize * visualDebugSizes.globalFactor * visualDebugSizes.transformRotateFactor) / viewport.zoom;
-    const rotationHandleOffset = 30 / viewport.zoom; // Distance above the bounding box
+    
+    // Calculate rotation handle offset accounting for resize handle size to prevent overlap
+    // Need to account for corner handle margin (same calculation as in TransformHandles.tsx)
+    const cornerHandleMargin = (baseHandleSize * visualDebugSizes.globalFactor * visualDebugSizes.transformResizeFactor) / viewport.zoom;
+    
+    // Base offset + corner handle margin + resize handle radius + padding for visual separation
+    const baseOffset = 15 / viewport.zoom; // Minimum distance
+    const resizeHandleRadius = resizeHandleSize / 2; // Half the resize handle size
+    const padding = 8 / viewport.zoom; // Visual separation padding
+    const rotationHandleOffset = baseOffset + cornerHandleMargin + resizeHandleRadius + padding;
 
     const handles: TransformHandle[] = [
       // Corner handles for proportional scaling
