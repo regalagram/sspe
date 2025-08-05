@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { EditorState, SVGImage, SVGClipPath, SVGMask, SVGFilter, SVGMarker, SVGSymbol, SVGUse, Point } from '../types';
+import { EditorState, SVGImage, SVGClipPath, SVGMask, SVGFilter, SVGMarker, SVGSymbol, SVGUse, Point, PathStyle } from '../types';
 import { generateId } from '../utils/id-utils';
 import { HistoryActions } from './historyActions';
 

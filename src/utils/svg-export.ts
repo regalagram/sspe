@@ -706,7 +706,7 @@ export const generateSVGCode = (editorState: any): string => {
     
     // Add gradients and patterns
     if (allGradients.length > 0) {
-      console.log('Processing gradients/patterns:', allGradients.map(g => `${g.type}:${g.id}`));
+      console.log('Processing gradients/patterns:', allGradients.map((g: any) => `${g.type}:${g.id}`));
       const gradientDefs = allGradients.map((gradient: any) => {
         // Find animations that target this gradient
         const gradientAnimations = animations.filter((anim: any) => 
