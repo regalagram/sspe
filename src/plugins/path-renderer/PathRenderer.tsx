@@ -275,8 +275,8 @@ export const PathRenderer: React.FC = () => {
         // Notify transform manager that movement started (subpath drag)
         transformManager.setMoving(true);
         
-        // Save to history when starting to drag
-        pushToHistory();
+        // Schedule pushToHistory outside of the render cycle
+        setTimeout(() => pushToHistory(), 0);
         
         // Calculate the total delta from start point to current point
         // This ensures we don't lose the initial movement that triggered the drag

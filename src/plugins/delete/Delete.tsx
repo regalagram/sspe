@@ -93,7 +93,7 @@ export function executeDelete(editorState?: any) {
   // Delete selected groups
   if (state.selection.selectedGroups) {
     state.selection.selectedGroups.forEach((groupId: string) => {
-      state.removeGroup(groupId);
+      state.deleteGroup(groupId);
     });
   }
 
