@@ -151,8 +151,7 @@ export class StickyManager {
    * This should be called at the start of any drag operation
    */
   public startDragOperation(draggedElementId?: string, draggedElementType?: string): void {
-    console.log('StickyManager: Starting drag operation', { draggedElementId, draggedElementType });
-    
+        
     this.isDragActive = true;
     this.originalElementBounds.clear();
     
@@ -196,16 +195,14 @@ export class StickyManager {
         
         if (bounds) {
           this.originalElementBounds.set(elementId, bounds);
-          console.log('StickyManager: Captured original bounds for selected element', { elementId, elementType, bounds });
-        }
+                  }
       });
     } else if (draggedElementId && draggedElementType) {
       // Single element: capture bounds for the dragged element
       const bounds = this.getElementBounds(draggedElementId, draggedElementType);
       if (bounds) {
         this.originalElementBounds.set(draggedElementId, bounds);
-        console.log('StickyManager: Captured original bounds for single element', { draggedElementId, draggedElementType, bounds });
-      }
+              }
     }
     
     // Also capture bounds for selection if it exists
@@ -213,8 +210,7 @@ export class StickyManager {
       const selectionBounds = this.calculateSelectionBounds();
       if (selectionBounds) {
         this.originalElementBounds.set('selection', selectionBounds);
-        console.log('StickyManager: Captured original selection bounds', { selectionBounds });
-      }
+              }
     }
   }
   
@@ -223,8 +219,7 @@ export class StickyManager {
    * This should be called when drag operation ends
    */
   public endDragOperation(): void {
-    console.log('StickyManager: Ending drag operation');
-    this.isDragActive = false;
+        this.isDragActive = false;
     this.originalElementBounds.clear();
   }
   
@@ -384,13 +379,7 @@ export class StickyManager {
     const store = useEditorStore.getState();
     let bbox: BoundingBox | null = null;
     
-    console.log('getElementBounds called:', {
-      elementId,
-      elementType,
-      pathsInStore: store.paths.length,
-      pathIds: store.paths.map(p => p.id)
-    });
-    
+        
     switch (elementType) {
       case 'subpath': {
         // Find the subpath in any of the paths
@@ -399,28 +388,16 @@ export class StickyManager {
           foundSubPath = path.subPaths.find(sp => sp.id === elementId);
           if (foundSubPath) break;
         }
-        console.log('getElementBounds subpath search:', {
-          elementId,
-          subPathFound: !!foundSubPath,
-          subPath: foundSubPath ? { id: foundSubPath.id, commandsCount: foundSubPath.commands.length } : null
-        });
-        if (!foundSubPath) return null;
+                if (!foundSubPath) return null;
         bbox = getSubPathBoundingBox(foundSubPath);
-        console.log('getSubPathBoundingBox result:', bbox);
-        break;
+                break;
       }
       
       case 'path': {
         const path = store.paths.find(p => p.id === elementId);
-        console.log('getElementBounds path search:', {
-          elementId,
-          pathFound: !!path,
-          path: path ? { id: path.id, subPathsCount: path.subPaths.length } : null
-        });
-        if (!path) return null;
+                if (!path) return null;
         bbox = getPathBoundingBox(path);
-        console.log('getPathBoundingBox result:', bbox);
-        break;
+                break;
       }
       
       case 'text': {
@@ -521,15 +498,7 @@ export class StickyManager {
     const store = useEditorStore.getState();
     const elements: CanvasElement[] = [];
     
-    console.log('getAllOtherElements called:', {
-      excludeElements: Array.from(excludeElements),
-      storePaths: store.paths.length,
-      storeTexts: store.texts.length,
-      storeImages: store.images.length,
-      storeGroups: store.groups.length,
-      storeUses: store.uses.length
-    });
-    
+        
     // Add sub-paths (this is the key innovation of this app)
     store.paths.forEach(path => {
       path.subPaths.forEach(subPath => {
@@ -537,10 +506,8 @@ export class StickyManager {
           const bounds = this.getElementBounds(subPath.id, 'subpath');
           if (bounds) {
             elements.push({ id: subPath.id, type: 'subpath', bounds });
-            console.log('Added subpath element:', { id: subPath.id, bounds });
-          } else {
-            console.log('SubPath bounds not found:', subPath.id);
-          }
+                      } else {
+                      }
         }
       });
     });
@@ -564,18 +531,8 @@ export class StickyManager {
           const bounds = this.getElementBounds(path.id, 'path');
           if (bounds) {
             elements.push({ id: path.id, type: 'path', bounds });
-            console.log('Added path element:', { id: path.id, bounds });
-          } else {
-            console.log('Path bounds not found:', path.id);
-          }
-        } else {
-          console.log('Skipping path element to avoid duplication:', { 
-            pathId: path.id, 
-            reason: hasExcludedSubPaths ? 'has excluded sub-paths' : 'debug mode with sub-paths',
-            excludedSubPaths: path.subPaths.filter(sp => excludeElements.has(sp.id)).map(sp => sp.id),
-            subPathsCount: path.subPaths.length
-          });
-        }
+            } 
+        } 
       }
     });
     
@@ -632,28 +589,10 @@ export class StickyManager {
     otherElements: CanvasElement[]
   ): DebugProjection[] {
     if (!this.config.debugMode) {
-      console.log('generateDebugProjections: debug mode disabled, returning empty array');
-      return [];
+            return [];
     }
 
-    console.log('generateDebugProjections called:', {
-      movingElementId,
-      debugModeEnabled: this.config.debugMode,
-      movingBounds: {
-        x: movingBounds.x,
-        y: movingBounds.y,
-        width: movingBounds.width,
-        height: movingBounds.height,
-        centerX: movingBounds.centerX,
-        centerY: movingBounds.centerY,
-        left: movingBounds.left,
-        right: movingBounds.right,
-        top: movingBounds.top,
-        bottom: movingBounds.bottom
-      },
-      otherElementsCount: otherElements.length
-    });
-
+    
     // For non-selection elements, verify the bounds are correct by getting actual position
     let actualMovingBounds = movingBounds;
     if (movingElementId !== 'selection') {
@@ -681,33 +620,14 @@ export class StickyManager {
         const deltaX = movingBounds.x - actualBounds.x;
         const deltaY = movingBounds.y - actualBounds.y;
         
-        console.log('COORDINATE COMPARISON:', {
-          movingElementId,
-          calculatedBounds: movingBounds,
-          actualElementBounds: actualBounds,
-          deltaX,
-          deltaY
-        });
-        
+                
         // CRITICAL DEBUG: Check if this is where the alignment issue comes from
-        console.log('STICKY DEBUG - bounds alignment check:', {
-          movingElementId,
-          'calculatedBounds.centerX': movingBounds.centerX,
-          'calculatedBounds.centerY': movingBounds.centerY,
-          'actualBounds.centerX': actualBounds.centerX,
-          'actualBounds.centerY': actualBounds.centerY,
-          'center deltaX': movingBounds.centerX - actualBounds.centerX,
-          'center deltaY': movingBounds.centerY - actualBounds.centerY,
-          'position deltaX': deltaX,
-          'position deltaY': deltaY
-        });
-        
+                
         // Only use actual bounds if they are significantly different
         // This handles cases where the element hasn't been updated yet in the store
         // but the visual position (movingBounds) is correct
         if (Math.abs(deltaX) > 0.1 || Math.abs(deltaY) > 0.1) {
-          console.log('Using calculated movingBounds for debug projections due to delta');
-          // Keep using movingBounds as they represent the intended visual position
+                    // Keep using movingBounds as they represent the intended visual position
           actualMovingBounds = movingBounds;
         } else {
           // Use actual bounds when they are close to ensure perfect alignment
@@ -723,13 +643,7 @@ export class StickyManager {
         const deltaX = movingBounds.x - currentSelectionBounds.x;
         const deltaY = movingBounds.y - currentSelectionBounds.y;
         
-        console.log('SELECTION BOUNDS COMPARISON:', {
-          movingBounds,
-          currentSelectionBounds,
-          deltaX,
-          deltaY
-        });
-        
+                
         // For selections, always use the moving bounds as they represent the intended position
         // during drag operations. The currentSelectionBounds may be outdated during movement.
         actualMovingBounds = movingBounds;
@@ -1046,17 +960,9 @@ export class StickyManager {
     originalBounds: ElementBounds
   ): StickyResult {
     
-    console.log('StickyManager.handleSelectionMoving called:', {
-      enabled: this.config.enabled,
-      targetPosition: targetSelectionPosition,
-      originalBounds,
-      isDragActive: this.isDragActive,
-      hasOriginalSelectionBounds: this.originalElementBounds.has('selection')
-    });
-    
+        
     if (!this.config.enabled) {
-      console.log('StickyManager disabled, returning original position');
-      return {
+            return {
         snappedPoint: targetSelectionPosition,
         guidelines: [],
         snappedBounds: {
@@ -1084,22 +990,11 @@ export class StickyManager {
       selectionOriginalBounds = originalBounds;
     }
 
-    console.log('STICKY DEBUG - handleSelectionMoving USING ORIGINAL BOUNDS:', {
-      targetSelectionPosition,
-      selectionOriginalBounds,
-      providedOriginalBounds: originalBounds,
-      usingCapturedBounds: !!this.getOriginalBounds('selection')
-    });
-
+    
     const selectedElements = this.getSelectedElementsIds();
     const otherElements = this.getAllOtherElements(selectedElements);
     
-    console.log('handleSelectionMoving otherElements:', {
-      selectedElementsCount: selectedElements.size,
-      selectedElements: Array.from(selectedElements),
-      otherElementsCount: otherElements.length,
-      otherElements: otherElements.map(e => ({ id: e.id, type: e.type }))
-    });
+ 
     
     const guidelines: AlignmentGuide[] = [];
     const snappedElements: string[] = [];
@@ -1302,17 +1197,7 @@ export class StickyManager {
     this.activeGuidelines = guidelines;
     this.notifyListeners();
 
-    console.log('StickyManager handleSelectionMoving RESULT:', {
-      guidelinesCount: guidelines.length,
-      guidelines: guidelines.map(g => ({ type: g.type, position: g.position, alignmentType: g.alignmentType })),
-      snappedElements: snappedElements.length,
-      debugProjectionsCount: debugProjections.length,
-      debugMode: this.config.debugMode,
-      hasDebugProjections: debugProjections.length > 0,
-      firstDebugProjection: debugProjections.length > 0 ? debugProjections[0] : null,
-      newBounds,
-      targetSelectionPosition
-    });
+
 
     // Return the snapped selection bounds directly
     // The caller should use these bounds to position the elements
@@ -1488,14 +1373,7 @@ export class StickyManager {
     
     // For debug projections, use the snapped bounds which represent where the element actually is
     // This should align with the visual position of the element
-    console.log('Debug projections bounds calculation:', {
-      elementId,
-      elementType,
-      newPosition,
-      currentBounds,
-      snappedBounds
-    });
-    
+        
     const debugProjections = this.generateDebugProjections(snappedBounds, elementId, filteredOtherElements);
     this.activeDebugProjections = debugProjections;
 
@@ -1537,23 +1415,11 @@ export class StickyManager {
   public handleDragMovement(newPosition: Point, elementId?: string, elementType?: string): StickyResult {
     const store = useEditorStore.getState();
     
-    console.log('handleDragMovement called:', {
-      newPosition,
-      elementId,
-      elementType,
-      hasSelection: this.hasSelection(store.selection),
-      selectionPaths: store.selection.selectedPaths?.length || 0,
-      selectionTexts: store.selection.selectedTexts?.length || 0,
-      selectionImages: store.selection.selectedImages?.length || 0,
-      selectionGroups: store.selection.selectedGroups?.length || 0,
-      selectionUses: store.selection.selectedUses?.length || 0
-    });
-    
+        
     // If we have a selection, use the selection movement handler
     if (this.hasSelection(store.selection)) {
       const selectionBounds = this.calculateSelectionBounds();
-      console.log('Using selection movement, selectionBounds:', selectionBounds);
-      if (selectionBounds) {
+            if (selectionBounds) {
         return this.handleSelectionMoving(newPosition, selectionBounds);
       }
     }
@@ -1561,8 +1427,7 @@ export class StickyManager {
     // If single element specified, use element movement handler
     if (elementId && elementType) {
       const currentBounds = this.getElementBounds(elementId, elementType);
-      console.log('Using element movement:', { elementId, elementType, currentBounds });
-      if (currentBounds) {
+            if (currentBounds) {
         // For single element movement, newPosition should represent where the element would be positioned
         // If newPosition is cursor position, we need to convert it to element position
         // But the caller should pass the element's intended position, not cursor position
@@ -1570,8 +1435,7 @@ export class StickyManager {
       }
     }
     
-    console.log('handleDragMovement fallback - no guidelines');
-    // Fallback - no guidelines
+        // Fallback - no guidelines
     return {
       snappedPoint: newPosition,
       guidelines: []
@@ -1590,14 +1454,7 @@ export class StickyManager {
   ): StickyResult {
     const store = useEditorStore.getState();
     
-    console.log('handleCursorDragMovement called:', {
-      cursorPosition,
-      dragStartPoint,
-      elementId,
-      elementType,
-      hasSelection: this.hasSelection(store.selection)
-    });
-    
+        
     // Calculate movement delta from the start point to current cursor position
     const moveDelta = {
       x: cursorPosition.x - dragStartPoint.x,
@@ -1612,12 +1469,7 @@ export class StickyManager {
           x: selectionBounds.x + moveDelta.x,
           y: selectionBounds.y + moveDelta.y
         };
-        console.log('Cursor drag: using selection movement', { 
-          selectionBounds, 
-          moveDelta, 
-          targetSelectionPosition 
-        });
-        const result = this.handleSelectionMoving(targetSelectionPosition, selectionBounds);
+                const result = this.handleSelectionMoving(targetSelectionPosition, selectionBounds);
         
         // Convert snapped element position back to cursor position
         if (result.snappedBounds) {
@@ -1655,20 +1507,7 @@ export class StickyManager {
           y: originalBounds.y + moveDelta.y
         };
         
-        console.log('STICKY DEBUG - handleCursorDragMovement USING ORIGINAL BOUNDS:', {
-          elementId,
-          elementType,
-          cursorPosition,
-          dragStartPoint,
-          moveDelta,
-          originalBounds,
-          targetElementPosition,
-          'targetElementPosition.centerX': targetElementPosition.x + originalBounds.width / 2,
-          'targetElementPosition.centerY': targetElementPosition.y + originalBounds.height / 2,
-          isDragActive: this.isDragActive,
-          hasOriginalBounds: !!this.getOriginalBounds(elementId)
-        });
-        
+                
         // Create bounds that represent where the element SHOULD be visually
         const targetBounds = {
           ...originalBounds,
@@ -1810,19 +1649,7 @@ export class StickyManager {
           y: cursorPosition.y + snapAdjustment.y
         };
         
-        console.log('STICKY DEBUG - SMOOTH movement delta conversion:', {
-          elementId,
-          originalCursorPosition: cursorPosition,
-          dragStartPoint,
-          originalBounds,
-          snappedElementPosition: { x: snapX, y: snapY },
-          originalMoveDelta,
-          finalMoveDelta,
-          snapAdjustment,
-          snappedCursorPosition,
-          hasSnapping: snapAdjustment.x !== 0 || snapAdjustment.y !== 0
-        });
-        
+                
         return {
           snappedPoint: snappedCursorPosition,
           guidelines,
@@ -1831,8 +1658,7 @@ export class StickyManager {
       }
     }
     
-    console.log('handleCursorDragMovement fallback - no guidelines');
-    // Fallback - no guidelines
+        // Fallback - no guidelines
     return {
       snappedPoint: cursorPosition,
       guidelines: []

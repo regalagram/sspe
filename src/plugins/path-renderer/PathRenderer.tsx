@@ -297,8 +297,7 @@ export const PathRenderer: React.FC = () => {
             firstElementType = 'use';
           }
           
-          console.log('PathRenderer: Starting sticky guidelines drag operation', { firstElementId, firstElementType });
-          stickyManager.startDragOperation(firstElementId, firstElementType);
+                    stickyManager.startDragOperation(firstElementId, firstElementType);
         }
         
         // Schedule pushToHistory outside of the render cycle
@@ -324,23 +323,16 @@ export const PathRenderer: React.FC = () => {
             let moveDelta = { ...initialDelta };
             
             // Apply sticky guidelines if enabled - HYBRID APPROACH for sub-paths
-            console.log('PathRenderer checking sticky guidelines:', {
-              enabled: enabledFeatures.stickyGuidelinesEnabled,
-              stickyManagerExists: !!stickyManager,
-              moveDelta: initialDelta
-            });
-            
+                        
             if (enabledFeatures.stickyGuidelinesEnabled && stickyManager) {
-              console.log('PathRenderer applying hybrid sticky guidelines approach');
-              
+                            
               const subPathId = currentDragState.subPathId;
               if (subPathId) {
                 // HYBRID APPROACH: Get individual sub-path bounds and apply sticky snapping
                 const subPathBounds = stickyManager.getCurrentElementBounds(subPathId, 'subpath');
                 
                 if (subPathBounds) {
-                  console.log('PathRenderer initial: Got sub-path bounds:', subPathBounds);
-                  
+                                    
                   // Calculate target position with delta
                   const targetPosition = {
                     x: subPathBounds.x + initialDelta.x,
@@ -357,17 +349,10 @@ export const PathRenderer: React.FC = () => {
                       y: result.snappedBounds.y - subPathBounds.y
                     };
                     
-                    console.log('PathRenderer initial: Applied sticky snapping to sub-path:', {
-                      originalDelta: initialDelta,
-                      snappedDelta: moveDelta,
-                      guidelines: result.guidelines.length
-                    });
-                  } else {
-                    console.log('PathRenderer initial: No snapping applied, using original delta');
-                  }
+                                      } else {
+                                      }
                 } else {
-                  console.log('PathRenderer initial: Could not get sub-path bounds, using debug-only mode');
-                  
+                                    
                   // Fallback to debug-only mode
                   const targetPoint = {
                     x: currentDragState.startPoint.x + initialDelta.x,
@@ -381,10 +366,7 @@ export const PathRenderer: React.FC = () => {
                     'subpath'
                   );
                   
-                  console.log('PathRenderer initial: Generated debug projections (fallback):', {
-                    debugProjections: debugResult.debugProjections?.length || 0
-                  });
-                }
+                                  }
               }
             }
             
@@ -430,18 +412,9 @@ export const PathRenderer: React.FC = () => {
           let moveDelta = { ...delta };
           
           // Apply sticky guidelines if enabled - HYBRID APPROACH for sub-paths
-          console.log('PathRenderer continuous checking sticky guidelines:', {
-            enabled: enabledFeatures.stickyGuidelinesEnabled,
-            stickyManagerExists: !!stickyManager,
-            currentPoint,
-            lastPoint: currentDragState.lastPoint,
-            delta,
-            hasSubPaths
-          });
-          
+                    
           if (enabledFeatures.stickyGuidelinesEnabled && stickyManager) {
-            console.log('PathRenderer continuous ENTERING sticky guidelines logic');
-            
+                        
             const subPathId = currentDragState.subPathId;
             if (subPathId) {
               // Calculate movement speed to make sticky guidelines less aggressive during fast movement
@@ -452,8 +425,7 @@ export const PathRenderer: React.FC = () => {
               const subPathBounds = stickyManager.getCurrentElementBounds(subPathId, 'subpath');
               
               if (subPathBounds && isSlowMovement) {
-                console.log('PathRenderer continuous: Got sub-path bounds for slow movement:', subPathBounds);
-                
+                                
                 // Calculate target position with delta
                 const targetPosition = {
                   x: subPathBounds.x + delta.x,
@@ -470,17 +442,10 @@ export const PathRenderer: React.FC = () => {
                     y: result.snappedBounds.y - subPathBounds.y
                   };
                   
-                  console.log('PathRenderer continuous: Applied sticky snapping to sub-path:', {
-                    originalDelta: delta,
-                    snappedDelta: moveDelta,
-                    guidelines: result.guidelines.length
-                  });
-                } else {
-                  console.log('PathRenderer continuous: No snapping applied, using original delta');
-                }
+                                  } else {
+                                  }
               } else {
-                console.log('PathRenderer continuous: Using debug-only mode (fast movement or no bounds)');
-                
+                                
                 // For fast movements or when bounds unavailable, use debug-only mode
                 const debugResult = stickyManager.handleCursorDragMovement(
                   currentPoint,
@@ -489,12 +454,7 @@ export const PathRenderer: React.FC = () => {
                   'subpath'
                 );
                 
-                console.log('PathRenderer continuous: Generated debug projections:', {
-                  deltaDistance,
-                  isSlowMovement,
-                  debugProjections: debugResult.debugProjections?.length || 0
-                });
-              }
+                              }
             }
           }
           
