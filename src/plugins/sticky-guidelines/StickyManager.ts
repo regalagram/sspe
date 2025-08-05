@@ -73,7 +73,7 @@ export class StickyManager {
   private static instance: StickyManager;
   private config: StickyConfig = {
     enabled: true,
-    snapDistance: 12, // Practical value - not too small, not too large
+    snapDistance: 8, // Reduced to half for more subtle sticky effect
     showGuidelines: true,
     enableEdgeSnapping: true,
     enableCenterSnapping: true,
@@ -510,6 +510,11 @@ export class StickyManager {
       width: maxX - minX,
       height: maxY - minY
     };
+  }
+
+  // Public method to get current element bounds (for PathRenderer integration)
+  public getCurrentElementBounds(elementId: string, elementType: string): ElementBounds | null {
+    return this.getElementBounds(elementId, elementType);
   }
 
   private getAllOtherElements(excludeElements: Set<string>): CanvasElement[] {
