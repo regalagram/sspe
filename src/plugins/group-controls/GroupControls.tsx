@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSvgTextBBox } from '../../hooks/useSvgTextBBox';
 import { useEditorStore } from '../../store/editorStore';
+import { getTextBoundingBox, getImageBoundingBox } from '../../utils/bbox-utils';
 import { PluginButton } from '../../components/PluginButton';
 import { 
   Group, 
@@ -168,26 +169,13 @@ export const GroupControls: React.FC = () => {
       }
       if (child.type === 'text' || child.type === 'multiline-text') {
         const textObj = (texts ?? []).find((t: any) => t.id === child.id);
-        // Usar el bbox medido si existe
         if (textObj) {
-          const fontSize = typeof textObj.fontSize === 'number' ? textObj.fontSize : 14;
-          const fontFamily = typeof textObj.fontFamily === 'string' ? textObj.fontFamily : 'sans-serif';
-          let content = '';
-          if (textObj.type === 'text') {
-            content = textObj.content || '';
-          } else if (textObj.type === 'multiline-text') {
-            content = (textObj.spans && textObj.spans.length > 0)
-              ? textObj.spans.map((span: any) => span.content).join(' ')
-              : '';
-          }
-          // Usar el bbox real si está disponible
-          const bboxText = textBBoxes[textObj.id];
-          let width = bboxText?.width ?? Math.max(16, content.length * fontSize * 0.6);
-          let height = bboxText?.height ?? fontSize * 1.2;
-          minX = Math.min(minX, textObj.x);
-          minY = Math.min(minY, textObj.y);
-          maxX = Math.max(maxX, textObj.x + width);
-          maxY = Math.max(maxY, textObj.y + height);
+          // Use the proper getTextBoundingBox function that handles transforms
+          const textBBox = getTextBoundingBox(textObj);
+          minX = Math.min(minX, textBBox.x);
+          minY = Math.min(minY, textBBox.y);
+          maxX = Math.max(maxX, textBBox.x + textBBox.width);
+          maxY = Math.max(maxY, textBBox.y + textBBox.height);
         }
       }
       if (child.type === 'group') {
@@ -203,10 +191,12 @@ export const GroupControls: React.FC = () => {
       if (child.type === 'image') {
         const imageObj = (images ?? []).find((img: any) => img.id === child.id);
         if (imageObj) {
-          minX = Math.min(minX, imageObj.x);
-          minY = Math.min(minY, imageObj.y);
-          maxX = Math.max(maxX, imageObj.x + imageObj.width);
-          maxY = Math.max(maxY, imageObj.y + imageObj.height);
+          // Use the proper getImageBoundingBox function that handles transforms
+          const imageBBox = getImageBoundingBox(imageObj);
+          minX = Math.min(minX, imageBBox.x);
+          minY = Math.min(minY, imageBBox.y);
+          maxX = Math.max(maxX, imageBBox.x + imageBBox.width);
+          maxY = Math.max(maxY, imageBBox.y + imageBBox.height);
         }
       }
     });

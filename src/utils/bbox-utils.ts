@@ -131,11 +131,51 @@ export function getTextBoundingBox(text: TextElementType): BoundingBox {
     estimatedHeight = text.spans.length * fontSize * 1.2;
   }
 
+  // Calculate base bounding box (without transform)
+  const baseX = text.x;
+  const baseY = text.y - estimatedHeight * 0.8; // Adjust for text baseline
+  const baseWidth = estimatedWidth;
+  const baseHeight = estimatedHeight;
+
+  // If no transform, return simple bounding box
+  if (!text.transform) {
+    return {
+      x: baseX,
+      y: baseY,
+      width: baseWidth,
+      height: baseHeight
+    };
+  }
+
+  // Calculate all four corners of the text bounding box
+  const corners = [
+    { x: baseX, y: baseY }, // top-left
+    { x: baseX + baseWidth, y: baseY }, // top-right
+    { x: baseX, y: baseY + baseHeight }, // bottom-left
+    { x: baseX + baseWidth, y: baseY + baseHeight } // bottom-right
+  ];
+
+  // Apply transform to all corners
+  const transformedCorners = corners.map(corner => 
+    applyTransform(corner.x, corner.y, text.transform!)
+  );
+
+  // Find the bounding box of the transformed corners
+  let minX = Infinity, maxX = -Infinity;
+  let minY = Infinity, maxY = -Infinity;
+
+  transformedCorners.forEach(corner => {
+    minX = Math.min(minX, corner.x);
+    maxX = Math.max(maxX, corner.x);
+    minY = Math.min(minY, corner.y);
+    maxY = Math.max(maxY, corner.y);
+  });
+
   return {
-    x: text.x,
-    y: text.y - estimatedHeight * 0.8, // Adjust for text baseline
-    width: estimatedWidth,
-    height: estimatedHeight
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY
   };
 }
 

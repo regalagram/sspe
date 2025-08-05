@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { EditorState, Point, ViewportState } from '../types';
 import { getAllPathsBounds, getSelectedElementsBounds, getSelectedSubPathsBounds } from '../utils/path-utils';
+import { getTextBoundingBox } from '../utils/bbox-utils';
 
 export interface ViewportActions {
   setZoom: (zoom: number, center?: Point) => void;
@@ -174,26 +175,16 @@ export const createViewportActions: StateCreator<
         }
       });
       
-      // Add selected texts bounds (simplified - texts don't have complex bounds calculation)
+      // Add selected texts bounds using proper bounding box calculation with transforms
       selection.selectedTexts.forEach(textId => {
         const text = texts.find(t => t.id === textId);
         if (text && typeof text.x === 'number' && typeof text.y === 'number') {
-          let textWidth = 100; // Default estimate
-          let textHeight = 20; // Default estimate
-          
-          // Get text content based on text type
-          if (text.type === 'text' && 'content' in text) {
-            textWidth = (text.content || '').length * 10; // Rough estimate
-          } else if (text.type === 'multiline-text' && 'spans' in text) {
-            const totalContent = text.spans.map(span => span.content || '').join('');
-            textWidth = totalContent.length * 10; // Rough estimate
-            textHeight = text.spans.length * 20; // Multiple lines
-          }
-          
-          minX = Math.min(minX, text.x);
-          minY = Math.min(minY, text.y);
-          maxX = Math.max(maxX, text.x + textWidth);
-          maxY = Math.max(maxY, text.y + textHeight);
+          // Use the proper getTextBoundingBox function that handles transforms
+          const textBBox = getTextBoundingBox(text);
+          minX = Math.min(minX, textBBox.x);
+          minY = Math.min(minY, textBBox.y);
+          maxX = Math.max(maxX, textBBox.x + textBBox.width);
+          maxY = Math.max(maxY, textBBox.y + textBBox.height);
           hasValidBounds = true;
         }
       });

@@ -2,6 +2,9 @@ import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { SVGGroup, SVGGroupChild, GroupLockLevel } from '../../types';
 import { useAnimationsForElement } from '../../components/AnimationRenderer';
+import { calculateTextBoundsDOM } from '../../utils/text-utils';
+import { calculateGlobalViewBox } from '../../utils/viewbox-utils';
+import { subPathToString } from '../../utils/path-utils';
 
 interface GroupRendererProps {
   group: SVGGroup;
@@ -81,82 +84,124 @@ const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false,
     }
   };
 
-  // Calculate bounding box of all children (for both selection indicators and name positioning)
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  let foundValidBounds = false;
-  
-  group.children.forEach(child => {
-    if (child.type === 'path') {
-      const path = paths.find(p => p.id === child.id);
-      if (path && path.subPaths) {
-        path.subPaths.forEach(sp => {
-          sp.commands.forEach(cmd => {
-            if (typeof cmd.x === 'number' && typeof cmd.y === 'number') {
-              minX = Math.min(minX, cmd.x);
-              minY = Math.min(minY, cmd.y);
-              maxX = Math.max(maxX, cmd.x);
-              maxY = Math.max(maxY, cmd.y);
-              foundValidBounds = true;
+  // Calculate bounds using the same method as TransformManager (which works correctly)
+  const calculateGroupBounds = (group: SVGGroup) => {
+    if (typeof document === 'undefined') return null;
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const tempSvg = document.createElementNS(svgNS, 'svg') as SVGSVGElement;
+    let hasContent = false;
+
+    // Add all children of the group to the temp SVG (same logic as TransformManager)
+    for (const child of group.children) {
+      switch (child.type) {
+        case 'path': {
+          const path = paths.find((p: any) => p.id === child.id);
+          if (path) {
+            // Add all subpaths from this path
+            for (const subPath of path.subPaths) {
+              const pathElement = document.createElementNS(svgNS, 'path');
+              const pathData = subPathToString(subPath);
+              if (pathData) {
+                pathElement.setAttribute('d', pathData);
+                tempSvg.appendChild(pathElement);
+                hasContent = true;
+              }
             }
-            if (typeof cmd.x1 === 'number' && typeof cmd.y1 === 'number') {
-              minX = Math.min(minX, cmd.x1);
-              minY = Math.min(minY, cmd.y1);
-              maxX = Math.max(maxX, cmd.x1);
-              maxY = Math.max(maxY, cmd.y1);
-              foundValidBounds = true;
-            }
-            if (typeof cmd.x2 === 'number' && typeof cmd.y2 === 'number') {
-              minX = Math.min(minX, cmd.x2);
-              minY = Math.min(minY, cmd.y2);
-              maxX = Math.max(maxX, cmd.x2);
-              maxY = Math.max(maxY, cmd.y2);
-              foundValidBounds = true;
-            }
-          });
-        });
-      }
-    } else if (child.type === 'text') {
-      const text = texts.find(t => t.id === child.id);
-      if (text) {
-        const fontSize = text.style?.fontSize || 16;
-        let textWidth = 0;
-        let textHeight = fontSize;
-        
-        if (text.type === 'text') {
-          textWidth = (text.content?.length || 0) * fontSize * 0.6;
-        } else if (text.type === 'multiline-text') {
-          const maxLineLength = Math.max(...text.spans.map(span => span.content?.length || 0));
-          textWidth = maxLineLength * fontSize * 0.6;
-          textHeight = text.spans.length * fontSize * 1.2;
+          }
+          break;
         }
-        
-        minX = Math.min(minX, text.x);
-        minY = Math.min(minY, text.y);
-        maxX = Math.max(maxX, text.x + textWidth);
-        maxY = Math.max(maxY, text.y + textHeight);
-        foundValidBounds = true;
+        case 'text': {
+          const text = texts.find((t: any) => t.id === child.id);
+          if (text) {
+            // Use the same method as TransformManager - calculateTextBoundsDOM
+            const bounds = calculateTextBoundsDOM(text);
+            if (bounds) {
+              // Create a rectangle path that represents the text bounds
+              const pathElement = document.createElementNS(svgNS, 'path');
+              const pathData = `M ${bounds.x},${bounds.y} L ${bounds.x + bounds.width},${bounds.y} L ${bounds.x + bounds.width},${bounds.y + bounds.height} L ${bounds.x},${bounds.y + bounds.height} Z`;
+              pathElement.setAttribute('d', pathData);
+              pathElement.setAttribute('fill', 'none');
+              pathElement.setAttribute('stroke', 'none');
+              tempSvg.appendChild(pathElement);
+              hasContent = true;
+            }
+          }
+          break;
+        }
+        case 'image': {
+          const image = images.find((img: any) => img.id === child.id);
+          if (image) {
+            const imageElement = document.createElementNS(svgNS, 'image');
+            imageElement.setAttribute('x', image.x.toString());
+            imageElement.setAttribute('y', image.y.toString());
+            imageElement.setAttribute('width', image.width.toString());
+            imageElement.setAttribute('height', image.height.toString());
+            if (image.transform) {
+              imageElement.setAttribute('transform', image.transform);
+            }
+            tempSvg.appendChild(imageElement);
+            hasContent = true;
+          }
+          break;
+        }
+        case 'group': {
+          // For nested groups, recursively add their children
+          const childGroup = groups.find((g: any) => g.id === child.id);
+          if (childGroup) {
+            const childBounds = calculateGroupBounds(childGroup);
+            if (childBounds) {
+              // Create a rectangle representing the child group bounds
+              const pathElement = document.createElementNS(svgNS, 'path');
+              const pathData = `M ${childBounds.x},${childBounds.y} L ${childBounds.x + childBounds.width},${childBounds.y} L ${childBounds.x + childBounds.width},${childBounds.y + childBounds.height} L ${childBounds.x},${childBounds.y + childBounds.height} Z`;
+              pathElement.setAttribute('d', pathData);
+              pathElement.setAttribute('fill', 'none');
+              pathElement.setAttribute('stroke', 'none');
+              tempSvg.appendChild(pathElement);
+              hasContent = true;
+            }
+          }
+          break;
+        }
       }
-    } else if (child.type === 'image') {
-      const image = images.find(img => img.id === child.id);
-      if (image) {
-        minX = Math.min(minX, image.x);
-        minY = Math.min(minY, image.y);
-        maxX = Math.max(maxX, image.x + image.width);
-        maxY = Math.max(maxY, image.y + image.height);
-        foundValidBounds = true;
-      }
-    } else if (child.type === 'group') {
-      // For nested groups, we would need to recursively calculate bounds
-      // For now, skip nested groups to avoid complexity
     }
-  });
-  
-  const bounds = foundValidBounds ? {
-    x: minX,
-    y: minY,
-    width: maxX - minX,
-    height: maxY - minY
-  } : null;
+
+    if (!hasContent) {
+      return null;
+    }
+
+    // Use the DOM-based viewbox calculation (same as TransformManager)
+    const viewBoxResult = calculateGlobalViewBox(tempSvg);
+    
+    // Clean up
+    if (tempSvg.parentNode) {
+      tempSvg.parentNode.removeChild(tempSvg);
+    }
+
+    if (!viewBoxResult || viewBoxResult.width <= 0 || viewBoxResult.height <= 0) {
+      return null;
+    }
+
+    // Parse the viewBox to get coordinates
+    const viewBoxParts = viewBoxResult.viewBox.split(' ').map(Number);
+    const [x, y, width, height] = viewBoxParts;
+
+    // Convert to bounds (remove padding that calculateGlobalViewBox adds)
+    const padding = Math.max(2, Math.max(width, height) * 0.05);
+    const actualX = x + padding;
+    const actualY = y + padding;
+    const actualWidth = width - padding * 2;
+    const actualHeight = height - padding * 2;
+
+    return {
+      x: actualX,
+      y: actualY,
+      width: actualWidth,
+      height: actualHeight
+    };
+  };
+
+  const bounds = calculateGroupBounds(group);
 
   // Calculate group selection visual indicators
   // Show bounds if:
