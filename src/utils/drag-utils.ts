@@ -346,11 +346,10 @@ export function moveAllCapturedElementsByDelta(
 ) {
   // Skip update if delta is too small to prevent unnecessary calls
   if (Math.abs(delta.x) < 0.001 && Math.abs(delta.y) < 0.001) {
-        return;
+    return;
   }
 
   // Keep only essential protection against concurrent execution
-  // Remove throttling to fix mouse synchronization issues
   if (isExecuting) {
     return;
   }
@@ -367,376 +366,65 @@ export function moveAllCapturedElementsByDelta(
       };
     }
 
-    // Get current store state
+    // Get current store state and methods
     const store = useEditorStore.getState();
+    const { moveText, moveImage, moveUse, moveGroup, translateSubPath } = store;
 
-    // Collect all updates in a single batch
+    // Collect all element IDs to move
     const imageIds = Object.keys(capturedData.images);
     const textIds = Object.keys(capturedData.texts);
     const useIds = Object.keys(capturedData.uses);
     const groupIds = Object.keys(capturedData.groups);
     const subPathIds = Object.keys(capturedData.subPaths);
 
-        
     // Only proceed if there are elements to move
     if (imageIds.length === 0 && textIds.length === 0 && useIds.length === 0 && 
         groupIds.length === 0 && subPathIds.length === 0) {
       return;
     }
 
-    // Perform a single batch update for all simple elements (images, texts, uses)
-    useEditorStore.setState((state) => {
-      let newState = { ...state };
-      let hasChanges = false;
-
-      // Update images
-      if (imageIds.length > 0) {
-        newState.images = state.images.map((img) => {
-          if (imageIds.includes(img.id)) {
-            let imageDelta = finalDelta;
-            // If image has rotation transform, apply inverse rotation to delta
-            if (img.transform) {
-              imageDelta = transformDeltaForRotation(finalDelta, img.transform);
-            }
-            
-            const newX = img.x + imageDelta.x;
-            const newY = img.y + imageDelta.y;
-            
-            // Only update if there's a meaningful change
-            if (Math.abs(img.x - newX) >= 0.001 || Math.abs(img.y - newY) >= 0.001) {
-              hasChanges = true;
-              return { ...img, x: newX, y: newY };
-            }
-          }
-          return img;
-        });
+    // Move texts using proper moveText method which handles group synchronization
+    textIds.forEach((textId: string) => {
+      if (Math.abs(finalDelta.x) > 0.001 || Math.abs(finalDelta.y) > 0.001) {
+        // skipGroupSync = true to prevent recursive loops during batch movement
+        moveText(textId, finalDelta, true);
       }
-
-      // Update texts
-      if (textIds.length > 0) {
-        newState.texts = state.texts.map((text) => {
-          if (textIds.includes(text.id)) {
-            const newX = text.x + finalDelta.x;
-            const newY = text.y + finalDelta.y;
-            
-            // Handle rotation transforms properly
-            let newTransform = text.transform;
-            if (text.transform) {
-              // Match rotate with center coordinates: rotate(angle, cx, cy)
-              const rotateWithCenterMatch = text.transform.match(/rotate\(([^,]+),\s*([^,]+),\s*([^)]+)\)/);
-              if (rotateWithCenterMatch) {
-                const angle = rotateWithCenterMatch[1];
-                const oldCx = parseFloat(rotateWithCenterMatch[2]);
-                const oldCy = parseFloat(rotateWithCenterMatch[3]);
-                
-                // Calculate the relative offset between rotation center and text position
-                const relativeOffsetX = oldCx - text.x;
-                const relativeOffsetY = oldCy - text.y;
-                
-                // Update the rotation center to maintain the same relative position to the new text position
-                const newCx = newX + relativeOffsetX;
-                const newCy = newY + relativeOffsetY;
-                
-                newTransform = text.transform.replace(
-                  /rotate\([^)]+\)/,
-                  `rotate(${angle}, ${newCx}, ${newCy})`
-                );
-              }
-            }
-            
-            if (Math.abs(text.x - newX) >= 0.001 || Math.abs(text.y - newY) >= 0.001) {
-              hasChanges = true;
-              return { ...text, x: newX, y: newY, transform: newTransform };
-            }
-          }
-          return text;
-        });
-      }
-
-      // Update uses
-      if (useIds.length > 0) {
-        newState.uses = state.uses.map((use) => {
-          if (useIds.includes(use.id)) {
-            const newX = (use.x || 0) + finalDelta.x;
-            const newY = (use.y || 0) + finalDelta.y;
-            
-            if (Math.abs((use.x || 0) - newX) >= 0.001 || Math.abs((use.y || 0) - newY) >= 0.001) {
-              hasChanges = true;
-              return { ...use, x: newX, y: newY };
-            }
-          }
-          return use;
-        });
-      }
-
-      // Only return new state if there are actual changes
-      return hasChanges ? newState : state;
     });
 
-    // Handle complex elements (groups and subpaths) separately with their own logic
-    // but use minimal calls to prevent loops
-    if (groupIds.length > 0 || subPathIds.length > 0) {
-      console.log('🎯 Complex elements detected:', { groupIds, subPathIds });
-      
-      // CRITICAL: Use a single state update for both group and external subpaths
-      // to prevent state conflicts
-      const store = useEditorStore.getState();
-      
-      // Move groups (only if delta is significant)
+    // Move images using proper moveImage method which handles group synchronization
+    imageIds.forEach((imageId: string) => {
       if (Math.abs(finalDelta.x) > 0.001 || Math.abs(finalDelta.y) > 0.001) {
-        console.log('🔧 Using combined state update approach');
-        
-        // Get all affected paths from groups
-        const groups = store.groups;
-        const movedGroupPathIds = new Set<string>();
-        
-        groupIds.forEach(groupId => {
-          const group = groups.find((g: any) => g.id === groupId);
-          if (group) {
-            group.children.forEach((child: any) => {
-              if (child.type === 'path') {
-                movedGroupPathIds.add(child.id);
-              }
-            });
-          }
-        });
-        
-        console.log('📝 Group path IDs to move:', Array.from(movedGroupPathIds));
-        
-        // Filter external subpaths (ones NOT in groups)
-        const paths = store.paths;
-        const filteredSubPathIds = subPathIds.filter(subPathId => {
-          const parentPath = paths.find((path: any) => 
-            path.subPaths.some((sp: any) => sp.id === subPathId)
-          );
-          const shouldKeep = !parentPath || !movedGroupPathIds.has(parentPath.id);
-          console.log(`🔍 SubPath ${subPathId}: parent=${parentPath?.id}, shouldKeep=${shouldKeep}`);
-          return shouldKeep;
-        });
-        
-        console.log('✅ External subpaths to move:', filteredSubPathIds);
-        
-        // Collect all group elements that need to be moved
-        const groupTextsToMove = new Set<string>();
-        const groupImagesToMove = new Set<string>();
-        const groupUsesToMove = new Set<string>();
-        
-        groupIds.forEach(groupId => {
-          const group = groups.find((g: any) => g.id === groupId);
-          if (group) {
-            console.log(`📋 Collecting elements from group ${groupId}:`, group.children);
-            group.children.forEach((child: any) => {
-              if (child.type === 'text') {
-                groupTextsToMove.add(child.id);
-              } else if (child.type === 'image') {
-                groupImagesToMove.add(child.id);
-              } else if (child.type === 'use') {
-                groupUsesToMove.add(child.id);
-              }
-            });
-          }
-        });
-        
-        console.log('📝 Group elements to move:', {
-          paths: Array.from(movedGroupPathIds),
-          texts: Array.from(groupTextsToMove),
-          images: Array.from(groupImagesToMove),
-          uses: Array.from(groupUsesToMove)
-        });
-        
-        // Filter external elements (ones NOT in groups being moved)
-        const filteredTextIds = textIds.filter(textId => !groupTextsToMove.has(textId));
-        const filteredImageIds = imageIds.filter(imageId => !groupImagesToMove.has(imageId));
-        const filteredUseIds = useIds.filter(useId => !groupUsesToMove.has(useId));
-        
-        console.log('✅ External elements to move separately:', {
-          subpaths: filteredSubPathIds,
-          texts: filteredTextIds,
-          images: filteredImageIds,
-          uses: filteredUseIds
-        });
-
-        // Apply all changes in a SINGLE state update
-        useEditorStore.setState((state) => {
-          console.log('🚀 Applying combined state update for ALL element types');
-          
-          const newPaths = state.paths.map((path) => {
-            let pathUpdated = false;
-            let newSubPaths = path.subPaths;
-            
-            // Move ALL subpaths if this path belongs to a group
-            if (movedGroupPathIds.has(path.id)) {
-              console.log(`�️ Moving ALL subpaths in group path ${path.id}`);
-              pathUpdated = true;
-              newSubPaths = path.subPaths.map((subPath) => ({
-                ...subPath,
-                commands: subPath.commands.map((cmd) => {
-                  let newX = cmd.x !== undefined ? cmd.x + finalDelta.x : cmd.x;
-                  let newY = cmd.y !== undefined ? cmd.y + finalDelta.y : cmd.y;
-                  let newX1 = cmd.x1 !== undefined ? cmd.x1 + finalDelta.x : cmd.x1;
-                  let newY1 = cmd.y1 !== undefined ? cmd.y1 + finalDelta.y : cmd.y1;
-                  let newX2 = cmd.x2 !== undefined ? cmd.x2 + finalDelta.x : cmd.x2;
-                  let newY2 = cmd.y2 !== undefined ? cmd.y2 + finalDelta.y : cmd.y2;
-                  
-                  return {
-                    ...cmd,
-                    x: newX,
-                    y: newY,
-                    x1: newX1,
-                    y1: newY1,
-                    x2: newX2,
-                    y2: newY2,
-                  };
-                }),
-              }));
-            } else {
-              // Move only SELECTED external subpaths
-              newSubPaths = path.subPaths.map((subPath) => {
-                if (filteredSubPathIds.includes(subPath.id)) {
-                  console.log(`🎯 Moving external subpath ${subPath.id}`);
-                  pathUpdated = true;
-                  return {
-                    ...subPath,
-                    commands: subPath.commands.map((cmd) => {
-                      let newX = cmd.x !== undefined ? cmd.x + finalDelta.x : cmd.x;
-                      let newY = cmd.y !== undefined ? cmd.y + finalDelta.y : cmd.y;
-                      let newX1 = cmd.x1 !== undefined ? cmd.x1 + finalDelta.x : cmd.x1;
-                      let newY1 = cmd.y1 !== undefined ? cmd.y1 + finalDelta.y : cmd.y1;
-                      let newX2 = cmd.x2 !== undefined ? cmd.x2 + finalDelta.x : cmd.x2;
-                      let newY2 = cmd.y2 !== undefined ? cmd.y2 + finalDelta.y : cmd.y2;
-                      
-                      // Apply grid snapping if enabled
-                      if (enableGridSnapping) {
-                        if (newX !== undefined && newY !== undefined) {
-                          const snapped = snapToGrid({ x: newX, y: newY }, gridSize);
-                          newX = snapped.x;
-                          newY = snapped.y;
-                        }
-                        if (newX1 !== undefined && newY1 !== undefined) {
-                          const snapped = snapToGrid({ x: newX1, y: newY1 }, gridSize);
-                          newX1 = snapped.x;
-                          newY1 = snapped.y;
-                        }
-                        if (newX2 !== undefined && newY2 !== undefined) {
-                          const snapped = snapToGrid({ x: newX2, y: newY2 }, gridSize);
-                          newX2 = snapped.x;
-                          newY2 = snapped.y;
-                        }
-                      }
-                      
-                      return {
-                        ...cmd,
-                        x: newX,
-                        y: newY,
-                        x1: newX1,
-                        y1: newY1,
-                        x2: newX2,
-                        y2: newY2,
-                      };
-                    }),
-                  };
-                }
-                return subPath;
-              });
-            }
-            
-            return pathUpdated ? { ...path, subPaths: newSubPaths } : path;
-          });
-          
-          // Update texts (both group and external)
-          const newTexts = state.texts.map((text) => {
-            // Move if it's in a group being moved
-            if (groupTextsToMove.has(text.id)) {
-              console.log(`📝 Moving group text ${text.id}`);
-              return {
-                ...text,
-                x: text.x + finalDelta.x,
-                y: text.y + finalDelta.y
-              };
-            }
-            // Move if it's an external text being moved
-            if (filteredTextIds.includes(text.id)) {
-              console.log(`🎯 Moving external text ${text.id}`);
-              return {
-                ...text,
-                x: text.x + finalDelta.x,
-                y: text.y + finalDelta.y
-              };
-            }
-            return text;
-          });
-
-          // Update images (both group and external)
-          const newImages = state.images.map((image) => {
-            // Move if it's in a group being moved
-            if (groupImagesToMove.has(image.id)) {
-              console.log(`🖼️ Moving group image ${image.id}`);
-              let imageDelta = finalDelta;
-              // If image has rotation transform, apply inverse rotation to delta
-              if (image.transform) {
-                imageDelta = transformDeltaForRotation(finalDelta, image.transform);
-              }
-              return {
-                ...image,
-                x: image.x + imageDelta.x,
-                y: image.y + imageDelta.y
-              };
-            }
-            // Move if it's an external image being moved
-            if (filteredImageIds.includes(image.id)) {
-              console.log(`🎯 Moving external image ${image.id}`);
-              let imageDelta = finalDelta;
-              if (image.transform) {
-                imageDelta = transformDeltaForRotation(finalDelta, image.transform);
-              }
-              return {
-                ...image,
-                x: image.x + imageDelta.x,
-                y: image.y + imageDelta.y
-              };
-            }
-            return image;
-          });
-
-          // Update uses (both group and external)
-          const newUses = state.uses.map((use) => {
-            // Move if it's in a group being moved
-            if (groupUsesToMove.has(use.id)) {
-              console.log(`⚙️ Moving group use ${use.id}`);
-              return {
-                ...use,
-                x: (use.x || 0) + finalDelta.x,
-                y: (use.y || 0) + finalDelta.y
-              };
-            }
-            // Move if it's an external use being moved
-            if (filteredUseIds.includes(use.id)) {
-              console.log(`🎯 Moving external use ${use.id}`);
-              return {
-                ...use,
-                x: (use.x || 0) + finalDelta.x,
-                y: (use.y || 0) + finalDelta.y
-              };
-            }
-            return use;
-          });
-          
-          console.log('✅ Combined update complete for all element types');
-          return {
-            paths: newPaths,
-            texts: newTexts,
-            images: newImages,
-            uses: newUses,
-            renderVersion: state.renderVersion + 1
-          };
-        });
+        // skipGroupSync = true to prevent recursive loops during batch movement
+        moveImage(imageId, finalDelta, true);
       }
-    }
+    });
+
+    // Move use elements using proper moveUse method
+    useIds.forEach((useId: string) => {
+      if (Math.abs(finalDelta.x) > 0.001 || Math.abs(finalDelta.y) > 0.001) {
+        moveUse(useId, finalDelta);
+      }
+    });
+
+    // Move groups using proper moveGroup method
+    groupIds.forEach((groupId: string) => {
+      if (Math.abs(finalDelta.x) > 0.001 || Math.abs(finalDelta.y) > 0.001) {
+        moveGroup(groupId, finalDelta);
+      }
+    });
+
+    // Move individual subpaths using proper translateSubPath method
+    subPathIds.forEach((subPathId: string) => {
+      if (Math.abs(finalDelta.x) > 0.001 || Math.abs(finalDelta.y) > 0.001) {
+        translateSubPath(subPathId, finalDelta);
+      }
+    });
 
   } finally {
     isExecuting = false;
   }
 }
+
 
 // Helper function to get command position (copied from existing code)
 function getCommandPosition(command: any): Point | null {
