@@ -360,6 +360,7 @@ export class TransformManager {
           if (use.y !== undefined) useElement.setAttribute('y', use.y.toString());
           if (use.width !== undefined) useElement.setAttribute('width', use.width.toString());
           if (use.height !== undefined) useElement.setAttribute('height', use.height.toString());
+          if (use.transform) useElement.setAttribute('transform', use.transform);
           
           tempSvg.appendChild(useElement);
           hasContent = true;
@@ -1216,36 +1217,125 @@ export class TransformManager {
       const initialUse = this.state.initialUses[useId];
       
       if (this.state.mode === 'scale') {
-        // For scaling, transform all corners if use has dimensions
+        // For scaling, use matrix-based transformation like images and texts to preserve existing transforms
+        const { scaleX, scaleY, originX, originY } = this.getScaleParams();
+        
+        // Calculate the center of the use element for scaling
         const width = initialUse.width || 100;
         const height = initialUse.height || 100;
-        const x = initialUse.x || 0;
-        const y = initialUse.y || 0;
+        const useCenterX = (initialUse.x || 0) + width / 2;
+        const useCenterY = (initialUse.y || 0) + height / 2;
         
-        const topLeft = transform(x, y);
-        const bottomRight = transform(x + width, y + height);
+        // Create current transformation matrix
+        const currentMatrix = this.buildTransformMatrix(
+          useCenterX,  // use element center
+          useCenterY,
+          1, // base scale X
+          1, // base scale Y
+          0, // base rotation
+          initialUse.transform || ''
+        );
         
-        const newX = Math.min(topLeft.x, bottomRight.x);
-        const newY = Math.min(topLeft.y, bottomRight.y);
-        const newWidth = Math.abs(bottomRight.x - topLeft.x);
-        const newHeight = Math.abs(bottomRight.y - topLeft.y);
+        // Apply new scale transformation
+        const newMatrix = this.combineTransformations(
+          currentMatrix,
+          { 
+            type: 'scale', 
+            scaleX, 
+            scaleY, 
+            originX, 
+            originY 
+          }
+        );
+        
+        const transformString = this.matrixToString(newMatrix);
+        
+        // For use elements, we need to also update the dimensions
+        // Scale the width and height while preserving position through transform
+        const newWidth = width * Math.abs(scaleX);
+        const newHeight = height * Math.abs(scaleY);
         
         updateUse(useId, {
-          x: newX,
-          y: newY,
           width: newWidth,
-          height: newHeight
+          height: newHeight,
+          transform: transformString
         });
       } else if (this.state.mode === 'rotate') {
-        // For rotation, transform the position
-        const x = initialUse.x || 0;
-        const y = initialUse.y || 0;
-        const transformedPos = transform(x, y);
+        // For rotation, use matrix-based transformation like images and texts
+        const { angle, centerX, centerY } = this.getRotationParams();
         
-        updateUse(useId, {
-          x: transformedPos.x,
-          y: transformedPos.y
-        });
+        // Calculate the center of the use element for rotation
+        const width = initialUse.width || 100;
+        const height = initialUse.height || 100;
+        const useCenterX = (initialUse.x || 0) + width / 2;
+        const useCenterY = (initialUse.y || 0) + height / 2;
+        
+        // Create current transformation matrix
+        const currentMatrix = this.buildTransformMatrix(
+          useCenterX,  // use element center
+          useCenterY,
+          1, // base scale X
+          1, // base scale Y
+          0, // base rotation
+          initialUse.transform || ''
+        );
+        
+        // Apply new rotation transformation
+        const newMatrix = this.combineTransformations(
+          currentMatrix,
+          { 
+            type: 'rotate', 
+            angle, 
+            centerX, 
+            centerY 
+          }
+        );
+        
+        const transformString = this.matrixToString(newMatrix);
+        
+        // Apply the transform using updateUse
+        updateUse(useId, { transform: transformString });
+      } else {
+        // For basic movement (translate)
+        if (!this.state.dragStart || !this.state.currentPoint) return;
+        
+        const deltaX = this.state.currentPoint.x - this.state.dragStart.x;
+        const deltaY = this.state.currentPoint.y - this.state.dragStart.y;
+        
+        // If the use element has an existing transform, we need to combine it with the movement
+        if (initialUse.transform) {
+          // Use matrix-based transformation to preserve existing transforms while adding translation
+          const width = initialUse.width || 100;
+          const height = initialUse.height || 100;
+          const useCenterX = (initialUse.x || 0) + width / 2;
+          const useCenterY = (initialUse.y || 0) + height / 2;
+          
+          // Create current transformation matrix including existing transform
+          const currentMatrix = this.buildTransformMatrix(
+            useCenterX,
+            useCenterY,
+            1, // base scale X
+            1, // base scale Y
+            0, // base rotation
+            initialUse.transform || ''
+          );
+          
+          // Apply translation by modifying the matrix e and f components (translation components)
+          const translatedMatrix: TransformMatrix = {
+            ...currentMatrix,
+            e: currentMatrix.e + deltaX,
+            f: currentMatrix.f + deltaY
+          };
+          
+          const transformString = this.matrixToString(translatedMatrix);
+          updateUse(useId, { transform: transformString });
+        } else {
+          // If no existing transform, update x and y position directly for simplicity
+          updateUse(useId, {
+            x: (initialUse.x || 0) + deltaX,
+            y: (initialUse.y || 0) + deltaY
+          });
+        }
       }
     }
   }
@@ -1329,6 +1419,55 @@ export class TransformManager {
           });
         } else {
           updateImage(imageId, { 
+            x: newX,
+            y: newY,
+            width: newWidth,
+            height: newHeight,
+            transform: '' // Clear transform if no significant rotation
+          });
+        }
+      }
+    }
+
+    // Apply final transformations permanently to use elements
+    for (const useId of Object.keys(this.state.initialUses)) {
+      const initialUse = this.state.initialUses[useId];
+      
+      // Get the current use element with the applied transform
+      const currentUse = store.uses?.find((use: any) => use.id === useId);
+      if (currentUse && currentUse.transform) {
+        // Extract the final consolidated values from the transform matrix
+        const width = initialUse.width || 100;
+        const height = initialUse.height || 100;
+        const finalValues = this.extractFinalValues(
+          currentUse.transform,
+          (initialUse.x || 0) + width / 2,  // use element center
+          (initialUse.y || 0) + height / 2,
+          1, // initial scale
+          0  // initial rotation
+        );
+        
+        // Calculate new use element properties based on the transformation
+        const newWidth = width * finalValues.scale;
+        const newHeight = height * finalValues.scale;
+        const newX = finalValues.x - newWidth / 2;  // back to top-left corner
+        const newY = finalValues.y - newHeight / 2;
+        
+        // Apply the consolidated values as permanent properties
+        const { updateUse } = store;
+        
+        // Only keep rotation as transform, everything else becomes permanent properties
+        if (Math.abs(finalValues.rotation) > 0.01) {
+          const rotationTransform = `rotate(${finalValues.rotation}, ${finalValues.x}, ${finalValues.y})`;
+          updateUse(useId, { 
+            x: newX,
+            y: newY,
+            width: newWidth,
+            height: newHeight,
+            transform: rotationTransform 
+          });
+        } else {
+          updateUse(useId, { 
             x: newX,
             y: newY,
             width: newWidth,

@@ -1,6 +1,22 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { useAnimationsForElement } from '../../components/AnimationRenderer';
+import { isGradientOrPattern } from '../../utils/gradient-utils';
+
+// Helper function to convert gradient/pattern objects to URL references
+const styleValueToCSS = (value: any): string | undefined => {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value === 'object' && value !== null && value.id) {
+    // It's a gradient or pattern object, convert to URL reference
+    return `url(#${value.id})`;
+  }
+  return String(value);
+};
 
 // Individual Use Element Component that can use hooks
 const UseElementComponent: React.FC<{ use: any }> = ({ use }) => {
@@ -10,24 +26,62 @@ const UseElementComponent: React.FC<{ use: any }> = ({ use }) => {
   const isSelected = selection.selectedUses.includes(use.id);
   const strokeWidth = 1 / viewport.zoom;
 
+  // Calculate effective position considering transform
+  const getEffectivePosition = () => {
+    if (!use.transform || !use.transform.includes('translate')) {
+      // No translate in transform, use x,y directly
+      return { x: use.x, y: use.y };
+    }
+    
+    // Has translate in transform, the x,y are used for bbox calculations
+    // but for rendering we need to let the transform handle positioning
+    return { x: 0, y: 0 };
+  };
+
+  const { x: effectiveX, y: effectiveY } = getEffectivePosition();
+
   return (
     <g key={use.id} data-use-id={use.id}>
+      {/* Invisible interaction rectangle for better pointer event detection */}
+      <rect
+        x={effectiveX}
+        y={effectiveY}
+        width={use.width || 100}
+        height={use.height || 100}
+        transform={use.transform}
+        fill="transparent"
+        stroke="none"
+        pointerEvents="all"
+        data-element-type="use"
+        data-element-id={use.id}
+        style={{ cursor: 'pointer' }}
+      />
+      
       {/* Use element */}
       <use
         id={use.id}
         href={use.href}
-        x={use.x}
-        y={use.y}
+        x={effectiveX}
+        y={effectiveY}
         width={use.width}
         height={use.height}
         transform={use.transform}
         style={{
           opacity: use.style?.opacity ?? 1,
-          clipPath: use.style?.clipPath,
-          mask: use.style?.mask,
-          filter: use.style?.filter,
+          clipPath: styleValueToCSS(use.style?.clipPath),
+          mask: styleValueToCSS(use.style?.mask),
+          filter: styleValueToCSS(use.style?.filter),
+          fill: styleValueToCSS(use.style?.fill) || '#000000',
+          stroke: styleValueToCSS(use.style?.stroke) || 'none',
+          strokeWidth: use.style?.strokeWidth ?? 1,
+          strokeOpacity: use.style?.strokeOpacity ?? 1,
+          fillOpacity: use.style?.fillOpacity ?? 1,
+          strokeDasharray: use.style?.strokeDasharray || 'none',
+          strokeLinecap: use.style?.strokeLinecap || 'butt',
+          strokeLinejoin: use.style?.strokeLinejoin || 'miter',
         }}
-        data-element-type="use"
+        pointerEvents="none"
+        data-element-type="use-visual"
         data-element-id={use.id}
       />
       {/* Include animations as siblings that target the use element */}
@@ -68,66 +122,6 @@ const UseElementComponent: React.FC<{ use: any }> = ({ use }) => {
           />
         );
       })()}
-      
-      {/* Selection handles for transform */}
-      {isSelected && (() => {
-        // Calculate dimensions using the same logic as selection outline
-        const symbol = symbols.find(s => use.href === `#${s.id}`);
-        let useWidth = use.width || 100;
-        let useHeight = use.height || 100;
-        
-        if (symbol && symbol.viewBox && !use.width && !use.height) {
-          const viewBoxMatch = symbol.viewBox.match(/^[\d\s.,-]+$/);
-          if (viewBoxMatch) {
-            const viewBoxParts = symbol.viewBox.split(/[\s,]+/).map(Number);
-            if (viewBoxParts.length === 4) {
-              useWidth = viewBoxParts[2];
-              useHeight = viewBoxParts[3];
-            }
-          }
-        }
-        
-        return (
-          <g data-element-type="use-handles" data-element-id={use.id}>
-            {/* Corner handles */}
-            {[
-              { x: use.x || 0, y: use.y || 0, cursor: 'nw-resize' },
-              { x: (use.x || 0) + useWidth, y: use.y || 0, cursor: 'ne-resize' },
-              { x: (use.x || 0) + useWidth, y: (use.y || 0) + useHeight, cursor: 'se-resize' },
-              { x: use.x || 0, y: (use.y || 0) + useHeight, cursor: 'sw-resize' },
-            ].map((handle, index) => (
-              <rect
-                key={index}
-                x={handle.x - 4 / viewport.zoom}
-                y={handle.y - 4 / viewport.zoom}
-                width={8 / viewport.zoom}
-                height={8 / viewport.zoom}
-                fill="#007ACC"
-                stroke="#ffffff"
-                strokeWidth={strokeWidth}
-                style={{ cursor: handle.cursor }}
-                data-element-type="use-handle"
-                data-element-id={use.id}
-                data-handle-type={`corner-${index}`}
-              />
-            ))}
-            
-            {/* Center handle for move */}
-            <circle
-              cx={(use.x || 0) + useWidth / 2}
-              cy={(use.y || 0) + useHeight / 2}
-              r={4 / viewport.zoom}
-              fill="#007ACC"
-              stroke="#ffffff"
-              strokeWidth={strokeWidth}
-              style={{ cursor: 'move' }}
-              data-element-type="use-handle"
-              data-element-id={use.id}
-              data-handle-type="move"
-            />
-          </g>
-        );
-      })()}
     </g>
   );
 };
@@ -164,10 +158,6 @@ export const SymbolRenderer: React.FC = () => {
           <path
             key={childId}
             d={pathData}
-            fill={typeof path.style.fill === 'string' ? path.style.fill : 'none'}
-            stroke={typeof path.style.stroke === 'string' ? path.style.stroke : 'none'}
-            strokeWidth={path.style.strokeWidth}
-            opacity={path.style.fillOpacity}
           />
         );
 
@@ -177,7 +167,7 @@ export const SymbolRenderer: React.FC = () => {
         
         return (
           <g key={childId} transform={group.transform}>
-            {group.children.map(child => renderChildContent(child.id, child.type))}
+            {group.children.map(child => renderChildContent(child.id, child.type)).filter(Boolean)}
           </g>
         );
 
@@ -201,8 +191,17 @@ export const SymbolRenderer: React.FC = () => {
               {symbol.children.map((child, index) => {
                 // Handle direct child objects (created from selection)
                 if (child.type === 'path' && (child as any).subPaths) {
-                  const pathData = (child as any).subPaths.map((subPath: any) => 
-                    subPath.commands.map((cmd: any) => {
+                  const subPaths = (child as any).subPaths;
+                  if (!subPaths || !Array.isArray(subPaths)) {
+                    console.warn('Symbol child has invalid subPaths:', child);
+                    return null;
+                  }
+                  
+                  const pathData = subPaths.map((subPath: any) => {
+                    if (!subPath.commands || !Array.isArray(subPath.commands)) {
+                      return '';
+                    }
+                    return subPath.commands.map((cmd: any) => {
                       switch (cmd.command) {
                         case 'M':
                           return `M ${cmd.x || 0} ${cmd.y || 0}`;
@@ -215,18 +214,20 @@ export const SymbolRenderer: React.FC = () => {
                         default:
                           return '';
                       }
-                    }).join(' ')
-                  ).join(' ');
+                    }).join(' ');
+                  }).join(' ');
 
+                  // Only render if we have valid path data
+                  if (!pathData || pathData.trim() === '') {
+                    console.warn('Symbol child generated empty path data:', child);
+                    return null;
+                  }
+
+                  // Create path without explicit styles to allow inheritance from <use>
                   return (
                     <path
                       key={`${symbol.id}-child-${index}`}
                       d={pathData}
-                      fill={typeof (child as any).style?.fill === 'string' ? (child as any).style.fill : 'none'}
-                      stroke={typeof (child as any).style?.stroke === 'string' ? (child as any).style.stroke : 'none'}
-                      strokeWidth={(child as any).style?.strokeWidth || 0}
-                      fillOpacity={(child as any).style?.fillOpacity ?? 1}
-                      strokeOpacity={(child as any).style?.strokeOpacity ?? 1}
                     />
                   );
                 }
@@ -236,8 +237,9 @@ export const SymbolRenderer: React.FC = () => {
                   return renderChildContent((child as any).id, child.type);
                 }
                 
+                // Skip unhandled children
                 return null;
-              })}
+              }).filter(Boolean)}
             </symbol>
           ))}
         </defs>

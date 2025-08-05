@@ -326,13 +326,17 @@ export const generateSVGCode = (editorState: any): string => {
   const chainDelays = calculateChainDelays();
   
   // Helper function to convert fill/stroke values to SVG format
-  const convertStyleValue = (value: any): string => {
-    if (!value || value === 'none') return 'none';
+  const convertStyleValue = (value: any): string | null => {
+    if (value === undefined || value === null) return null;
+    if (value === 'none') return 'none';
     if (typeof value === 'string') return value;
-    if (typeof value === 'object' && value.id) {
+    if (typeof value === 'object' && value !== null && value.id) {
+      // Debug: Log pattern/gradient conversion
+      console.log('Converting object to URL:', value.type, value.id, `-> url(#${value.id})`);
       return `url(#${value.id})`;
     }
-    return 'none';
+    console.log('Unexpected value type in convertStyleValue:', typeof value, value);
+    return null;
   };
 
   // Helper function to render a single path element
@@ -456,16 +460,37 @@ export const generateSVGCode = (editorState: any): string => {
 
   // Render use elements (symbol instances)
   const renderUse = (use: any) => {
+    const style = use.style || {};
+    
+    // Debug: Log the use element being processed
+    console.log('Rendering use element:', use.id, 'with style:', JSON.stringify(style, null, 2));
+    
+    const fillValue = convertStyleValue(style.fill);
+    const strokeValue = convertStyleValue(style.stroke);
+    const clipPathValue = convertStyleValue(style.clipPath);
+    const maskValue = convertStyleValue(style.mask);
+    const filterValue = convertStyleValue(style.filter);
+    
     const attributes = [
-      `href="#${use.href.replace('#', '')}"`,
-      `x="${use.x}"`,
-      `y="${use.y}"`,
+      `href="${use.href.startsWith('#') ? use.href : '#' + use.href}"`,
+      `x="${use.x || 0}"`,
+      `y="${use.y || 0}"`,
       use.width ? `width="${use.width}"` : '',
       use.height ? `height="${use.height}"` : '',
       use.transform ? `transform="${use.transform}"` : '',
-      use.style?.clipPath ? `clip-path="${convertStyleValue(use.style.clipPath)}"` : '',
-      use.style?.mask ? `mask="${convertStyleValue(use.style.mask)}"` : '',
-      use.style?.filter ? `filter="${convertStyleValue(use.style.filter)}"` : '',
+      // Add all style properties - be more permissive with conditions
+      fillValue !== null ? `fill="${fillValue}"` : '',
+      strokeValue !== null ? `stroke="${strokeValue}"` : '',
+      style.strokeWidth !== undefined ? `stroke-width="${style.strokeWidth}"` : '',
+      style.strokeDasharray ? `stroke-dasharray="${style.strokeDasharray}"` : '',
+      style.strokeLinecap ? `stroke-linecap="${style.strokeLinecap}"` : '',
+      style.strokeLinejoin ? `stroke-linejoin="${style.strokeLinejoin}"` : '',
+      style.fillOpacity !== undefined ? `fill-opacity="${style.fillOpacity}"` : '',
+      style.strokeOpacity !== undefined ? `stroke-opacity="${style.strokeOpacity}"` : '',
+      style.opacity !== undefined ? `opacity="${style.opacity}"` : '',
+      clipPathValue ? `clip-path="${clipPathValue}"` : '',
+      maskValue ? `mask="${maskValue}"` : '',
+      filterValue ? `filter="${filterValue}"` : '',
     ].filter(Boolean).join(' ');
     
     // Get animations for this use element (symbol instance)
@@ -619,8 +644,14 @@ export const generateSVGCode = (editorState: any): string => {
     const style = element.style || {};
     
     // Check for gradient/pattern references
-    if (typeof style.fill === 'object' && style.fill?.id) usedGradientIds.add(style.fill.id);
-    if (typeof style.stroke === 'object' && style.stroke?.id) usedGradientIds.add(style.stroke.id);
+    if (typeof style.fill === 'object' && style.fill?.id) {
+      console.log('Found fill reference:', style.fill.type, style.fill.id);
+      usedGradientIds.add(style.fill.id);
+    }
+    if (typeof style.stroke === 'object' && style.stroke?.id) {
+      console.log('Found stroke reference:', style.stroke.type, style.stroke.id);
+      usedGradientIds.add(style.stroke.id);
+    }
     
     // Check for marker references
     if (style.markerStart && typeof style.markerStart === 'string' && style.markerStart.includes('#')) {
@@ -667,6 +698,7 @@ export const generateSVGCode = (editorState: any): string => {
   const allClipPaths = clipPaths; // Include ALL clipPaths temporarily
   const allMasks = masks.filter((mask: any) => usedMaskIds.has(mask.id));
   const allFilters = filters.filter((filter: any) => usedFilterIds.has(filter.id));
+  const allSymbols = symbols.filter((symbol: any) => usedSymbolIds.has(symbol.id));
 
   // Generate all definitions (gradients, symbols, markers, filters, clip paths, masks)
   const generateDefinitions = () => {
@@ -674,6 +706,7 @@ export const generateSVGCode = (editorState: any): string => {
     
     // Add gradients and patterns
     if (allGradients.length > 0) {
+      console.log('Processing gradients/patterns:', allGradients.map(g => `${g.type}:${g.id}`));
       const gradientDefs = allGradients.map((gradient: any) => {
         // Find animations that target this gradient
         const gradientAnimations = animations.filter((anim: any) => 
@@ -743,6 +776,24 @@ export const generateSVGCode = (editorState: any): string => {
           ].filter(Boolean).join(' ');
           
           return `    <radialGradient ${gradientProps}>\n${stops}\n    </radialGradient>`;
+        } else if (gradient.type === 'pattern') {
+          const patternProps = [
+            `id="${gradient.id}"`,
+            `x="${gradient.x || 0}"`,
+            `y="${gradient.y || 0}"`,
+            `width="${gradient.width || 10}"`,
+            `height="${gradient.height || 10}"`,
+            gradient.patternUnits ? `patternUnits="${gradient.patternUnits}"` : 'patternUnits="userSpaceOnUse"',
+            gradient.patternContentUnits ? `patternContentUnits="${gradient.patternContentUnits}"` : '',
+            gradient.patternTransform ? `patternTransform="${gradient.patternTransform}"` : '',
+            gradient.viewBox ? `viewBox="${gradient.viewBox}"` : '',
+            gradient.preserveAspectRatio ? `preserveAspectRatio="${gradient.preserveAspectRatio}"` : ''
+          ].filter(Boolean).join(' ');
+          
+          // Pattern content can be SVG elements or raw SVG string
+          const patternContent = gradient.content || '';
+          
+          return `    <pattern ${patternProps}>\n      ${patternContent}\n    </pattern>`;
         }
         return '';
       }).filter(Boolean);
@@ -751,8 +802,8 @@ export const generateSVGCode = (editorState: any): string => {
     }
 
     // Add symbols
-    if (symbols.length > 0) {
-      const symbolDefs = symbols.map((symbol: any) => {
+    if (allSymbols.length > 0) {
+      const symbolDefs = allSymbols.map((symbol: any) => {
         const symbolAttributes = [
           `id="${symbol.id}"`,
           symbol.viewBox ? `viewBox="${symbol.viewBox}"` : '',
@@ -761,7 +812,50 @@ export const generateSVGCode = (editorState: any): string => {
           symbol.preserveAspectRatio ? `preserveAspectRatio="${symbol.preserveAspectRatio}"` : ''
         ].filter(Boolean).join(' ');
         
-        return `    <symbol ${symbolAttributes}>\n      ${symbol.content}\n    </symbol>`;
+        // Generate symbol content from children
+        const symbolContent = symbol.children?.map((child: any) => {
+          if (child.type === 'path') {
+            // Handle direct child objects (created from selection)
+            if (child.subPaths) {
+              const pathData = child.subPaths.map((subPath: any) => {
+                if (!subPath.commands || !Array.isArray(subPath.commands)) {
+                  return '';
+                }
+                return subPath.commands.map((cmd: any) => {
+                  switch (cmd.command) {
+                    case 'M':
+                      return `M ${cmd.x || 0} ${cmd.y || 0}`;
+                    case 'L':
+                      return `L ${cmd.x || 0} ${cmd.y || 0}`;
+                    case 'C':
+                      return `C ${cmd.x1 || 0} ${cmd.y1 || 0} ${cmd.x2 || 0} ${cmd.y2 || 0} ${cmd.x || 0} ${cmd.y || 0}`;
+                    case 'Z':
+                      return 'Z';
+                    default:
+                      return '';
+                  }
+                }).join(' ');
+              }).join(' ');
+
+              if (!pathData || pathData.trim() === '') {
+                return '';
+              }
+
+              // For symbol paths, omit fill/stroke attributes to allow inheritance from <use>
+              const pathAttrs = [
+                `id="${child.id}"`,
+                `d="${pathData}"`,
+                // Don't include fill or stroke - let them inherit from <use> element
+              ].filter(Boolean).join(' ');
+
+              return `      <path ${pathAttrs} />`;
+            }
+          }
+          // Handle reference-based children (could be expanded for other types)
+          return '';
+        }).filter(Boolean).join('\n') || '';
+        
+        return `    <symbol ${symbolAttributes}>\n${symbolContent}\n    </symbol>`;
       });
       
       allDefs.push(...symbolDefs);

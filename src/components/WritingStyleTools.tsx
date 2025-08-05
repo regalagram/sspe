@@ -11,6 +11,7 @@ export const WritingStyleTools: React.FC = () => {
     selection, 
     updatePathStyle, 
     updateTextStyle, 
+    updateUseStyle,
     paths, 
     texts, 
     groups, 
@@ -22,14 +23,16 @@ export const WritingStyleTools: React.FC = () => {
                       selection.selectedSubPaths.length > 0 || 
                       selection.selectedCommands.length > 0 ||
                       selection.selectedTexts.length > 0 ||
-                      selection.selectedGroups.length > 0;
+                      selection.selectedGroups.length > 0 ||
+                      selection.selectedUses.length > 0;
 
   // Get all affected element IDs for styling
   const getAllAffectedElements = () => {
     const result = {
       pathIds: new Set(selection.selectedPaths),
       textIds: new Set(selection.selectedTexts),
-      groupIds: new Set(selection.selectedGroups)
+      groupIds: new Set(selection.selectedGroups),
+      useIds: new Set(selection.selectedUses)
     };
     
     // Add parent paths of selected subpaths
@@ -59,13 +62,14 @@ export const WritingStyleTools: React.FC = () => {
     return {
       pathIds: Array.from(result.pathIds),
       textIds: Array.from(result.textIds),
-      groupIds: Array.from(result.groupIds)
+      groupIds: Array.from(result.groupIds),
+      useIds: Array.from(result.useIds)
     };
   };
 
   const handleFillColor = (color: string) => {
     if (hasSelection) {
-      const { pathIds, textIds, groupIds } = getAllAffectedElements();
+      const { pathIds, textIds, groupIds, useIds } = getAllAffectedElements();
       
       // Apply to paths
       pathIds.forEach(pathId => {
@@ -77,6 +81,11 @@ export const WritingStyleTools: React.FC = () => {
         updateTextStyle(textId, { fill: color });
       });
       
+      // Apply to use elements (symbol instances)
+      useIds.forEach(useId => {
+        updateUseStyle(useId, { fill: color });
+      });
+      
       // TODO: Apply to groups (groups don't have direct styles, would need to apply to children)
       // For now, skip groups as they would need recursive application to children
     }
@@ -84,7 +93,7 @@ export const WritingStyleTools: React.FC = () => {
 
   const handleStrokeColor = (color: string) => {
     if (hasSelection) {
-      const { pathIds, textIds, groupIds } = getAllAffectedElements();
+      const { pathIds, textIds, groupIds, useIds } = getAllAffectedElements();
       
       // Apply to paths
       pathIds.forEach(pathId => {
@@ -95,12 +104,17 @@ export const WritingStyleTools: React.FC = () => {
       textIds.forEach(textId => {
         updateTextStyle(textId, { stroke: color });
       });
+      
+      // Apply to use elements (symbol instances)  
+      useIds.forEach(useId => {
+        updateUseStyle(useId, { stroke: color });
+      });
     }
   };
 
   const handleStrokeWidth = (width: number) => {
     if (hasSelection) {
-      const { pathIds, textIds, groupIds } = getAllAffectedElements();
+      const { pathIds, textIds, groupIds, useIds } = getAllAffectedElements();
       
       // Apply to paths
       pathIds.forEach(pathId => {
@@ -111,12 +125,17 @@ export const WritingStyleTools: React.FC = () => {
       textIds.forEach(textId => {
         updateTextStyle(textId, { strokeWidth: width });
       });
+      
+      // Apply to use elements (symbol instances)
+      useIds.forEach(useId => {
+        updateUseStyle(useId, { strokeWidth: width });
+      });
     }
   };
 
   const handleRemoveFill = () => {
     if (hasSelection) {
-      const { pathIds, textIds, groupIds } = getAllAffectedElements();
+      const { pathIds, textIds, groupIds, useIds } = getAllAffectedElements();
       
       // Apply to paths
       pathIds.forEach(pathId => {
@@ -127,12 +146,17 @@ export const WritingStyleTools: React.FC = () => {
       textIds.forEach(textId => {
         updateTextStyle(textId, { fill: 'none' });
       });
+      
+      // Apply to use elements (symbol instances)
+      useIds.forEach(useId => {
+        updateUseStyle(useId, { fill: 'none' });
+      });
     }
   };
 
   const handleRemoveStroke = () => {
     if (hasSelection) {
-      const { pathIds, textIds, groupIds } = getAllAffectedElements();
+      const { pathIds, textIds, groupIds, useIds } = getAllAffectedElements();
       
       // Apply to paths
       pathIds.forEach(pathId => {
@@ -142,6 +166,11 @@ export const WritingStyleTools: React.FC = () => {
       // Apply to texts
       textIds.forEach(textId => {
         updateTextStyle(textId, { stroke: 'none' });
+      });
+      
+      // Apply to use elements (symbol instances)
+      useIds.forEach(useId => {
+        updateUseStyle(useId, { stroke: 'none' });
       });
     }
   };
@@ -163,7 +192,7 @@ export const WritingStyleTools: React.FC = () => {
     addGradient(gradient);
 
     // Apply to all selected elements
-    const { pathIds, textIds, groupIds } = getAllAffectedElements();
+    const { pathIds, textIds, groupIds, useIds } = getAllAffectedElements();
     
     // Apply to paths
     pathIds.forEach(pathId => {
@@ -173,6 +202,11 @@ export const WritingStyleTools: React.FC = () => {
     // Apply to texts
     textIds.forEach(textId => {
       updateTextStyle(textId, { [target]: gradient });
+    });
+    
+    // Apply to use elements (symbol instances)
+    useIds.forEach(useId => {
+      updateUseStyle(useId, { [target]: gradient });
     });
   };
 
@@ -188,7 +222,7 @@ export const WritingStyleTools: React.FC = () => {
     addGradient(pattern);
 
     // Apply to all selected elements
-    const { pathIds, textIds, groupIds } = getAllAffectedElements();
+    const { pathIds, textIds, groupIds, useIds } = getAllAffectedElements();
     
     // Apply to paths
     pathIds.forEach(pathId => {
@@ -198,6 +232,11 @@ export const WritingStyleTools: React.FC = () => {
     // Apply to texts
     textIds.forEach(textId => {
       updateTextStyle(textId, { [target]: pattern });
+    });
+    
+    // Apply to use elements (symbol instances)
+    useIds.forEach(useId => {
+      updateUseStyle(useId, { [target]: pattern });
     });
   };
 

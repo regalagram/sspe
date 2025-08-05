@@ -356,6 +356,11 @@ class DragManager {
     this.capturedElementsData = captureAllSelectedElementsPositions();
     this.debugManager.logDragOperation('Captured elements data', this.capturedElementsData);
     
+    // Initialize sticky guidelines drag operation to capture original bounds
+    // This prevents amplification of sticky guidelines during text/image dragging
+    console.log('PointerInteraction: Starting sticky guidelines drag operation for elements:', elements);
+    stickyManager.startDragOperation();
+    
     // Reset last delta
     this.lastDelta = { x: 0, y: 0 };
     
@@ -368,9 +373,8 @@ class DragManager {
     this.debugManager.logDragManager('instanceId in updateDrag', this.instanceId);
     this.debugManager.logDragOperation('Element snapshots count', this.elementSnapshots.size);
     
-    // Don't use sticky guidelines for now - just apply the raw delta
-    // const snappedDelta = this.applyStickyGuidelines(delta);
-    const snappedDelta = delta;
+    // Apply sticky guidelines if enabled
+    const snappedDelta = this.applyStickyGuidelines(delta);
     
     // Calculate incremental delta (difference from last applied delta)
     const incrementalDelta = {
@@ -608,13 +612,31 @@ class DragManager {
       return delta;
     }
 
-    // Calculate selection bounds and apply sticky guidelines
-    const selectionBounds = stickyManager.calculateSelectionBounds();
+    console.log('Applying sticky guidelines with delta:', delta);
+
+    // CRITICAL FIX: Use original selection bounds if available, otherwise current bounds
+    // This prevents amplification during selection movement
+    let selectionBounds = stickyManager.getOriginalSelectionBounds();
+      
+    if (!selectionBounds) {
+      console.log('PointerInteraction: Using current selection bounds for sticky guidelines');
+      selectionBounds = stickyManager.calculateSelectionBounds();
+    } else {
+      console.log('PointerInteraction: Using original selection bounds for sticky guidelines');
+    }
+
     if (selectionBounds) {
       const targetPosition = {
         x: selectionBounds.x + delta.x,
         y: selectionBounds.y + delta.y
       };
+
+      console.log('PointerInteraction applyStickyGuidelines:', {
+        delta,
+        selectionBounds,
+        targetPosition,
+        usingOriginalBounds: !!stickyManager.getOriginalSelectionBounds()
+      });
 
       const result = stickyManager.handleSelectionMoving(targetPosition, selectionBounds);
       if (result.snappedBounds) {
@@ -629,16 +651,30 @@ class DragManager {
   }
 
   private shouldUseSticky(): boolean {
-    if (!this.config.enableStickyGuidelines) return false;
+    console.log('shouldUseSticky check:', {
+      configEnabled: this.config.enableStickyGuidelines,
+      featureEnabled: this.editorStore.enabledFeatures?.stickyGuidelinesEnabled,
+      elementSnapshots: this.elementSnapshots.size
+    });
+    
+    if (!this.config.enableStickyGuidelines) {
+      console.log('Sticky guidelines disabled in config');
+      return false;
+    }
     
     const { enabledFeatures, selection } = this.editorStore;
-    if (!enabledFeatures?.guidelinesEnabled) return false;
+    if (!enabledFeatures?.stickyGuidelinesEnabled) {
+      console.log('Sticky guidelines disabled in store');
+      return false;
+    }
 
     // Skip sticky guidelines if groups are involved in multi-selection
     const hasGroupsInSelection = selection.selectedGroups && selection.selectedGroups.length > 0;
     const hasMultiSelection = this.elementSnapshots.size > 1;
     
-    return !(hasGroupsInSelection && hasMultiSelection);
+    const result = !(hasGroupsInSelection && hasMultiSelection);
+    console.log('shouldUseSticky result:', result);
+    return result;
   }
 
   private moveElement(snapshot: ElementSnapshot, delta: Point): void {

@@ -728,12 +728,13 @@ export const createDefaultSymbol = (): Omit<SVGSymbol, 'id'> => ({
 });
 
 // Use utilities
-export const createDefaultUse = (href: string, x: number = 0, y: number = 0): Omit<SVGUse, 'id'> => ({
+export const createDefaultUse = (href: string, x: number = 400, y: number = 300): Omit<SVGUse, 'id'> => ({
   type: 'use',
   href,
   x,
   y,
-  // Don't specify width/height by default - let the symbol render at its natural size
+  width: 100,  // Default manageable width
+  height: 100, // Default manageable height
   locked: false,
 });
 
@@ -753,10 +754,21 @@ export const moveElement = <T extends { x?: number; y?: number }>(element: T, de
 });
 
 export const getElementBounds = (element: SVGImage | SVGUse) => {
-  const x = element.x || 0;
-  const y = element.y || 0;
+  let x = element.x || 0;
+  let y = element.y || 0;
   const width = 'width' in element ? element.width || 0 : 0;
   const height = 'height' in element ? element.height || 0 : 0;
+  
+  // For use elements with translate transform, calculate effective position
+  if ('transform' in element && element.transform && element.transform.includes('translate')) {
+    const translateMatch = element.transform.match(/translate\s*\(\s*([^,)]+)(?:,\s*([^)]+))?\s*\)/);
+    if (translateMatch) {
+      const translateX = parseFloat(translateMatch[1]) || 0;
+      const translateY = parseFloat(translateMatch[2]) || 0;
+      x = translateX;
+      y = translateY;
+    }
+  }
   
   return {
     x,

@@ -142,8 +142,8 @@ export const SymbolControls: React.FC = () => {
         subPaths: [{
           ...data.subPath,
           commands: normalizedCommands
-        }],
-        style: data.style
+        }]
+        // Omit style to allow inheritance from <use> element
       };
     });
 
@@ -153,11 +153,7 @@ export const SymbolControls: React.FC = () => {
       children: selectedSubPathsData
     };
 
-    console.log('Creating symbol with data:', {
-      viewBox: symbolData.viewBox,
-      childrenCount: selectedSubPathsData.length,
-      children: selectedSubPathsData
-    });
+    // Symbol created successfully
 
     addSymbol(symbolData);
     
@@ -171,13 +167,8 @@ export const SymbolControls: React.FC = () => {
   };
 
   const handleCreateInstance = (symbolId: string) => {
-    // Calculate viewport center position for better initial placement
-    const viewportCenter = {
-      x: viewport.viewBox.x + viewport.viewBox.width / 2,
-      y: viewport.viewBox.y + viewport.viewBox.height / 2
-    };
-    
-    const instanceData = createDefaultUse(`#${symbolId}`, viewportCenter.x, viewportCenter.y);
+    // Use default position (400, 300) for consistent placement
+    const instanceData = createDefaultUse(`#${symbolId}`);
     addUse(instanceData);
   };
 

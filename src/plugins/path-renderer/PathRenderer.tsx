@@ -274,6 +274,33 @@ export const PathRenderer: React.FC = () => {
         // Notify transform manager that movement started (subpath drag)
         transformManager.setMoving(true);
         
+        // Initialize sticky guidelines with original element bounds
+        if (enabledFeatures.stickyGuidelinesEnabled) {
+          // Get the first element being dragged for initialization
+          let firstElementId: string | undefined;
+          let firstElementType: string | undefined;
+          
+          if (currentDragState.capturedElements && Object.keys(currentDragState.capturedElements.subPaths).length > 0) {
+            firstElementId = Object.keys(currentDragState.capturedElements.subPaths)[0];
+            firstElementType = 'subpath';
+          } else if (currentDragState.capturedElements && Object.keys(currentDragState.capturedElements.images).length > 0) {
+            firstElementId = Object.keys(currentDragState.capturedElements.images)[0];
+            firstElementType = 'image';
+          } else if (currentDragState.capturedElements && Object.keys(currentDragState.capturedElements.texts).length > 0) {
+            firstElementId = Object.keys(currentDragState.capturedElements.texts)[0];
+            firstElementType = 'text';
+          } else if (currentDragState.capturedElements && Object.keys(currentDragState.capturedElements.groups).length > 0) {
+            firstElementId = Object.keys(currentDragState.capturedElements.groups)[0];
+            firstElementType = 'group';
+          } else if (currentDragState.capturedElements && Object.keys(currentDragState.capturedElements.uses).length > 0) {
+            firstElementId = Object.keys(currentDragState.capturedElements.uses)[0];
+            firstElementType = 'use';
+          }
+          
+          console.log('PathRenderer: Starting sticky guidelines drag operation', { firstElementId, firstElementType });
+          stickyManager.startDragOperation(firstElementId, firstElementType);
+        }
+        
         // Schedule pushToHistory outside of the render cycle
         setTimeout(() => {
           const store = useEditorStore.getState();
@@ -294,7 +321,58 @@ export const PathRenderer: React.FC = () => {
           if (hasSubPaths && (Math.abs(initialDelta.x) > 0.001 || Math.abs(initialDelta.y) > 0.001)) {
             // Capture variables before setTimeout to avoid closure issues
             const capturedElements = currentDragState.capturedElements;
-            const moveDelta = { ...initialDelta };
+            let moveDelta = { ...initialDelta };
+            
+            // Apply sticky guidelines if enabled - USE SIMPLE DELTA APPROACH like PointerInteraction
+            console.log('PathRenderer checking sticky guidelines:', {
+              enabled: enabledFeatures.stickyGuidelinesEnabled,
+              stickyManagerExists: !!stickyManager,
+              moveDelta: initialDelta
+            });
+            
+            if (enabledFeatures.stickyGuidelinesEnabled && stickyManager) {
+              console.log('PathRenderer applying sticky guidelines with simple delta approach');
+              
+              // Use the EXACT same approach as PointerInteraction.applyStickyGuidelines
+              let selectionBounds = stickyManager.getOriginalSelectionBounds();
+              
+              if (!selectionBounds) {
+                console.log('PathRenderer: Using current selection bounds for sticky guidelines');
+                selectionBounds = stickyManager.calculateSelectionBounds();
+              } else {
+                console.log('PathRenderer: Using original selection bounds for sticky guidelines');
+              }
+
+              if (selectionBounds) {
+                const targetPosition = {
+                  x: selectionBounds.x + initialDelta.x,
+                  y: selectionBounds.y + initialDelta.y
+                };
+
+                console.log('PathRenderer initial applyStickyGuidelines:', {
+                  delta: initialDelta,
+                  selectionBounds,
+                  targetPosition,
+                  usingOriginalBounds: !!stickyManager.getOriginalSelectionBounds()
+                });
+
+                const result = stickyManager.handleSelectionMoving(targetPosition, selectionBounds);
+                if (result.snappedBounds) {
+                  // Return the modified delta - EXACTLY like PointerInteraction
+                  moveDelta = {
+                    x: result.snappedBounds.x - selectionBounds.x,
+                    y: result.snappedBounds.y - selectionBounds.y
+                  };
+                  
+                  console.log('PathRenderer initial sticky guidelines applied:', {
+                    originalDelta: initialDelta,
+                    snappedMoveDelta: moveDelta,
+                    guidelines: result.guidelines.length
+                  });
+                }
+              }
+            }
+            
             const snapToGrid = grid.snapToGrid;
             const gridSize = grid.size;
             
@@ -330,11 +408,84 @@ export const PathRenderer: React.FC = () => {
         const hasSubPaths = Object.keys(currentDragState.capturedElements.subPaths).length > 0;
         
         // PathRenderer handles sub-path dragging when initiated from sub-path overlay
-        // Only process movement if delta is significant
-        if (hasSubPaths && (Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001)) {
+        // Process all movement - no threshold needed for continuous movement
+        if (hasSubPaths) {
           // Capture variables before setTimeout to avoid closure issues
           const capturedElements = currentDragState.capturedElements;
-          const moveDelta = { ...delta };
+          let moveDelta = { ...delta };
+          
+          // Apply sticky guidelines if enabled - USE DELTA APPROACH like PointerInteraction
+          console.log('PathRenderer continuous checking sticky guidelines:', {
+            enabled: enabledFeatures.stickyGuidelinesEnabled,
+            stickyManagerExists: !!stickyManager,
+            currentPoint,
+            lastPoint: currentDragState.lastPoint,
+            delta,
+            hasSubPaths
+          });
+          
+          if (enabledFeatures.stickyGuidelinesEnabled && stickyManager) {
+            console.log('PathRenderer continuous ENTERING sticky guidelines logic');
+            
+            // Use the EXACT same approach as PointerInteraction.applyStickyGuidelines
+            let selectionBounds = stickyManager.getOriginalSelectionBounds();
+            
+            if (!selectionBounds) {
+              console.log('PathRenderer continuous: Using current selection bounds for sticky guidelines');
+              selectionBounds = stickyManager.calculateSelectionBounds();
+            } else {
+              console.log('PathRenderer continuous: Using original selection bounds for sticky guidelines');
+            }
+
+            if (selectionBounds) {
+              const targetPosition = {
+                x: selectionBounds.x + delta.x,
+                y: selectionBounds.y + delta.y
+              };
+
+              console.log('PathRenderer continuous applyStickyGuidelines CALLING handleSelectionMoving:', {
+                delta,
+                selectionBounds,
+                targetPosition,
+                usingOriginalBounds: !!stickyManager.getOriginalSelectionBounds()
+              });
+
+              const result = stickyManager.handleSelectionMoving(targetPosition, selectionBounds);
+              if (result.snappedBounds) {
+                // Return the modified delta - EXACTLY like PointerInteraction
+                moveDelta = {
+                  x: result.snappedBounds.x - selectionBounds.x,
+                  y: result.snappedBounds.y - selectionBounds.y
+                };
+                
+                console.log('PathRenderer continuous sticky guidelines applied:', {
+                  originalDelta: delta,
+                  snappedMoveDelta: moveDelta,
+                  guidelines: result.guidelines.length
+                });
+              }
+            } else {
+              // For single sub-path movement without selection, generate debug projections
+              console.log('PathRenderer continuous: No selection bounds, generating debug projections for sub-path');
+              const subPathId = currentDragState.subPathId;
+              if (subPathId) {
+                // Use handleCursorDragMovement just for debug projections, not for movement logic
+                const debugResult = stickyManager.handleCursorDragMovement(
+                  currentPoint,
+                  currentDragState.startPoint,
+                  subPathId,
+                  'subpath'
+                );
+                
+                console.log('PathRenderer continuous: Generated debug projections for sub-path:', {
+                  subPathId,
+                  debugProjections: debugResult.debugProjections?.length || 0,
+                  guidelines: debugResult.guidelines?.length || 0
+                });
+              }
+            }
+          }
+          
           const snapToGrid = grid.snapToGrid;
           const gridSize = grid.size;
           

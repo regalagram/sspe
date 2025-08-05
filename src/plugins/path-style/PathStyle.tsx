@@ -239,7 +239,7 @@ export const PathStyleControls: React.FC<PathStyleControlsProps> = ({
 };
 
 export const PathStyleComponent: React.FC = () => {
-  const { paths, selection, updatePathStyle } = useEditorStore();
+  const { paths, uses, selection, updatePathStyle, updateUseStyle } = useEditorStore();
   
   // Helper function to compare two style objects
   const areStylesEqual = (style1: PathStyle, style2: PathStyle): boolean => {
@@ -255,9 +255,9 @@ export const PathStyleComponent: React.FC = () => {
     });
   };
   
-  // Find all paths that contain selected sub-paths
-  const getPathsWithSelectedSubPaths = () => {
-    const pathsWithSubPaths = new Map<string, SVGPath>();
+  // Find all elements with styles (paths and uses)
+  const getElementsWithStyles = () => {
+    const elements: Array<{ id: string; style: any; type: 'path' | 'use' }> = [];
     
     // Check selected sub-paths
     if (selection.selectedSubPaths.length > 0) {
@@ -265,7 +265,7 @@ export const PathStyleComponent: React.FC = () => {
         for (const path of paths) {
           const foundSubPath = path.subPaths.find(sp => sp.id === subPathId);
           if (foundSubPath) {
-            pathsWithSubPaths.set(path.id, path);
+            elements.push({ id: path.id, style: path.style, type: 'path' });
             break;
           }
         }
@@ -276,7 +276,7 @@ export const PathStyleComponent: React.FC = () => {
       for (const pathId of selection.selectedPaths) {
         const path = paths.find(p => p.id === pathId);
         if (path) {
-          pathsWithSubPaths.set(path.id, path);
+          elements.push({ id: path.id, style: path.style, type: 'path' });
         }
       }
     }
@@ -287,7 +287,7 @@ export const PathStyleComponent: React.FC = () => {
           let found = false;
           for (const subPath of path.subPaths) {
             if (subPath.commands.some(cmd => cmd.id === commandId)) {
-              pathsWithSubPaths.set(path.id, path);
+              elements.push({ id: path.id, style: path.style, type: 'path' });
               found = true;
               break;
             }
@@ -297,35 +297,49 @@ export const PathStyleComponent: React.FC = () => {
       }
     }
     
-    return Array.from(pathsWithSubPaths.values());
+    // Check selected use elements (symbol instances)
+    if (selection.selectedUses.length > 0) {
+      for (const useId of selection.selectedUses) {
+        const use = uses.find(u => u.id === useId);
+        if (use) {
+          elements.push({ id: use.id, style: use.style || {}, type: 'use' });
+        }
+      }
+    }
+    
+    return elements;
   };
   
-  const selectedPaths = getPathsWithSelectedSubPaths();
+  const selectedElements = getElementsWithStyles();
   
   // Don't show if no selection
-  if (selectedPaths.length === 0) {
+  if (selectedElements.length === 0) {
     return null;
   }
   
-  // Check if all selected paths have the same style
-  const firstPathStyle = selectedPaths[0]?.style || {};
-  const allPathsHaveSameStyle = selectedPaths.every(path => 
-    areStylesEqual(path.style || {}, firstPathStyle)
+  // Check if all selected elements have the same style
+  const firstElementStyle = selectedElements[0]?.style || {};
+  const allElementsHaveSameStyle = selectedElements.every(element => 
+    areStylesEqual(element.style || {}, firstElementStyle)
   );
   
-  // Only show the panel when all paths have the same style
-  if (!allPathsHaveSameStyle) {
+  // Only show the panel when all elements have the same style
+  if (!allElementsHaveSameStyle) {
     return null;
   }
   
   // Force re-render when selection changes by creating a key that changes
-  const pathIds = selectedPaths.map(p => p.id).sort().join(',');
-  const renderKey = `${pathIds}-${selection.selectedSubPaths.join(',')}-${selection.selectedCommands.join(',')}-${JSON.stringify(firstPathStyle)}`;
+  const elementIds = selectedElements.map(e => e.id).sort().join(',');
+  const renderKey = `${elementIds}-${selection.selectedSubPaths.join(',')}-${selection.selectedCommands.join(',')}-${selection.selectedUses.join(',')}-${JSON.stringify(firstElementStyle)}`;
   
   const handleStyleChange = (styleUpdates: Partial<PathStyle>) => {
-    // Apply style changes to all paths that contain selected sub-paths
-    selectedPaths.forEach(path => {
-      updatePathStyle(path.id, styleUpdates);
+    // Apply style changes to all selected elements
+    selectedElements.forEach(element => {
+      if (element.type === 'path') {
+        updatePathStyle(element.id, styleUpdates);
+      } else if (element.type === 'use') {
+        updateUseStyle(element.id, styleUpdates);
+      }
     });
   };
 
@@ -338,11 +352,11 @@ export const PathStyleComponent: React.FC = () => {
         marginBottom: '8px',
         fontStyle: 'italic'
       }}>
-        Editing {selectedPaths.length} path{selectedPaths.length !== 1 ? 's' : ''} with matching styles
+        Editing {selectedElements.length} element{selectedElements.length !== 1 ? 's' : ''} with matching styles
       </div>
       <PathStyleControls
         hasSelection={true}
-        pathStyle={firstPathStyle}
+        pathStyle={firstElementStyle}
         onStyleChange={handleStyleChange}
       />
     </div>

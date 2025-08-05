@@ -43,6 +43,7 @@ export interface SVGElementActions {
   // Use actions
   addUse: (use: Omit<SVGUse, 'id'>) => void;
   updateUse: (id: string, updates: Partial<SVGUse>) => void;
+  updateUseStyle: (id: string, style: Partial<PathStyle>) => void;
   removeUse: (id: string) => void;
   duplicateUse: (id: string, offset?: Point) => void;
   moveUse: (id: string, delta: Point) => void;
@@ -292,6 +293,48 @@ export const createSVGElementActions: StateCreator<
       renderVersion: state.renderVersion + 1,
     })),
 
+  updateUseStyle: (id, styleUpdates) =>
+    set((state) => {
+      // Auto-register gradients/patterns when they're applied to use styles
+      const newGradients = [...state.gradients];
+      
+      Object.values(styleUpdates).forEach(value => {
+        if (typeof value === 'object' && value !== null && (value as any).id) {
+          const existsInGradients = newGradients.some(g => g.id === (value as any).id);
+          if (!existsInGradients) {
+            newGradients.push(value as any);
+          }
+        } else if (typeof value === 'string' && value.startsWith('url(#')) {
+          // Handle url(#id) format - extract ID and look for predefined gradients
+          const match = value.match(/url\(#([^)]+)\)/);
+          if (match) {
+            const gradientId = match[1];
+            const exists = newGradients.some(g => g.id === gradientId);
+            
+            if (!exists) {
+              // First try to find the gradient in the current gradients array
+              const existingGradient = state.gradients.find(g => g.id === gradientId);
+              if (existingGradient && !newGradients.some(g => g.id === gradientId)) {
+                newGradients.push(existingGradient);
+              }
+              // Note: If gradient doesn't exist, the url(#id) reference will be kept as-is
+              // This allows for external gradient references or gradients to be defined later
+            }
+          }
+        }
+      });
+
+      return {
+        uses: state.uses.map((use) =>
+          use.id === id 
+            ? { ...use, style: { ...use.style, ...styleUpdates } }
+            : use
+        ),
+        gradients: newGradients,
+        renderVersion: state.renderVersion + 1,
+      };
+    }),
+
   removeUse: (id) =>
     set((state) => ({
       uses: state.uses.filter((use) => use.id !== id),
@@ -462,41 +505,31 @@ export const createSVGElementActions: StateCreator<
 
   // Transform actions for use elements
   moveUse: (id, delta) => {
-    const state = get();
-    const use = state.uses.find(u => u.id === id);
-    if (use) {
-      // Handle movement based on whether the use element has complex transformations
-      if (use.transform && use.transform.trim()) {
-        // Use element has transformations - modify transform instead of position
-        let newTransform = use.transform;
-        
-        // Check if there's already a translate in the transform
-        const translateMatch = newTransform.match(/translate\s*\(\s*([^)]+)\s*\)/);
-        
-        if (translateMatch) {
-          // Update existing translate
-          const [, coords] = translateMatch;
-          const [currentX = 0, currentY = 0] = coords.split(/[,\s]+/).map(Number);
-          const newTranslateX = currentX + delta.x;
-          const newTranslateY = currentY + delta.y;
-          newTransform = newTransform.replace(
-            /translate\s*\(\s*[^)]+\s*\)/,
-            `translate(${newTranslateX}, ${newTranslateY})`
-          );
-        } else {
-          // Add new translate at the beginning (so it applies after other transforms)
-          newTransform = `translate(${delta.x}, ${delta.y}) ${newTransform}`.trim();
-        }
-        
-        state.updateUse(id, { transform: newTransform });
-      } else {
-        // No transformations - move using x,y position as before
-        state.updateUse(id, {
-          x: (use.x || 0) + delta.x,
-          y: (use.y || 0) + delta.y
-        });
-      }
+    // Skip update if delta is too small to prevent unnecessary re-renders
+    if (Math.abs(delta.x) < 0.001 && Math.abs(delta.y) < 0.001) {
+      return;
     }
+    
+    set(state => {
+      const use = state.uses.find(u => u.id === id);
+      if (!use) {
+        return state; // Return unchanged state if use not found
+      }
+      
+      // Always update x,y position directly for smooth movement
+      // Let the renderer handle any transform complexities
+      return {
+        ...state,
+        uses: state.uses.map(u =>
+          u.id === id ? {
+            ...u,
+            x: (u.x || 0) + delta.x,
+            y: (u.y || 0) + delta.y
+          } : u
+        ),
+        renderVersion: state.renderVersion + 1
+      };
+    });
   },
 
   resizeUse: (id, newWidth, newHeight) => {

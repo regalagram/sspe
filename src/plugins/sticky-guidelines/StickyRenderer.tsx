@@ -7,9 +7,25 @@ export const StickyRenderer: React.FC = () => {
   const [guidelines, setGuidelines] = useState<AlignmentGuide[]>([]);
   const [debugProjections, setDebugProjections] = useState<DebugProjection[]>([]);
   
+  console.log('StickyRenderer render:', {
+    enabled: enabledFeatures.stickyGuidelinesEnabled,
+    showGuidelines: stickyManager.getConfig().showGuidelines,
+    debugMode: stickyManager.getConfig().debugMode,
+    guidelinesCount: guidelines.length,
+    debugProjectionsCount: debugProjections.length
+  });
+  
   useEffect(() => {
+    console.log('StickyRenderer subscribing to stickyManager');
     const unsubscribe = stickyManager.subscribe((newGuidelines, newDebugProjections) => {
-                  setGuidelines(newGuidelines);
+      console.log('StickyRenderer received update:', {
+        guidelines: newGuidelines.length,
+        debugProjections: newDebugProjections.length,
+        debugMode: stickyManager.getConfig().debugMode,
+        hasDebugProjections: newDebugProjections.length > 0,
+        firstDebugProjection: newDebugProjections.length > 0 ? newDebugProjections[0] : null
+      });
+      setGuidelines(newGuidelines);
       setDebugProjections(newDebugProjections);
     });
 
@@ -24,10 +40,26 @@ export const StickyRenderer: React.FC = () => {
   }
 
   // Show debug projections if debug mode is enabled (even without guidelines)
-  const showDebugProjections = stickyManager.getConfig().debugMode && debugProjections.length > 0;
+  const debugMode = stickyManager.getConfig().debugMode;
+  const debugProjectionsLength = debugProjections.length;
+  const showDebugProjections = debugMode && debugProjectionsLength > 0;
+  
+  console.log('StickyRenderer render decisions - DETAILED:', {
+    enabled: enabledFeatures.stickyGuidelinesEnabled,
+    showGuidelines: stickyManager.getConfig().showGuidelines,
+    debugMode,
+    guidelinesCount: guidelines.length,
+    debugProjectionsLength,
+    debugProjectionsState: debugProjections,
+    'debugMode && debugProjectionsLength > 0': debugMode && debugProjectionsLength > 0,
+    showDebugProjections,
+    willRender: (guidelines.length > 0 || showDebugProjections),
+    'first 2 projections': debugProjections.slice(0, 2)
+  });
   
   // Don't render if no guidelines and no debug projections
   if (guidelines.length === 0 && !showDebugProjections) {
+    console.log('StickyRenderer: Not rendering - no guidelines and no debug projections');
     return null;
   }
 
