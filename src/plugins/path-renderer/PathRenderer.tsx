@@ -274,8 +274,10 @@ export const PathRenderer: React.FC = () => {
         }
         
         // Start actual dragging
-        // Notify transform manager that movement started (subpath drag)
-        transformManager.setMoving(true);
+        // Notify transform manager that movement started (subpath drag) - schedule outside render
+        setTimeout(() => {
+          transformManager.setMoving(true);
+        }, 0);
         
         // Initialize sticky guidelines with original element bounds
         if (enabledFeatures.stickyGuidelinesEnabled) {
@@ -472,9 +474,11 @@ export const PathRenderer: React.FC = () => {
   // Handle pointer up to stop dragging
   const handlePointerUp = useCallback((e?: React.PointerEvent<SVGElement>) => {
     setDragState(currentDragState => {
-      // Notify transform manager that movement ended only if actual dragging occurred
+      // Notify transform manager that movement ended only if actual dragging occurred - schedule outside render
       if (currentDragState.isDragging && currentDragState.dragStarted) {
-        transformManager.setMoving(false);
+        setTimeout(() => {
+          transformManager.setMoving(false);
+        }, 0);
       }
       
       // Clear guidelines when dragging stops
