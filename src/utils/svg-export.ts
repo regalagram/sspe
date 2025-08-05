@@ -1,4 +1,303 @@
 import { subPathToString } from './path-utils';
+import { FilterPrimitiveType } from '../types';
+
+/**
+ * Converts a filter primitive to its SVG string representation
+ */
+const primitiveToSVGString = (primitive: FilterPrimitiveType, index: number): string => {
+  const commonProps = {
+    result: 'result' in primitive ? primitive.result || `effect${index}` : `effect${index}`,
+    in: 'in' in primitive ? primitive.in || (index === 0 ? 'SourceGraphic' : `effect${index - 1}`) : (index === 0 ? 'SourceGraphic' : `effect${index - 1}`),
+  };
+
+  const formatAttributes = (attrs: Record<string, any>): string => {
+    return Object.entries(attrs)
+      .filter(([_, value]) => value !== undefined && value !== null)
+      .map(([key, value]) => `${key}="${value}"`)
+      .join(' ');
+  };
+
+  switch (primitive.type) {
+    case 'feGaussianBlur':
+      return `      <feGaussianBlur ${formatAttributes({
+        ...commonProps,
+        stdDeviation: primitive.stdDeviation
+      })} />`;
+
+    case 'feOffset':
+      return `      <feOffset ${formatAttributes({
+        ...commonProps,
+        dx: primitive.dx,
+        dy: primitive.dy
+      })} />`;
+
+    case 'feFlood':
+      return `      <feFlood ${formatAttributes({
+        ...commonProps,
+        'flood-color': primitive.floodColor,
+        'flood-opacity': primitive.floodOpacity
+      })} />`;
+
+    case 'feComposite':
+      const compositeAttrs: any = {
+        ...commonProps,
+        operator: primitive.operator,
+        in2: primitive.in2 || 'SourceGraphic'
+      };
+      
+      if (primitive.operator === 'arithmetic') {
+        compositeAttrs.k1 = primitive.k1 || 0;
+        compositeAttrs.k2 = primitive.k2 || 0;
+        compositeAttrs.k3 = primitive.k3 || 0;
+        compositeAttrs.k4 = primitive.k4 || 0;
+      }
+      
+      return `      <feComposite ${formatAttributes(compositeAttrs)} />`;
+
+    case 'feColorMatrix':
+      return `      <feColorMatrix ${formatAttributes({
+        ...commonProps,
+        type: primitive.colorMatrixType || 'matrix',
+        values: primitive.values
+      })} />`;
+
+    case 'feDropShadow':
+      return `      <feDropShadow ${formatAttributes({
+        ...commonProps,
+        dx: primitive.dx,
+        dy: primitive.dy,
+        stdDeviation: primitive.stdDeviation,
+        'flood-color': primitive.floodColor,
+        'flood-opacity': primitive.floodOpacity
+      })} />`;
+
+    case 'feBlend':
+      return `      <feBlend ${formatAttributes({
+        ...commonProps,
+        mode: primitive.mode,
+        in2: primitive.in2 || 'SourceGraphic'
+      })} />`;
+
+    case 'feMorphology':
+      return `      <feMorphology ${formatAttributes({
+        ...commonProps,
+        operator: primitive.operator,
+        radius: primitive.radius
+      })} />`;
+
+    case 'feConvolveMatrix':
+      return `      <feConvolveMatrix ${formatAttributes({
+        ...commonProps,
+        order: primitive.order,
+        kernelMatrix: primitive.kernelMatrix,
+        divisor: primitive.divisor,
+        bias: primitive.bias || 0,
+        targetX: primitive.targetX,
+        targetY: primitive.targetY,
+        edgeMode: primitive.edgeMode || 'duplicate',
+        preserveAlpha: primitive.preserveAlpha || false
+      })} />`;
+
+    case 'feComponentTransfer':
+      let transferContent = '';
+      if (primitive.funcR) {
+        transferContent += `\n        <feFuncR ${formatAttributes({
+          type: primitive.funcR.funcType || 'identity',
+          tableValues: primitive.funcR.tableValues,
+          slope: primitive.funcR.slope,
+          intercept: primitive.funcR.intercept,
+          amplitude: primitive.funcR.amplitude,
+          exponent: primitive.funcR.exponent,
+          offset: primitive.funcR.offset
+        })} />`;
+      }
+      if (primitive.funcG) {
+        transferContent += `\n        <feFuncG ${formatAttributes({
+          type: primitive.funcG.funcType || 'identity',
+          tableValues: primitive.funcG.tableValues,
+          slope: primitive.funcG.slope,
+          intercept: primitive.funcG.intercept,
+          amplitude: primitive.funcG.amplitude,
+          exponent: primitive.funcG.exponent,
+          offset: primitive.funcG.offset
+        })} />`;
+      }
+      if (primitive.funcB) {
+        transferContent += `\n        <feFuncB ${formatAttributes({
+          type: primitive.funcB.funcType || 'identity',
+          tableValues: primitive.funcB.tableValues,
+          slope: primitive.funcB.slope,
+          intercept: primitive.funcB.intercept,
+          amplitude: primitive.funcB.amplitude,
+          exponent: primitive.funcB.exponent,
+          offset: primitive.funcB.offset
+        })} />`;
+      }
+      if (primitive.funcA) {
+        transferContent += `\n        <feFuncA ${formatAttributes({
+          type: primitive.funcA.funcType || 'identity',
+          tableValues: primitive.funcA.tableValues,
+          slope: primitive.funcA.slope,
+          intercept: primitive.funcA.intercept,
+          amplitude: primitive.funcA.amplitude,
+          exponent: primitive.funcA.exponent,
+          offset: primitive.funcA.offset
+        })} />`;
+      }
+      return `      <feComponentTransfer ${formatAttributes(commonProps)}>${transferContent}\n      </feComponentTransfer>`;
+
+    case 'feDiffuseLighting':
+      let diffuseLightSource = '';
+      if (primitive.lightSource.type === 'feDistantLight') {
+        diffuseLightSource = `\n        <feDistantLight ${formatAttributes({
+          azimuth: primitive.lightSource.azimuth || 45,
+          elevation: primitive.lightSource.elevation || 45
+        })} />`;
+      } else if (primitive.lightSource.type === 'fePointLight') {
+        diffuseLightSource = `\n        <fePointLight ${formatAttributes({
+          x: primitive.lightSource.x || 0,
+          y: primitive.lightSource.y || 0,
+          z: primitive.lightSource.z || 0
+        })} />`;
+      } else if (primitive.lightSource.type === 'feSpotLight') {
+        diffuseLightSource = `\n        <feSpotLight ${formatAttributes({
+          x: primitive.lightSource.x || 0,
+          y: primitive.lightSource.y || 0,
+          z: primitive.lightSource.z || 0,
+          pointsAtX: primitive.lightSource.pointsAtX || 0,
+          pointsAtY: primitive.lightSource.pointsAtY || 0,
+          pointsAtZ: primitive.lightSource.pointsAtZ || 0,
+          specularExponent: primitive.lightSource.specularExponent || 1,
+          limitingConeAngle: primitive.lightSource.limitingConeAngle
+        })} />`;
+      }
+      return `      <feDiffuseLighting ${formatAttributes({
+        ...commonProps,
+        surfaceScale: primitive.surfaceScale || 1,
+        diffuseConstant: primitive.diffuseConstant || 1,
+        'lighting-color': primitive.lightingColor || '#ffffff'
+      })}>${diffuseLightSource}\n      </feDiffuseLighting>`;
+
+    case 'feSpecularLighting':
+      let specularLightSource = '';
+      if (primitive.lightSource.type === 'feDistantLight') {
+        specularLightSource = `\n        <feDistantLight ${formatAttributes({
+          azimuth: primitive.lightSource.azimuth || 45,
+          elevation: primitive.lightSource.elevation || 45
+        })} />`;
+      } else if (primitive.lightSource.type === 'fePointLight') {
+        specularLightSource = `\n        <fePointLight ${formatAttributes({
+          x: primitive.lightSource.x || 0,
+          y: primitive.lightSource.y || 0,
+          z: primitive.lightSource.z || 0
+        })} />`;
+      } else if (primitive.lightSource.type === 'feSpotLight') {
+        specularLightSource = `\n        <feSpotLight ${formatAttributes({
+          x: primitive.lightSource.x || 0,
+          y: primitive.lightSource.y || 0,
+          z: primitive.lightSource.z || 0,
+          pointsAtX: primitive.lightSource.pointsAtX || 0,
+          pointsAtY: primitive.lightSource.pointsAtY || 0,
+          pointsAtZ: primitive.lightSource.pointsAtZ || 0,
+          specularExponent: primitive.lightSource.specularExponent || 1,
+          limitingConeAngle: primitive.lightSource.limitingConeAngle
+        })} />`;
+      }
+      return `      <feSpecularLighting ${formatAttributes({
+        ...commonProps,
+        surfaceScale: primitive.surfaceScale || 1,
+        specularConstant: primitive.specularConstant || 1,
+        specularExponent: primitive.specularExponent || 20,
+        'lighting-color': primitive.lightingColor || '#ffffff'
+      })}>${specularLightSource}\n      </feSpecularLighting>`;
+
+    case 'feDisplacementMap':
+      return `      <feDisplacementMap ${formatAttributes({
+        ...commonProps,
+        scale: primitive.scale || 0,
+        xChannelSelector: primitive.xChannelSelector || 'R',
+        yChannelSelector: primitive.yChannelSelector || 'G',
+        in2: primitive.in2 || 'SourceGraphic'
+      })} />`;
+
+    case 'feTurbulence':
+      return `      <feTurbulence ${formatAttributes({
+        ...commonProps,
+        baseFrequency: primitive.baseFrequency,
+        numOctaves: primitive.numOctaves || 1,
+        seed: primitive.seed || 0,
+        stitchTiles: primitive.stitchTiles || 'noStitch',
+        type: primitive.turbulenceType || 'turbulence'
+      })} />`;
+
+    case 'feImage':
+      return `      <feImage ${formatAttributes({
+        ...commonProps,
+        href: primitive.href,
+        preserveAspectRatio: primitive.preserveAspectRatio || 'xMidYMid meet',
+        crossorigin: primitive.crossorigin
+      })} />`;
+
+    case 'feTile':
+      return `      <feTile ${formatAttributes(commonProps)} />`;
+
+    case 'feMerge':
+      let mergeNodes = '';
+      if (primitive.feMergeNodes) {
+        mergeNodes = primitive.feMergeNodes.map(node => 
+          `\n        <feMergeNode ${formatAttributes({ in: node.in })} />`
+        ).join('');
+      }
+      return `      <feMerge ${formatAttributes(commonProps)}>${mergeNodes}\n      </feMerge>`;
+
+    case 'feFuncR':
+      return `      <feFuncR ${formatAttributes({
+        type: primitive.funcType || 'identity',
+        tableValues: primitive.tableValues,
+        slope: primitive.slope,
+        intercept: primitive.intercept,
+        amplitude: primitive.amplitude,
+        exponent: primitive.exponent,
+        offset: primitive.offset
+      })} />`;
+
+    case 'feFuncG':
+      return `      <feFuncG ${formatAttributes({
+        type: primitive.funcType || 'identity',
+        tableValues: primitive.tableValues,
+        slope: primitive.slope,
+        intercept: primitive.intercept,
+        amplitude: primitive.amplitude,
+        exponent: primitive.exponent,
+        offset: primitive.offset
+      })} />`;
+
+    case 'feFuncB':
+      return `      <feFuncB ${formatAttributes({
+        type: primitive.funcType || 'identity',
+        tableValues: primitive.tableValues,
+        slope: primitive.slope,
+        intercept: primitive.intercept,
+        amplitude: primitive.amplitude,
+        exponent: primitive.exponent,
+        offset: primitive.offset
+      })} />`;
+
+    case 'feFuncA':
+      return `      <feFuncA ${formatAttributes({
+        type: primitive.funcType || 'identity',
+        tableValues: primitive.tableValues,
+        slope: primitive.slope,
+        intercept: primitive.intercept,
+        amplitude: primitive.amplitude,
+        exponent: primitive.exponent,
+        offset: primitive.offset
+      })} />`;
+
+    default:
+      return '';
+  }
+};
 
 /**
  * Generates a complete SVG string from the current editor state
@@ -498,10 +797,18 @@ export const generateSVGCode = (editorState: any): string => {
           filter.width ? `width="${filter.width}"` : '',
           filter.height ? `height="${filter.height}"` : '',
           filter.filterUnits ? `filterUnits="${filter.filterUnits}"` : '',
-          filter.primitiveUnits ? `primitiveUnits="${filter.primitiveUnits}"` : ''
+          filter.primitiveUnits ? `primitiveUnits="${filter.primitiveUnits}"` : '',
+          filter.colorInterpolationFilters ? `color-interpolation-filters="${filter.colorInterpolationFilters}"` : ''
         ].filter(Boolean).join(' ');
         
-        return `    <filter ${filterAttributes}>\n      ${filter.content}\n    </filter>`;
+        // Generate primitives content from the filter's primitives array
+        const primitivesContent = filter.primitives && filter.primitives.length > 0 
+          ? filter.primitives.map((primitive: any, index: number) => 
+              primitiveToSVGString(primitive, index)
+            ).join('\n')
+          : '';
+        
+        return `    <filter ${filterAttributes}>\n${primitivesContent}\n    </filter>`;
       });
       
       allDefs.push(...filterDefs);
