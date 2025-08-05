@@ -177,8 +177,6 @@ export const PathRenderer: React.FC = () => {
 
   // Handle pointer down on subpath for dragging (selected or unselected)
   const handleSubPathPointerDown = useCallback((e: React.PointerEvent<SVGElement>, subPathId: string) => {
-    e.stopPropagation();
-    
     const svgElement = (e.target as SVGPathElement).closest('svg');
     if (svgElement) {
       const currentState = useEditorStore.getState();
@@ -187,6 +185,38 @@ export const PathRenderer: React.FC = () => {
         groups: currentState.groups,
         paths: currentState.paths
       };
+      
+      // Check if this subpath belongs to a group
+      const parentPath = currentState.paths.find(path => 
+        path.subPaths.some(sp => sp.id === subPathId)
+      );
+      
+      let belongsToGroup = false;
+      if (parentPath) {
+        // Check if the parent path is in any group
+        belongsToGroup = currentState.groups.some(group => 
+          group.children.some(child => child.id === parentPath.id && child.type === 'path')
+        );
+      }
+      
+      // If subpath belongs to a group, don't handle dragging here - let PointerInteraction handle it
+      if (belongsToGroup) {
+        // Just select the subpath and let PointerInteraction handle the group dragging
+        const isSubPathSelected = currentState.selection.selectedSubPaths.includes(subPathId);
+        if (!isSubPathSelected) {
+          if (shouldPreserveSelection(subPathId, 'subpath', selectionContext)) {
+            // Preserve current selection - don't call selectSubPathMultiple
+          } else {
+            // Normal selection (this will trigger group promotion if needed)
+            selectSubPathMultiple(subPathId, e.shiftKey);
+          }
+        }
+        // Don't stopPropagation or start drag state here - let PointerInteraction handle it
+        return;
+      }
+      
+      // Only handle dragging for subpaths that are NOT in groups
+      e.stopPropagation();
       
       // Only select if not already selected and shouldn't preserve selection
       const isSubPathSelected = currentState.selection.selectedSubPaths.includes(subPathId);
@@ -450,7 +480,25 @@ export const PathRenderer: React.FC = () => {
                   onPointerDown={(e) => {
                     // Only handle left pointer button
                     if (e.button !== 0) return;
-                    e.stopPropagation();
+                    
+                    // Check if this subpath belongs to a group
+                    const currentState = useEditorStore.getState();
+                    const parentPath = currentState.paths.find(p => 
+                      p.subPaths.some(sp => sp.id === subPath.id)
+                    );
+                    
+                    let belongsToGroup = false;
+                    if (parentPath) {
+                      belongsToGroup = currentState.groups.some(group => 
+                        group.children.some(child => child.id === parentPath.id && child.type === 'path')
+                      );
+                    }
+                    
+                    // If subpath belongs to a group, don't stopPropagation - let PointerInteraction handle it
+                    if (!belongsToGroup) {
+                      e.stopPropagation();
+                    }
+                    
                     // Get the SVG element from the path's parent
                     const svgElement = (e.target as SVGPathElement).closest('svg');
                     if (svgElement) {
@@ -530,6 +578,19 @@ export const PathRenderer: React.FC = () => {
                   filter: `drop-shadow(0 0 ${3 / viewport.zoom}px ${contrastColor})`,
                 }}
                 onPointerDown={(e) => {
+                  // Check if this subpath belongs to a group
+                  const currentState = useEditorStore.getState();
+                  const parentPath = currentState.paths.find(p => 
+                    p.subPaths.some(sp => sp.id === subPath.id)
+                  );
+                  
+                  let belongsToGroup = false;
+                  if (parentPath) {
+                    belongsToGroup = currentState.groups.some(group => 
+                      group.children.some(child => child.id === parentPath.id && child.type === 'path')
+                    );
+                  }
+                  
                   // Check if this is a potential drag operation
                   const svgElement = (e.target as SVGPathElement).closest('svg');
                   if (svgElement) {
@@ -546,8 +607,14 @@ export const PathRenderer: React.FC = () => {
                     }
                   }
                   
-                  // Otherwise, proceed with normal drag operation
-                  handleSubPathPointerDown(e, subPath.id);
+                  // If subpath belongs to a group, don't stopPropagation - let PointerInteraction handle it
+                  if (!belongsToGroup) {
+                    // Otherwise, proceed with normal drag operation
+                    handleSubPathPointerDown(e, subPath.id);
+                  } else {
+                    // For group subpaths, just call the handler without stopPropagation
+                    handleSubPathPointerDown(e, subPath.id);
+                  }
                 }}
               />
               

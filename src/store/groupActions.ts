@@ -407,19 +407,60 @@ export const createGroupActions: StateCreator<
     const targetGroup = storeState.groups.find(g => g.id === groupId);
     if (!targetGroup) return;
 
-    // Move path children by moving their subpaths with skipGroupSync
-    targetGroup.children.forEach(child => {
-      if (child.type === 'path') {
-        const path = state.paths.find(p => p.id === child.id);
-        if (path) {
-          path.subPaths.forEach(subPath => {
-            if (typeof get().moveSubPath === 'function') {
-              get().moveSubPath(subPath.id, delta, true); // Skip group sync to avoid recursion
-            }
-          });
+    // Move all path children by updating all their subpaths in a single state update
+    const pathChildrenIds = targetGroup.children
+      .filter(child => child.type === 'path')
+      .map(child => child.id);
+    
+    if (pathChildrenIds.length > 0) {
+      set((state) => {
+        // Apply grid snapping if enabled
+        let finalDelta = delta;
+        if (state.grid.enabled && state.grid.snapToGrid) {
+          const gridSize = state.grid.size;
+          const snapToGrid = (value: number) => Math.round(value / gridSize) * gridSize;
+          finalDelta = {
+            x: snapToGrid(delta.x),
+            y: snapToGrid(delta.y)
+          };
         }
-      }
-    });
+
+        const newPaths = state.paths.map((path) => {
+          if (pathChildrenIds.includes(path.id)) {
+            return {
+              ...path,
+              subPaths: path.subPaths.map((subPath) => ({
+                ...subPath,
+                commands: subPath.commands.map((cmd) => {
+                  let newX = cmd.x !== undefined ? cmd.x + finalDelta.x : cmd.x;
+                  let newY = cmd.y !== undefined ? cmd.y + finalDelta.y : cmd.y;
+                  let newX1 = cmd.x1 !== undefined ? cmd.x1 + finalDelta.x : cmd.x1;
+                  let newY1 = cmd.y1 !== undefined ? cmd.y1 + finalDelta.y : cmd.y1;
+                  let newX2 = cmd.x2 !== undefined ? cmd.x2 + finalDelta.x : cmd.x2;
+                  let newY2 = cmd.y2 !== undefined ? cmd.y2 + finalDelta.y : cmd.y2;
+                  
+                  return {
+                    ...cmd,
+                    x: newX,
+                    y: newY,
+                    x1: newX1,
+                    y1: newY1,
+                    x2: newX2,
+                    y2: newY2,
+                  };
+                }),
+              }))
+            };
+          }
+          return path;
+        });
+
+        return {
+          paths: newPaths,
+          renderVersion: state.renderVersion + 1
+        };
+      });
+    }
 
     // Move text children using moveText method with skipGroupSync to avoid recursion
     targetGroup.children.forEach(child => {

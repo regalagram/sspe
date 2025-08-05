@@ -355,23 +355,56 @@ export const createSVGElementActions: StateCreator<
         }
       }
       
-      // Move individual image
-      const newX = image.x + delta.x;
-      const newY = image.y + delta.y;
-      
-      // Check if the new position would actually be different (avoid floating point precision issues)
-      if (Math.abs(image.x - newX) < 0.001 && Math.abs(image.y - newY) < 0.001) {
-        return state; // No meaningful change, return unchanged state
+      // Handle movement based on whether the image has complex transformations
+      if (image.transform && image.transform.trim()) {
+        // Image has transformations - modify transform instead of position
+        let newTransform = image.transform;
+        
+        // Check if there's already a translate in the transform
+        const translateMatch = newTransform.match(/translate\s*\(\s*([^)]+)\s*\)/);
+        
+        if (translateMatch) {
+          // Update existing translate
+          const [, coords] = translateMatch;
+          const [currentX = 0, currentY = 0] = coords.split(/[,\s]+/).map(Number);
+          const newTranslateX = currentX + delta.x;
+          const newTranslateY = currentY + delta.y;
+          newTransform = newTransform.replace(
+            /translate\s*\(\s*[^)]+\s*\)/,
+            `translate(${newTranslateX}, ${newTranslateY})`
+          );
+        } else {
+          // Add new translate at the beginning (so it applies after other transforms)
+          newTransform = `translate(${delta.x}, ${delta.y}) ${newTransform}`.trim();
+        }
+        
+        return {
+          images: state.images.map((img) =>
+            img.id === id 
+              ? { ...img, transform: newTransform }
+              : img
+          ),
+          renderVersion: state.renderVersion + 1
+        };
+      } else {
+        // No transformations - move using x,y position as before
+        const newX = image.x + delta.x;
+        const newY = image.y + delta.y;
+        
+        // Check if the new position would actually be different (avoid floating point precision issues)
+        if (Math.abs(image.x - newX) < 0.001 && Math.abs(image.y - newY) < 0.001) {
+          return state; // No meaningful change, return unchanged state
+        }
+        
+        return {
+          images: state.images.map((img) =>
+            img.id === id 
+              ? { ...img, x: newX, y: newY }
+              : img
+          ),
+          renderVersion: state.renderVersion + 1
+        };
       }
-      
-      return {
-        images: state.images.map((img) =>
-          img.id === id 
-            ? { ...img, x: newX, y: newY }
-            : img
-        ),
-        renderVersion: state.renderVersion + 1
-      };
     });
   },
 
@@ -432,10 +465,37 @@ export const createSVGElementActions: StateCreator<
     const state = get();
     const use = state.uses.find(u => u.id === id);
     if (use) {
-      state.updateUse(id, {
-        x: (use.x || 0) + delta.x,
-        y: (use.y || 0) + delta.y
-      });
+      // Handle movement based on whether the use element has complex transformations
+      if (use.transform && use.transform.trim()) {
+        // Use element has transformations - modify transform instead of position
+        let newTransform = use.transform;
+        
+        // Check if there's already a translate in the transform
+        const translateMatch = newTransform.match(/translate\s*\(\s*([^)]+)\s*\)/);
+        
+        if (translateMatch) {
+          // Update existing translate
+          const [, coords] = translateMatch;
+          const [currentX = 0, currentY = 0] = coords.split(/[,\s]+/).map(Number);
+          const newTranslateX = currentX + delta.x;
+          const newTranslateY = currentY + delta.y;
+          newTransform = newTransform.replace(
+            /translate\s*\(\s*[^)]+\s*\)/,
+            `translate(${newTranslateX}, ${newTranslateY})`
+          );
+        } else {
+          // Add new translate at the beginning (so it applies after other transforms)
+          newTransform = `translate(${delta.x}, ${delta.y}) ${newTransform}`.trim();
+        }
+        
+        state.updateUse(id, { transform: newTransform });
+      } else {
+        // No transformations - move using x,y position as before
+        state.updateUse(id, {
+          x: (use.x || 0) + delta.x,
+          y: (use.y || 0) + delta.y
+        });
+      }
     }
   },
 
