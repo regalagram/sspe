@@ -395,10 +395,18 @@ class DragManager {
         });
         
         if (currentPosition) {
-          const newPosition = {
+          let newPosition = {
             x: (currentPosition as { x: number; y: number }).x + incrementalDelta.x,  
             y: (currentPosition as { x: number; y: number }).y + incrementalDelta.y
           };
+          
+          // Apply grid snapping if enabled - get current grid settings from store
+          const currentGridSettings = this.editorStore.grid;
+          if (currentGridSettings && currentGridSettings.snapToGrid) {
+            const snapped = snapToGrid(newPosition, currentGridSettings.size);
+            newPosition = snapped;
+          }
+          
           this.editorStore.moveCommand(commandId, newPosition);
         }
       });
@@ -897,6 +905,12 @@ class PointerInteractionManager {
 
   setEditorStore(store: any): void {
     this.editorStore = store;
+    
+    // Update config with current grid settings from store
+    if (store.grid) {
+      this.config.snapToGrid = store.grid.snapToGrid;
+      this.config.gridSize = store.grid.size;
+    }
     
     // Only create managers if they don't exist yet to preserve state
     if (!this.elementSelector) {

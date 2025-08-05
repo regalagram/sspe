@@ -74,7 +74,6 @@ export const createTransformActions: StateCreator<
   },
 
   translateSubPath: (subPathId, delta) => {
-    get().pushToHistory();
     set((state) => ({
       paths: state.paths.map((path) => ({
         ...path,

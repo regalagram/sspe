@@ -143,7 +143,6 @@ export const PathRenderer: React.FC = () => {
     moveImage,
     moveGroup,
     moveUse,
-    pushToHistory, 
     renderVersion, 
     enabledFeatures,
     grid
@@ -276,7 +275,10 @@ export const PathRenderer: React.FC = () => {
         transformManager.setMoving(true);
         
         // Schedule pushToHistory outside of the render cycle
-        setTimeout(() => pushToHistory(), 0);
+        setTimeout(() => {
+          const store = useEditorStore.getState();
+          store.pushToHistory();
+        }, 0);
         
         // Calculate the total delta from start point to current point
         // This ensures we don't lose the initial movement that triggered the drag
@@ -290,12 +292,21 @@ export const PathRenderer: React.FC = () => {
           const hasSubPaths = Object.keys(currentDragState.capturedElements.subPaths).length > 0;
           
           if (hasSubPaths && (Math.abs(initialDelta.x) > 0.001 || Math.abs(initialDelta.y) > 0.001)) {
-            moveAllCapturedElementsByDelta(
-              currentDragState.capturedElements,
-              initialDelta,
-              grid.snapToGrid,
-              grid.size
-            );
+            // Capture variables before setTimeout to avoid closure issues
+            const capturedElements = currentDragState.capturedElements;
+            const moveDelta = { ...initialDelta };
+            const snapToGrid = grid.snapToGrid;
+            const gridSize = grid.size;
+            
+            // Schedule the move operation outside of render cycle to avoid setState during render
+            setTimeout(() => {
+              moveAllCapturedElementsByDelta(
+                capturedElements,
+                moveDelta,
+                snapToGrid,
+                gridSize
+              );
+            }, 0);
           }
         }
         
@@ -321,13 +332,21 @@ export const PathRenderer: React.FC = () => {
         // PathRenderer handles sub-path dragging when initiated from sub-path overlay
         // Only process movement if delta is significant
         if (hasSubPaths && (Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001)) {
-          // Call moveAllCapturedElementsByDelta directly to maintain perfect synchronization
-          moveAllCapturedElementsByDelta(
-            currentDragState.capturedElements,
-            delta,
-            grid.snapToGrid,
-            grid.size
-          );
+          // Capture variables before setTimeout to avoid closure issues
+          const capturedElements = currentDragState.capturedElements;
+          const moveDelta = { ...delta };
+          const snapToGrid = grid.snapToGrid;
+          const gridSize = grid.size;
+          
+          // Schedule the move operation outside of render cycle to avoid setState during render
+          setTimeout(() => {
+            moveAllCapturedElementsByDelta(
+              capturedElements,
+              moveDelta,
+              snapToGrid,
+              gridSize
+            );
+          }, 0);
         }
       }
       
@@ -337,7 +356,7 @@ export const PathRenderer: React.FC = () => {
         lastPoint: currentPoint,
       };
     });
-  }, [viewport, pushToHistory, grid.snapToGrid, grid.size]);
+  }, [viewport, grid.snapToGrid, grid.size]);
 
   // Handle pointer up to stop dragging
   const handlePointerUp = useCallback((e?: React.PointerEvent<SVGElement>) => {
