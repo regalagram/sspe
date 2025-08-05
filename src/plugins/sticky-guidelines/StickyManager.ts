@@ -135,7 +135,10 @@ export class StickyManager {
   }
 
   private notifyListeners(): void {
-    this.listeners.forEach(listener => listener(this.activeGuidelines, this.activeDebugProjections));
+    // Schedule notifications outside render cycle to prevent setState during render errors
+    setTimeout(() => {
+      this.listeners.forEach(listener => listener(this.activeGuidelines, this.activeDebugProjections));
+    }, 0);
   }
 
   public getActiveGuidelines(): AlignmentGuide[] {
