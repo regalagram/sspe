@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
@@ -148,6 +148,14 @@ export const PathRenderer: React.FC = () => {
     grid
   } = useEditorStore();
   const svgRef = useRef<SVGSVGElement>(null);
+  
+  // Force re-evaluation when sticky guidelines feature changes
+  useEffect(() => {
+    if (enabledFeatures.stickyGuidelinesEnabled) {
+      // Trigger re-evaluation of component state to ensure sticky guidelines are active
+      setDragState(prevState => ({ ...prevState })); // Force re-render to sync with enabled features
+    }
+  }, [enabledFeatures.stickyGuidelinesEnabled]);
   
   // Drag state
   const [dragState, setDragState] = useState<{
