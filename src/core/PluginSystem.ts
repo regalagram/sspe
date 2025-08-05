@@ -151,7 +151,11 @@ export class PluginManager {
         ? target.getAttribute('data-element-type')
         : null;
       
-      if (elementType === 'text' || elementType === 'multiline-text') {
+      // Check if we're clicking on a text-related element (including tspan within text)
+      const isTextRelated = elementType === 'text' || elementType === 'multiline-text' || 
+                          (target.tagName === 'tspan' && target.parentElement?.tagName === 'text');
+      
+      if (isTextRelated) {
         // When clicking on text, prioritize pointer-interaction plugin for selection logic
         const pointerInteractionPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'pointer-interaction');
         const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'pointer-interaction');

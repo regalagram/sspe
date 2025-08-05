@@ -4,6 +4,7 @@ import { WritingCreationTools } from './WritingCreationTools';
 import { WritingPencilTools } from './WritingPencilTools';
 import { WritingShapeTools } from './WritingShapeTools';
 import { WritingCurveTools } from './WritingCurveTools';
+import { WritingTextTools } from './WritingTextTools';
 import { WritingStyleTools } from './WritingStyleTools';
 import { WritingDeleteTools } from './WritingDeleteTools';
 import { SandwichButton } from './SandwichButton';
@@ -88,10 +89,13 @@ export const WritingToolbar: React.FC<WritingToolbarProps> = ({
         {/* Section 4: Curve Tools */}
         <WritingCurveTools />
 
-        {/* Section 5: Style Tools */}
+        {/* Section 5: Text Tools */}
+        <WritingTextTools />
+
+        {/* Section 6: Style Tools */}
         <WritingStyleTools />
 
-        {/* Section 6: Delete Tools */}
+        {/* Section 7: Delete Tools */}
         <WritingDeleteTools />
 
         {/* Section 7: Sandwich button for panels/sidebar */}

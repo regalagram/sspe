@@ -1,7 +1,7 @@
 import { EditorState, SVGPath, SVGSubPath } from '../types';
 
 // ElementType definition for selection utilities
-export type ElementType = 'image' | 'use' | 'text' | 'textPath' | 'group' | 'command' | 'subpath';
+export type ElementType = 'image' | 'use' | 'text' | 'multiline-text' | 'textPath' | 'group' | 'command' | 'subpath';
 
 export interface SelectionState {
   selectedCommands: string[];
@@ -97,7 +97,8 @@ export function isElementSelected(elementId: string, elementType: ElementType, s
   switch (elementType) {
     case 'image': return selection.selectedImages?.includes(elementId) || false;
     case 'use': return selection.selectedUses?.includes(elementId) || false;
-    case 'text': return selection.selectedTexts?.includes(elementId) || false;
+    case 'text': 
+    case 'multiline-text': return selection.selectedTexts?.includes(elementId) || false;
     case 'textPath': return selection.selectedTextPaths?.includes(elementId) || false;
     case 'group': return selection.selectedGroups?.includes(elementId) || false;
     case 'command': return selection.selectedCommands?.includes(elementId) || false;

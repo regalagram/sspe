@@ -89,6 +89,22 @@ const loadInitialState = (): EditorState => {
           fontSize: 16,
           fill: '#000000'
         }
+      },
+      {
+        id: 'test-multiline-text-1',
+        type: 'multiline-text',
+        x: 100,
+        y: 100,
+        spans: [
+          { id: 'span-1', content: 'First Line' },
+          { id: 'span-2', content: 'Second Line' },
+          { id: 'span-3', content: 'Third Line' }
+        ],
+        style: {
+          fontSize: 18,
+          fill: '#ff0000',
+          lineHeight: 1.2
+        }
       }
     ],
     textPaths: [],

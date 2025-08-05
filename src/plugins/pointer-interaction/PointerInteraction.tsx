@@ -257,6 +257,10 @@ class ElementSelector {
         this.debugManager.logSelection('Calling selectText', {});
         this.editorStore.selectText(elementId); 
         break;
+      case 'multiline-text': 
+        this.debugManager.logSelection('Calling selectText for multiline-text', {});
+        this.editorStore.selectText(elementId); 
+        break;
       case 'textPath': 
         this.debugManager.logSelection('Calling selectTextPath', {});
         this.editorStore.selectTextPath(elementId); 
@@ -292,6 +296,7 @@ class ElementSelector {
         }
         break;
       case 'text':
+      case 'multiline-text':
         if (!newSelection.selectedTexts.includes(elementId)) {
           newSelection.selectedTexts = [...newSelection.selectedTexts, elementId];
         }
