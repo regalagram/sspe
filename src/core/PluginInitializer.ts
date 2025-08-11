@@ -42,6 +42,7 @@ import { AnimationSystemPlugin } from '../plugins/animation-system';
 import { ContextMenuPlugin } from '../plugins/context-menu';
 import { KeyboardMovementPlugin } from '../plugins/keyboard-movement';
 import { TextPlacementPlugin } from '../plugins/text-placement';
+import { TextEditPlugin } from '../plugins/text-edit';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -93,6 +94,7 @@ export const initializePlugins = (): void => {
   // Register remaining plugins
   pluginManager.registerPlugin(ShapesPlugin);
   pluginManager.registerPlugin(TextPlacementPlugin);
+  pluginManager.registerPlugin(TextEditPlugin);
   pluginManager.registerPlugin(ArrangePlugin);
   pluginManager.registerPlugin(ReorderPlugin);
   pluginManager.registerPlugin(PanelModePlugin);

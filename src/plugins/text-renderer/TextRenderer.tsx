@@ -1,18 +1,37 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { TextElementType, TextElement, MultilineTextElement } from '../../types';
 import { getStyleValue } from '../../utils/gradient-utils';
 import { getContrastColor } from '../../utils/path-utils';
 import { calculateTextBoundsDOM } from '../../utils/text-utils';
 import { useAnimationsForElement } from '../../components/AnimationRenderer';
+import { useTextEditMode } from '../../hooks/useTextEditMode';
+import { TextEditOverlay } from '../../components/TextEditOverlay';
 
 // Individual Text Element Component that can use hooks
 const TextElementComponent: React.FC<{ text: TextElement }> = ({ text }) => {
-  const { selection, viewport, renderVersion, enabledFeatures } = useEditorStore();
+  const { selection, viewport, renderVersion, enabledFeatures, updateTextContent } = useEditorStore();
   const animations = useAnimationsForElement(text.id);
+  const { isTextBeingEdited, updateTextContent: updateTextContentLive, stopTextEdit } = useTextEditMode();
   
   const isSelected = selection.selectedTexts.includes(text.id);
   const isWireframeMode = enabledFeatures.wireframeEnabled;
+  const isBeingEdited = isTextBeingEdited(text.id);
+  
+  // Handle content changes during editing (memoized to prevent TextEditOverlay remount)
+  const handleContentChange = useCallback((content: string | string[]) => {
+    console.log('📝 TextRenderer (single): handleContentChange called with:', content);
+    if (typeof content === 'string') {
+      console.log('📝 TextRenderer (single): Updating text content live...');
+      updateTextContentLive(content);
+    }
+  }, [updateTextContentLive]);
+  
+  // Handle finishing editing (memoized to prevent TextEditOverlay remount)
+  const handleFinishEditing = useCallback((save: boolean) => {
+    console.log('📝 TextRenderer (single): handleFinishEditing called with save:', save);
+    stopTextEdit(save);
+  }, [stopTextEdit]);
   
   return (
     <g key={`text-group-${text.id}`}>
@@ -57,9 +76,10 @@ const TextElementComponent: React.FC<{ text: TextElement }> = ({ text }) => {
         clipPath={text.style.clipPath}
         mask={text.style.mask}
         style={{
-          cursor: text.locked ? 'default' : 'grab',
+          cursor: text.locked ? 'default' : (isBeingEdited ? 'text' : 'grab'),
           pointerEvents: text.locked ? 'none' : 'all',
-          userSelect: 'none'
+          userSelect: isBeingEdited ? 'text' : 'none',
+          opacity: isBeingEdited ? 0 : 1 // Completely hide during editing to prevent duplication
         }}
         data-element-type="text"
         data-element-id={text.id}
@@ -68,6 +88,16 @@ const TextElementComponent: React.FC<{ text: TextElement }> = ({ text }) => {
         {/* Include animations with programmatic control */}
         {animations}
       </text>
+
+      {/* Text Edit Overlay */}
+      {isBeingEdited && (
+        <TextEditOverlay
+          textElement={text}
+          viewport={viewport}
+          onContentChange={handleContentChange}
+          onFinishEditing={handleFinishEditing}
+        />
+      )}
 
       {/* Selection indicator */}
       {isSelected && (
@@ -127,11 +157,28 @@ const TextElementComponent: React.FC<{ text: TextElement }> = ({ text }) => {
 
 // Individual Multiline Text Element Component that can use hooks
 const MultilineTextElementComponent: React.FC<{ text: MultilineTextElement }> = ({ text }) => {
-  const { selection, viewport, renderVersion, enabledFeatures } = useEditorStore();
+  const { selection, viewport, renderVersion, enabledFeatures, updateTextSpan } = useEditorStore();
   const animations = useAnimationsForElement(text.id);
+  const { isTextBeingEdited, updateTextContent: updateTextContentLive, stopTextEdit } = useTextEditMode();
   
   const isSelected = selection.selectedTexts.includes(text.id);
   const isWireframeMode = enabledFeatures.wireframeEnabled;
+  const isBeingEdited = isTextBeingEdited(text.id);
+  
+  // Handle content changes during editing (memoized to prevent TextEditOverlay remount)
+  const handleContentChange = useCallback((content: string | string[]) => {
+    console.log('📝 TextRenderer (multiline): handleContentChange called with:', content);
+    if (Array.isArray(content)) {
+      console.log('📝 TextRenderer (multiline): Updating multiline text content live...');
+      updateTextContentLive(content);
+    }
+  }, [updateTextContentLive]);
+  
+  // Handle finishing editing (memoized to prevent TextEditOverlay remount)
+  const handleFinishEditing = useCallback((save: boolean) => {
+    console.log('📝 TextRenderer (multiline): handleFinishEditing called with save:', save);
+    stopTextEdit(save);
+  }, [stopTextEdit]);
   
   return (
     <g key={`multiline-text-group-${text.id}`}>
@@ -176,9 +223,10 @@ const MultilineTextElementComponent: React.FC<{ text: MultilineTextElement }> = 
         clipPath={text.style.clipPath}
         mask={text.style.mask}
         style={{
-          cursor: text.locked ? 'default' : 'grab',
+          cursor: text.locked ? 'default' : (isBeingEdited ? 'text' : 'grab'),
           pointerEvents: text.locked ? 'none' : 'all',
-          userSelect: 'none'
+          userSelect: isBeingEdited ? 'text' : 'none',
+          opacity: isBeingEdited ? 0 : 1 // Completely hide during editing to prevent duplication
         }}
         data-element-type="multiline-text"
         data-element-id={text.id}
@@ -204,6 +252,16 @@ const MultilineTextElementComponent: React.FC<{ text: MultilineTextElement }> = 
         {/* Include animations with programmatic control */}
         {animations}
       </text>
+
+      {/* Text Edit Overlay for multiline text */}
+      {isBeingEdited && (
+        <TextEditOverlay
+          textElement={text}
+          viewport={viewport}
+          onContentChange={handleContentChange}
+          onFinishEditing={handleFinishEditing}
+        />
+      )}
 
       {/* Selection indicator for multiline text */}
       {isSelected && (

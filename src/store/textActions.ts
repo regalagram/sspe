@@ -30,6 +30,12 @@ export interface TextActions {
   getAllTexts: () => TextElementType[];
   getSelectedTexts: () => TextElementType[];
   
+  // Text editing support
+  setTextEditMode: (textId: string | null) => void;
+  isTextInEditMode: (textId: string) => boolean;
+  getEditingText: () => TextElementType | null;
+  updateTextContentLive: (textId: string, content: string | string[]) => void;
+
   // Utility
   lockText: (textId: string, locked?: boolean) => void;
   clearAllTexts: () => void;
@@ -440,6 +446,51 @@ export const createTextActions: StateCreator<
         selectedTexts: [],
         selectedTextSpans: []
       }
+    }));
+  },
+
+  // Text editing support
+  setTextEditMode: (textId: string | null) => {
+    set(state => ({
+      textEditState: {
+        editingTextId: textId
+      }
+    }));
+  },
+
+  isTextInEditMode: (textId: string) => {
+    const state = get();
+    return state.textEditState.editingTextId === textId;
+  },
+
+  getEditingText: () => {
+    const state = get();
+    const editingTextId = state.textEditState.editingTextId;
+    return editingTextId 
+      ? state.texts.find(text => text.id === editingTextId) || null
+      : null;
+  },
+
+  updateTextContentLive: (textId: string, content: string | string[]) => {
+    // This is for live updates during editing - no history push
+    set(state => ({
+      texts: state.texts.map(text => {
+        if (text.id !== textId) return text;
+        
+        if (text.type === 'text' && typeof content === 'string') {
+          return { ...text, content };
+        } else if (text.type === 'multiline-text' && Array.isArray(content)) {
+          const spans = content.map((line, index) => {
+            const existingSpan = text.spans[index];
+            return existingSpan 
+              ? { ...existingSpan, content: line }
+              : { id: `span-${Date.now()}-${index}`, content: line };
+          });
+          return { ...text, spans };
+        }
+        
+        return text;
+      })
     }));
   }
 });

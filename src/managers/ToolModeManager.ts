@@ -1,13 +1,14 @@
 import { useEditorStore } from '../store/editorStore';
 import { EditorCommandType } from '../types';
 
-export type ToolMode = 'select' | 'pencil' | 'curves' | 'shapes' | 'text' | 'creation';
+export type ToolMode = 'select' | 'pencil' | 'curves' | 'shapes' | 'text' | 'text-edit' | 'creation';
 
 export interface ToolModeState {
   activeMode: ToolMode;
   createSubMode?: EditorCommandType; // Para M, L, C, Z
   shapeId?: string; // Para shapes
   textType?: 'single' | 'multiline'; // Para text
+  editingTextId?: string; // Para text-edit
   metadata?: Record<string, any>; // Datos adicionales del modo
 }
 
@@ -15,6 +16,7 @@ export interface ToolModeOptions {
   commandType?: EditorCommandType;
   shapeId?: string;
   textType?: 'single' | 'multiline';
+  editingTextId?: string;
   metadata?: Record<string, any>;
 }
 
@@ -40,6 +42,7 @@ export class ToolModeManager {
   private curvesManager: any = null;
   private pencilManager: any = null;
   private textManager: any = null;
+  private textEditManager: any = null;
   private creationManager: any = null;
 
   constructor() {
@@ -62,6 +65,10 @@ export class ToolModeManager {
 
   setTextManager(manager: any) {
     this.textManager = manager;
+  }
+
+  setTextEditManager(manager: any) {
+    this.textEditManager = manager;
   }
 
   setCreationManager(manager: any) {
@@ -116,7 +123,8 @@ export class ToolModeManager {
 
     return this.state.createSubMode === options.commandType &&
       this.state.shapeId === options.shapeId &&
-      this.state.textType === options.textType;
+      this.state.textType === options.textType &&
+      this.state.editingTextId === options.editingTextId;
   }
 
   /**
@@ -151,6 +159,12 @@ export class ToolModeManager {
         }
         break;
 
+      case 'text-edit':
+        if (this.textEditManager) {
+          this.textEditManager.deactivateExternally();
+        }
+        break;
+
       case 'creation':
         if (this.creationManager) {
           this.creationManager.deactivateExternally();
@@ -166,6 +180,7 @@ export class ToolModeManager {
     this.state.createSubMode = undefined;
     this.state.shapeId = undefined;
     this.state.textType = undefined;
+    this.state.editingTextId = undefined;
     this.state.metadata = undefined;
   }
 
@@ -208,6 +223,14 @@ export class ToolModeManager {
           this.state.textType = options.textType;
           this.state.metadata = options.metadata;
           this.textManager.startTextCreation(options.textType);
+        }
+        break;
+
+      case 'text-edit':
+        if (options?.editingTextId) {
+          this.state.editingTextId = options.editingTextId;
+          this.state.metadata = options.metadata;
+          // Text edit manager handles its own activation
         }
         break;
 
@@ -281,6 +304,11 @@ export class ToolModeManager {
 
 // Instancia singleton
 export const toolModeManager = new ToolModeManager();
+
+// Make it globally accessible for debugging and plugin system
+if (typeof window !== 'undefined') {
+  (window as any).toolModeManager = toolModeManager;
+}
 
 // Helper functions para uso en componentes
 export const useToolMode = () => {

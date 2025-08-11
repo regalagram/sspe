@@ -20,6 +20,8 @@ export interface PointerEventContext {
   svgRef: React.RefObject<SVGSVGElement | null>;
   commandId?: string;
   controlPoint?: 'x1y1' | 'x2y2';
+  isDoubleClick?: boolean;
+  clickCount?: number;
 }
 
 export interface Plugin {
@@ -75,6 +77,12 @@ export class PluginManager {
   private editorStore: ReturnType<typeof useEditorStore> | null = null;
   public isShapeCreationMode: boolean = false;
   public isTextCreationMode: boolean = false;
+  
+  // Double-click detection state
+  private lastClickTime: number = 0;
+  private lastClickTarget: EventTarget | null = null;
+  private clickCount: number = 0;
+  private doubleClickDelay: number = 400; // ms - increased for easier double-click detection
 
   setSVGRef(ref: React.RefObject<SVGSVGElement | null>): void {
     this.svgRef = ref;
@@ -104,6 +112,81 @@ export class PluginManager {
     return this.isTextCreationMode;
   }
 
+  /**
+   * Detect if this is a double-click event
+   */
+  private detectDoubleClick(e: PointerEvent<SVGElement>): { isDoubleClick: boolean; clickCount: number } {
+    const now = Date.now();
+    const currentTarget = e.target;
+    
+    // Check if this is a potential double-click
+    const timeDiff = now - this.lastClickTime;
+    
+    // Enhanced same target detection for text elements and their selection borders
+    let sameTarget = this.lastClickTarget === currentTarget;
+    if (!sameTarget) {
+      // Check if both targets are related to the same text element
+      const getTextElementId = (target: EventTarget | null): string | null => {
+        const element = target as SVGElement;
+        if (!element || !element.dataset) return null;
+        
+        // Direct text element
+        if (element.tagName === 'text' && element.id) return element.id;
+        
+        // Element with data-element-id (like selection borders)
+        if (element.dataset.elementId) return element.dataset.elementId;
+        
+        return null;
+      };
+      
+      const currentTextId = getTextElementId(currentTarget);
+      const lastTextId = getTextElementId(this.lastClickTarget);
+      
+      if (currentTextId && lastTextId && currentTextId === lastTextId) {
+        sameTarget = true;
+        console.log('🖱️ Enhanced target matching: text element and selection border treated as same target:', currentTextId);
+      }
+    }
+    
+    console.log('🖱️ DoubleClick Detection:', {
+      timeDiff,
+      sameTarget,
+      currentTarget: (currentTarget as any)?.tagName,
+      targetId: (currentTarget as any)?.id,
+      targetDataId: (currentTarget as any)?.dataset?.elementId,
+      targetDataType: (currentTarget as any)?.dataset?.elementType,
+      doubleClickDelay: this.doubleClickDelay
+    });
+    
+    if (timeDiff <= this.doubleClickDelay && sameTarget) {
+      this.clickCount++;
+    } else {
+      this.clickCount = 1;
+    }
+    
+    this.lastClickTime = now;
+    this.lastClickTarget = currentTarget;
+    
+    const isDoubleClick = this.clickCount === 2;
+    
+    console.log('🖱️ Click Result:', {
+      clickCount: this.clickCount,
+      isDoubleClick,
+      timeDiff,
+      sameTarget
+    });
+    
+    // Reset count after double-click to prevent triple-click issues
+    if (isDoubleClick) {
+      this.clickCount = 0;
+    }
+    
+    return {
+      isDoubleClick,
+      clickCount: this.clickCount
+    };
+  }
+
   getSVGPoint(e: PointerEvent<SVGElement>): SVGPoint {
     if (!this.svgRef || !this.editorStore) return { x: 0, y: 0 };
     const store = this.editorStore as { viewport: EditorState['viewport'] };
@@ -117,11 +200,31 @@ export class PluginManager {
     commandId?: string,
     controlPoint?: 'x1y1' | 'x2y2'
   ): boolean {
+    // Detect double-click for pointerDown events
+    let isDoubleClick = false;
+    let clickCount = 1;
+    
+    if (eventType === 'pointerDown') {
+      const doubleClickInfo = this.detectDoubleClick(e as PointerEvent<SVGElement>);
+      isDoubleClick = doubleClickInfo.isDoubleClick;
+      clickCount = doubleClickInfo.clickCount;
+      
+      console.log('🎯 handlePointerEvent - Double-click info:', {
+        eventType,
+        isDoubleClick,
+        clickCount,
+        target: (e.target as any)?.tagName,
+        targetId: (e.target as any)?.id
+      });
+    }
+
     const context: PointerEventContext = {
       svgPoint: this.getSVGPoint(e as PointerEvent<SVGElement>),
       svgRef: this.svgRef!,
       commandId,
-      controlPoint
+      controlPoint,
+      isDoubleClick,
+      clickCount
     };
 
     const target = e.target as SVGElement;
@@ -135,6 +238,19 @@ export class PluginManager {
     // Process plugins in order, stop if any plugin handles the event
     let pluginsToProcess: Plugin[] = this.getEnabledPlugins();
     let contextMenuPrioritized = false;
+    
+    // Special priority for text-edit plugin on double-clicks
+    if (isDoubleClick && eventType === 'pointerDown') {
+      console.log('🎯 PluginSystem: Double-click detected, prioritizing text-edit plugin');
+      const textEditPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'text-edit');
+      if (textEditPlugin) {
+        const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'text-edit');
+        pluginsToProcess = [textEditPlugin, ...otherPlugins];
+        console.log('🎯 PluginSystem: Text-edit plugin prioritized, new order:', pluginsToProcess.map(p => p.id).slice(0, 5));
+      } else {
+        console.log('🎯 PluginSystem: Text-edit plugin not found in enabled plugins');
+      }
+    }
     
     if (eventType === 'pointerDown' && (e as PointerEvent<SVGElement>).button === 2) {
       // For right-clicks, prioritize context menu plugin above all others
@@ -202,6 +318,12 @@ export class PluginManager {
 
     for (const plugin of pluginsToProcess) {
       if (!plugin.pointerHandlers) continue;
+      
+      // Log for double-clicks specifically
+      if (isDoubleClick && eventType === 'pointerDown') {
+        console.log('🎯 PluginSystem: Processing plugin for double-click:', plugin.id);
+      }
+      
       let handled = false;
       switch (eventType) {
         case 'pointerDown':
@@ -217,7 +339,13 @@ export class PluginManager {
           handled = plugin.pointerHandlers.onWheel?.(e as WheelEvent<SVGElement>, context) || false;
           break;
       }
+      
+      if (isDoubleClick && eventType === 'pointerDown') {
+        console.log('🎯 PluginSystem: Plugin', plugin.id, 'returned handled:', handled);
+      }
+      
       if (handled) {
+        console.log('🎯 PluginSystem: Event handled by plugin:', plugin.id);
         return true;
       }
     }
@@ -315,8 +443,40 @@ export class PluginManager {
       return false;
     }
 
-    // Log para debug de teclas
-    //console.log('[PluginSystem] keydown:', { key: event.key, code: event.code, ctrl: event.ctrlKey, shift: event.shiftKey, alt: event.altKey, meta: event.metaKey, target: event.target });
+    // Check if we're in text-edit mode - if so, let text editing handle ALL keys except escape
+    let isInTextEditMode = false;
+    let toolModeManagerMode = 'unknown';
+    try {
+      // @ts-ignore
+      const toolModeManager = window.toolModeManager;
+      if (toolModeManager) {
+        toolModeManagerMode = toolModeManager.getActiveMode();
+        isInTextEditMode = toolModeManagerMode === 'text-edit';
+      }
+    } catch (e) {
+      console.warn('[PluginSystem] Error checking tool mode:', e);
+    }
+    
+    console.log('[PluginSystem] Tool mode check:', {
+      isInTextEditMode,
+      toolModeManagerMode,
+      key: event.key,
+      target: event.target
+    });
+    
+    if (isInTextEditMode) {
+      console.log('[PluginSystem] Text-edit mode active, key:', event.key);
+      // Only allow Escape to be handled by shortcuts in text-edit mode
+      if (event.key !== 'Escape') {
+        console.log('[PluginSystem] Allowing key to pass through to text editing input:', event.key);
+        return false; // Let the text input handle the key
+      }
+    }
+    
+    // Log para debug de teclas (temporarily enabled for debugging)
+    if (event.key === 'Enter' || event.key === 'F2' || event.key.length === 1) {
+      console.log('[PluginSystem] keydown:', { key: event.key, code: event.code, ctrl: event.ctrlKey, shift: event.shiftKey, alt: event.altKey, meta: event.metaKey, target: event.target, isInTextEditMode });
+    }
 
     // First, let plugins handle the event
     for (const plugin of this.plugins.values()) {
@@ -336,7 +496,22 @@ export class PluginManager {
     const key = modifiers.length > 0 ? `${modifiers.sort().join('+')}+${event.key}` : event.key;
     const shortcuts = this.shortcuts.get(key);
 
+    // Debug shortcut lookup
+    if (event.key === 'Enter' || event.key === 'F2') {
+      console.log('[PluginSystem] Shortcut lookup:', {
+        searchKey: key,
+        availableShortcuts: Array.from(this.shortcuts.keys()),
+        foundShortcuts: shortcuts ? shortcuts.length : 0,
+        shortcuts: shortcuts?.map(s => ({ key: s.key, plugin: s.plugin, description: s.description }))
+      });
+    }
+
     if (shortcuts && shortcuts.length > 0) {
+      // Debug shortcut execution
+      if (event.key === 'Enter' || event.key === 'F2') {
+        console.log('[PluginSystem] Executing shortcuts for key:', key);
+      }
+      
       // Si hay varios shortcuts para la misma combinación, priorizar el del modo activo
       let mode: string | undefined = undefined;
       try {
@@ -345,6 +520,27 @@ export class PluginManager {
       } catch (e) {
         // fallback: no hay toolModeManager
       }
+      
+      // Special priority for text-edit plugin when text is selected
+      if (event.key === 'Enter' || event.key === 'F2') {
+        const textEditShortcut = shortcuts.find(s => s.plugin === 'text-edit');
+        if (textEditShortcut) {
+          // Check if there are selected texts
+          try {
+            const editorStore = this.editorStore as any;
+            const hasSelectedText = editorStore && editorStore.selection?.selectedTexts?.length > 0;
+            if (hasSelectedText || mode === 'text-edit') {
+              event.preventDefault();
+              console.log('[PluginSystem] shortcut triggered (text-edit priority):', key, textEditShortcut);
+              textEditShortcut.action();
+              return true;
+            }
+          } catch (e) {
+            console.warn('[PluginSystem] Error checking text selection:', e);
+          }
+        }
+      }
+      
       let found = false;
       if (mode) {
         // Prioridad exacta: plugin === mode
@@ -374,7 +570,7 @@ export class PluginManager {
       if (!found) {
         // Si no se encontró por modo, ejecuta el primero
         event.preventDefault();
-        //console.log('[PluginSystem] shortcut triggered (default):', key, shortcuts[0]);
+        console.log('[PluginSystem] shortcut triggered (default):', key, shortcuts[0]);
         shortcuts[0].action();
       }
       return true;

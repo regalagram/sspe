@@ -261,7 +261,10 @@ export interface EditorState {
   grid: GridState;
   mode: EditorMode;
   history: HistoryState;
-  isFullscreen: boolean; 
+  isFullscreen: boolean;
+  textEditState: {
+    editingTextId: string | null;
+  };
   enabledFeatures: {
     commandPointsEnabled: boolean;
     controlPointsEnabled: boolean;

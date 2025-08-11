@@ -182,6 +182,9 @@ const loadInitialState = (): EditorState => {
       canRedo: false,
     },
     isFullscreen: false,
+    textEditState: {
+      editingTextId: null
+    },
     enabledFeatures: {
       commandPointsEnabled: false, 
       controlPointsEnabled: false, 
