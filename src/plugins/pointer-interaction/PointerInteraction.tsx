@@ -1205,6 +1205,12 @@ class PointerInteractionManager {
       
       const elementTypeTyped = elementType as ElementType;
       
+      // For double-clicks on text elements, let text-edit plugin handle them
+      if (context.isDoubleClick && (elementTypeTyped === 'text' || elementTypeTyped === 'multiline-text')) {
+        console.log('🎯 PointerInteraction: Double-click on text detected, letting text-edit plugin handle it');
+        return false; // Don't handle, let text-edit plugin process it
+      }
+      
       // DEBUG: Log what's being detected and selected
       this.debugManager.logElementDetection({
         elementType: elementTypeTyped,

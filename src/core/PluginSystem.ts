@@ -280,8 +280,9 @@ export class PluginManager {
       const isTextRelated = elementType === 'text' || elementType === 'multiline-text' || 
                           (target.tagName === 'tspan' && target.parentElement?.tagName === 'text');
       
-      if (isTextRelated) {
-        // When clicking on text, prioritize pointer-interaction plugin for selection logic
+      if (isTextRelated && !isDoubleClick) {
+        // When single-clicking on text, prioritize pointer-interaction plugin for selection logic
+        // But for double-clicks, let text-edit plugin handle it first (already prioritized above)
         const pointerInteractionPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'pointer-interaction');
         const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'pointer-interaction');
         if (pointerInteractionPlugin) {

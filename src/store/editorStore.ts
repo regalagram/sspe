@@ -93,8 +93,8 @@ const loadInitialState = (): EditorState => {
       {
         id: 'test-multiline-text-1',
         type: 'multiline-text',
-        x: 100,
-        y: 100,
+        x: 300,
+        y: 300,
         spans: [
           { id: 'span-1', content: 'First Line' },
           { id: 'span-2', content: 'Second Line' },

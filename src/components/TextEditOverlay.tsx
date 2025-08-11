@@ -266,8 +266,8 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
       inputRef.current.style.width = `${newWidth}px`;
       
       // Maintain all text styling properties for consistency
-      inputRef.current.style.letterSpacing = textElement.style.letterSpacing || '0px';
-      inputRef.current.style.wordSpacing = textElement.style.wordSpacing || '0px';
+      inputRef.current.style.letterSpacing = String(textElement.style.letterSpacing || '0px');
+      inputRef.current.style.wordSpacing = String(textElement.style.wordSpacing || '0px');
       inputRef.current.style.fontKerning = 'auto';
       
       // Maintain rotation if present
