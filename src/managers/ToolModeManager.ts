@@ -1,18 +1,20 @@
 import { useEditorStore } from '../store/editorStore';
 import { EditorCommandType } from '../types';
 
-export type ToolMode = 'select' | 'pencil' | 'curves' | 'shapes' | 'creation';
+export type ToolMode = 'select' | 'pencil' | 'curves' | 'shapes' | 'text' | 'creation';
 
 export interface ToolModeState {
   activeMode: ToolMode;
   createSubMode?: EditorCommandType; // Para M, L, C, Z
   shapeId?: string; // Para shapes
+  textType?: 'single' | 'multiline'; // Para text
   metadata?: Record<string, any>; // Datos adicionales del modo
 }
 
 export interface ToolModeOptions {
   commandType?: EditorCommandType;
   shapeId?: string;
+  textType?: 'single' | 'multiline';
   metadata?: Record<string, any>;
 }
 
@@ -37,6 +39,7 @@ export class ToolModeManager {
   private shapeManager: any = null;
   private curvesManager: any = null;
   private pencilManager: any = null;
+  private textManager: any = null;
   private creationManager: any = null;
 
   constructor() {
@@ -55,6 +58,10 @@ export class ToolModeManager {
 
   setPencilManager(manager: any) {
     this.pencilManager = manager;
+  }
+
+  setTextManager(manager: any) {
+    this.textManager = manager;
   }
 
   setCreationManager(manager: any) {
@@ -108,7 +115,8 @@ export class ToolModeManager {
     if (!options) return true;
 
     return this.state.createSubMode === options.commandType &&
-      this.state.shapeId === options.shapeId;
+      this.state.shapeId === options.shapeId &&
+      this.state.textType === options.textType;
   }
 
   /**
@@ -137,6 +145,12 @@ export class ToolModeManager {
         } 
         break;
 
+      case 'text':
+        if (this.textManager) {
+          this.textManager.stopTextCreation();
+        }
+        break;
+
       case 'creation':
         if (this.creationManager) {
           this.creationManager.deactivateExternally();
@@ -151,6 +165,7 @@ export class ToolModeManager {
     // Limpiar estado anterior
     this.state.createSubMode = undefined;
     this.state.shapeId = undefined;
+    this.state.textType = undefined;
     this.state.metadata = undefined;
   }
 
@@ -185,6 +200,14 @@ export class ToolModeManager {
         } else {
           // Fallback si no hay manager
           useEditorStore.getState().setCreateMode('PENCIL');
+        }
+        break;
+
+      case 'text':
+        if (options?.textType && this.textManager) {
+          this.state.textType = options.textType;
+          this.state.metadata = options.metadata;
+          this.textManager.startTextCreation(options.textType);
         }
         break;
 

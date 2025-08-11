@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Type, ChevronDown, FileText, AlignJustify, Spline } from 'lucide-react';
+import { Type, ChevronDown, FileText, AlignJustify, Spline, X } from 'lucide-react';
 import { ToolbarButton, ToolbarSection } from './ToolbarButton';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useEditorStore } from '../store/editorStore';
@@ -24,26 +24,20 @@ export const WritingTextTools: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  // Note: There's no 'text' mode in ToolMode, so we'll just track submenu state
-  const isTextActive = false;
+  const isTextActive = toolModeState.activeMode === 'text';
+  const activeTextType = toolModeState.textType;
 
   // Check if there's a selected subpath for TextPath option
   const hasSelectedSubpath = selection.selectedSubPaths.length > 0;
 
   const handleAddText = () => {
-    const centerX = viewport.viewBox.x + viewport.viewBox.width / 2;
-    const centerY = viewport.viewBox.y + viewport.viewBox.height / 2;
-    addText(centerX, centerY, 'Text');
+    toolModeManager.setMode('text', { textType: 'single' });
     setIsTextSubmenuOpen(false);
-    toolModeManager.setMode('select');
   };
 
   const handleAddMultilineText = () => {
-    const centerX = viewport.viewBox.x + viewport.viewBox.width / 2;
-    const centerY = viewport.viewBox.y + viewport.viewBox.height / 2;
-    addMultilineText(centerX, centerY, ['Line 1', 'Line 2']);
+    toolModeManager.setMode('text', { textType: 'multiline' });
     setIsTextSubmenuOpen(false);
-    toolModeManager.setMode('select');
   };
 
   const handleAddTextPath = () => {
@@ -62,6 +56,10 @@ export const WritingTextTools: React.FC = () => {
         toolModeManager.setMode('select');
       }
     }
+  };
+
+  const handleExitTextMode = () => {
+    toolModeManager.setMode('select');
   };
 
   return (
@@ -85,7 +83,11 @@ export const WritingTextTools: React.FC = () => {
             transition: 'all 0.15s ease',
             position: 'relative'
           }}>
-            <Type size={16} />
+            {isTextActive && activeTextType ? (
+              activeTextType === 'multiline' ? <AlignJustify size={16} /> : <Type size={16} />
+            ) : (
+              <Type size={16} />
+            )}
             <ChevronDown size={12} style={{ 
               marginLeft: '2px',
               transform: isTextSubmenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
@@ -96,18 +98,37 @@ export const WritingTextTools: React.FC = () => {
         isOpen={isTextSubmenuOpen}
         onToggle={() => setIsTextSubmenuOpen(!isTextSubmenuOpen)}
       >
+        {isTextActive && (
+          <>
+            <SubmenuItem
+              icon={<X size={16} />}
+              label="Exit Text Mode"
+              onClick={() => {
+                handleExitTextMode();
+                setIsTextSubmenuOpen(false);
+              }}
+              active={true}
+            />
+            <div style={{ 
+              height: '1px', 
+              background: '#e5e7eb', 
+              margin: '4px 0' 
+            }} />
+          </>
+        )}
+
         <SubmenuItem
           icon={<Type size={16} />}
           label="Add Text"
           onClick={handleAddText}
-          active={false}
+          active={activeTextType === 'single'}
         />
         
         <SubmenuItem
           icon={<AlignJustify size={16} />}
           label="Add Multiline Text"
           onClick={handleAddMultilineText}
-          active={false}
+          active={activeTextType === 'multiline'}
         />
         
         <SubmenuItem

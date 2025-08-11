@@ -74,6 +74,7 @@ export class PluginManager {
   private svgRef: React.RefObject<SVGSVGElement | null> | null = null;
   private editorStore: ReturnType<typeof useEditorStore> | null = null;
   public isShapeCreationMode: boolean = false;
+  public isTextCreationMode: boolean = false;
 
   setSVGRef(ref: React.RefObject<SVGSVGElement | null>): void {
     this.svgRef = ref;
@@ -93,6 +94,14 @@ export class PluginManager {
 
   getShapeCreationMode(): boolean {
     return this.isShapeCreationMode;
+  }
+
+  setTextCreationMode(isCreating: boolean): void {
+    this.isTextCreationMode = isCreating;
+  }
+
+  getTextCreationMode(): boolean {
+    return this.isTextCreationMode;
   }
 
   getSVGPoint(e: PointerEvent<SVGElement>): SVGPoint {
@@ -177,9 +186,14 @@ export class PluginManager {
           pluginsToProcess = [pointerInteractionPlugin, ...otherPlugins];
         }
       } else if (!commandId && !elementType) {
-        // When clicking on empty canvas, prioritize shapes plugin if it's in creation mode
+        // When clicking on empty canvas, prioritize creation plugins if they're in creation mode
         const shapesPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'shapes');
-        if (shapesPlugin && this.isShapeCreationMode) {
+        const textPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'text-placement');
+        
+        if (textPlugin && this.isTextCreationMode) {
+          const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'text-placement');
+          pluginsToProcess = [textPlugin, ...otherPlugins];
+        } else if (shapesPlugin && this.isShapeCreationMode) {
           const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'shapes');
           pluginsToProcess = [shapesPlugin, ...otherPlugins];
         }
