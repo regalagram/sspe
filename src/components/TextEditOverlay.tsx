@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { TextElementType, TextElement, MultilineTextElement, ViewportState } from '../types';
 import { textEditManager } from '../managers/TextEditManager';
 import { useEditorStore } from '../store/editorStore';
+import { calculateTextBoundsDOM } from '../utils/text-utils';
 
 interface TextEditOverlayProps {
   textElement: TextElementType;
@@ -116,56 +117,64 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
       
       let inputX, inputY, inputWidth, inputHeight;
       
+      // Use calculateTextBoundsDOM to get accurate text dimensions
+      const textBounds = calculateTextBoundsDOM(textElement);
+      let accurateWidth = textBounds?.width || 100;
+      let accurateHeight = textBounds?.height || fontSize * 1.2;
+      
+      console.log('📝 TextEditOverlay: Using calculateTextBoundsDOM for accurate dimensions:', {
+        textBounds,
+        textElement: textElement.type,
+        content: isMultiline ? textElement.spans.map(s => s.content) : textElement.content
+      });
+      
       if (rotation === 0) {
         // No rotation - use normal positioning
         const rect = svgTextElement.getBoundingClientRect();
-        const charWidth = fontSize * 0.6;
         
         inputX = rect.x;
         inputY = rect.y;
         
         // Adjust for text baseline vs bounding box difference
-        // getBoundingClientRect gives us the full text bounding box, but we want to align with the text baseline
-        inputY = inputY + fontSize * BASELINE_ADJUSTMENT_NORMAL; // Smaller adjustment for non-rotated text
+        inputY = inputY + fontSize * BASELINE_ADJUSTMENT_NORMAL;
         
+        // Use accurate dimensions from calculateTextBoundsDOM, scaled by zoom and with padding
         inputWidth = Math.max(
-          originalText.length * charWidth + 40,
-          fontSize * 4,
-          rect.width + 20
+          accurateWidth * viewport.zoom + 40,  // Accurate width with padding
+          fontSize * 4  // Minimum width
         );
-        inputHeight = Math.max(rect.height, fontSize * 1.2);
+        inputHeight = Math.max(
+          accurateHeight * viewport.zoom,  // Accurate height
+          fontSize * 1.2  // Minimum height
+        );
         
-        console.log('📝 TextEditOverlay: No rotation - using rect position:', { 
+        console.log('📝 TextEditOverlay: No rotation - using accurate dimensions:', { 
           rectPosition: { x: rect.x, y: rect.y },
           adjustedPosition: { inputX, inputY }, 
-          inputWidth, 
-          inputHeight,
+          accurateDimensions: { width: accurateWidth, height: accurateHeight },
+          scaledDimensions: { inputWidth, inputHeight },
           fontSize: {
             calculated: fontSize,
             original: textElement.style.fontSize,
-            zoom: viewport.zoom,
-            formula: `${textElement.style.fontSize || 16} * ${viewport.zoom}`
+            zoom: viewport.zoom
           },
           baselineAdjustment: fontSize * BASELINE_ADJUSTMENT_NORMAL
         });
       } else {
-        // Text is rotated - SIMPLIFIED APPROACH: Use the exact visual position of the text
-        console.log('📝 TextEditOverlay: Calculating position for rotated text (simplified approach)...');
+        // Text is rotated - use accurate dimensions from DOM measurement
+        console.log('📝 TextEditOverlay: Calculating position for rotated text with accurate dimensions...');
         
-        // Get the visual bounding rect - this is where the text actually appears on screen
         const rect = svgTextElement.getBoundingClientRect();
-        const bbox = (svgTextElement as unknown as SVGTextElement).getBBox();
         
-        // Calculate input dimensions based on unrotated text (using bbox)
-        const charWidth = fontSize * 0.55;
-        const textWidth = bbox.width * viewport.zoom;
-        
+        // Use accurate dimensions from calculateTextBoundsDOM, scaled by zoom
         inputWidth = Math.max(
-          textWidth + 30,
-          originalText.length * charWidth + 30,
-          fontSize * 3
+          accurateWidth * viewport.zoom + 30,  // Accurate width with padding
+          fontSize * 3  // Minimum width
         );
-        inputHeight = Math.max(bbox.height * viewport.zoom, fontSize * 1.2);
+        inputHeight = Math.max(
+          accurateHeight * viewport.zoom,  // Accurate height
+          fontSize * 1.2  // Minimum height
+        );
         
         // SIMPLEST APPROACH: Use the top-left of the rotated text's bounding rect
         // Then let CSS rotation handle the rest
@@ -179,9 +188,9 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
         inputX = inputX + fontSize * rotatedAdjustments.x; // Horizontal adjustment
         inputY = inputY + fontSize * rotatedAdjustments.y; // Vertical adjustment
         
-        console.log('📝 TextEditOverlay: Rotated text - simplified positioning:', {
+        console.log('📝 TextEditOverlay: Rotated text - using accurate dimensions:', {
           rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-          bbox: { x: bbox.x, y: bbox.y, width: bbox.width, height: bbox.height },
+          accurateBounds: textBounds,
           rectPosition: { x: rect.x, y: rect.y },
           adjustedPosition: { inputX, inputY },
           inputDimensions: { inputWidth, inputHeight },
@@ -254,16 +263,63 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
     // Update local input state immediately
     setInputValue(newContent);
     
-    // Update input width dynamically without recalculating entire position
+    // Update input width dynamically using precise DOM measurement
     if (inputRef.current && position) {
       const fontSize = position.fontSize;
-      const charWidth = fontSize * 0.55; // Use same precise char width as position calculation
-      const newWidth = Math.max(
-        newContent.length * charWidth + 30, // Use same padding as initial calculation
-        fontSize * 3, // Same minimum width
-        position.width * 0.7 // Allow more shrinking for better fit
-      );
-      inputRef.current.style.width = `${newWidth}px`;
+      
+      // Create a temporary text element with the new content to get precise measurements
+      let tempTextElement: TextElementType;
+      
+      if (isMultiline) {
+        // For multiline text, split the new content into lines and update spans
+        const lines = newContent.split('\n');
+        tempTextElement = {
+          ...textElement,
+          type: 'multiline-text',
+          spans: lines.map((line, index) => ({
+            id: `temp-span-${index}`,
+            content: line,
+            dx: 0,
+            dy: index === 0 ? 0 : fontSize * 1.2
+          }))
+        } as MultilineTextElement;
+      } else {
+        // For single line text, update content directly
+        tempTextElement = {
+          ...textElement,
+          type: 'text',
+          content: newContent
+        } as TextElement;
+      }
+      
+      // Use calculateTextBoundsDOM for precise measurement with new content
+      const newTextBounds = calculateTextBoundsDOM(tempTextElement);
+      
+      if (newTextBounds) {
+        const newWidth = Math.max(
+          newTextBounds.width * viewport.zoom + 40, // Precise width with padding
+          fontSize * 3 // Minimum width
+        );
+        inputRef.current.style.width = `${newWidth}px`;
+        
+        console.log('📝 TextEditOverlay: Precise dynamic width calculation:', {
+          newContent: newContent,
+          newContentType: isMultiline ? 'multiline' : 'single-line',
+          newContentLines: isMultiline ? newContent.split('\n') : [newContent],
+          measuredBounds: newTextBounds,
+          scaledWidth: newTextBounds.width * viewport.zoom,
+          finalWidth: newWidth,
+          viewport: { zoom: viewport.zoom }
+        });
+      } else {
+        // Fallback to basic calculation if DOM measurement fails
+        console.warn('📝 TextEditOverlay: calculateTextBoundsDOM failed, using fallback');
+        const fallbackWidth = Math.max(
+          newContent.length * fontSize * 0.6 * viewport.zoom + 40,
+          fontSize * 3
+        );
+        inputRef.current.style.width = `${fallbackWidth}px`;
+      }
       
       // Maintain all text styling properties for consistency
       inputRef.current.style.letterSpacing = String(textElement.style.letterSpacing || '0px');
