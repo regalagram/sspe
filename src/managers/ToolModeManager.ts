@@ -147,8 +147,7 @@ export class ToolModeManager {
         break;
 
       case 'pencil':
-        console.log('Desactivando Pencil Manager');
-        if (this.pencilManager) {
+                if (this.pencilManager) {
           this.pencilManager.deactivateExternally();
         } 
         break;

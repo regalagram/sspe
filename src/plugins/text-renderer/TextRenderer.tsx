@@ -20,17 +20,14 @@ const TextElementComponent: React.FC<{ text: TextElement }> = ({ text }) => {
   
   // Handle content changes during editing (memoized to prevent TextEditOverlay remount)
   const handleContentChange = useCallback((content: string | string[]) => {
-    console.log('📝 TextRenderer (single): handleContentChange called with:', content);
-    if (typeof content === 'string') {
-      console.log('📝 TextRenderer (single): Updating text content live...');
-      updateTextContentLive(content);
+        if (typeof content === 'string') {
+            updateTextContentLive(content);
     }
   }, [updateTextContentLive]);
   
   // Handle finishing editing (memoized to prevent TextEditOverlay remount)
   const handleFinishEditing = useCallback((save: boolean) => {
-    console.log('📝 TextRenderer (single): handleFinishEditing called with save:', save);
-    stopTextEdit(save);
+        stopTextEdit(save);
   }, [stopTextEdit]);
   
   return (
@@ -167,17 +164,14 @@ const MultilineTextElementComponent: React.FC<{ text: MultilineTextElement }> = 
   
   // Handle content changes during editing (memoized to prevent TextEditOverlay remount)
   const handleContentChange = useCallback((content: string | string[]) => {
-    console.log('📝 TextRenderer (multiline): handleContentChange called with:', content);
-    if (Array.isArray(content)) {
-      console.log('📝 TextRenderer (multiline): Updating multiline text content live...');
-      updateTextContentLive(content);
+        if (Array.isArray(content)) {
+            updateTextContentLive(content);
     }
   }, [updateTextContentLive]);
   
   // Handle finishing editing (memoized to prevent TextEditOverlay remount)
   const handleFinishEditing = useCallback((save: boolean) => {
-    console.log('📝 TextRenderer (multiline): handleFinishEditing called with save:', save);
-    stopTextEdit(save);
+        stopTextEdit(save);
   }, [stopTextEdit]);
   
   return (

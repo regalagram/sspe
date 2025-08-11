@@ -28,19 +28,11 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
   onContentChange,
   onFinishEditing
 }) => {
-  console.log('📝 TextEditOverlay: Component rendered for text:', textElement.id);
-  console.log('📝 TextEditOverlay: Props changed:', {
-    textElementId: textElement.id,
-    viewportZoom: viewport.zoom,
-    viewportPan: viewport.pan
-  });
-  
+      
   // Track component mount/unmount
   useEffect(() => {
-    console.log('📝 TextEditOverlay: Component mounted for text:', textElement.id);
-    return () => {
-      console.log('📝 TextEditOverlay: Component unmounting for text:', textElement.id);
-    };
+        return () => {
+          };
   }, [textElement.id]);
   
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
@@ -50,13 +42,11 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
   
   // Track input value changes for debugging
   useEffect(() => {
-    console.log('📝 TextEditOverlay: inputValue state changed to:', inputValue);
-  }, [inputValue]);
+      }, [inputValue]);
   
   const isMultiline = textElement.type === 'multiline-text';
   
-  console.log('📝 TextEditOverlay: isMultiline:', isMultiline);
-
+  
   // Calculate the exact position of the text element in screen coordinates (memoized)
   const calculateTextPosition = useMemo((): TextPosition | null => {
     try {
@@ -83,8 +73,7 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
           const parts = rotateMatch[1].trim().split(/[,\s]+/);
           const angle = parseFloat(parts[0]) || 0;
           rotation = angle;
-          console.log('📝 TextEditOverlay: Detected rotation:', rotation, 'degrees');
-        }
+                  }
       }
       
       // Fine-tuning constants for baseline alignment
@@ -122,12 +111,7 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
       let accurateWidth = textBounds?.width || 100;
       let accurateHeight = textBounds?.height || fontSize * 1.2;
       
-      console.log('📝 TextEditOverlay: Using calculateTextBoundsDOM for accurate dimensions:', {
-        textBounds,
-        textElement: textElement.type,
-        content: isMultiline ? textElement.spans.map(s => s.content) : textElement.content
-      });
-      
+            
       if (rotation === 0) {
         // No rotation - use normal positioning
         const rect = svgTextElement.getBoundingClientRect();
@@ -148,22 +132,9 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
           fontSize * 1.2  // Minimum height
         );
         
-        console.log('📝 TextEditOverlay: No rotation - using accurate dimensions:', { 
-          rectPosition: { x: rect.x, y: rect.y },
-          adjustedPosition: { inputX, inputY }, 
-          accurateDimensions: { width: accurateWidth, height: accurateHeight },
-          scaledDimensions: { inputWidth, inputHeight },
-          fontSize: {
-            calculated: fontSize,
-            original: textElement.style.fontSize,
-            zoom: viewport.zoom
-          },
-          baselineAdjustment: fontSize * BASELINE_ADJUSTMENT_NORMAL
-        });
-      } else {
+              } else {
         // Text is rotated - use accurate dimensions from DOM measurement
-        console.log('📝 TextEditOverlay: Calculating position for rotated text with accurate dimensions...');
-        
+                
         const rect = svgTextElement.getBoundingClientRect();
         
         // Use accurate dimensions from calculateTextBoundsDOM, scaled by zoom
@@ -188,23 +159,7 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
         inputX = inputX + fontSize * rotatedAdjustments.x; // Horizontal adjustment
         inputY = inputY + fontSize * rotatedAdjustments.y; // Vertical adjustment
         
-        console.log('📝 TextEditOverlay: Rotated text - using accurate dimensions:', {
-          rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-          accurateBounds: textBounds,
-          rectPosition: { x: rect.x, y: rect.y },
-          adjustedPosition: { inputX, inputY },
-          inputDimensions: { inputWidth, inputHeight },
-          fontSize,
-          rotation,
-          calculatedAdjustments: {
-            horizontal: fontSize * rotatedAdjustments.x,
-            vertical: fontSize * rotatedAdjustments.y,
-            rotationDegrees: rotation,
-            adjustmentComponents: rotatedAdjustments
-          },
-          viewport: { zoom: viewport.zoom, pan: viewport.pan }
-        });
-      }
+              }
       
       return {
         x: inputX,
@@ -223,9 +178,7 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
 
   // Initialize content and position
   useEffect(() => {
-    console.log('📝 TextEditOverlay: Initializing content and position...');
-    console.log('📝 TextEditOverlay: Calculated position:', calculateTextPosition);
-    setPosition(calculateTextPosition);
+            setPosition(calculateTextPosition);
     
     // Only set initial content if we don't already have input value (prevents overwrites during typing)
     if (inputValue === '' || inputValue === undefined) {
@@ -233,33 +186,27 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
         const spans = (textElement as MultilineTextElement).spans.map(span => span.content);
         setCurrentContent(spans);
         setInputValue(spans.join('\n'));
-        console.log('📝 TextEditOverlay: Set initial multiline content:', spans);
-      } else {
+              } else {
         const singleContent = (textElement as TextElement).content;
         setCurrentContent(singleContent);
         setInputValue(singleContent);
-        console.log('📝 TextEditOverlay: Set initial single line content:', singleContent);
-      }
+              }
     } else {
-      console.log('📝 TextEditOverlay: Skipping content initialization - user is typing, inputValue:', inputValue);
-    }
+          }
   }, [textElement.id, calculateTextPosition]); // Depend on the memoized position calculation
 
   // Update position when viewport changes (but not constantly during typing)
   useEffect(() => {
     // Only update position if we don't already have one or if zoom changes significantly
     if (!position || Math.abs(viewport.zoom - (position.fontSize / (textElement.style.fontSize || 16))) > 0.1) {
-      console.log('📝 TextEditOverlay: Updating position due to viewport change');
-      setPosition(calculateTextPosition);
+            setPosition(calculateTextPosition);
     } else {
-      console.log('📝 TextEditOverlay: Skipping position update - no significant viewport change');
-    }
+          }
   }, [viewport.zoom, calculateTextPosition]); // Only depend on zoom and the memoized position calculation
 
   // Handle content changes
   const handleContentChange = useCallback((newContent: string) => {
-    console.log('📝 TextEditOverlay: handleContentChange called with:', newContent);
-    
+        
     // Update local input state immediately
     setInputValue(newContent);
     
@@ -302,16 +249,7 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
         );
         inputRef.current.style.width = `${newWidth}px`;
         
-        console.log('📝 TextEditOverlay: Precise dynamic width calculation:', {
-          newContent: newContent,
-          newContentType: isMultiline ? 'multiline' : 'single-line',
-          newContentLines: isMultiline ? newContent.split('\n') : [newContent],
-          measuredBounds: newTextBounds,
-          scaledWidth: newTextBounds.width * viewport.zoom,
-          finalWidth: newWidth,
-          viewport: { zoom: viewport.zoom }
-        });
-      } else {
+              } else {
         // Fallback to basic calculation if DOM measurement fails
         console.warn('📝 TextEditOverlay: calculateTextBoundsDOM failed, using fallback');
         const fallbackWidth = Math.max(
@@ -335,48 +273,41 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
     
     if (isMultiline) {
       const lines = newContent.split('\n');
-      console.log('📝 TextEditOverlay: Setting multiline content:', lines);
-      setCurrentContent(lines);
+            setCurrentContent(lines);
       onContentChange(lines);
     } else {
-      console.log('📝 TextEditOverlay: Setting single line content:', newContent);
-      setCurrentContent(newContent);
+            setCurrentContent(newContent);
       onContentChange(newContent);
     }
   }, [isMultiline, onContentChange, position]);
 
   // Handle keyboard events
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    console.log('📝 TextEditOverlay: keyDown:', e.key, 'ctrl:', e.ctrlKey, 'shift:', e.shiftKey, 'isMultiline:', isMultiline);
-    
+        
     switch (e.key) {
       case 'Escape':
         e.preventDefault();
         e.stopPropagation();
-        console.log('📝 TextEditOverlay: Escape pressed - canceling editing');
-        onFinishEditing(false); // Cancel editing
+                onFinishEditing(false); // Cancel editing
         break;
       case 'Enter':
         if (!isMultiline && !e.shiftKey) {
           // Single line: Enter saves and exits
           e.preventDefault();
           e.stopPropagation();
-          console.log('📝 TextEditOverlay: Enter pressed on single line - saving and exiting');
-          onFinishEditing(true); // Save editing for single line
+                    onFinishEditing(true); // Save editing for single line
         } else if (isMultiline && e.ctrlKey) {
           // Multiline: Ctrl+Enter saves and exits
           e.preventDefault();
           e.stopPropagation();
-          console.log('📝 TextEditOverlay: Ctrl+Enter pressed on multiline - saving and exiting');
-          onFinishEditing(true); // Save editing for multiline
+                    onFinishEditing(true); // Save editing for multiline
         }
         // For multiline, plain Enter creates new lines naturally
         break;
       case 'Tab':
         e.preventDefault();
         e.stopPropagation();
-        console.log('📝 TextEditOverlay: Tab pressed - saving and exiting');
-        onFinishEditing(true); // Save and move to next
+                onFinishEditing(true); // Save and move to next
         break;
     }
   }, [isMultiline, onFinishEditing]);
@@ -393,25 +324,15 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
   useEffect(() => {
     if (!position) return; // Wait for position to be calculated
     
-    console.log('📝 TextEditOverlay: Auto-focus effect with position, inputRef.current:', !!inputRef.current);
-    
+        
     // Small delay to ensure DOM is ready
     const timeoutId = setTimeout(() => {
       if (inputRef.current) {
-        console.log('📝 TextEditOverlay: Focusing input element...');
-        console.log('📝 TextEditOverlay: Input element details:', {
-          tagName: inputRef.current.tagName,
-          type: inputRef.current.type,
-          value: inputRef.current.value,
-          disabled: inputRef.current.disabled,
-          readOnly: inputRef.current.readOnly
-        });
-        
+                        
         // Try multiple focus attempts
         const attemptFocus = (attempt: number = 1) => {
           if (attempt <= 3 && inputRef.current) {
-            console.log('📝 TextEditOverlay: Focus attempt', attempt);
-            inputRef.current.focus();
+                        inputRef.current.focus();
             // Simulate click event instead of calling click method
             const clickEvent = new MouseEvent('click', {
               bubbles: true,
@@ -422,34 +343,20 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
             setTimeout(() => {
               const activeElement = document.activeElement;
               const isSuccess = activeElement === inputRef.current;
-              console.log('📝 TextEditOverlay: Focus attempt', attempt, 'result:', {
-                isInputFocused: isSuccess,
-                activeElementTag: activeElement?.tagName,
-                activeElementId: (activeElement as any)?.id,
-                inputHasFocus: inputRef.current === document.activeElement
-              });
-              
+                            
               if (!isSuccess && attempt < 3) {
-                console.log('📝 TextEditOverlay: Focus failed, trying again...');
-                attemptFocus(attempt + 1);
+                                attemptFocus(attempt + 1);
               } else if (isSuccess) {
-                console.log('📝 TextEditOverlay: Focus successful after', attempt, 'attempts!');
-              } else {
-                console.log('📝 TextEditOverlay: Focus failed after all attempts, trying requestAnimationFrame...');
-                // Last resort: use requestAnimationFrame
+                              } else {
+                                // Last resort: use requestAnimationFrame
                 requestAnimationFrame(() => {
                   if (inputRef.current) {
-                    console.log('📝 TextEditOverlay: Final focus attempt with requestAnimationFrame');
-                    inputRef.current.focus();
+                                        inputRef.current.focus();
                     
                     setTimeout(() => {
                       const finalActiveElement = document.activeElement;
                       const finalSuccess = finalActiveElement === inputRef.current;
-                      console.log('📝 TextEditOverlay: Final focus result:', {
-                        success: finalSuccess,
-                        activeElement: finalActiveElement?.tagName
-                      });
-                    }, 10);
+                                          }, 10);
                   }
                 });
               }
@@ -461,40 +368,24 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
         
         // Select all text for easy replacement (with delay for textarea)
         if (inputRef.current instanceof HTMLInputElement) {
-          console.log('📝 TextEditOverlay: Selecting all text in input');
-          inputRef.current.select();
+                    inputRef.current.select();
         } else if (inputRef.current instanceof HTMLTextAreaElement) {
-          console.log('📝 TextEditOverlay: Selecting all text in textarea (with delay)');
-          // For textarea, we need a small delay to ensure focus is properly set
+                    // For textarea, we need a small delay to ensure focus is properly set
           setTimeout(() => {
             if (inputRef.current instanceof HTMLTextAreaElement) {
-              console.log('📝 TextEditOverlay: Executing delayed select for textarea');
-              console.log('📝 TextEditOverlay: Textarea element details before focus:', {
-                element: inputRef.current,
-                value: inputRef.current.value,
-                disabled: inputRef.current.disabled,
-                readOnly: inputRef.current.readOnly,
-                style: inputRef.current.style.cssText,
-                offsetWidth: inputRef.current.offsetWidth,
-                offsetHeight: inputRef.current.offsetHeight
-              });
-              inputRef.current.focus(); // Re-focus to ensure it's active
+                                          inputRef.current.focus(); // Re-focus to ensure it's active
               inputRef.current.select(); // Then select all text
-              console.log('📝 TextEditOverlay: Textarea select complete, value length:', inputRef.current.value.length);
-              
+                            
               // Manual test: try to type programmatically (disabled for production)
-              // console.log('📝 TextEditOverlay: Testing programmatic input...');
-              // inputRef.current.value = inputRef.current.value + '✓';
+              //               // inputRef.current.value = inputRef.current.value + '✓';
               // const event = new Event('input', { bubbles: true });
               // inputRef.current.dispatchEvent(event);
             }
           }, 100); // Slightly longer delay
         }
         
-        console.log('📝 TextEditOverlay: Focus and selection complete');
-      } else {
-        console.log('📝 TextEditOverlay: Still no input element to focus');
-      }
+              } else {
+              }
     }, 10); // Small delay to ensure DOM rendering
     
     return () => clearTimeout(timeoutId);
@@ -502,13 +393,10 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
 
   // Don't render if position is not calculated yet
   if (!position) {
-    console.log('📝 TextEditOverlay: Not rendering - position not calculated');
-    return null;
+        return null;
   }
 
-  console.log('📝 TextEditOverlay: Rendering overlay with position:', position);
-  console.log('📝 TextEditOverlay: Content to render:', currentContent);
-
+    
   const sharedStyles: React.CSSProperties = {
     position: 'fixed',
     left: position.x,
@@ -549,17 +437,7 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
   // Use local input state to prevent overwrites during typing
   // const contentValue = Array.isArray(currentContent) ? currentContent.join('\n') : currentContent;
 
-  console.log('📝 TextEditOverlay: Preparing to render overlay via portal');
-  console.log('📝 TextEditOverlay: Final render state:', {
-    isMultiline,
-    inputValue,
-    inputValueLength: inputValue.length,
-    currentContent,
-    position,
-    textElementType: textElement.type,
-    textElementId: textElement.id
-  });
-
+    
   // Render the overlay outside the SVG using a portal
   return ReactDOM.createPortal(
     <>
@@ -579,12 +457,10 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
         }}
         onClick={(e) => {
           if (e.target === inputRef.current) return;
-          console.log('📝 TextEditOverlay: Backdrop clicked, finishing editing');
-          onFinishEditing(true);
+                    onFinishEditing(true);
         }}
         onKeyDown={(e) => {
-          console.log('📝 TextEditOverlay: Backdrop received keydown:', e.key);
-        }}
+                  }}
       />
       )}
       
@@ -602,40 +478,21 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
           data-testid="multiline-text-editor"
           placeholder="Editar texto multilínea..."
           onChange={(e) => {
-            console.log('📝 TextEditOverlay: Textarea onChange fired with:', e.target.value);
-            console.log('📝 TextEditOverlay: Textarea onChange event details:', {
-              target: e.target,
-              value: e.target.value,
-              disabled: e.target.disabled,
-              readOnly: e.target.readOnly,
-              focused: document.activeElement === e.target
-            });
-            handleContentChange(e.target.value);
+                                    handleContentChange(e.target.value);
           }}
           onKeyDown={(e) => {
-            console.log('📝 TextEditOverlay: Textarea onKeyDown fired with:', e.key);
-            handleKeyDown(e);
+                        handleKeyDown(e);
           }}
           onInput={(e) => {
-            console.log('📝 TextEditOverlay: Textarea onInput fired with:', (e.target as HTMLTextAreaElement).value);
-          }}
+                      }}
           onFocus={() => {
-            console.log('📝 TextEditOverlay: Textarea focused!');
-            console.log('📝 TextEditOverlay: Textarea focus details:', {
-              activeElement: document.activeElement,
-              isTextarea: document.activeElement instanceof HTMLTextAreaElement,
-              value: (document.activeElement as HTMLTextAreaElement)?.value,
-              canEdit: !!(document.activeElement as HTMLTextAreaElement)?.focus
-            });
-          }}
+                                  }}
           onBlur={handleBlur}
           onPointerDown={(e) => {
-            console.log('📝 TextEditOverlay: Textarea pointer down event');
-            e.stopPropagation(); // Prevent event bubbling that might interfere
+                        e.stopPropagation(); // Prevent event bubbling that might interfere
           }}
           onClick={(e) => {
-            console.log('📝 TextEditOverlay: Textarea click event');
-            e.stopPropagation(); // Prevent event bubbling that might interfere
+                        e.stopPropagation(); // Prevent event bubbling that might interfere
           }}
           style={{
             ...sharedStyles,
@@ -665,19 +522,15 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
           autoFocus
           tabIndex={1}
           onChange={(e) => {
-            console.log('📝 TextEditOverlay: Input onChange fired with:', e.target.value);
-            handleContentChange(e.target.value);
+                        handleContentChange(e.target.value);
           }}
           onKeyDown={(e) => {
-            console.log('📝 TextEditOverlay: Input onKeyDown fired with:', e.key);
-            handleKeyDown(e);
+                        handleKeyDown(e);
           }}
           onInput={(e) => {
-            console.log('📝 TextEditOverlay: Input onInput fired with:', (e.target as HTMLInputElement).value);
-          }}
+                      }}
           onFocus={() => {
-            console.log('📝 TextEditOverlay: Input focused!');
-          }}
+                      }}
           onBlur={handleBlur}
           style={{
             ...sharedStyles,

@@ -37,42 +37,32 @@ export class TextEditManager {
    * Start editing a text element
    */
   startTextEdit(textId: string): boolean {
-    console.log('📝 TextEditManager: startTextEdit called with textId:', textId);
-    
+        
     const store = this.editorStore || useEditorStore.getState();
     const textElement = store.texts.find((t: TextElementType) => t.id === textId);
     
-    console.log('📝 TextEditManager: Found text element:', !!textElement);
-    console.log('📝 TextEditManager: Text element locked:', textElement?.locked);
-    console.log('📝 TextEditManager: Text element details:', textElement ? { id: textElement.id, type: textElement.type, locked: textElement.locked } : 'null');
-    
+                
     if (!textElement) {
-      console.log('📝 TextEditManager: Cannot start text edit - element not found');
-      return false;
+            return false;
     }
     
     if (textElement.locked === true) {
-      console.log('📝 TextEditManager: Cannot start text edit - element is locked');
-      return false;
+            return false;
     }
     
-    console.log('📝 TextEditManager: Proceeding with text edit setup...');
-
+    
     // Stop any current editing
     if (this.state.isEditing) {
-      console.log('📝 TextEditManager: Stopping current editing first...');
-      this.stopTextEdit(false); // Don't save current edit
+            this.stopTextEdit(false); // Don't save current edit
     }
 
     // Determine text type and backup content
     const isMultiline = textElement.type === 'multiline-text';
-    console.log('📝 TextEditManager: Text element type:', textElement.type, 'isMultiline:', isMultiline);
-    
+        
     const originalContent = isMultiline 
       ? (textElement as MultilineTextElement).spans.map(span => span.content)
       : (textElement as TextElement).content;
-    console.log('📝 TextEditManager: Original content:', originalContent);
-
+    
     this.state = {
       isEditing: true,
       editingTextId: textId,
@@ -81,32 +71,24 @@ export class TextEditManager {
       selectionRange: null,
       originalContent
     };
-    console.log('📝 TextEditManager: State updated:', this.state);
-
+    
     // Switch to text-edit mode
-    console.log('📝 TextEditManager: Switching to text-edit mode...');
-    toolModeManager.setMode('text-edit', { editingTextId: textId });
+        toolModeManager.setMode('text-edit', { editingTextId: textId });
     
     // Ensure the text is selected
-    console.log('📝 TextEditManager: Selecting text in store...');
-    store.selectText(textId);
+        store.selectText(textId);
     
-    console.log('📝 TextEditManager: Notifying listeners...');
-    this.notifyListeners();
-    console.log('📝 TextEditManager: Text edit started successfully!');
-    return true;
+        this.notifyListeners();
+        return true;
   }
 
   /**
    * Stop editing and optionally save changes
    */
   stopTextEdit(saveChanges: boolean = true): boolean {
-    console.log('📝 TextEditManager: stopTextEdit called with saveChanges:', saveChanges);
-    console.log('📝 TextEditManager: Current state before stop:', this.state);
-    
+            
     if (!this.state.isEditing) {
-      console.log('📝 TextEditManager: Not currently editing, ignoring stopTextEdit');
-      return false;
+            return false;
     }
 
     const store = this.editorStore || useEditorStore.getState();
@@ -158,12 +140,9 @@ export class TextEditManager {
    * Update text content during editing (live updates)
    */
   updateTextContent(content: string | string[]): void {
-    console.log('📝 TextEditManager: updateTextContent called with:', content);
-    console.log('📝 TextEditManager: Current editing state:', { isEditing: this.state.isEditing, editingTextId: this.state.editingTextId });
-    
+            
     if (!this.state.isEditing || !this.state.editingTextId) {
-      console.log('📝 TextEditManager: Not editing or no editingTextId, ignoring update');
-      return;
+            return;
     }
 
     // Debounce updates to prevent instability during rapid changes
@@ -181,19 +160,13 @@ export class TextEditManager {
    */
   private performContentUpdate(content: string | string[]): void {
     const store = this.editorStore || useEditorStore.getState();
-    console.log('📝 TextEditManager: Performing debounced content update');
-    
+        
     if (this.state.editingType === 'single' && typeof content === 'string') {
       store.updateTextContent(this.state.editingTextId, content);
     } else if (this.state.editingType === 'multiline' && Array.isArray(content)) {
       const textElement = store.texts.find((t: TextElementType) => t.id === this.state.editingTextId);
       if (textElement && textElement.type === 'multiline-text') {
-        console.log('📝 TextEditManager: Updating multiline content:', { 
-          contentLines: content.length, 
-          existingSpans: textElement.spans.length,
-          content: content 
-        });
-        
+                
         // Handle edge case: if all content is empty, ensure at least one span exists
         const filteredContent = content.length === 0 ? [''] : content;
         
@@ -206,27 +179,22 @@ export class TextEditManager {
           const lineContent = line || '';
           
           if (currentSpans[index]) {
-            console.log('📝 TextEditManager: Updating existing span', index, 'with:', lineContent);
-            store.updateTextSpan(this.state.editingTextId, currentSpans[index].id, { content: lineContent });
+                        store.updateTextSpan(this.state.editingTextId, currentSpans[index].id, { content: lineContent });
           } else {
-            console.log('📝 TextEditManager: Creating new span', index, 'with:', lineContent);
-            store.addTextSpan(this.state.editingTextId, lineContent);
+                        store.addTextSpan(this.state.editingTextId, lineContent);
           }
         });
         
         // Remove extra spans if content has fewer lines
         // Process in reverse order to avoid index shifting issues
         if (currentSpans.length > filteredContent.length) {
-          console.log('📝 TextEditManager: Removing extra spans:', currentSpans.length - filteredContent.length);
-          for (let i = currentSpans.length - 1; i >= filteredContent.length; i--) {
+                    for (let i = currentSpans.length - 1; i >= filteredContent.length; i--) {
             const spanToDelete = currentSpans[i];
-            console.log('📝 TextEditManager: Deleting span', i, 'with id:', spanToDelete.id);
-            store.deleteTextSpan(this.state.editingTextId, spanToDelete.id);
+                        store.deleteTextSpan(this.state.editingTextId, spanToDelete.id);
           }
         }
         
-        console.log('📝 TextEditManager: Multiline update complete');
-      }
+              }
     }
   }
 
@@ -297,11 +265,9 @@ export class TextEditManager {
     const store = this.getEditorStore();
     if (store && store.selection.selectedTexts.length > 0) {
       const firstSelectedText = store.selection.selectedTexts[0];
-      console.log('📝 TextEditManager: Starting edit for selected text:', firstSelectedText);
-      return this.startTextEdit(firstSelectedText);
+            return this.startTextEdit(firstSelectedText);
     }
-    console.log('📝 TextEditManager: No selected texts to edit');
-    return false;
+        return false;
   }
 
   /**
@@ -358,13 +324,10 @@ export class TextEditManager {
    * Notify all listeners of state changes
    */
   private notifyListeners(): void {
-    console.log('📝 TextEditManager: Notifying listeners, current state:', this.getState());
-    console.log('📝 TextEditManager: Number of listeners:', this.listeners.length);
-    this.listeners.forEach((listener, index) => {
+            this.listeners.forEach((listener, index) => {
       try {
         listener(this.getState());
-        console.log('📝 TextEditManager: Notified listener', index);
-      } catch (error) {
+              } catch (error) {
         console.error('📝 TextEditManager: Error in listener', index, ':', error);
       }
     });
