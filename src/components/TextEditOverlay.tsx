@@ -155,63 +155,63 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
         );
         
       } else {
-        // Text is rotated - use proper viewport coordinate transformation
+        // Text is rotated - calculate dimensions for unrotated text and center over rotated position
+        // Strategy: Use unrotated text dimensions but position centered over rotated text visual bounds
         
-        // Get the accurate unrotated text bounds from DOM calculation  
+        const textRect = svgTextElement.getBoundingClientRect();
+        
+        // Get the dimensions that the text would have if it were NOT rotated
         const originalTextBounds = calculateTextBoundsDOM({
           ...textElement,
           transform: undefined // Remove transform to get original bounds
         });
         
         if (originalTextBounds) {
-          // Use the original (unrotated) dimensions for the input
-          inputWidth = Math.max(
-            originalTextBounds.width * viewport.zoom,
-            fontSize * 3
-          );
-          inputHeight = Math.max(
-            originalTextBounds.height * viewport.zoom,
-            fontSize * 1.2
-          );
+          // Use the unrotated text dimensions scaled by zoom
+          const unrotatedWidth = originalTextBounds.width * viewport.zoom;
+          const unrotatedHeight = originalTextBounds.height * viewport.zoom;
+          
+          // Ensure minimum sizes
+          inputWidth = Math.max(unrotatedWidth, fontSize * 3);
+          inputHeight = Math.max(unrotatedHeight, fontSize * 1.2);
+          
+          // Position input centered over the rotated text's visual center
+          const rotatedCenterX = textRect.x + textRect.width / 2;
+          const rotatedCenterY = textRect.y + textRect.height / 2;
+          
+          inputX = rotatedCenterX - inputWidth / 2;
+          inputY = rotatedCenterY - inputHeight / 2;
+          
         } else {
-          // Fallback dimensions if DOM calculation fails
-          inputWidth = Math.max(
-            accurateWidth * viewport.zoom,
-            fontSize * 3
-          );
-          inputHeight = Math.max(
-            accurateHeight * viewport.zoom,
-            fontSize * 1.2
-          );
+          // Fallback: use estimated dimensions based on text content
+          const textContent = isMultiline ? 
+            (textElement as MultilineTextElement).spans.map(s => s.content).join('\\n') : 
+            (textElement as TextElement).content;
+          
+          const estimatedWidth = Math.max(textContent.length * fontSize * 0.6 * viewport.zoom, fontSize * 3);
+          const estimatedHeight = fontSize * 1.2 * viewport.zoom;
+          
+          inputWidth = estimatedWidth;
+          inputHeight = estimatedHeight;
+          
+          // Center over rotated text
+          const rotatedCenterX = textRect.x + textRect.width / 2;
+          const rotatedCenterY = textRect.y + textRect.height / 2;
+          
+          inputX = rotatedCenterX - inputWidth / 2;
+          inputY = rotatedCenterY - inputHeight / 2;
         }
         
-        // For rotated text, use getBoundingClientRect (which already includes viewport transforms)
-        // and add a small constant offset to compensate for SVG vs HTML rotation differences
-        const textRect = svgTextElement.getBoundingClientRect();
-        
-        // Use getBoundingClientRect directly (it already handles zoom/pan correctly)
-        // Add small constant offset for baseline/anchor point alignment
-        const textFontSize = parseFloat(String(textElement.style.fontSize || '16'));
-        const offsetX = 2; // Small constant horizontal offset
-        const offsetY = textFontSize * 0.75; // Proportional vertical offset for baseline
-        
-        inputX = textRect.x + offsetX;
-        inputY = textRect.y + offsetY;
-        
-        console.log('Rotated text - SIMPLE OFFSET approach:', {
-          position_SELECTED: { x: inputX, y: inputY },
+        console.log('Rotated text positioning - UNROTATED DIMENSIONS approach:', {
           textRect: { x: textRect.x, y: textRect.y, width: textRect.width, height: textRect.height },
-          appliedOffset: { x: offsetX, y: offsetY },
-          fontSize: textFontSize,
-          originalTextPosition_svg: { x: textElement.x, y: textElement.y },
+          rotatedCenter: { x: textRect.x + textRect.width / 2, y: textRect.y + textRect.height / 2 },
+          originalBounds: originalTextBounds,
+          inputDimensions: { width: inputWidth, height: inputHeight },
+          inputPosition: { x: inputX, y: inputY },
+          fontSize: fontSize,
           rotation: rotation,
-          approach: 'getBoundingClientRect_plus_constant_offset',
-          viewport: { pan: viewport.pan, zoom: viewport.zoom }
+          approach: 'unrotated_dimensions_centered_over_rotated_visual'
         });
-        
-        // Fine-tune for baseline alignment with rotated text
-        // Remove baseline adjustment to test if getBoundingClientRect is already correct
-        // inputY = inputY + fontSize * BASELINE_ADJUSTMENT_NORMAL;
       }
       
       return {
@@ -303,15 +303,55 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
           newTextBounds.width * viewport.zoom, // Precise width without additional padding
           fontSize * 3 // Minimum width
         );
+        
+        // For rotated text, also recenter the input when width changes
+        if (position.rotation && position.rotation !== 0) {
+          const currentWidth = parseFloat(inputRef.current.style.width) || position.width;
+          const widthChange = newWidth - currentWidth;
+          
+          if (Math.abs(widthChange) > 10) { // Only reposition if significant change
+            // Get the visual center of the rotated text (this shouldn't change)
+            const svgTextElement = document.getElementById(textElement.id);
+            if (svgTextElement) {
+              const textRect = svgTextElement.getBoundingClientRect();
+              const rotatedCenterX = textRect.x + textRect.width / 2;
+              
+              // Recenter horizontally with new width
+              const newLeft = rotatedCenterX - newWidth / 2;
+              inputRef.current.style.left = `${newLeft}px`;
+              
+              console.log('Recentered rotated text input:', {
+                oldWidth: currentWidth,
+                newWidth: newWidth,
+                widthChange: widthChange,
+                newLeft: newLeft,
+                rotatedCenter: { x: rotatedCenterX }
+              });
+            }
+          }
+        }
+        
         inputRef.current.style.width = `${newWidth}px`;
         
-              } else {
+      } else {
         // Fallback to basic calculation if DOM measurement fails
         console.warn('📝 TextEditOverlay: calculateTextBoundsDOM failed, using fallback');
         const fallbackWidth = Math.max(
           newContent.length * fontSize * 0.6 * viewport.zoom,
           fontSize * 3
         );
+        
+        // For rotated text, also recenter with fallback width
+        if (position.rotation && position.rotation !== 0) {
+          const svgTextElement = document.getElementById(textElement.id);
+          if (svgTextElement) {
+            const textRect = svgTextElement.getBoundingClientRect();
+            const rotatedCenterX = textRect.x + textRect.width / 2;
+            const newLeft = rotatedCenterX - fallbackWidth / 2;
+            inputRef.current.style.left = `${newLeft}px`;
+          }
+        }
+        
         inputRef.current.style.width = `${fallbackWidth}px`;
       }
       
@@ -323,18 +363,34 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
       // Force correct font-size with !important to override mobile CSS
       inputRef.current.style.setProperty('font-size', `${position.fontSize}px`, 'important');
       
-      // Maintain rotation if present
+      // For rotated text, don't rotate the input - just style it as overlay
       if (position.rotation) {
-        inputRef.current.style.transform = `rotate(${position.rotation}deg)`;
-        // Use the same transform-origin as defined in sharedStyles for consistency
-        const transformOrigin = position.rotationCenterX !== undefined && position.rotationCenterY !== undefined ? 
-          `${position.rotationCenterX - position.x}px ${position.rotationCenterY - position.y}px` : 
-          '0 0';
-        inputRef.current.style.transformOrigin = transformOrigin;
-      } else {
-        // Clear any rotation if not needed
+        // No rotation - just overlay styling
         inputRef.current.style.transform = '';
         inputRef.current.style.transformOrigin = '';
+        
+        // Different styling for single vs multiline text
+        if (isMultiline) {
+          // For multiline text: maintain left alignment, use block display
+          inputRef.current.style.textAlign = 'left';
+          inputRef.current.style.display = 'block';
+          inputRef.current.style.alignItems = 'unset';
+          inputRef.current.style.justifyContent = 'unset';
+        } else {
+          // For single line text: center within the overlay area
+          inputRef.current.style.textAlign = 'center';
+          inputRef.current.style.display = 'flex';
+          inputRef.current.style.alignItems = 'center';
+          inputRef.current.style.justifyContent = 'center';
+        }
+      } else {
+        // Normal text - clear overlay styles
+        inputRef.current.style.transform = '';
+        inputRef.current.style.transformOrigin = '';
+        inputRef.current.style.textAlign = 'left';
+        inputRef.current.style.display = 'block';
+        inputRef.current.style.alignItems = 'unset';
+        inputRef.current.style.justifyContent = 'unset';
       }
     }
     
@@ -431,6 +487,51 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
     };
   }, [position]);
 
+  // Apply styling when position is available - NO rotation for rotated text
+  useEffect(() => {
+    if (!inputRef.current || !position) return;
+    
+    const input = inputRef.current;
+    
+    // For rotated text, don't apply rotation to input - just position it as overlay
+    if (position.rotation) {
+      // Don't rotate the input - just position it over the visual text
+      input.style.transform = '';
+      input.style.transformOrigin = '';
+      
+      // Different styling for single vs multiline text
+      if (isMultiline) {
+        // For multiline text: maintain left alignment, use block display
+        input.style.textAlign = 'left'; // Keep original text alignment
+        input.style.display = 'block';
+        input.style.alignItems = 'unset';
+        input.style.justifyContent = 'unset';
+      } else {
+        // For single line text: center within the overlay area
+        input.style.textAlign = 'center';
+        input.style.display = 'flex';
+        input.style.alignItems = 'center';
+        input.style.justifyContent = 'center';
+      }
+      
+      console.log('Applied overlay styling for rotated text:', {
+        rotation: position.rotation,
+        isMultiline: isMultiline,
+        inputPosition: { x: position.x, y: position.y },
+        textAlign: isMultiline ? 'left' : 'center',
+        approach: 'no_rotation_overlay_with_alignment'
+      });
+    } else {
+      // For non-rotated text, keep normal styling
+      input.style.transform = '';
+      input.style.transformOrigin = '';
+      input.style.textAlign = 'left';
+      input.style.display = 'block';
+      input.style.alignItems = 'unset';
+      input.style.justifyContent = 'unset';
+    }
+  }, [position, textElement.id]);
+
   // Auto-focus when component mounts and position is available
   useEffect(() => {
     if (!position) return; // Wait for position to be calculated
@@ -520,9 +621,10 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
     fontStyle: textElement.style.fontStyle || 'normal',
     color: typeof textElement.style.fill === 'string' ? textElement.style.fill : '#000000',
     backgroundColor: 'transparent',
-    border: 'none', // Remove border completely
+    border: 'none',
     borderRadius: '0',
     outline: 'none',
+    boxShadow: 'none',
     padding: '0', // No padding for perfect alignment
     zIndex: 99999, // Much higher z-index
     boxSizing: 'content-box', // Changed from border-box to avoid border affecting position
@@ -540,9 +642,9 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
     // Additional alignment properties
     verticalAlign: 'baseline', // Ensure baseline alignment
     display: 'block', // Block display for better positioning control
-    // Simple rotation since input is already positioned at rotation center
-    transform: position.rotation ? `rotate(${position.rotation}deg)` : undefined,
-    transformOrigin: '0 0', // Rotate from top-left corner since we're positioned at text origin
+    // Rotation will be applied dynamically with proper transform-origin
+    transform: undefined, // Will be set dynamically in handleContentChange
+    transformOrigin: undefined, // Will be calculated dynamically
     // Mobile-specific overrides to prevent interference from global styles
     margin: '0',
     WebkitAppearance: 'none',
@@ -555,7 +657,10 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
     // Ensure precise text selection
     WebkitUserSelect: 'text',
     MozUserSelect: 'text',
-    userSelect: 'text'
+    userSelect: 'text',
+    // Disable browser autocomplete styles
+    WebkitBoxShadow: 'none',
+    MozBoxShadow: 'none'
   };
 
   // Use local input state to prevent overwrites during typing
@@ -625,8 +730,8 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
             resize: 'none',
             overflow: 'hidden',
             // Override specific properties for multiline textarea
-            backgroundColor: 'rgba(255, 255, 0, 0.2)', // More visible yellow background
-            border: '2px solid rgba(0, 120, 204, 0.8)', // Same border as single-line input
+            backgroundColor: 'transparent',
+            border: 'none',
             // Explicit editable styles and fixes for textarea
             pointerEvents: 'all',
             userSelect: 'text',
@@ -664,9 +769,10 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
             ...sharedStyles,
             // Override specific properties for single-line input
             height: position.height,
-            backgroundColor: 'rgba(255, 255, 0, 0.05)', // Very subtle background
-            border: '1px solid rgba(0, 120, 204, 0.3)', // Much lighter border
-            outline: 'none', // Remove focus outline
+            backgroundColor: 'transparent',
+            border: 'none',
+            outline: 'none',
+            boxShadow: 'none',
             // Ensure font properties match exactly
             fontSize: position.fontSize,
             fontFamily: position.fontFamily,

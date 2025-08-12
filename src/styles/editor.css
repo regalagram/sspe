@@ -801,8 +801,10 @@ html,body {
 .text-edit-overlay-input.text-edit-overlay-textarea {
   /* Ensure no global styles interfere */
   margin: 0 !important;
-  border-radius: 3px !important;
+  border-radius: 0 !important;
   outline: none !important;
+  border: none !important;
+  background: transparent !important;
   
   /* Precise text rendering */
   font-variant-ligatures: none !important;
@@ -811,6 +813,7 @@ html,body {
   
   /* Disable browser defaults that may add padding/margin */
   -webkit-box-shadow: none !important;
+  -moz-box-shadow: none !important;
   box-shadow: none !important;
   
   /* Ensure exact positioning */
@@ -820,4 +823,30 @@ html,body {
   -webkit-user-select: text !important;
   -moz-user-select: text !important;
   user-select: text !important;
+  
+  /* Remove all possible focus states and highlights */
+  -webkit-focus-ring-color: transparent !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Remove focus states for text edit overlay inputs */
+.text-edit-overlay-input.text-edit-overlay-input-single:focus,
+.text-edit-overlay-input.text-edit-overlay-textarea:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  -moz-box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Remove hover states for text edit overlay inputs */
+.text-edit-overlay-input.text-edit-overlay-input-single:hover,
+.text-edit-overlay-input.text-edit-overlay-textarea:hover {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-box-shadow: none !important;
+  -moz-box-shadow: none !important;
+  background: transparent !important;
 }
