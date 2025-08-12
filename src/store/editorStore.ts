@@ -87,14 +87,15 @@ const loadInitialState = (): EditorState => {
         content: 'Test Text',
         style: {
           fontSize: 16,
+          fontFamily: 'Verdana',
           fill: '#000000'
         }
       },
       {
         id: 'test-multiline-text-1',
         type: 'multiline-text',
-        x: 300,
-        y: 300,
+        x: 200,
+        y: 250,
         spans: [
           { id: 'span-1', content: 'First Line' },
           { id: 'span-2', content: 'Second Line' },
@@ -102,6 +103,7 @@ const loadInitialState = (): EditorState => {
         ],
         style: {
           fontSize: 18,
+          fontFamily: 'Verdana',
           fill: '#ff0000',
           lineHeight: 1.2
         }
