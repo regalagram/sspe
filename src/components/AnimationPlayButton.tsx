@@ -30,7 +30,7 @@ export const AnimationPlayButton: React.FC = () => {
         <MobileToolbarButton
           icon={<Play />}
           onClick={handlePlay}
-          color="#007acc"
+          color="#374151"
           title="Play Animations"
           size="medium"
         />

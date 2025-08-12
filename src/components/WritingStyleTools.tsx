@@ -277,7 +277,7 @@ export const WritingStyleTools: React.FC = () => {
             background: isStyleSubmenuOpen ? '#e5e7eb' : 'white',
             fontSize: '12px',
             fontWeight: 600,
-            color: '#007acc',
+            color: '#374151',
             border: 'none',
             gap: '4px',
             padding: '0 4px',

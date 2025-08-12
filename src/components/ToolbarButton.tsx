@@ -18,7 +18,7 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
   onClick,
   disabled = false,
   active = false,
-  color = '#007acc',
+  color = '#374151',
   size = 'medium',
   title
 }) => {

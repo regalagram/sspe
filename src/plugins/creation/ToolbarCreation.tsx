@@ -100,10 +100,10 @@ export const ToolbarCreationTools: React.FC = () => {
             justifyContent: 'center',
             width: '48px', // Fixed width to prevent jumping
             height: '40px',
-            background: hasActiveTool ? '#007acc' : (isCreationSubmenuOpen ? '#e5e7eb' : 'white'),
+            background: hasActiveTool ? '#374151' : (isCreationSubmenuOpen ? '#e5e7eb' : 'white'),
             fontSize: '12px',
             fontWeight: 600,
-            color: hasActiveTool ? 'white' : '#007acc',
+            color: hasActiveTool ? 'white' : '#374151',
             border: 'none',
             gap: '4px',
             padding: '0 4px', // Reduced padding since width is fixed

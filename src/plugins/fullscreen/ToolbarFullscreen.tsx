@@ -30,7 +30,7 @@ export const ToolbarFullscreenControl: React.FC = () => {
         icon={isFullscreen ? <Minimize /> : <Maximize />}
         onClick={handleToggle}
         active={isFullscreen}
-        color="#007acc"
+        color="#374151"
         title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
         size="medium"
       />

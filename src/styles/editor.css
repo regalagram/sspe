@@ -87,7 +87,7 @@ button:active {
 
 button:focus {
   outline: none;
-  border-color: #007acc;
+  border-color: #374151;
 }
 
 button:disabled {
@@ -96,13 +96,13 @@ button:disabled {
 }
 
 button.active {
-  background: #007acc;
+  background: #374151;
   color: white;
-  border-color: #005299;
+  border-color: #1f2937;
 }
 
 button.active:hover {
-  background: #005299;
+  background: #1f2937;
 }
 
 .control-panel {
@@ -688,7 +688,7 @@ html,body {
 
 .carousel-action:hover:not(.disabled) {
   background: #f8f9fa;
-  border-color: #007acc;
+  border-color: #374151;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
@@ -746,7 +746,7 @@ html,body {
   
   .carousel-action:hover:not(.disabled) {
     background: #f8f9fa !important;
-    border-color: #007acc !important;
+    border-color: #374151 !important;
   }
   
   .carousel-action.disabled {

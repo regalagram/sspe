@@ -70,7 +70,7 @@ export const ToolbarZoomControls: React.FC = () => {
       <MobileToolbarButton
         icon={<ZoomOut />}
         onClick={handleZoomOut}
-        color="#007acc"
+        color="#374151"
         title="Zoom Out (Ctrl+-)"
         size="medium"
       />
@@ -87,7 +87,7 @@ export const ToolbarZoomControls: React.FC = () => {
             background: isZoomSubmenuOpen ? '#e5e7eb' : 'white',
             fontSize: '12px',
             fontWeight: 600,
-            color: '#007acc',
+            color: '#374151',
             border: 'none',
             gap: '4px',
             padding: '0 8px',
@@ -130,7 +130,7 @@ export const ToolbarZoomControls: React.FC = () => {
       <MobileToolbarButton
         icon={<ZoomIn />}
         onClick={handleZoomIn}
-        color="#007acc"
+        color="#374151"
         title="Zoom In (Ctrl++)"
         size="medium"
       />

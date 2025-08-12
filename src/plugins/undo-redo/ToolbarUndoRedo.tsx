@@ -16,7 +16,7 @@ export const ToolbarUndoRedoControls: React.FC = () => {
         icon={<Undo2 />}
         onClick={undo}
         disabled={!history.canUndo}
-        color="#007acc"
+        color="#374151"
         title="Undo (Ctrl+Z)"
         size="medium"
       />
@@ -24,7 +24,7 @@ export const ToolbarUndoRedoControls: React.FC = () => {
         icon={<Redo2 />}
         onClick={redo}
         disabled={!history.canRedo}
-        color="#007acc"
+        color="#374151"
         title="Redo (Ctrl+Y)"
         size="medium"
       />
