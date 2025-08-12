@@ -185,48 +185,24 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
           );
         }
         
-        // For rotated text, we need to match SVG rotation behavior
+        // For rotated text, use getBoundingClientRect directly without any offset
         const textRect = svgTextElement.getBoundingClientRect();
         
-        // Get the SVG rotation center (where the SVG text actually rotates around)
-        // This should be the original text position in screen coordinates
-        const svgElement = svgTextElement.closest('svg') as SVGSVGElement;
-        if (svgElement) {
-          // Convert SVG text position to screen coordinates
-          const point = svgElement.createSVGPoint();
-          point.x = textElement.x;
-          point.y = textElement.y;
-          const screenPoint = point.matrixTransform(svgElement.getScreenCTM());
-          
-          // Position the input at the bounding box, but set transform-origin
-          // to rotate around the same point as the SVG text
-          inputX = textRect.x;
-          inputY = textRect.y;
-          
-          // Calculate transform-origin relative to input position
-          const originX = screenPoint.x - inputX;
-          const originY = screenPoint.y - inputY;
-          
-          // Store the transform origin for CSS
-          transformOriginX = originX;
-          transformOriginY = originY;
-          
-          console.log('Rotated text - SVG-HTML rotation matching:', {
-            position_SELECTED: { x: inputX, y: inputY },
-            textRect: { x: textRect.x, y: textRect.y, width: textRect.width, height: textRect.height },
-            svgRotationCenter: { x: screenPoint.x, y: screenPoint.y },
-            transformOrigin: { x: originX, y: originY },
-            originalTextPosition: { x: textElement.x, y: textElement.y },
-            rotation: rotation,
-            viewport: { pan: viewport.pan, zoom: viewport.zoom }
-          });
-        } else {
-          // Fallback if no SVG found
-          inputX = textRect.x;
-          inputY = textRect.y;
-          transformOriginX = 0;
-          transformOriginY = 0;
-        }
+        // Use the exact coordinates from getBoundingClientRect
+        inputX = textRect.x;
+        inputY = textRect.y;
+        
+        console.log('Rotated text - NO OFFSET approach:', {
+          position_SELECTED: { x: inputX, y: inputY },
+          textRect: {
+            x: textRect.x, y: textRect.y,
+            width: textRect.width, height: textRect.height
+          },
+          originalTextPosition: { x: textElement.x, y: textElement.y },
+          rotation: rotation,
+          transformOrigin: '0 0',
+          viewport: { pan: viewport.pan, zoom: viewport.zoom }
+        });
         
         // Fine-tune for baseline alignment with rotated text
         // Remove baseline adjustment to test if getBoundingClientRect is already correct
