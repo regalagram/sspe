@@ -99,26 +99,39 @@ export function calculateTextBoundsDOM(text: TextElementType): {
     }
     
     if (text.type === 'text') {
-      textElement.textContent = text.content;
+      // For single-line text, always set content even if empty to get proper positioning
+      textElement.textContent = text.content || ' '; // Use space if empty to get proper bounds
     } else if (text.type === 'multiline-text') {
-      text.spans.forEach((span, index, spans) => {
-        // Only add spans with content
-        if (span.content && span.content.trim()) {
-          // Calculate the actual line number for dy (count non-empty spans before this one)
-          const lineNumber = spans.slice(0, index).filter(s => s.content && s.content.trim()).length;
-          
-          const tspanElement = document.createElementNS(svgNS, 'tspan');
-          tspanElement.textContent = span.content;
-          tspanElement.setAttribute('x', text.x.toString());
-          if (lineNumber === 0) {
-            tspanElement.setAttribute('dy', '0');
-          } else {
-            const fontSize = text.style?.fontSize || 16;
-            tspanElement.setAttribute('dy', (fontSize * 1.2).toString());
+      const hasNonEmptySpans = text.spans.some(span => span.content && span.content.trim());
+      
+      if (!hasNonEmptySpans) {
+        // If all spans are empty, add a single tspan with space to get proper positioning
+        const tspanElement = document.createElementNS(svgNS, 'tspan');
+        tspanElement.textContent = ' '; // Use space for proper baseline positioning
+        tspanElement.setAttribute('x', text.x.toString());
+        tspanElement.setAttribute('dy', '0');
+        textElement.appendChild(tspanElement);
+      } else {
+        // Add spans with content as before
+        text.spans.forEach((span, index, spans) => {
+          // Only add spans with content
+          if (span.content && span.content.trim()) {
+            // Calculate the actual line number for dy (count non-empty spans before this one)
+            const lineNumber = spans.slice(0, index).filter(s => s.content && s.content.trim()).length;
+            
+            const tspanElement = document.createElementNS(svgNS, 'tspan');
+            tspanElement.textContent = span.content;
+            tspanElement.setAttribute('x', text.x.toString());
+            if (lineNumber === 0) {
+              tspanElement.setAttribute('dy', '0');
+            } else {
+              const fontSize = text.style?.fontSize || 16;
+              tspanElement.setAttribute('dy', (fontSize * 1.2).toString());
+            }
+            textElement.appendChild(tspanElement);
           }
-          textElement.appendChild(tspanElement);
-        }
-      });
+        });
+      }
     }
     
     tempSvg.appendChild(textElement);

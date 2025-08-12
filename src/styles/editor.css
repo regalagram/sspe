@@ -493,9 +493,9 @@ html,body {
     font-size: 16px !important;
   }
   
-  input[type="text"],
-  input[type="number"],
-  textarea {
+  input[type="text"]:not(.text-edit-overlay-input),
+  input[type="number"]:not(.text-edit-overlay-input),
+  textarea:not(.text-edit-overlay-textarea) {
     min-height: 44px !important;
     font-size: 16px !important;
     padding: 12px !important;
@@ -769,4 +769,55 @@ html,body {
   .carousel-action.disabled .action-label {
     color: #999 !important;
   }
+}
+
+/* ============================================
+   TEXT EDIT OVERLAY - Mobile Override Styles
+   ============================================ */
+
+/* Override mobile touch-friendly styles for text edit overlay inputs */
+@media (pointer: coarse) {
+  .text-edit-overlay-input.text-edit-overlay-input-single,
+  .text-edit-overlay-input.text-edit-overlay-textarea {
+    /* Reset all mobile overrides to allow precise positioning */
+    min-height: unset !important;
+    padding: 0px !important;
+    
+    /* Ensure the styles from React inline styles take precedence */
+    box-sizing: content-box !important;
+    
+    /* Disable mobile-specific behaviors that interfere with precise editing */
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    
+    /* Remove font-size restriction to allow inline styles to work */
+    font-size: unset !important;
+  }
+}
+
+/* Additional specific overrides for all screen sizes */
+.text-edit-overlay-input.text-edit-overlay-input-single,
+.text-edit-overlay-input.text-edit-overlay-textarea {
+  /* Ensure no global styles interfere */
+  margin: 0 !important;
+  border-radius: 3px !important;
+  outline: none !important;
+  
+  /* Precise text rendering */
+  font-variant-ligatures: none !important;
+  font-feature-settings: normal !important;
+  text-rendering: geometricPrecision !important;
+  
+  /* Disable browser defaults that may add padding/margin */
+  -webkit-box-shadow: none !important;
+  box-shadow: none !important;
+  
+  /* Ensure exact positioning */
+  position: fixed !important;
+  
+  /* Prevent any text selection interference */
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  user-select: text !important;
 }
