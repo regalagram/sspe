@@ -185,22 +185,27 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
           );
         }
         
-        // For rotated text, use getBoundingClientRect directly without any offset
+        // For rotated text, use getBoundingClientRect (which already includes viewport transforms)
+        // and add a small constant offset to compensate for SVG vs HTML rotation differences
         const textRect = svgTextElement.getBoundingClientRect();
         
-        // Use the exact coordinates from getBoundingClientRect
-        inputX = textRect.x;
-        inputY = textRect.y;
+        // Use getBoundingClientRect directly (it already handles zoom/pan correctly)
+        // Add small constant offset for baseline/anchor point alignment
+        const textFontSize = parseFloat(String(textElement.style.fontSize || '16'));
+        const offsetX = 2; // Small constant horizontal offset
+        const offsetY = textFontSize * 0.75; // Proportional vertical offset for baseline
         
-        console.log('Rotated text - NO OFFSET approach:', {
+        inputX = textRect.x + offsetX;
+        inputY = textRect.y + offsetY;
+        
+        console.log('Rotated text - SIMPLE OFFSET approach:', {
           position_SELECTED: { x: inputX, y: inputY },
-          textRect: {
-            x: textRect.x, y: textRect.y,
-            width: textRect.width, height: textRect.height
-          },
-          originalTextPosition: { x: textElement.x, y: textElement.y },
+          textRect: { x: textRect.x, y: textRect.y, width: textRect.width, height: textRect.height },
+          appliedOffset: { x: offsetX, y: offsetY },
+          fontSize: textFontSize,
+          originalTextPosition_svg: { x: textElement.x, y: textElement.y },
           rotation: rotation,
-          transformOrigin: '0 0',
+          approach: 'getBoundingClientRect_plus_constant_offset',
           viewport: { pan: viewport.pan, zoom: viewport.zoom }
         });
         
@@ -535,9 +540,9 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
     // Additional alignment properties
     verticalAlign: 'baseline', // Ensure baseline alignment
     display: 'block', // Block display for better positioning control
-    // Apply rotation with fixed transform-origin to prevent movement during typing
+    // Simple rotation since input is already positioned at rotation center
     transform: position.rotation ? `rotate(${position.rotation}deg)` : undefined,
-    transformOrigin: position.rotation ? '0 0' : '0 0',
+    transformOrigin: '0 0', // Rotate from top-left corner since we're positioned at text origin
     // Mobile-specific overrides to prevent interference from global styles
     margin: '0',
     WebkitAppearance: 'none',
