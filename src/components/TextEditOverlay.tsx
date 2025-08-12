@@ -5,6 +5,46 @@ import { textEditManager } from '../managers/TextEditManager';
 import { useEditorStore } from '../store/editorStore';
 import { calculateTextBoundsDOM } from '../utils/text-utils';
 
+/**
+ * Calculate font-specific baseline correction for better HTML/SVG text alignment
+ * Different fonts have different baseline/ascent ratios that cause vertical misalignment
+ */
+const calculateFontBaselineCorrection = (fontFamily: string | undefined, fontSize: number): number => {
+  const family = fontFamily?.toLowerCase() || 'arial';
+  
+  // Font-specific baseline correction factors (empirically determined)
+  // These values are in px units, adjusted for the difference between SVG baseline and HTML input positioning
+  const corrections: { [key: string]: number } = {
+    'verdana': 0,        // Verdana is our reference (perfect alignment)
+    'arial': -0.5,       // Arial perfect alignment (empirically determined)
+    'helvetica': -0.5,   // Similar to Arial, should have same correction
+    'times': -1,         // Times New Roman slightly different
+    'georgia': -0.8,     // Georgia has slightly different metrics
+    'courier': -0.3,     // Monospace fonts are usually closer to standard
+    'trebuchet': -0.6,   // Trebuchet MS similar to Arial
+    'impact': -1.5,      // Impact has notably different baseline
+    'comic': -0.4,       // Comic Sans closer to standard
+    'tahoma': -0.5,      // Tahoma similar to Arial
+    'segoe': -0.5        // Segoe UI similar to Arial
+  };
+  
+  // Find matching font family (check for partial matches)
+  let correctionFactor = -0.5; // Default correction based on Arial (most common)
+  
+  for (const [fontName, factor] of Object.entries(corrections)) {
+    if (family.includes(fontName)) {
+      correctionFactor = factor;
+      break;
+    }
+  }
+  
+  // Return correction in pixels (no scaling by font size to avoid zoom amplification issues)
+  // The correction is a fixed pixel offset, not proportional to font size
+  const baselineCorrection = correctionFactor;
+  
+  return baselineCorrection;
+};
+
 interface TextEditOverlayProps {
   textElement: TextElementType;
   viewport: ViewportState;
@@ -140,9 +180,9 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
           }
         }
         
-        // Adjust for text baseline vs bounding box difference
-        // Remove the baseline adjustment for now to see if it improves alignment
-        // inputY = inputY + fontSize * BASELINE_ADJUSTMENT_NORMAL;
+        // Apply font-specific baseline correction for better alignment
+        const baselineCorrection = calculateFontBaselineCorrection(textElement.style.fontFamily, fontSize);
+        inputY += baselineCorrection;
         
         // Use accurate dimensions from calculateTextBoundsDOM, scaled by zoom
         inputWidth = Math.max(
@@ -202,15 +242,20 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
           inputY = rotatedCenterY - inputHeight / 2;
         }
         
+        // Apply font-specific baseline correction for better alignment
+        const baselineCorrection = calculateFontBaselineCorrection(textElement.style.fontFamily, fontSize);
+        inputY += baselineCorrection;
+        
         console.log('Rotated text positioning - UNROTATED DIMENSIONS approach:', {
           textRect: { x: textRect.x, y: textRect.y, width: textRect.width, height: textRect.height },
           rotatedCenter: { x: textRect.x + textRect.width / 2, y: textRect.y + textRect.height / 2 },
           originalBounds: originalTextBounds,
           inputDimensions: { width: inputWidth, height: inputHeight },
           inputPosition: { x: inputX, y: inputY },
+          baselineCorrection: baselineCorrection,
           fontSize: fontSize,
           rotation: rotation,
-          approach: 'unrotated_dimensions_centered_over_rotated_visual'
+          approach: 'unrotated_dimensions_with_font_baseline_correction'
         });
       }
       
