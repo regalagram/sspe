@@ -120,7 +120,7 @@ export const FloatingToolbarRenderer: React.FC = () => {
     position: 'fixed',
     left: `${position.x}px`,
     top: `${position.y}px`,
-    zIndex: 50, // Lower z-index to not interfere
+    zIndex: 40, // Lower z-index to reduce interference with touch events
     display: 'flex',
     alignItems: 'center',
     gap: `${currentConfig.spacing}px`,
@@ -163,11 +163,27 @@ export const FloatingToolbarRenderer: React.FC = () => {
       
       <div 
         ref={toolbarRef} 
-        style={toolbarStyle}
+        style={{
+          ...toolbarStyle,
+          // On mobile, make it less intrusive
+          ...(isMobileDevice && {
+            touchAction: 'none', // Prevent default touch behaviors on the toolbar itself
+          })
+        }}
         className="floating-toolbar-content"
         onPointerDown={(e) => {
-          // Stop propagation on toolbar interactions
-          e.stopPropagation();
+          // Only stop propagation for direct toolbar button interactions,
+          // but allow gestures (multi-touch) to pass through
+          const target = e.target as HTMLElement;
+          const isButton = target.tagName === 'BUTTON' || target.closest('button');
+          
+          // Don't interfere with multi-touch gestures for pan/zoom
+          // Also check if this is a multi-touch event (pointerType === 'touch' and multiple pointers)
+          const isMultiTouch = e.pointerType === 'touch' && (e as any).touches?.length > 1;
+          
+          if (isButton && !isMultiTouch) {
+            e.stopPropagation();
+          }
         }}
       >
         {visibleActions.map(action => (
@@ -202,7 +218,7 @@ export const FloatingToolbarRenderer: React.FC = () => {
                   border: '1px solid #e5e7eb',
                   borderRadius: '6px',
                   boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  zIndex: 51,
+                  zIndex: 41, // Slightly higher than main toolbar
                   padding: '4px',
                   display: 'flex',
                   flexDirection: 'column',
@@ -210,6 +226,14 @@ export const FloatingToolbarRenderer: React.FC = () => {
                   minWidth: `${currentConfig.buttonSize}px`
                 }}
                 onPointerLeave={() => setShowOverflow(false)}
+                onPointerDown={(e) => {
+                  // Only stop propagation on actual button clicks
+                  const target = e.target as HTMLElement;
+                  const isButton = target.tagName === 'BUTTON' || target.closest('button');
+                  if (isButton) {
+                    e.stopPropagation();
+                  }
+                }}
               >
                 {overflowActions.map(action => (
                   <FloatingToolbarButton

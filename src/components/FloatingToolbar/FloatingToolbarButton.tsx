@@ -53,8 +53,12 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
     return '#374151';
   }
 
-  const handleClick = () => {
+  const handleClick = (e: React.PointerEvent) => {
     if (action.disabled) return;
+    
+    // Stop propagation only for single touch/click interactions
+    // Allow multi-touch gestures to pass through
+    e.stopPropagation();
 
     switch (action.type) {
       case 'button':

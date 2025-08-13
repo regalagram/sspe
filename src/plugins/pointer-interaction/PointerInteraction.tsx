@@ -1085,6 +1085,62 @@ class PointerInteractionManager {
     return getSVGPoint(e, svgRef, this.editorStore.viewport);
   }
 
+  private handleImmediateAreaSelection(e: PointerEvent<SVGElement>, context: PointerEventContext, modifiers: KeyModifiers): void {
+    // CRITICAL FIX: Verificar inmediatamente si hay gestos multi-touch activos
+    // @ts-ignore - acceso a variable global para comunicación entre plugins  
+    const isGestureBlocked = window.gestureBlocked || false;
+    
+    // Si hay gesture bloqueado (multi-touch), abortar inmediatamente la selección
+    if (e.pointerType === 'touch' && isGestureBlocked) {
+      return; // Salir sin hacer nada
+    }
+    
+    // Clear current selection unless holding shift
+    if (!modifiers.shift) {
+      this.editorStore.clearSelection();
+      
+      // Clear any existing drag state
+      this.dispatchDragAction({ type: 'RESET' });
+      this.state.draggingElement = null;
+      this.state.draggingCommand = null;
+      
+      // Reset drag manager state
+      this.dragManager.endDrag();
+      
+      // Show floating toolbar after drag
+      this.editorStore.showFloatingToolbarAfterDrag();
+      
+      console.log('🧹 CLEARED: Selection and drag state', {
+        dragState: this.state.dragState,
+        draggingElement: this.state.draggingElement,
+        draggingCommand: this.state.draggingCommand
+      });
+      
+      this.debugManager.logSelection('Cleared selection and drag state on empty space click', this.getSelectedElements());
+    }
+    
+    // Start area selection drag
+    const origin = this.getSVGPoint(e, context.svgRef);
+    const emptySelection: SelectedElements = {
+      commands: [],
+      texts: [],
+      images: [],
+      uses: [],
+      textPaths: [],
+      groups: [],
+      subPaths: []
+    };
+    this.dispatchDragAction({
+      type: 'START_DRAG',
+      elements: emptySelection,
+      origin,
+      dragType: 'area'
+    });
+    
+    console.log('🎯 STARTED: Area selection drag', { origin });
+    this.debugManager.logGeneric('Started area selection', { origin });
+  }
+
   // ================== EVENT HANDLERS ==================
 
   handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
@@ -1313,7 +1369,8 @@ class PointerInteractionManager {
         modifiers,
         target: target.tagName,
         elementType,
-        elementId
+        elementId,
+        pointerType: e.pointerType
       });
       
       this.debugManager.logGeneric('🔥 EMPTY SPACE CLICK DETECTED!', {
@@ -1322,53 +1379,12 @@ class PointerInteractionManager {
         modifiers,
         target: target.tagName,
         elementType,
-        elementId
+        elementId,
+        pointerType: e.pointerType
       });
       
-      // Clear current selection unless holding shift
-      if (!modifiers.shift) {
-        this.editorStore.clearSelection();
-        
-        // Clear any existing drag state
-        this.dispatchDragAction({ type: 'RESET' });
-        this.state.draggingElement = null;
-        this.state.draggingCommand = null;
-        
-        // Reset drag manager state
-        this.dragManager.endDrag();
-        
-        // Show floating toolbar after drag
-        this.editorStore.showFloatingToolbarAfterDrag();
-        
-        console.log('🧹 CLEARED: Selection and drag state', {
-          dragState: this.state.dragState,
-          draggingElement: this.state.draggingElement,
-          draggingCommand: this.state.draggingCommand
-        });
-        
-        this.debugManager.logSelection('Cleared selection and drag state on empty space click', this.getSelectedElements());
-      }
-      
-      // Start area selection drag
-      const origin = this.getSVGPoint(e, context.svgRef);
-      const emptySelection: SelectedElements = {
-        commands: [],
-        texts: [],
-        images: [],
-        uses: [],
-        textPaths: [],
-        groups: [],
-        subPaths: []
-      };
-      this.dispatchDragAction({
-        type: 'START_DRAG',
-        elements: emptySelection,
-        origin,
-        dragType: 'area'
-      });
-      
-      console.log('🎯 STARTED: Area selection drag', { origin });
-      this.debugManager.logGeneric('Started area selection', { origin });
+      // Para otros casos, proceder con área de selección normal
+      this.handleImmediateAreaSelection(e, context, modifiers);
       return true;
     }
 

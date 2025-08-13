@@ -18,6 +18,7 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0', // Escuchar en todas las interfaces
     allowedHosts: true,
     open: true, // Auto-open browser on dev start
   },

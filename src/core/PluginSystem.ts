@@ -235,6 +235,17 @@ export class PluginManager {
     let pluginsToProcess: Plugin[] = this.getEnabledPlugins();
     let contextMenuPrioritized = false;
     
+    // CRITICAL: Para eventos touch, dar prioridad absoluta al GesturesPlugin
+    // Esto debe estar ANTES de cualquier otra priorización
+    if ((e as PointerEvent<SVGElement>).pointerType === 'touch') {
+      const gesturesPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'gestures');
+      if (gesturesPlugin) {
+        const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'gestures');
+        pluginsToProcess = [gesturesPlugin, ...otherPlugins];
+        console.log('🔧 PluginSystem: Prioritizing gestures plugin for touch event');
+      }
+    }
+    
     // Special priority for text-edit plugin on double-clicks
     if (isDoubleClick && eventType === 'pointerDown') {
             const textEditPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'text-edit');
