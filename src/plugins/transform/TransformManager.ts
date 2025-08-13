@@ -157,68 +157,87 @@ export class TransformManager {
 
     let hasContent = false;
 
-    // For selected commands (only if multiple commands for meaningful transformation)
-    if (selection.selectedCommands.length > 1) {
+    // For selected commands 
+    if (selection.selectedCommands.length > 0) {
+      // When only one command is selected, show bounds of the entire subpath containing it
+      // When multiple commands are selected, show bounds of just those commands
+      const shouldShowSubpathBounds = selection.selectedCommands.length === 1;
       
-      // Group commands by subpath to create proper path elements
-      const commandsBySubPath = new Map();
-      
-      for (const commandId of selection.selectedCommands) {
-        const command = this.findCommandById(commandId, paths);
-        if (command) {
-          // Find which subpath this command belongs to
-          for (const path of paths) {
-            for (const subPath of path.subPaths) {
-              if (subPath.commands.some((cmd: any) => cmd.id === commandId)) {
-                if (!commandsBySubPath.has(subPath.id)) {
-                  commandsBySubPath.set(subPath.id, []);
+      if (shouldShowSubpathBounds) {
+        // For single command selection: show bounds of the entire subpath containing it
+        const commandId = selection.selectedCommands[0];
+        const subPath = this.findSubPathByCommandId(commandId, paths);
+        if (subPath) {
+          const pathElement = document.createElementNS(svgNS, 'path');
+          const pathData = subPathToString(subPath);
+          if (pathData) {
+            pathElement.setAttribute('d', pathData);
+            tempSvg.appendChild(pathElement);
+            hasContent = true;
+          }
+        }
+      } else {
+        // For multiple command selection: show bounds of just those commands
+        // Group commands by subpath to create proper path elements
+        const commandsBySubPath = new Map();
+        
+        for (const commandId of selection.selectedCommands) {
+          const command = this.findCommandById(commandId, paths);
+          if (command) {
+            // Find which subpath this command belongs to
+            for (const path of paths) {
+              for (const subPath of path.subPaths) {
+                if (subPath.commands.some((cmd: any) => cmd.id === commandId)) {
+                  if (!commandsBySubPath.has(subPath.id)) {
+                    commandsBySubPath.set(subPath.id, []);
+                  }
+                  commandsBySubPath.get(subPath.id).push(command);
+                  break;
                 }
-                commandsBySubPath.get(subPath.id).push(command);
-                break;
               }
             }
           }
         }
-      }
 
-      // Create path elements for each subpath that has selected commands
-      for (const [subPathId, commands] of commandsBySubPath) {
-        const pathElement = document.createElementNS(svgNS, 'path');
-        
-        // Ensure the first command is always a move-to command for valid SVG
-        let processedCommands = [...commands];
-        if (processedCommands.length > 0 && processedCommands[0].command !== 'M') {
-          // If the first command is not a move-to, create one from the first command's position
-          const firstCommand = processedCommands[0];
-          let x = 0, y = 0;
+        // Create path elements for each subpath that has selected commands
+        for (const [subPathId, commands] of commandsBySubPath) {
+          const pathElement = document.createElementNS(svgNS, 'path');
           
-          // Extract position from the first command
-          if (firstCommand.command === 'L' || firstCommand.command === 'C') {
-            x = firstCommand.x;
-            y = firstCommand.y;
+          // Ensure the first command is always a move-to command for valid SVG
+          let processedCommands = [...commands];
+          if (processedCommands.length > 0 && processedCommands[0].command !== 'M') {
+            // If the first command is not a move-to, create one from the first command's position
+            const firstCommand = processedCommands[0];
+            let x = 0, y = 0;
+            
+            // Extract position from the first command
+            if (firstCommand.command === 'L' || firstCommand.command === 'C') {
+              x = firstCommand.x;
+              y = firstCommand.y;
+            }
+            
+            // Create a move-to command and prepend it
+            const moveCommand = {
+              id: firstCommand.id + '_move',
+              command: 'M' as const,
+              x: x,
+              y: y
+            };
+            processedCommands = [moveCommand, ...processedCommands];
           }
           
-          // Create a move-to command and prepend it
-          const moveCommand = {
-            id: firstCommand.id + '_move',
-            command: 'M' as const,
-            x: x,
-            y: y
+          // Create a temporary subpath with the processed commands
+          const tempSubPath = { 
+            id: subPathId + '_temp', 
+            commands: processedCommands,
+            closed: false // Default value for temporary subpath
           };
-          processedCommands = [moveCommand, ...processedCommands];
-        }
-        
-        // Create a temporary subpath with the processed commands
-        const tempSubPath = { 
-          id: subPathId + '_temp', 
-          commands: processedCommands,
-          closed: false // Default value for temporary subpath
-        };
-        const pathData = subPathToString(tempSubPath);
-        if (pathData) {
-          pathElement.setAttribute('d', pathData);
-          tempSvg.appendChild(pathElement);
-          hasContent = true;
+          const pathData = subPathToString(tempSubPath);
+          if (pathData) {
+            pathElement.setAttribute('d', pathData);
+            tempSvg.appendChild(pathElement);
+            hasContent = true;
+          }
         }
       }
     }
@@ -742,6 +761,19 @@ export class TransformManager {
       for (const subPath of path.subPaths) {
         if (subPath.id === subPathId) {
           return subPath;
+        }
+      }
+    }
+    return null;
+  }
+
+  private findSubPathByCommandId(commandId: string, paths: any[]): any | null {
+    for (const path of paths) {
+      for (const subPath of path.subPaths) {
+        for (const command of subPath.commands) {
+          if (command.id === commandId) {
+            return subPath;
+          }
         }
       }
     }

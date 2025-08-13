@@ -1,6 +1,8 @@
 import { StateCreator } from 'zustand';
 import { EditorState, SVGCommand, Point } from '../types';
 import { generateId } from '../utils/id-utils.js';
+import { getCommandBoundingBox } from '../utils/bbox-utils';
+import { transformManager } from '../plugins/transform/TransformManager';
 
 export interface CommandActions {
   addCommand: (subPathId: string, command: Omit<SVGCommand, 'id'>) => string;
@@ -13,6 +15,48 @@ export interface CommandActions {
 
 function roundToPrecision(val: number | undefined, precision: number): number | undefined {
   return typeof val === 'number' ? Number(val.toFixed(precision)) : val;
+}
+
+// Calculate bounding box for currently selected commands
+function calculateSelectedCommandsBoundingBox(state: EditorState): { x: number; y: number; width: number; height: number } | null {
+  if (state.selection.selectedCommands.length === 0) {
+    return null;
+  }
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  let hasValidBounds = false;
+
+  // Find all selected commands and calculate their bounding box
+  for (const path of state.paths) {
+    for (const subPath of path.subPaths) {
+      for (const command of subPath.commands) {
+        if (state.selection.selectedCommands.includes(command.id)) {
+          const commandBounds = getCommandBoundingBox(command);
+          if (commandBounds) {
+            minX = Math.min(minX, commandBounds.x);
+            maxX = Math.max(maxX, commandBounds.x + commandBounds.width);
+            minY = Math.min(minY, commandBounds.y);
+            maxY = Math.max(maxY, commandBounds.y + commandBounds.height);
+            hasValidBounds = true;
+          }
+        }
+      }
+    }
+  }
+
+  if (!hasValidBounds || minX === Infinity) {
+    return null;
+  }
+
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY
+  };
 }
 
 export const createCommandActions: StateCreator<
@@ -157,7 +201,9 @@ export const createCommandActions: StateCreator<
       if (!hasRealChange) {
         return state;
       }
-      return {
+      
+      const newState = {
+        ...state,
         paths: state.paths.map((path) => ({
           ...path,
           subPaths: path.subPaths.map((subPath) => ({
@@ -179,6 +225,37 @@ export const createCommandActions: StateCreator<
           })),
         })),
       };
+      
+      // Update selection box only for multiple commands (not for single command)
+      // Single command selection shows transform handles instead
+      if (newState.selection.selectedCommands.length > 1) {
+        const updatedSelectionBox = calculateSelectedCommandsBoundingBox(newState);
+        if (updatedSelectionBox) {
+          newState.selection = {
+            ...newState.selection,
+            selectionBox: updatedSelectionBox
+          };
+        }
+      } else {
+        // Clear selection box for single command to avoid showing blue debug box
+        newState.selection = {
+          ...newState.selection,
+          selectionBox: undefined
+        };
+      }
+      
+      // Increment render version to force re-render of visual feedback for sub-paths
+      // This ensures that when a command is edited, any visual feedback for the containing
+      // sub-path gets updated to reflect the new shape
+      newState.renderVersion = (newState.renderVersion || 0) + 1;
+      
+      // Notify TransformManager of the changes to update bounds immediately
+      setTimeout(() => {
+        transformManager.setEditorStore(newState);
+        transformManager.updateTransformState();
+      }, 0);
+      
+      return newState;
     }),
 
   removeCommand: (commandId) =>
@@ -220,7 +297,8 @@ export const createCommandActions: StateCreator<
       }
       const deltaX = position.x - movingCommand.x;
       const deltaY = position.y - movingCommand.y;
-      return {
+      const newState = {
+        ...state,
         paths: state.paths.map((path, pathIndex) => ({
           ...path,
           subPaths: path.subPaths.map((subPath, subPathIndex) => ({
@@ -258,6 +336,37 @@ export const createCommandActions: StateCreator<
           })),
         })),
       };
+      
+      // Update selection box only for multiple commands (not for single command)
+      // Single command selection shows transform handles instead
+      if (newState.selection.selectedCommands.length > 1) {
+        const updatedSelectionBox = calculateSelectedCommandsBoundingBox(newState);
+        if (updatedSelectionBox) {
+          newState.selection = {
+            ...newState.selection,
+            selectionBox: updatedSelectionBox
+          };
+        }
+      } else {
+        // Clear selection box for single command to avoid showing blue debug box
+        newState.selection = {
+          ...newState.selection,
+          selectionBox: undefined
+        };
+      }
+      
+      // Increment render version to force re-render of visual feedback for sub-paths
+      // This ensures that when a command is moved, any visual feedback for the containing
+      // sub-path gets updated to reflect the new shape
+      newState.renderVersion = (newState.renderVersion || 0) + 1;
+      
+      // Notify TransformManager of the changes to update bounds immediately
+      setTimeout(() => {
+        transformManager.setEditorStore(newState);
+        transformManager.updateTransformState();
+      }, 0);
+      
+      return newState;
     }),
 
   replaceSubPathCommands: (subPathId, newCommands) => {

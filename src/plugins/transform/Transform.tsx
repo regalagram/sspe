@@ -19,6 +19,7 @@ const TransformPlugin: React.FC = () => {
   const uses = useEditorStore((state) => state.uses);
   const groups = useEditorStore((state) => state.groups);
   const viewport = useEditorStore((state) => state.viewport);
+  const renderVersion = useEditorStore((state) => state.renderVersion);
 
   // Initialize transform manager with editor store
   useEffect(() => {
@@ -85,7 +86,7 @@ const TransformPlugin: React.FC = () => {
       setBounds(null);
       setHandles([]);
     }
-  }, [selection.selectedCommands, selection.selectedSubPaths, selection.selectedTexts, selection.selectedTextPaths, selection.selectedImages, selection.selectedUses, selection.selectedGroups, paths, texts, textPaths, images, uses, groups]);
+  }, [selection.selectedCommands, selection.selectedSubPaths, selection.selectedTexts, selection.selectedTextPaths, selection.selectedImages, selection.selectedUses, selection.selectedGroups, paths, texts, textPaths, images, uses, groups, renderVersion]);
 
   // Update during transformation and movement
   useEffect(() => {
