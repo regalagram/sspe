@@ -187,7 +187,7 @@ export const useRectSelection = () => {
 
 // Selection Rectangle Renderer
 export const SelectionRectRenderer: React.FC = () => {
-  const { viewport } = useEditorStore();
+  const { viewport, selection } = useEditorStore();
   const [, forceUpdate] = useState({});
 
   React.useEffect(() => {
@@ -197,10 +197,28 @@ export const SelectionRectRenderer: React.FC = () => {
     return unsubscribe;
   }, []);
 
-  const selectionRect = rectSelectionManager.getSelectionRect();
-  const isSelecting = rectSelectionManager.isSelecting();
-
-  if (!isSelecting || !selectionRect) return null;
+  // Use selectionBox from store (for pointer-interaction drag selection) or fallback to rectSelectionManager
+  const storeSelectionBox = selection.selectionBox;
+  const managerSelectionRect = rectSelectionManager.getSelectionRect();
+  const isManagerSelecting = rectSelectionManager.isSelecting();
+  
+  // Prioritize store selectionBox over manager selectionRect
+  const selectionRect = storeSelectionBox || (isManagerSelecting ? managerSelectionRect : null);
+  
+  // Debug logging
+  console.log('🎯 SelectionRectRenderer check:', {
+    storeSelectionBox,
+    managerSelectionRect,
+    isManagerSelecting,
+    finalSelectionRect: selectionRect
+  });
+  
+  if (!selectionRect) {
+    console.log('❌ SelectionRectRenderer: No selection rect to render');
+    return null;
+  }
+  
+  console.log('✅ SelectionRectRenderer rendering:', selectionRect);
 
   return (
     <rect

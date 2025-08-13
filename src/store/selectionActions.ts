@@ -314,6 +314,7 @@ export interface SelectionActions {
   selectUseByPoint: (point: Point, isShiftPressed?: boolean) => void;
   selectElementByPoint: (point: Point, isShiftPressed?: boolean) => void;
   selectInBox: (box: { x: number; y: number; width: number; height: number }) => void;
+  updateSelectionBox: (box: { x: number; y: number; width: number; height: number } | undefined) => void;
 }
 
 export const createSelectionActions: StateCreator<
@@ -1327,4 +1328,12 @@ export const createSelectionActions: StateCreator<
       
       return { selection: promotedSelection };
     }),
+
+  updateSelectionBox: (box) =>
+    set((state) => ({
+      selection: {
+        ...state.selection,
+        selectionBox: box || undefined
+      }
+    })),
 });

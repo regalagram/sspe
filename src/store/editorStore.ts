@@ -210,6 +210,8 @@ const loadInitialState = (): EditorState => {
       chains: [],
       events: [],
     },
+    // Floating toolbar state
+    isFloatingToolbarHidden: false,
   };
   
   if (savedState && typeof savedState === 'object') {

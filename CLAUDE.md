@@ -30,6 +30,7 @@ interface Plugin {
   pointerHandlers?: PointerEventHandler;
   handleKeyDown?: (e: KeyboardEvent) => boolean;
   handleKeyUp?: (e: KeyboardEvent) => boolean;
+  floatingActions?: FloatingActionDefinition[]; // NEW: Contextual floating toolbar actions
 }
 ```
 
@@ -45,6 +46,9 @@ Only these positions are valid:
 ```
 src/
 ├── core/               # Core system only
+│   ├── FloatingToolbar/         # NEW: Floating toolbar system
+│   │   ├── FloatingToolbarManager.ts    # Central floating actions manager
+│   │   └── PositioningEngine.ts         # Smart positioning for floating toolbar
 ├── plugins/            # One folder per plugin
 │   └── [plugin-name]/
 │       ├── index.ts    # Plugin definition
@@ -58,6 +62,9 @@ src/
 │   ├── PluginButton.tsx         # Plugin buttons
 │   ├── SVGCommandIcons.tsx      # SVG command icons
 │   ├── SandwichButton.tsx       # Mobile menu toggle
+│   ├── FloatingToolbar/         # NEW: Floating contextual toolbar
+│   │   ├── FloatingToolbarRenderer.tsx   # Main floating toolbar component
+│   │   └── FloatingToolbarButton.tsx     # Individual floating action buttons
 │   └── [component-name].tsx
 ├── managers/           # Global managers
 ├── store/             # Zustand store
@@ -65,6 +72,7 @@ src/
 │   ├── toolbarStore.ts          # Toolbar state management
 │   └── [domain]Actions.ts       # Domain-specific actions
 ├── types/             # TypeScript types
+│   ├── floatingToolbar.ts       # NEW: Floating toolbar type definitions
 ├── utils/             # Shared utilities
 │   ├── path-utils.ts
 │   ├── id-utils.ts
@@ -96,6 +104,32 @@ src/
 - This ensures unified handling for mouse, touch, pen, and other input devices.
 
 **DO NOT** use `onMouseDown`, `onTouchStart`, or any device-specific event. Use only `onPointerDown`, `onPointerMove`, `onPointerUp`, etc.
+
+### Floating Toolbar System (NEW)
+
+**Contextual floating toolbars provide element-specific actions near selections.**
+
+- Automatically appears when elements are selected
+- Context-aware actions based on element type (text, path, group, etc.)
+- Smart positioning to avoid overlapping with selected elements
+- Responsive design for both desktop and mobile
+- Plugin-based action definitions
+
+#### Floating Toolbar Action Types:
+- `button` - Simple action button
+- `toggle` - Toggle state button
+- `dropdown` - Menu with multiple options
+- `color` - Color picker
+- `input` - Text/number input
+
+#### Element Type Support:
+- `text` - Text styling, font controls, alignment
+- `path/subpath` - Fill, stroke, arrange, filters
+- `group` - Group/ungroup, distribute, align
+- `use` - Symbol controls, detach, replace
+- `image` - Opacity, filters, crop
+- `mixed` - Multi-selection operations
+- `command` - Point manipulation, curve controls
 
 ## Code Generation Rules
 
@@ -168,7 +202,129 @@ export const MyPlugin: Plugin = {
       // Return true to stop propagation
       return false;
     }
+  },
+  
+  // NEW: Define floating actions for this plugin
+  floatingActions: [
+    {
+      elementTypes: ['text'], // Apply to text elements
+      selectionTypes: ['single', 'multiple'], // Single or multiple selection
+      actions: [
+        {
+          id: 'text-bold',
+          icon: Bold,
+          label: 'Bold',
+          type: 'toggle',
+          toggle: {
+            isActive: () => checkIfBold(),
+            onToggle: () => toggleBold()
+          },
+          priority: 80,
+          tooltip: 'Toggle bold'
+        },
+        {
+          id: 'text-color',
+          icon: Palette,
+          label: 'Color',
+          type: 'color',
+          color: {
+            currentColor: getCurrentColor(),
+            onChange: (color) => applyColor(color)
+          },
+          priority: 70,
+          tooltip: 'Change text color'
+        }
+      ],
+      priority: 100
+    }
+  ]
+};
+```
+
+### Floating Toolbar Implementation
+
+#### Creating Floating Actions
+```typescript
+// File: src/plugins/[plugin-name]/FloatingActions.ts
+import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
+import { useEditorStore } from '../../store/editorStore';
+
+// Define actions for specific element types
+export const textFloatingActions: ToolbarAction[] = [
+  {
+    id: 'font-family',
+    icon: Type,
+    label: 'Font Family',
+    type: 'dropdown',
+    dropdown: {
+      options: [
+        { id: 'arial', label: 'Arial', action: () => applyFont('Arial') },
+        { id: 'times', label: 'Times', action: () => applyFont('Times') }
+      ]
+    },
+    priority: 100,
+    tooltip: 'Change font family'
+  },
+  {
+    id: 'delete-text',
+    icon: Trash2,
+    label: 'Delete',
+    type: 'button',
+    action: deleteSelectedTexts,
+    priority: 10,
+    destructive: true,
+    tooltip: 'Delete text'
   }
+];
+
+// Export the definition
+export const textFloatingActionDefinition: FloatingActionDefinition = {
+  elementTypes: ['text'],
+  selectionTypes: ['single', 'multiple'],
+  actions: textFloatingActions,
+  priority: 100
+};
+```
+
+#### Responsive Configuration
+```typescript
+// Floating toolbar automatically adapts to screen size
+const config = {
+  desktop: {
+    maxVisibleButtons: 8,
+    buttonSize: 32,
+    layout: 'horizontal'
+  },
+  mobile: {
+    maxVisibleButtons: 6,
+    buttonSize: 44,
+    layout: 'adaptive'
+  }
+};
+```
+
+#### Integration in Plugin
+```typescript
+// In plugin index.ts
+import { textFloatingActionDefinition } from './FloatingActions';
+
+export const TextPlugin: Plugin = {
+  id: 'text-style',
+  name: 'Text Style',
+  version: '1.0.0',
+  enabled: true,
+  
+  // Regular UI components
+  ui: [
+    {
+      id: 'text-style-controls',
+      component: TextStyleControls,
+      position: 'sidebar'
+    }
+  ],
+  
+  // NEW: Floating actions
+  floatingActions: [textFloatingActionDefinition]
 };
 ```
 
@@ -303,6 +459,9 @@ pointerHandlers: {
 11. **Use data attributes** for element identification
 12. **Return boolean** from pointer handlers
 13. **Always use pointer event management for all input**
+14. **Define floating actions** for contextual element interactions
+15. **Use FloatingActionDefinition** for element-specific toolbars
+16. **Priority-based action ordering** in floating toolbars
 
 ### DON'T ❌
 1. **No business logic** in UI components
@@ -456,5 +615,8 @@ When generating code:
 12. Add keyboard shortcuts
 13. Test with enable/disable
 14. Always use pointer event management for all input (never Mouse, Touch, or Pencil events)
+15. **NEW: Define floating actions** for element-specific interactions
+16. **NEW: Use FloatingActionDefinition** for contextual toolbars
+17. **NEW: Set action priorities** for proper ordering
 
 Remember: **Everything is a plugin, no exceptions.**

@@ -287,6 +287,8 @@ export interface EditorState {
     chains: AnimationChain[]; // Synchronized animation chains
     events: AnimationEvent[]; // Custom animation events
   };
+  // Floating toolbar state
+  isFloatingToolbarHidden?: boolean;
 }
 
 // Animation synchronization types

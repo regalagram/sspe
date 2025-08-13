@@ -81,11 +81,11 @@ interface DragState {
   draggedElements: Map<string, ElementSnapshot>;
   origin: Point | null;
   current: Point | null;
-  type: 'command' | 'element' | 'controlPoint' | null;
+  type: 'command' | 'element' | 'controlPoint' | 'area' | null;
 }
 
 type DragAction = 
-  | { type: 'START_DRAG'; elements: SelectedElements; origin: Point; dragType: 'command' | 'element' | 'controlPoint' }
+  | { type: 'START_DRAG'; elements: SelectedElements; origin: Point; dragType: 'command' | 'element' | 'controlPoint' | 'area' }
   | { type: 'UPDATE_DRAG'; position: Point }
   | { type: 'END_DRAG' }
   | { type: 'RESET' };
@@ -891,7 +891,7 @@ class PointerInteractionManager {
       enableStickyGuidelines: true,
       doubleClickThreshold: 300,
       dragThreshold: 3,
-      debugMode: false
+      debugMode: true
     };
 
     this.state = {
@@ -1088,17 +1088,30 @@ class PointerInteractionManager {
   // ================== EVENT HANDLERS ==================
 
   handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
+    console.log('🟢 PointerInteractionManager.handlePointerDown CALLED!');
     const { commandId, controlPoint } = context;
     const target = e.target as SVGElement;
     const modifiers = this.getKeyModifiers(e);
     
     // Always log pointer down to verify the method is called
+    console.log('🔥 POINTER DOWN FIRED!', {
+      targetTag: target.tagName,
+      targetDataType: target.getAttribute('data-element-type'),
+      targetDataId: target.getAttribute('data-element-id'),
+      clickX: e.clientX,
+      clickY: e.clientY,
+      commandId,
+      controlPoint
+    });
+    
     this.debugManager.logGeneric('🔥 POINTER DOWN FIRED!', {
       targetTag: target.tagName,
       targetDataType: target.getAttribute('data-element-type'),
       targetDataId: target.getAttribute('data-element-id'),
       clickX: e.clientX,
-      clickY: e.clientY
+      clickY: e.clientY,
+      commandId,
+      controlPoint
     });
     
     // DEBUG: Log the click target
@@ -1184,6 +1197,10 @@ class PointerInteractionManager {
       const handleType = controlPoint === 'x1y1' ? 'outgoing' : 'incoming';
       handleManager.startDragHandle(commandId, handleType, startPoint);
       transformManager.setMoving(true);
+      
+      // Hide floating toolbar during control point drag
+      this.editorStore.hideFloatingToolbarDuringDrag();
+      
       this.editorStore.pushToHistory();
       return true;
     }
@@ -1246,6 +1263,10 @@ class PointerInteractionManager {
       const origin = this.getSVGPoint(e, context.svgRef);
       
       this.dragManager.startDrag(selectedElements, origin);
+      
+      // Hide floating toolbar during drag
+      this.editorStore.hideFloatingToolbarDuringDrag();
+      
       this.dispatchDragAction({
         type: 'START_DRAG',
         elements: selectedElements,
@@ -1267,6 +1288,10 @@ class PointerInteractionManager {
       const origin = this.getSVGPoint(e, context.svgRef);
       
       this.dragManager.startDrag(selectedElements, origin);
+      
+      // Hide floating toolbar during drag
+      this.editorStore.hideFloatingToolbarDuringDrag();
+      
       this.dispatchDragAction({
         type: 'START_DRAG',
         elements: selectedElements,
@@ -1278,6 +1303,82 @@ class PointerInteractionManager {
       return true;
     }
 
+    // Handle empty space clicks (deselection and area selection)
+    if (!this.state.isSpacePressed) {
+      e.stopPropagation();
+      
+      console.log('🔥 EMPTY SPACE CLICK DETECTED!', {
+        clickX: e.clientX,
+        clickY: e.clientY,
+        modifiers,
+        target: target.tagName,
+        elementType,
+        elementId
+      });
+      
+      this.debugManager.logGeneric('🔥 EMPTY SPACE CLICK DETECTED!', {
+        clickX: e.clientX,
+        clickY: e.clientY,
+        modifiers,
+        target: target.tagName,
+        elementType,
+        elementId
+      });
+      
+      // Clear current selection unless holding shift
+      if (!modifiers.shift) {
+        this.editorStore.clearSelection();
+        
+        // Clear any existing drag state
+        this.dispatchDragAction({ type: 'RESET' });
+        this.state.draggingElement = null;
+        this.state.draggingCommand = null;
+        
+        // Reset drag manager state
+        this.dragManager.endDrag();
+        
+        // Show floating toolbar after drag
+        this.editorStore.showFloatingToolbarAfterDrag();
+        
+        console.log('🧹 CLEARED: Selection and drag state', {
+          dragState: this.state.dragState,
+          draggingElement: this.state.draggingElement,
+          draggingCommand: this.state.draggingCommand
+        });
+        
+        this.debugManager.logSelection('Cleared selection and drag state on empty space click', this.getSelectedElements());
+      }
+      
+      // Start area selection drag
+      const origin = this.getSVGPoint(e, context.svgRef);
+      const emptySelection: SelectedElements = {
+        commands: [],
+        texts: [],
+        images: [],
+        uses: [],
+        textPaths: [],
+        groups: [],
+        subPaths: []
+      };
+      this.dispatchDragAction({
+        type: 'START_DRAG',
+        elements: emptySelection,
+        origin,
+        dragType: 'area'
+      });
+      
+      console.log('🎯 STARTED: Area selection drag', { origin });
+      this.debugManager.logGeneric('Started area selection', { origin });
+      return true;
+    }
+
+    this.debugManager.logGeneric('🔥 POINTER DOWN FINISHED - NO HANDLER MATCHED', {
+      target: target.tagName,
+      elementType,
+      elementId,
+      commandId,
+      isSpacePressed: this.state.isSpacePressed
+    });
     return false;
   };
 
@@ -1309,8 +1410,22 @@ class PointerInteractionManager {
       };
 
       this.dispatchDragAction({ type: 'UPDATE_DRAG', position: currentPoint });
-      this.dragManager.updateDrag(delta);
-      this.updateStickyGuidelines();
+      
+      // Only call dragManager.updateDrag for element/command drags, not area selection
+      if (this.state.dragState.type === 'area') {
+        console.log('📦 Area selection update:', { origin: this.state.dragState.origin, current: currentPoint });
+        // For area selection, update the selection box instead of moving elements
+        this.editorStore.updateSelectionBox({
+          x: Math.min(this.state.dragState.origin.x, currentPoint.x),
+          y: Math.min(this.state.dragState.origin.y, currentPoint.y),
+          width: Math.abs(currentPoint.x - this.state.dragState.origin.x),
+          height: Math.abs(currentPoint.y - this.state.dragState.origin.y)
+        });
+      } else {
+        // For element/command drags, move the elements
+        this.dragManager.updateDrag(delta);
+        this.updateStickyGuidelines();
+      }
 
       return true;
     }
@@ -1328,11 +1443,29 @@ class PointerInteractionManager {
       handleManager.endDragHandle();
       this.state.draggingControlPoint = null;
       transformManager.setMoving(false);
+      
+      // Show floating toolbar after control point drag
+      this.editorStore.showFloatingToolbarAfterDrag();
     }
 
     // End element/command dragging
     if (this.state.dragState.isDragging) {
+      // If this was area selection, perform selection and then clear the selection box
+      if (this.state.dragState.type === 'area') {
+        const currentSelectionBox = this.editorStore.selection.selectionBox;
+        if (currentSelectionBox) {
+          console.log('🔍 Performing area selection with box:', currentSelectionBox);
+          this.editorStore.selectInBox(currentSelectionBox);
+        }
+        console.log('🧹 Clearing selection box after area selection');
+        this.editorStore.updateSelectionBox(null);
+      }
+      
       this.dragManager.endDrag();
+      
+      // Show floating toolbar after drag
+      this.editorStore.showFloatingToolbarAfterDrag();
+      
       this.dispatchDragAction({ type: 'END_DRAG' });
     }
 

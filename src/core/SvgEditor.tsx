@@ -16,6 +16,7 @@ import { SVGDefinitions } from '../components/SVGDefinitions';
 import { MobileContainer } from '../components/MobileContainer';
 import { Toolbar } from '../components/Toolbar';
 import { WritingToolbar } from '../components/WritingToolbar';
+import { FloatingToolbarRenderer } from '../components/FloatingToolbar/FloatingToolbarRenderer';
 import { extractGradientsFromPaths } from '../utils/gradient-utils';
 
 // Register plugins immediately during module loading
@@ -169,6 +170,9 @@ export const SvgEditor: React.FC = () => {
         >
           {svgCanvas}
         </MobileContainer>
+        
+        {/* Floating toolbar for contextual actions */}
+        <FloatingToolbarRenderer />
       </div>
     );
   }
@@ -183,6 +187,9 @@ export const SvgEditor: React.FC = () => {
       <Toolbar toolbarPlugins={toolbarPanels} />
       
       {svgCanvas}
+      
+      {/* Floating toolbar for contextual actions */}
+      <FloatingToolbarRenderer />
       
       {/* Render sidebar as accordion */}
       {accordionVisible && <AccordionSidebar plugins={allPanels} />}

@@ -6,7 +6,7 @@ import { UndoRedoPlugin } from '../plugins/undo-redo/UndoRedo';
 import { CreationPlugin } from '../plugins/creation/Creation';
 import { FullscreenPlugin } from '../plugins/fullscreen/Fullscreen';
 import { PathStylePlugin } from '../plugins/path-style/PathStyle';
-import { SelectionPlugin } from '../plugins/selection/Selection';
+import { SelectionPlugin } from '../plugins/selection';
 import { SVGPlugin } from '../plugins/svg-editor/SVGEditor';
 import { SubPathListPlugin } from '../plugins/subpath-list/SubPathList';
 import { PointerInteractionPlugin } from '../plugins/pointer-interaction/PointerInteraction';

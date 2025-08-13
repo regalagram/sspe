@@ -285,6 +285,10 @@ export const PathRenderer: React.FC = () => {
         // Notify transform manager that movement started (subpath drag) - schedule outside render
         setTimeout(() => {
           transformManager.setMoving(true);
+          
+          // Hide floating toolbar during subpath drag
+          const store = useEditorStore.getState();
+          store.hideFloatingToolbarDuringDrag();
         }, 0);
         
         // Initialize sticky guidelines with original element bounds
@@ -486,6 +490,10 @@ export const PathRenderer: React.FC = () => {
       if (currentDragState.isDragging && currentDragState.dragStarted) {
         setTimeout(() => {
           transformManager.setMoving(false);
+          
+          // Show floating toolbar after subpath drag
+          const store = useEditorStore.getState();
+          store.showFloatingToolbarAfterDrag();
         }, 0);
       }
       

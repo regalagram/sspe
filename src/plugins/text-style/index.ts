@@ -1,5 +1,6 @@
 import { Plugin } from '../../core/PluginSystem';
 import { TextStyleControlsComponent } from './TextStyleControls';
+import { textFloatingActionDefinition } from './FloatingTextActions';
 
 export const TextStylePlugin: Plugin = {
   id: 'text-style',
@@ -15,5 +16,7 @@ export const TextStylePlugin: Plugin = {
       position: 'sidebar',
       order: 15
     }
-  ]
+  ],
+
+  floatingActions: [textFloatingActionDefinition]
 };

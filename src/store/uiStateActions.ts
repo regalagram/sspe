@@ -20,6 +20,9 @@ export interface UIStateActions {
   setVisualDebugControlPointsFactor: (factor: number) => void;
   setVisualDebugTransformResizeFactor: (factor: number) => void;
   setVisualDebugTransformRotateFactor: (factor: number) => void;
+  setFloatingToolbarHidden: (hidden: boolean) => void;
+  hideFloatingToolbarDuringDrag: () => void;
+  showFloatingToolbarAfterDrag: () => void;
 }
 
 export const createUIStateActions: StateCreator<
@@ -221,5 +224,23 @@ export const createUIStateActions: StateCreator<
       };
       return newState;
     });
+  },
+
+  setFloatingToolbarHidden: (hidden: boolean) => {
+    set((state) => ({
+      isFloatingToolbarHidden: hidden,
+    }));
+  },
+
+  hideFloatingToolbarDuringDrag: () => {
+    set((state) => ({
+      isFloatingToolbarHidden: true,
+    }));
+  },
+
+  showFloatingToolbarAfterDrag: () => {
+    set((state) => ({
+      isFloatingToolbarHidden: false,
+    }));
   },
 });
