@@ -56,18 +56,10 @@ export const FloatingToolbarRenderer: React.FC = () => {
       selection.selectedGradientStops.length > 0
     );
 
-    console.log('🔍 [FloatingToolbar] Selection analysis:', {
-      hasSelection,
-      selectedTexts: selection.selectedTexts,
-      selectedPaths: selection.selectedPaths,
-      selectionBox: selection.selectionBox,
-      viewport: viewport
-    });
-
+    
     if (hasSelection) {
       const toolbarActions = toolbarManager.getActionsForSelection(selection);
-      console.log('📝 [FloatingToolbar] Actions found:', toolbarActions);
-      setActions(toolbarActions);
+            setActions(toolbarActions);
       
       // Always calculate position, regardless of hidden state
       // This ensures position is updated when toolbar becomes visible again
@@ -78,36 +70,22 @@ export const FloatingToolbarRenderer: React.FC = () => {
         toolbarSize
       );
       
-      console.log('📍 [FloatingToolbar] Position calculation result:', {
-        position: toolbarPosition,
-        selection,
-        viewport,
-        isHidden: isFloatingToolbarHidden
-      });
-      
+            
       if (toolbarPosition) {
-        console.log('✅ [FloatingToolbar] Using calculated position:', toolbarPosition);
-        setPosition(toolbarPosition);
+                setPosition(toolbarPosition);
       } else {
         const fallbackPosition = { x: 100, y: 100 };
-        console.log('⚠️ [FloatingToolbar] Using fallback position:', fallbackPosition);
-        setPosition(fallbackPosition);
+                setPosition(fallbackPosition);
       }
     } else {
-      console.log('❌ [FloatingToolbar] No selection - hiding toolbar');
-      setActions([]);
+            setActions([]);
       setPosition(null);
       setShowOverflow(false);
     }
   }, [selection, viewport, isFloatingToolbarHidden, toolbarManager, positioningEngine]);
 
   // DEBUG: Log for development
-  console.log('[FloatingToolbar] Render check:', { 
-    position, 
-    actionsLength: actions.length, 
-    isHidden: isFloatingToolbarHidden 
-  });
-  
+    
   if (!position || actions.length === 0 || !portalContainer || isFloatingToolbarHidden) {
     return null;
   }

@@ -168,8 +168,7 @@ const deleteTexts = () => {
 // Convert text to path
 const convertTextToPath = () => {
   // This would need to be implemented in the text plugin
-  console.log('Convert text to path - not implemented yet');
-};
+  };
 
 export const textFloatingActions: ToolbarAction[] = [
   {

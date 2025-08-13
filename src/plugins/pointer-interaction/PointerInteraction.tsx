@@ -1110,12 +1110,7 @@ class PointerInteractionManager {
       // Show floating toolbar after drag
       this.editorStore.showFloatingToolbarAfterDrag();
       
-      console.log('🧹 CLEARED: Selection and drag state', {
-        dragState: this.state.dragState,
-        draggingElement: this.state.draggingElement,
-        draggingCommand: this.state.draggingCommand
-      });
-      
+            
       this.debugManager.logSelection('Cleared selection and drag state on empty space click', this.getSelectedElements());
     }
     
@@ -1137,29 +1132,18 @@ class PointerInteractionManager {
       dragType: 'area'
     });
     
-    console.log('🎯 STARTED: Area selection drag', { origin });
-    this.debugManager.logGeneric('Started area selection', { origin });
+        this.debugManager.logGeneric('Started area selection', { origin });
   }
 
   // ================== EVENT HANDLERS ==================
 
   handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
-    console.log('🟢 PointerInteractionManager.handlePointerDown CALLED!');
-    const { commandId, controlPoint } = context;
+        const { commandId, controlPoint } = context;
     const target = e.target as SVGElement;
     const modifiers = this.getKeyModifiers(e);
     
     // Always log pointer down to verify the method is called
-    console.log('🔥 POINTER DOWN FIRED!', {
-      targetTag: target.tagName,
-      targetDataType: target.getAttribute('data-element-type'),
-      targetDataId: target.getAttribute('data-element-id'),
-      clickX: e.clientX,
-      clickY: e.clientY,
-      commandId,
-      controlPoint
-    });
-    
+        
     this.debugManager.logGeneric('🔥 POINTER DOWN FIRED!', {
       targetTag: target.tagName,
       targetDataType: target.getAttribute('data-element-type'),
@@ -1280,8 +1264,7 @@ class PointerInteractionManager {
       
       // For double-clicks on text elements, let text-edit plugin handle them
       if (context.isDoubleClick && (elementTypeTyped === 'text' || elementTypeTyped === 'multiline-text')) {
-        console.log('🎯 PointerInteraction: Double-click on text detected, letting text-edit plugin handle it');
-        return false; // Don't handle, let text-edit plugin process it
+                return false; // Don't handle, let text-edit plugin process it
       }
       
       // DEBUG: Log what's being detected and selected
@@ -1363,16 +1346,7 @@ class PointerInteractionManager {
     if (!this.state.isSpacePressed) {
       e.stopPropagation();
       
-      console.log('🔥 EMPTY SPACE CLICK DETECTED!', {
-        clickX: e.clientX,
-        clickY: e.clientY,
-        modifiers,
-        target: target.tagName,
-        elementType,
-        elementId,
-        pointerType: e.pointerType
-      });
-      
+            
       this.debugManager.logGeneric('🔥 EMPTY SPACE CLICK DETECTED!', {
         clickX: e.clientX,
         clickY: e.clientY,
@@ -1429,8 +1403,7 @@ class PointerInteractionManager {
       
       // Only call dragManager.updateDrag for element/command drags, not area selection
       if (this.state.dragState.type === 'area') {
-        console.log('📦 Area selection update:', { origin: this.state.dragState.origin, current: currentPoint });
-        // For area selection, update the selection box instead of moving elements
+                // For area selection, update the selection box instead of moving elements
         this.editorStore.updateSelectionBox({
           x: Math.min(this.state.dragState.origin.x, currentPoint.x),
           y: Math.min(this.state.dragState.origin.y, currentPoint.y),
@@ -1470,11 +1443,9 @@ class PointerInteractionManager {
       if (this.state.dragState.type === 'area') {
         const currentSelectionBox = this.editorStore.selection.selectionBox;
         if (currentSelectionBox) {
-          console.log('🔍 Performing area selection with box:', currentSelectionBox);
-          this.editorStore.selectInBox(currentSelectionBox);
+                    this.editorStore.selectInBox(currentSelectionBox);
         }
-        console.log('🧹 Clearing selection box after area selection');
-        this.editorStore.updateSelectionBox(null);
+                this.editorStore.updateSelectionBox(null);
       }
       
       this.dragManager.endDrag();

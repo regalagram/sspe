@@ -39,12 +39,10 @@ export class FloatingToolbarManager {
     this.plugins.set(plugin.id, plugin);
     
     if (plugin.floatingActions) {
-      console.log(`[FloatingToolbarManager] Registering plugin ${plugin.id} with ${plugin.floatingActions.length} action definitions`);
-      this.actionDefinitions.push(...plugin.floatingActions);
+            this.actionDefinitions.push(...plugin.floatingActions);
       // Sort by priority
       this.actionDefinitions.sort((a, b) => (b.priority || 0) - (a.priority || 0));
-      console.log(`[FloatingToolbarManager] Total action definitions: ${this.actionDefinitions.length}`);
-    }
+          }
   }
 
   unregisterPlugin(pluginId: string): void {
@@ -55,32 +53,27 @@ export class FloatingToolbarManager {
   }
 
   getActionsForSelection(selection: SelectionState): ToolbarAction[] {
-    console.log(`[FloatingToolbarManager] Getting actions for selection, total definitions: ${this.actionDefinitions.length}`);
-    
+        
     if (!this.hasValidSelection(selection)) {
-      console.log('[FloatingToolbarManager] No valid selection');
-      return [];
+            return [];
     }
 
     const elementTypes = this.detectElementTypes(selection);
     const selectionType = this.getSelectionType(selection);
     
-    console.log(`[FloatingToolbarManager] Element types: ${elementTypes.join(', ')}, Selection type: ${selectionType}`);
-    
+        
     let actions: ToolbarAction[] = [];
     
     for (const definition of this.actionDefinitions) {
       if (this.matchesDefinition(definition, elementTypes, selectionType)) {
-        console.log(`[FloatingToolbarManager] Matched definition with ${definition.actions.length} actions for types: ${definition.elementTypes.join(', ')}`);
-        // Filter out disabled actions
+                // Filter out disabled actions
         const validActions = definition.actions.filter(action => !action.disabled);
         actions.push(...validActions);
       }
     }
     
     const processedActions = this.processActions(actions);
-    console.log(`[FloatingToolbarManager] Returning ${processedActions.length} processed actions`);
-    return processedActions;
+        return processedActions;
   }
 
   getConfig(): FloatingToolbarConfig {

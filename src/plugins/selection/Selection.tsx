@@ -206,20 +206,12 @@ export const SelectionRectRenderer: React.FC = () => {
   const selectionRect = storeSelectionBox || (isManagerSelecting ? managerSelectionRect : null);
   
   // Debug logging
-  console.log('🎯 SelectionRectRenderer check:', {
-    storeSelectionBox,
-    managerSelectionRect,
-    isManagerSelecting,
-    finalSelectionRect: selectionRect
-  });
-  
+    
   if (!selectionRect) {
-    console.log('❌ SelectionRectRenderer: No selection rect to render');
-    return null;
+        return null;
   }
   
-  console.log('✅ SelectionRectRenderer rendering:', selectionRect);
-
+  
   return (
     <rect
       x={selectionRect.x}

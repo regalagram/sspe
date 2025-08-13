@@ -116,8 +116,7 @@ const groupSelected = () => {
   
   if (hasSelection) {
     // TODO: Implement groupSelection method in store
-    console.log('Group selection - needs store implementation');
-  }
+      }
 };
 
 // Ungroup selected groups
@@ -154,8 +153,7 @@ const duplicateSelected = () => {
         }))
       };
       // TODO: This needs proper implementation to handle complex paths
-      console.log('Duplicate path - needs proper path creation implementation');
-    }
+          }
   });
   
   // Duplicate texts
@@ -175,8 +173,7 @@ const deleteSelected = () => {
   // Delete paths
   store.selection.selectedPaths.forEach(pathId => {
     // TODO: Implement deletePath method in store
-    console.log('Delete path - needs store implementation');
-  });
+      });
   
   // Delete texts
   store.selection.selectedTexts.forEach(textId => {
@@ -186,8 +183,7 @@ const deleteSelected = () => {
   // Delete groups
   store.selection.selectedGroups.forEach(groupId => {
     // TODO: Implement deleteGroup method in store
-    console.log('Delete group - needs store implementation');
-  });
+      });
   
   // Clear selection
   store.clearSelection();
@@ -199,8 +195,7 @@ const bringToFront = () => {
   
   store.selection.selectedPaths.forEach(pathId => {
     // TODO: Implement bring to front functionality
-    console.log('Bring to front - needs store implementation');
-  });
+      });
 };
 
 const sendToBack = () => {
@@ -208,8 +203,7 @@ const sendToBack = () => {
   
   store.selection.selectedPaths.forEach(pathId => {
     // TODO: Implement send to back functionality
-    console.log('Send to back - needs store implementation');
-  });
+      });
 };
 
 // Alignment options
@@ -218,19 +212,19 @@ const alignmentOptions = [
     id: 'align-left', 
     label: 'Align Left', 
     icon: AlignLeft,
-    action: () => console.log('Align left - needs implementation') 
+    action: () => console.warn('Align left - needs implementation') 
   },
   { 
     id: 'align-center', 
     label: 'Align Center', 
     icon: AlignCenter,
-    action: () => console.log('Align center - needs implementation') 
+    action: () => console.warn('Align center - needs implementation') 
   },
   { 
     id: 'align-right', 
     label: 'Align Right', 
     icon: AlignRight,
-    action: () => console.log('Align right - needs implementation') 
+    action: () => console.warn('Align right - needs implementation') 
   }
 ];
 
@@ -255,12 +249,12 @@ const filterOptions = [
   { 
     id: 'blur', 
     label: 'Blur', 
-    action: () => console.log('Apply blur - needs implementation') 
+    action: () => console.warn('Apply blur - needs implementation') 
   },
   { 
     id: 'shadow', 
     label: 'Drop Shadow', 
-    action: () => console.log('Apply shadow - needs implementation') 
+    action: () => console.warn('Apply shadow - needs implementation') 
   }
 ];
 
@@ -269,12 +263,12 @@ const animationOptions = [
   { 
     id: 'fade', 
     label: 'Fade In/Out', 
-    action: () => console.log('Add fade animation - needs implementation') 
+    action: () => console.warn('Add fade animation - needs implementation') 
   },
   { 
     id: 'move', 
     label: 'Move', 
-    action: () => console.log('Add move animation - needs implementation') 
+    action: () => console.warn('Add move animation - needs implementation') 
   }
 ];
 
@@ -555,8 +549,7 @@ const bringSubPathsToFront = () => {
   reorderManager.setEditorStore(store);
   
   reorderManager.bringToFront();
-  console.log('🔝 Brought subpaths to front');
-};
+  };
 
 // Send subpaths to back
 const sendSubPathsToBack = () => {
@@ -565,8 +558,7 @@ const sendSubPathsToBack = () => {
   reorderManager.setEditorStore(store);
   
   reorderManager.sendToBack();
-  console.log('🔽 Sent subpaths to back');
-};
+  };
 
 // Get common stroke width for subpaths
 const getCommonSubPathStrokeWidth = (): number => {
@@ -647,8 +639,7 @@ const addFadeAnimation = () => {
     }
   });
   
-  console.log('✨ Added fade animation to selected subpaths');
-};
+  };
 
 // Add rotation animation to subpaths
 const addRotateAnimation = () => {
@@ -672,8 +663,7 @@ const addRotateAnimation = () => {
     }
   });
   
-  console.log('🔄 Added rotation animation to selected subpaths');
-};
+  };
 
 // SubPath-specific options (defined after functions to avoid hoisting issues)
 const subPathArrangeOptions = [

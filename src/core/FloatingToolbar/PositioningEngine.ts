@@ -102,25 +102,16 @@ export class PositioningEngine {
   }
 
   private getSelectionBounds(selection: SelectionState, viewport: ViewportState): BoundingRect | null {
-    console.log('🎯 [PositioningEngine] Selection analysis:', {
-      selectionBox: selection.selectionBox,
-      selectedTexts: selection.selectedTexts,
-      selectedPaths: selection.selectedPaths,
-      selectedCommands: selection.selectedCommands,
-      viewport: viewport
-    });
-
+    
     // Try to get bounds from selected elements using DOM first (more reliable)
     const bounds = this.getElementBoundsFromDOM(selection);
     if (bounds) {
-      console.log('✅ [PositioningEngine] Using DOM bounds:', bounds);
-      return bounds;
+            return bounds;
     }
 
     // Fallback to selection box if available
     if (selection.selectionBox) {
-      console.log('📦 [PositioningEngine] Using selectionBox:', selection.selectionBox);
-      return selection.selectionBox;
+            return selection.selectionBox;
     }
 
     // Last resort: return a default around the center
@@ -130,17 +121,14 @@ export class PositioningEngine {
       width: 100,
       height: 50
     };
-    console.log('⚠️ [PositioningEngine] Using fallback bounds:', fallbackBounds);
-    return fallbackBounds;
+        return fallbackBounds;
   }
 
   private getElementBoundsFromDOM(selection: SelectionState): BoundingRect | null {
-    console.log('🔍 [PositioningEngine] Starting DOM element search...');
-    
+        
     const svgElement = document.querySelector('svg');
     if (!svgElement) {
-      console.log('❌ [PositioningEngine] No SVG element found');
-      return null;
+            return null;
     }
 
     // Get all possible selectors for the selection
@@ -150,8 +138,7 @@ export class PositioningEngine {
     
     // 1. SubPaths (HIGHEST priority - primary elements in our system)
     if (selection.selectedSubPaths.length > 0) {
-      console.log('🔍 [PositioningEngine] Searching for subpath elements:', selection.selectedSubPaths);
-      selection.selectedSubPaths.forEach(id => {
+            selection.selectedSubPaths.forEach(id => {
         selectors.push(`[data-subpath-id="${id}"]`);
         selectors.push(`[data-element-id="${id}"]`);
         selectors.push(`#${id}`);
@@ -160,8 +147,7 @@ export class PositioningEngine {
     
     // 2. Text elements (second priority - most visually distinct)
     if (selection.selectedTexts.length > 0) {
-      console.log('🔍 [PositioningEngine] Searching for text elements:', selection.selectedTexts);
-      selection.selectedTexts.forEach(id => {
+            selection.selectedTexts.forEach(id => {
         selectors.push(`#${id}`);
         selectors.push(`text[id="${id}"]`);
         selectors.push(`[data-element-id="${id}"]`);
@@ -170,8 +156,7 @@ export class PositioningEngine {
     
     // 3. Commands (third priority - part of subpaths)
     if (selection.selectedCommands.length > 0) {
-      console.log('🔍 [PositioningEngine] Searching for command elements:', selection.selectedCommands);
-      selection.selectedCommands.forEach(id => {
+            selection.selectedCommands.forEach(id => {
         selectors.push(`[data-command-id="${id}"]`);
         selectors.push(`[data-element-id="${id}"]`);
         selectors.push(`#${id}`);
@@ -180,8 +165,7 @@ export class PositioningEngine {
     
     // 4. Images (fourth priority - visually prominent)
     if (selection.selectedImages.length > 0) {
-      console.log('🔍 [PositioningEngine] Searching for image elements:', selection.selectedImages);
-      selection.selectedImages.forEach(id => {
+            selection.selectedImages.forEach(id => {
         selectors.push(`#${id}`);
         selectors.push(`image[id="${id}"]`);
         selectors.push(`[data-image-id="${id}"]`);
@@ -191,8 +175,7 @@ export class PositioningEngine {
     
     // 5. Groups (fifth priority - contain multiple elements)
     if (selection.selectedGroups.length > 0) {
-      console.log('🔍 [PositioningEngine] Searching for group elements:', selection.selectedGroups);
-      selection.selectedGroups.forEach(id => {
+            selection.selectedGroups.forEach(id => {
         selectors.push(`#${id}`);
         selectors.push(`g[id="${id}"]`);
         selectors.push(`[data-group-id="${id}"]`);
@@ -202,8 +185,7 @@ export class PositioningEngine {
     
     // 6. Use elements (sixth priority)
     if (selection.selectedUses.length > 0) {
-      console.log('🔍 [PositioningEngine] Searching for use elements:', selection.selectedUses);
-      selection.selectedUses.forEach(id => {
+            selection.selectedUses.forEach(id => {
         selectors.push(`#${id}`);
         selectors.push(`use[id="${id}"]`);
         selectors.push(`[data-use-id="${id}"]`);
@@ -213,8 +195,7 @@ export class PositioningEngine {
     
     // 7. Paths (lowest priority - mainly for legacy support)
     if (selection.selectedPaths.length > 0) {
-      console.log('🔍 [PositioningEngine] Searching for path elements:', selection.selectedPaths);
-      selection.selectedPaths.forEach(id => {
+            selection.selectedPaths.forEach(id => {
         selectors.push(`#${id}`);
         selectors.push(`path[id="${id}"]`);
         selectors.push(`[data-path-id="${id}"]`);
@@ -222,8 +203,7 @@ export class PositioningEngine {
       });
     }
 
-    console.log('📋 [PositioningEngine] Generated selectors:', selectors);
-
+    
     // Try to find elements and calculate combined bounds for multiple selections
     const foundElements: { element: Element; rect: DOMRect; selector: string }[] = [];
 
@@ -234,12 +214,7 @@ export class PositioningEngine {
           const rect = element.getBoundingClientRect();
           if (rect.width > 0 && rect.height > 0) {
             foundElements.push({ element, rect, selector });
-            console.log(`✓ [PositioningEngine] Found element "${selector}":`, {
-              tagName: element.tagName,
-              id: element.id,
-              rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
-            });
-          }
+                      }
         });
       } catch (e) {
         console.warn(`❌ [PositioningEngine] Selector "${selector}" failed:`, e);
@@ -247,8 +222,7 @@ export class PositioningEngine {
     }
 
     if (foundElements.length === 0) {
-      console.log('❌ [PositioningEngine] No valid elements found');
-      return null;
+            return null;
     }
 
     // Calculate combined bounding box for all found elements
@@ -271,8 +245,7 @@ export class PositioningEngine {
       height: maxY - minY
     };
 
-    console.log(`📐 [PositioningEngine] Combined bounds for ${foundElements.length} elements:`, combinedRect);
-
+    
     // For floating toolbar positioning, we actually want to work with screen coordinates
     // Don't convert to SVG coordinates since the toolbar positioning works in screen space
     const result = {
@@ -282,8 +255,7 @@ export class PositioningEngine {
       height: combinedRect.height
     };
     
-    console.log('✅ [PositioningEngine] Using combined screen bounds for toolbar positioning:', result);
-    return result;
+        return result;
   }
 
   private svgToScreen(
@@ -294,8 +266,7 @@ export class PositioningEngine {
     // If bounds are already in screen coordinates (from DOM element), return as-is
     // We can detect this by checking if coordinates are already in viewport range
     if (bounds.x >= 0 && bounds.x < window.innerWidth && bounds.y >= 0 && bounds.y < window.innerHeight) {
-      console.log('📐 [PositioningEngine] Bounds already in screen coordinates:', bounds);
-      return bounds;
+            return bounds;
     }
     
     // Otherwise, convert SVG coordinates to screen coordinates
@@ -307,13 +278,7 @@ export class PositioningEngine {
       height: bounds.height * scale
     };
     
-    console.log('📐 [PositioningEngine] SVG to Screen conversion:', {
-      svgBounds: bounds,
-      viewport: { zoom: viewport.zoom, pan: viewport.pan },
-      canvasRect: { left: canvasRect.left, top: canvasRect.top },
-      result
-    });
-    
+        
     return result;
   }
 

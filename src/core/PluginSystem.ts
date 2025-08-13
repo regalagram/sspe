@@ -193,17 +193,7 @@ export class PluginManager {
       ? target.getAttribute('data-element-type')
       : null;
 
-    // DEBUG: Log all pointer events for debugging
-    if (eventType === 'pointerDown') {
-      console.log('🔍 PluginSystem handlePointerEvent:', {
-        eventType,
-        commandId,
-        controlPoint,
-        elementType,
-        targetTag: target.tagName,
-        targetId: target.id
-      });
-    }
+
     // Detect double-click for pointerDown events
     let isDoubleClick = false;
     let clickCount = 1;
@@ -242,8 +232,7 @@ export class PluginManager {
       if (gesturesPlugin) {
         const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'gestures');
         pluginsToProcess = [gesturesPlugin, ...otherPlugins];
-        console.log('🔧 PluginSystem: Prioritizing gestures plugin for touch event');
-      }
+              }
     }
     
     // Special priority for text-edit plugin on double-clicks
@@ -308,14 +297,7 @@ export class PluginManager {
         }
       } else if (!commandId && !elementType) {
         // DEBUG: Log empty space click detection
-        console.log('🔍 PluginSystem: Empty space click detected', {
-          commandId,
-          elementType,
-          isTextCreationMode: this.isTextCreationMode,
-          isShapeCreationMode: this.isShapeCreationMode,
-          target: (e.target as SVGElement).tagName
-        });
-        
+                
         // Check current tool mode to prioritize the right plugin
         let currentMode: string | null = null;
         try {
@@ -328,8 +310,7 @@ export class PluginManager {
           console.warn('[PluginSystem] Error checking tool mode:', e);
         }
 
-        console.log('🔧 [PluginSystem] Current mode detected:', currentMode);
-
+        
         // Find all creation plugins
         const creationPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'creation');
         const pencilPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'pencil');
@@ -342,29 +323,23 @@ export class PluginManager {
         if (currentMode === 'creation' && creationPlugin) {
           const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'creation');
           pluginsToProcess = [creationPlugin, ...otherPlugins];
-          console.log('🔍 PluginSystem: Prioritizing CREATION plugin for creation mode');
-        } else if (currentMode === 'pencil' && pencilPlugin) {
+                  } else if (currentMode === 'pencil' && pencilPlugin) {
           const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'pencil');
           pluginsToProcess = [pencilPlugin, ...otherPlugins];
-          console.log('🔍 PluginSystem: Prioritizing PENCIL plugin for pencil mode');
-        } else if (currentMode === 'curves' && curvesPlugin) {
+                  } else if (currentMode === 'curves' && curvesPlugin) {
           const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'curves');
           pluginsToProcess = [curvesPlugin, ...otherPlugins];
-          console.log('🔍 PluginSystem: Prioritizing CURVES plugin for curves mode');
-        } else if (textPlugin && (this.isTextCreationMode || currentMode === 'text')) {
+                  } else if (textPlugin && (this.isTextCreationMode || currentMode === 'text')) {
           const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'text-placement');
           pluginsToProcess = [textPlugin, ...otherPlugins];
-          console.log('🔍 PluginSystem: Prioritizing TEXT plugin for text creation mode');
-        } else if (shapesPlugin && (this.isShapeCreationMode || currentMode === 'shapes')) {
+                  } else if (shapesPlugin && (this.isShapeCreationMode || currentMode === 'shapes')) {
           const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'shapes');
           pluginsToProcess = [shapesPlugin, ...otherPlugins];
-          console.log('🔍 PluginSystem: Prioritizing SHAPES plugin for shape creation mode');
-        } else if (pointerInteractionPlugin) {
+                  } else if (pointerInteractionPlugin) {
           // When NOT in creation mode, prioritize pointer-interaction for empty space clicks (deselection/area selection)
           const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'pointer-interaction');
           pluginsToProcess = [pointerInteractionPlugin, ...otherPlugins];
-          console.log('🔍 PluginSystem: Prioritizing pointer-interaction plugin for empty space click');
-        }
+                  }
       }
     }
 
@@ -379,8 +354,7 @@ export class PluginManager {
       
       // DEBUG: Log which plugin is being processed for empty space clicks (disabled by default)
       // if (eventType === 'pointerDown' && !commandId && !elementType) {
-      //   console.log(`🔍 PluginSystem: Processing plugin "${plugin.id}" for empty space click`);
-      // }
+      //         // }
       
       switch (eventType) {
         case 'pointerDown':
@@ -399,8 +373,7 @@ export class PluginManager {
       
       // DEBUG: Log if plugin handled the event for empty space clicks
       if (eventType === 'pointerDown' && !commandId && !elementType && handled) {
-        console.log(`🚨 PluginSystem: Plugin "${plugin.id}" HANDLED the empty space click event!`);
-      }
+              }
       
       if (isDoubleClick && eventType === 'pointerDown') {
               }
