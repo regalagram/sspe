@@ -7,6 +7,7 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     target: 'baseline-widely-available', // Vite 7 optimized browser target
+    chunkSizeWarningLimit: 1500, // Increase limit to 1.5MB to suppress warning for main bundle
     rollupOptions: {
       output: {
         manualChunks: {

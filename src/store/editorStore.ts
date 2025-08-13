@@ -17,6 +17,7 @@ import { GradientActions, createGradientActions } from './gradientActions';
 import { GroupActions, createGroupActions } from './groupActions';
 import { SVGElementActions, createSVGElementActions } from './svgElementActions';
 import { AnimationActions, createAnimationActions } from './animationActions';
+import { handleManager } from '../plugins/handles/HandleManager';
 // Combined actions interface
 interface EditorActions extends 
   ViewportActions, 
@@ -264,14 +265,11 @@ if (typeof window !== 'undefined') {
     useEditorStore.subscribe(
       state => state.selection,
       (selection) => {
-        // Import here to avoid circular dependency
-        import('../plugins/handles/HandleManager').then(({ handleManager }) => {
-          // Only notify if selection actually changed
-          if (previousSelection !== selection) {
-            previousSelection = selection;
-            handleManager.onSelectionChanged();
-          }
-        });
+        // Only notify if selection actually changed
+        if (previousSelection !== selection) {
+          previousSelection = selection;
+          handleManager.onSelectionChanged();
+        }
       }
     );
   }, 0);
