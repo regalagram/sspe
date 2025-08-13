@@ -196,43 +196,48 @@ const createArrow = (center: Point, size: number): Omit<SVGCommand, 'id'>[] => {
 
 // Helper function to create a cloud
 const createCloud = (center: Point, size: number): Omit<SVGCommand, 'id'>[] => {
-  const scale = size / 120;
+  // The icon path has viewBox 0 0 24 20, so we'll scale based on that
+  const scale = size / 24;
   const cx = center.x;
   const cy = center.y;
   
+  // Offset to center the cloud (original cloud spans roughly from 0 to 24 width, 4 to 20 height)
+  const offsetX = -12; // Center horizontally
+  const offsetY = -12; // Center vertically (adjusting for height from 4 to 20)
+  
   return [
-    { command: 'M', x: cx - 50 * scale, y: cy + 10 * scale },
+    { command: 'M', x: cx + (19.35 + offsetX) * scale, y: cy + (10.04 + offsetY) * scale },
     { command: 'C', 
-      x1: cx - 50 * scale, y1: cy - 5 * scale,
-      x2: cx - 60 * scale, y2: cy - 10 * scale,
-      x: cx - 60 * scale, y: cy - 10 * scale
+      x1: cx + (19.35 + offsetX) * scale, y1: cy + (6.55 + offsetY) * scale,
+      x2: cx + (16.49 + offsetX) * scale, y2: cy + (4 + offsetY) * scale,
+      x: cx + (12 + offsetX) * scale, y: cy + (4 + offsetY) * scale
     },
     { command: 'C', 
-      x1: cx - 60 * scale, y1: cy - 25 * scale,
-      x2: cx - 45 * scale, y2: cy - 25 * scale,
-      x: cx - 30 * scale, y: cy - 25 * scale
+      x1: cx + (9.11 + offsetX) * scale, y1: cy + (4 + offsetY) * scale,
+      x2: cx + (6.6 + offsetX) * scale, y2: cy + (5.64 + offsetY) * scale,
+      x: cx + (5.35 + offsetX) * scale, y: cy + (8.04 + offsetY) * scale
     },
     { command: 'C', 
-      x1: cx - 15 * scale, y1: cy - 35 * scale,
-      x2: cx - 7 * scale, y2: cy - 30 * scale,
-      x: cx, y: cy - 30 * scale
+      x1: cx + (2.34 + offsetX) * scale, y1: cy + (8.04 + offsetY) * scale,
+      x2: cx + (0 + offsetX) * scale, y2: cy + (10.69 + offsetY) * scale,
+      x: cx + (0 + offsetX) * scale, y: cy + (14 + offsetY) * scale
     },
     { command: 'C', 
-      x1: cx + 15 * scale, y1: cy - 35 * scale,
-      x2: cx + 30 * scale, y2: cy - 25 * scale,
-      x: cx + 30 * scale, y: cy - 25 * scale
+      x1: cx + (0 + offsetX) * scale, y1: cy + (17.31 + offsetY) * scale,
+      x2: cx + (2.69 + offsetX) * scale, y2: cy + (20 + offsetY) * scale,
+      x: cx + (6 + offsetX) * scale, y: cy + (20 + offsetY) * scale
+    },
+    { command: 'L', x: cx + (19 + offsetX) * scale, y: cy + (20 + offsetY) * scale },
+    { command: 'C', 
+      x1: cx + (21.76 + offsetX) * scale, y1: cy + (20 + offsetY) * scale,
+      x2: cx + (24 + offsetX) * scale, y2: cy + (17.76 + offsetY) * scale,
+      x: cx + (24 + offsetX) * scale, y: cy + (15 + offsetY) * scale
     },
     { command: 'C', 
-      x1: cx + 45 * scale, y1: cy - 25 * scale,
-      x2: cx + 50 * scale, y2: cy - 15 * scale,
-      x: cx + 50 * scale, y: cy - 10 * scale
+      x1: cx + (24 + offsetX) * scale, y1: cy + (12.36 + offsetY) * scale,
+      x2: cx + (21.95 + offsetX) * scale, y2: cy + (10.22 + offsetY) * scale,
+      x: cx + (19.35 + offsetX) * scale, y: cy + (10.04 + offsetY) * scale
     },
-    { command: 'C', 
-      x1: cx + 60 * scale, y1: cy - 5 * scale,
-      x2: cx + 50 * scale, y2: cy + 5 * scale,
-      x: cx + 40 * scale, y: cy + 10 * scale
-    },
-    { command: 'L', x: cx - 50 * scale, y: cy + 10 * scale },
     { command: 'Z' }
   ];
 };
