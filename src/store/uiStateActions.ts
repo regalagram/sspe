@@ -239,8 +239,12 @@ export const createUIStateActions: StateCreator<
   },
 
   showFloatingToolbarAfterDrag: () => {
-    set((state) => ({
-      isFloatingToolbarHidden: false,
-    }));
+    // Add a small delay to allow DOM elements to update their positions
+    // This prevents flickering when the toolbar repositions after a drag
+    setTimeout(() => {
+      set((state) => ({
+        isFloatingToolbarHidden: false,
+      }));
+    }, 16); // One frame delay (60fps = ~16ms per frame)
   },
 });

@@ -43,10 +43,60 @@ export class PositioningEngine {
       }
     }
 
-    // Fallback: center top of selection
+    // Improved fallback: try multiple fallback positions that are guaranteed to be visible
+    const fallbackPositions = [
+      // Try center top of selection
+      {
+        x: screenBounds.x + screenBounds.width / 2 - toolbarSize.width / 2,
+        y: screenBounds.y - toolbarSize.height - margin,
+        placement: 'top' as const
+      },
+      // Try center bottom of selection
+      {
+        x: screenBounds.x + screenBounds.width / 2 - toolbarSize.width / 2,
+        y: screenBounds.y + screenBounds.height + margin,
+        placement: 'bottom' as const
+      },
+      // Try top-left of canvas with some padding
+      {
+        x: canvasRect.left + 16,
+        y: canvasRect.top + 16,
+        placement: 'top' as const
+      },
+      // Try top-right of canvas with some padding
+      {
+        x: canvasRect.right - toolbarSize.width - 16,
+        y: canvasRect.top + 16,
+        placement: 'top' as const
+      },
+      // Try center of canvas
+      {
+        x: canvasRect.left + canvasRect.width / 2 - toolbarSize.width / 2,
+        y: canvasRect.top + 16,
+        placement: 'top' as const
+      }
+    ];
+
+    // Return the first valid fallback position
+    for (const fallback of fallbackPositions) {
+      if (this.isPositionValid(fallback, toolbarSize, canvasRect)) {
+        return fallback;
+      }
+    }
+
+    // Last resort: force position inside canvas (clamp to bounds)
+    const clampedX = Math.max(
+      canvasRect.left + 8,
+      Math.min(screenBounds.x + screenBounds.width / 2 - toolbarSize.width / 2, canvasRect.right - toolbarSize.width - 8)
+    );
+    const clampedY = Math.max(
+      canvasRect.top + 8,
+      Math.min(screenBounds.y - toolbarSize.height - margin, canvasRect.bottom - toolbarSize.height - 8)
+    );
+
     return {
-      x: screenBounds.x + screenBounds.width / 2 - toolbarSize.width / 2,
-      y: screenBounds.y - toolbarSize.height - margin,
+      x: clampedX,
+      y: clampedY,
       placement: 'top'
     };
   }
