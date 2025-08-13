@@ -762,6 +762,11 @@ export class HandleManager {
     } else {
       updateCommand(commandId, { x2: finalPoint.x, y2: finalPoint.y });
     }
+    
+    // Force floating toolbar to reposition after command update
+    if (this.editorStore?.forceFloatingToolbarUpdate) {
+      this.editorStore.forceFloatingToolbarUpdate();
+    }
   }
   private updateSingleHandleByControlPoint(commandId: string, controlPoint: 'x1y1' | 'x2y2', newPoint: Point) {
     if (!this.editorStore) {
@@ -778,6 +783,11 @@ export class HandleManager {
       updateCommand(commandId, { x1: finalPoint.x, y1: finalPoint.y });
     } else {
       updateCommand(commandId, { x2: finalPoint.x, y2: finalPoint.y });
+    }
+    
+    // Force floating toolbar to reposition after command update
+    if (this.editorStore?.forceFloatingToolbarUpdate) {
+      this.editorStore.forceFloatingToolbarUpdate();
     }
   }
   private updateMirroredHandles(commandId: string, handleType: 'incoming' | 'outgoing', newPoint: Point, anchor: Point) {
@@ -1078,6 +1088,11 @@ export class HandleManager {
       x1: newOutgoingHandle.x,
       y1: newOutgoingHandle.y
     });
+    
+    // Force floating toolbar to reposition after command update
+    if (this.editorStore?.forceFloatingToolbarUpdate) {
+      this.editorStore.forceFloatingToolbarUpdate();
+    }
     const updatedInfo = { ...controlPointInfo, type: 'mirrored' as ControlPointType };
     this.state.controlPoints.set(commandId, updatedInfo);
     this.notifyListeners();

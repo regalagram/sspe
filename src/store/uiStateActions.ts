@@ -23,6 +23,7 @@ export interface UIStateActions {
   setFloatingToolbarHidden: (hidden: boolean) => void;
   hideFloatingToolbarDuringDrag: () => void;
   showFloatingToolbarAfterDrag: () => void;
+  forceFloatingToolbarUpdate: () => void;
 }
 
 export const createUIStateActions: StateCreator<
@@ -246,5 +247,12 @@ export const createUIStateActions: StateCreator<
         isFloatingToolbarHidden: false,
       }));
     }, 16); // One frame delay (60fps = ~16ms per frame)
+  },
+
+  forceFloatingToolbarUpdate: () => {
+    // Force a re-render of the floating toolbar by updating a timestamp
+    set((state) => ({
+      floatingToolbarUpdateTimestamp: Date.now(),
+    }));
   },
 });

@@ -209,11 +209,4 @@ export function logSelectionDebug(
   const hasMulti = hasMultiSelection(context.selection);
   const belongsToSelectedGroup = isElementInSelectedGroup(elementId, elementType, context);
   
-  console.log(`[DEBUG] ${message}:`, {
-    elementId,
-    elementType,
-    isSelected,
-    hasMultiSelection: hasMulti,
-    belongsToSelectedGroup
-  });
-}
+  }

@@ -9,7 +9,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 
 export const FloatingToolbarRenderer: React.FC = () => {
-  const { selection, viewport, isFloatingToolbarHidden } = useEditorStore();
+  const { selection, viewport, isFloatingToolbarHidden, paths, texts, groups, images, floatingToolbarUpdateTimestamp } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   const [actions, setActions] = useState<ToolbarAction[]>([]);
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
@@ -82,7 +82,7 @@ export const FloatingToolbarRenderer: React.FC = () => {
       setPosition(null);
       setShowOverflow(false);
     }
-  }, [selection, viewport, isFloatingToolbarHidden, toolbarManager, positioningEngine]);
+  }, [selection, viewport, isFloatingToolbarHidden, paths, texts, groups, images, toolbarManager, positioningEngine]);
 
   // DEBUG: Log for development
     

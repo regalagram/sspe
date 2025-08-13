@@ -15,11 +15,20 @@ import {
   Layers,
   Filter,
   Play,
-  Compass
+  Compass,
+  Eye,
+  EyeOff,
+  Waves,
+  Minimize2
 } from 'lucide-react';
 import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { useEditorStore } from '../../store/editorStore';
 import { ReorderManager } from '../reorder/ReorderManager';
+import { 
+  generateSmoothPath, 
+  areCommandsInSameSubPath,
+  simplifySegmentWithPointsOnPath
+} from '../../utils/path-simplification-utils';
 
 // Utility functions for getting current selection state
 const getSelectedPaths = () => {
@@ -430,7 +439,193 @@ export const multipleSelectionActions: ToolbarAction[] = [
   }
 ];
 
-// Group actions
+// Group utility functions
+const getSelectedGroupsData = () => {
+  const store = useEditorStore.getState();
+  return store.selection.selectedGroups.map(id => 
+    store.getGroupById(id)
+  ).filter((group): group is NonNullable<typeof group> => Boolean(group));
+};
+
+const getCommonGroupVisibility = (): boolean => {
+  const groups = getSelectedGroupsData();
+  if (groups.length === 0) return true;
+  
+  const firstVisibility = groups[0]?.visible !== false;
+  return groups.every(group => (group?.visible !== false) === firstVisibility) ? firstVisibility : true;
+};
+
+const getCommonGroupLockLevel = (): 'none' | 'selection' | 'editing' | 'movement-sync' | 'full' => {
+  const groups = getSelectedGroupsData();
+  if (groups.length === 0) return 'none';
+  
+  const firstLockLevel = groups[0]?.lockLevel || (groups[0]?.locked ? 'full' : 'none');
+  const allSame = groups.every(group => {
+    const lockLevel = group?.lockLevel || (group?.locked ? 'full' : 'none');
+    return lockLevel === firstLockLevel;
+  });
+  
+  return allSame ? firstLockLevel : 'none';
+};
+
+// Group action functions
+const toggleGroupVisibility = () => {
+  const store = useEditorStore.getState();
+  
+  store.selection.selectedGroups.forEach(groupId => {
+    store.toggleGroupVisibility(groupId);
+  });
+};
+
+const toggleGroupLock = () => {
+  const store = useEditorStore.getState();
+  const currentLockLevel = getCommonGroupLockLevel();
+  const newLockLevel = currentLockLevel === 'none' ? 'full' : 'none';
+  
+  store.selection.selectedGroups.forEach(groupId => {
+    store.setGroupLockLevel(groupId, newLockLevel);
+  });
+};
+
+const duplicateGroups = () => {
+  const store = useEditorStore.getState();
+  const selectedGroupIds = [...store.selection.selectedGroups];
+  const newGroupIds: string[] = [];
+  
+  selectedGroupIds.forEach(groupId => {
+    const group = store.getGroupById(groupId);
+    if (group) {
+      // Get all child IDs and types
+      const childIds = group.children.map(child => child.id);
+      const childTypes = group.children.map(child => child.type);
+      
+      // Create new group with offset position
+      const newGroupId = store.createGroup(
+        `${group.name} Copy`, 
+        childIds, 
+        childTypes as ('path' | 'text' | 'group')[]
+      );
+      
+      // Move the duplicated group
+      store.moveGroup(newGroupId, { x: 20, y: 20 });
+      newGroupIds.push(newGroupId);
+    }
+  });
+  
+  // Select the new groups
+  if (newGroupIds.length > 0) {
+    store.clearSelection();
+    newGroupIds.forEach((groupId, index) => {
+      store.selectGroup(groupId, index > 0); // Add to selection for subsequent groups
+    });
+  }
+};
+
+const deleteGroups = () => {
+  const store = useEditorStore.getState();
+  
+  store.selection.selectedGroups.forEach(groupId => {
+    store.deleteGroup(groupId, true); // Delete with children
+  });
+  
+  store.clearSelection();
+};
+
+const exportGroupSVG = () => {
+  const store = useEditorStore.getState();
+  
+  store.selection.selectedGroups.forEach(groupId => {
+    store.exportGroupSVG(groupId, true); // Auto download
+  });
+};
+
+const bringGroupsToFront = () => {
+  const reorderManager = new ReorderManager();
+  const store = useEditorStore.getState();
+  reorderManager.setEditorStore(store);
+  
+  reorderManager.bringToFront();
+};
+
+const sendGroupsToBack = () => {
+  const reorderManager = new ReorderManager();
+  const store = useEditorStore.getState();
+  reorderManager.setEditorStore(store);
+  
+  reorderManager.sendToBack();
+};
+
+// Group arrange options
+const groupArrangeOptions = [
+  { 
+    id: 'group-bring-front', 
+    label: 'Bring to Front', 
+    icon: ArrowUp,
+    action: bringGroupsToFront 
+  },
+  { 
+    id: 'group-send-back', 
+    label: 'Send to Back', 
+    icon: ArrowDown,
+    action: sendGroupsToBack 
+  }
+];
+
+// Group lock level options
+const groupLockOptions = [
+  { 
+    id: 'group-lock-none', 
+    label: 'Unlock', 
+    action: () => {
+      const store = useEditorStore.getState();
+      store.selection.selectedGroups.forEach(groupId => {
+        store.setGroupLockLevel(groupId, 'none');
+      });
+    }
+  },
+  { 
+    id: 'group-lock-selection', 
+    label: 'Lock Selection', 
+    action: () => {
+      const store = useEditorStore.getState();
+      store.selection.selectedGroups.forEach(groupId => {
+        store.setGroupLockLevel(groupId, 'selection');
+      });
+    }
+  },
+  { 
+    id: 'group-lock-editing', 
+    label: 'Lock Editing', 
+    action: () => {
+      const store = useEditorStore.getState();
+      store.selection.selectedGroups.forEach(groupId => {
+        store.setGroupLockLevel(groupId, 'editing');
+      });
+    }
+  },
+  { 
+    id: 'group-lock-movement', 
+    label: 'Lock Movement', 
+    action: () => {
+      const store = useEditorStore.getState();
+      store.selection.selectedGroups.forEach(groupId => {
+        store.setGroupLockLevel(groupId, 'movement-sync');
+      });
+    }
+  },
+  { 
+    id: 'group-lock-full', 
+    label: 'Lock All', 
+    action: () => {
+      const store = useEditorStore.getState();
+      store.selection.selectedGroups.forEach(groupId => {
+        store.setGroupLockLevel(groupId, 'full');
+      });
+    }
+  }
+];
+
+// Enhanced Group actions
 export const groupActions: ToolbarAction[] = [
   {
     id: 'ungroup',
@@ -442,20 +637,60 @@ export const groupActions: ToolbarAction[] = [
     tooltip: 'Ungroup elements'
   },
   {
+    id: 'group-visibility',
+    icon: getCommonGroupVisibility() ? Eye : EyeOff,
+    label: getCommonGroupVisibility() ? 'Hide' : 'Show',
+    type: 'button',
+    action: toggleGroupVisibility,
+    priority: 95,
+    tooltip: 'Toggle group visibility'
+  },
+  {
+    id: 'group-lock',
+    icon: getCommonGroupLockLevel() === 'none' ? Unlock : Lock,
+    label: getCommonGroupLockLevel() === 'none' ? 'Lock' : 'Unlock',
+    type: 'dropdown',
+    dropdown: {
+      options: groupLockOptions
+    },
+    priority: 90,
+    tooltip: 'Group lock settings'
+  },
+  {
+    id: 'group-arrange',
+    icon: Layers,
+    label: 'Arrange',
+    type: 'dropdown',
+    dropdown: {
+      options: groupArrangeOptions
+    },
+    priority: 80,
+    tooltip: 'Arrange group order'
+  },
+  {
+    id: 'group-export',
+    icon: Compass,
+    label: 'Export SVG',
+    type: 'button',
+    action: exportGroupSVG,
+    priority: 70,
+    tooltip: 'Export group as SVG file'
+  },
+  {
     id: 'duplicate-group',
     icon: Copy,
-    label: 'Duplicate Group',
+    label: 'Duplicate',
     type: 'button',
-    action: duplicateSelected,
+    action: duplicateGroups,
     priority: 20,
     tooltip: 'Duplicate group'
   },
   {
     id: 'delete-group',
     icon: Trash2,
-    label: 'Delete Group',
+    label: 'Delete',
     type: 'button',
-    action: deleteSelected,
+    action: deleteGroups,
     priority: 10,
     destructive: true,
     tooltip: 'Delete group'
@@ -589,6 +824,209 @@ const applySubPathStrokeWidth = (width: string | number) => {
     }
   });
 };
+
+// Get common stroke dash for subpaths
+const getCommonSubPathStrokeDash = (): string => {
+  const selectedSubPaths = getSelectedSubPaths();
+  if (selectedSubPaths.length === 0) return 'none';
+  
+  const firstStrokeDash = selectedSubPaths[0]?.path?.style?.strokeDasharray;
+  const strokeDash = typeof firstStrokeDash === 'string' ? firstStrokeDash : 'none';
+  const allSame = selectedSubPaths.every(({ path }) => {
+    const pathStrokeDash = path?.style?.strokeDasharray;
+    return typeof pathStrokeDash === 'string' && pathStrokeDash === strokeDash;
+  });
+  
+  return allSame ? strokeDash : 'none';
+};
+
+// Get common stroke linecap for subpaths
+const getCommonSubPathStrokeLinecap = (): string => {
+  const selectedSubPaths = getSelectedSubPaths();
+  if (selectedSubPaths.length === 0) return 'butt';
+  
+  const firstStrokeLinecap = selectedSubPaths[0]?.path?.style?.strokeLinecap;
+  const strokeLinecap = typeof firstStrokeLinecap === 'string' ? firstStrokeLinecap : 'butt';
+  const allSame = selectedSubPaths.every(({ path }) => {
+    const pathStrokeLinecap = path?.style?.strokeLinecap;
+    return typeof pathStrokeLinecap === 'string' && pathStrokeLinecap === strokeLinecap;
+  });
+  
+  return allSame ? strokeLinecap : 'butt';
+};
+
+// Get common stroke linejoin for subpaths
+const getCommonSubPathStrokeLinejoin = (): string => {
+  const selectedSubPaths = getSelectedSubPaths();
+  if (selectedSubPaths.length === 0) return 'miter';
+  
+  const firstStrokeLinejoin = selectedSubPaths[0]?.path?.style?.strokeLinejoin;
+  const strokeLinejoin = typeof firstStrokeLinejoin === 'string' ? firstStrokeLinejoin : 'miter';
+  const allSame = selectedSubPaths.every(({ path }) => {
+    const pathStrokeLinejoin = path?.style?.strokeLinejoin;
+    return typeof pathStrokeLinejoin === 'string' && pathStrokeLinejoin === strokeLinejoin;
+  });
+  
+  return allSame ? strokeLinejoin : 'miter';
+};
+
+// Apply stroke dash to subpaths
+const applySubPathStrokeDash = (dashValue: string) => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  selectedSubPaths.forEach(({ path }) => {
+    if (path && path.id) {
+      const strokeDasharray = dashValue === 'none' ? undefined : dashValue;
+      store.updatePathStyle(path.id, { strokeDasharray });
+    }
+  });
+};
+
+// Apply stroke linecap to subpaths
+const applySubPathStrokeLinecap = (linecap: string) => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  selectedSubPaths.forEach(({ path }) => {
+    if (path && path.id) {
+      store.updatePathStyle(path.id, { strokeLinecap: linecap as 'butt' | 'round' | 'square' });
+    }
+  });
+};
+
+// Apply stroke linejoin to subpaths
+const applySubPathStrokeLinejoin = (linejoin: string) => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  selectedSubPaths.forEach(({ path }) => {
+    if (path && path.id) {
+      store.updatePathStyle(path.id, { strokeLinejoin: linejoin as 'miter' | 'round' | 'bevel' });
+    }
+  });
+};
+
+// Smooth subpaths - based on SubPathTransformControls implementation
+const smoothSubPaths = () => {
+  const store = useEditorStore.getState();
+  const { selection, paths, grid, replaceSubPathCommands, pushToHistory } = store;
+  const { selectedSubPaths } = selection;
+  
+  if (selectedSubPaths.length === 0) return;
+  
+  // Save current state to history before making changes
+  pushToHistory();
+  
+  // Find target subpaths that can be smoothed
+  const targetSubPaths: any[] = [];
+  for (const subPathId of selectedSubPaths) {
+    for (const path of paths) {
+      const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
+      if (subPath && subPath.commands.length >= 2) {
+        targetSubPaths.push(subPath);
+      }
+    }
+  }
+  
+  if (targetSubPaths.length === 0) return;
+  
+  // Apply smoothing to each subpath
+  targetSubPaths.forEach((subPath) => {
+    const subPathCommands = subPath.commands;
+    
+    if (subPathCommands.length < 2) return;
+    
+    // Apply smoothing to entire subpath
+    const segmentToSmooth = [...subPathCommands];
+    
+    // Helper function to update this specific subpath
+    const updateSubPath = (newCommands: any[]) => {
+      // Ensure the subpath ALWAYS starts with M
+      if (newCommands.length > 0 && newCommands[0].command !== 'M') {
+        const firstCmd = newCommands[0];
+        if ('x' in firstCmd && 'y' in firstCmd) {
+          newCommands[0] = {
+            ...firstCmd,
+            command: 'M'
+          };
+        }
+      }
+      
+      // Replace all commands in this subpath
+      replaceSubPathCommands(subPath.id, newCommands);
+    };
+    
+    // Apply smoothing using the generateSmoothPath function
+    generateSmoothPath(
+      segmentToSmooth,
+      subPathCommands,
+      updateSubPath,
+      grid.snapToGrid ? (value: number) => Math.round(value / grid.size) * grid.size : (value: number) => value
+    );
+  });
+};
+
+// Simplify subpaths - based on SubPathTransformControls implementation
+const simplifySubPaths = () => {
+  const store = useEditorStore.getState();
+  const { selection, paths, grid, replaceSubPathCommands, pushToHistory } = store;
+  const { selectedSubPaths } = selection;
+  
+  if (selectedSubPaths.length === 0) return;
+  
+  // Default simplification parameters
+  const simplifyTolerance = 0.1;
+  const simplifyDistance = 10;
+  
+  // Save current state to history before making changes
+  pushToHistory();
+  
+  // Find target subpaths that can be simplified
+  const targetSubPaths: any[] = [];
+  for (const subPathId of selectedSubPaths) {
+    for (const path of paths) {
+      const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
+      if (subPath && subPath.commands.length >= 2) {
+        targetSubPaths.push(subPath);
+      }
+    }
+  }
+  
+  if (targetSubPaths.length === 0) return;
+  
+  // Apply simplification to each subpath
+  for (const subPath of targetSubPaths) {
+    if (subPath.commands.length < 2) continue;
+    
+    const commands = subPath.commands;
+    
+    // Use points-on-path algorithm for simplification (Ramer-Douglas-Peucker)
+    const simplifiedCommands = simplifySegmentWithPointsOnPath(
+      commands, 
+      simplifyTolerance, 
+      simplifyDistance, 
+      grid.snapToGrid ? grid.size : 0
+    );
+
+    if (simplifiedCommands.length === 0) continue;
+
+    // Ensure the subpath ALWAYS starts with M
+    if (simplifiedCommands.length > 0 && simplifiedCommands[0].command !== 'M') {
+      const firstCmd = simplifiedCommands[0];
+      if ('x' in firstCmd && 'y' in firstCmd) {
+        simplifiedCommands[0] = {
+          ...firstCmd,
+          command: 'M'
+        };
+      }
+    }
+    
+    // Replace all commands in this subpath
+    replaceSubPathCommands(subPath.id, simplifiedCommands);
+  }
+};
+
 const applyBlurFilter = () => {
   const store = useEditorStore.getState();
   const selectedSubPaths = getSelectedSubPaths();
@@ -730,13 +1168,13 @@ export const subPathActions: ToolbarAction[] = [
       currentColor: getCommonSubPathStrokeColor(),
       onChange: applySubPathStrokeColor
     },
-    priority: 90,
+    priority: 95,
     tooltip: 'Change subpath stroke color'
   },
   {
-    id: 'subpath-stroke-width',
+    id: 'subpath-stroke-options',
     icon: Brush,
-    label: 'Stroke Width',
+    label: 'Stroke Options',
     type: 'input',
     input: {
       currentValue: getCommonSubPathStrokeWidth(),
@@ -744,8 +1182,36 @@ export const subPathActions: ToolbarAction[] = [
       type: 'number',
       placeholder: '1'
     },
+    strokeOptions: {
+      getCurrentStrokeWidth: getCommonSubPathStrokeWidth,
+      getCurrentStrokeDash: getCommonSubPathStrokeDash,
+      getCurrentStrokeLinecap: getCommonSubPathStrokeLinecap,
+      getCurrentStrokeLinejoin: getCommonSubPathStrokeLinejoin,
+      onStrokeWidthChange: applySubPathStrokeWidth,
+      onStrokeDashChange: applySubPathStrokeDash,
+      onStrokeLinecapChange: applySubPathStrokeLinecap,
+      onStrokeLinejoinChange: applySubPathStrokeLinejoin
+    },
+    priority: 90,
+    tooltip: 'Configure stroke width, dash pattern, line cap, and line join'
+  },
+  {
+    id: 'subpath-smooth',
+    icon: Waves,
+    label: 'Smooth',
+    type: 'button',
+    action: smoothSubPaths,
     priority: 85,
-    tooltip: 'Change stroke width'
+    tooltip: 'Apply smoothing to subpath curves'
+  },
+  {
+    id: 'subpath-simplify',
+    icon: Minimize2,
+    label: 'Simplify',
+    type: 'button',
+    action: simplifySubPaths,
+    priority: 80,
+    tooltip: 'Simplify subpath by reducing points'
   },
   {
     id: 'subpath-arrange',

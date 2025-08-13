@@ -209,15 +209,29 @@ export class PositioningEngine {
 
     for (const selector of selectors) {
       try {
-        const elements = document.querySelectorAll(selector);
-        elements.forEach(element => {
-          const rect = element.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0) {
-            foundElements.push({ element, rect, selector });
-                      }
-        });
+        // Skip invalid selectors that start with numbers when using ID selector
+        if (selector.startsWith('#') && /^#\d/.test(selector)) {
+          // Use escaped selector or skip
+          const escapedId = selector.slice(1); // Remove #
+          const elements = document.querySelectorAll(`[id="${escapedId}"]`);
+          elements.forEach(element => {
+            const rect = element.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              foundElements.push({ element, rect, selector: `[id="${escapedId}"]` });
+            }
+          });
+        } else {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach(element => {
+            const rect = element.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              foundElements.push({ element, rect, selector });
+            }
+          });
+        }
       } catch (e) {
-        console.warn(`❌ [PositioningEngine] Selector "${selector}" failed:`, e);
+        // Silently skip invalid selectors instead of logging warnings
+        // since ID validation issues are common and not critical
       }
     }
 

@@ -1056,6 +1056,11 @@ export class TransformManager {
       // Apply updates
       if (Object.keys(updates).length > 0) {
         updateCommand(commandId, updates);
+        
+        // Force floating toolbar to reposition after command update
+        if (store.forceFloatingToolbarUpdate) {
+          store.forceFloatingToolbarUpdate();
+        }
       }
     }
 

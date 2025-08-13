@@ -223,11 +223,28 @@ export const createTextActions: StateCreator<
       });
 
       return {
-        texts: state.texts.map(text => 
-          text.id === textId 
-            ? { ...text, style: { ...text.style, ...style } }
-            : text
-        ),
+        texts: state.texts.map(text => {
+          if (text.id !== textId) return text;
+          
+          const updatedText = { ...text, style: { ...text.style, ...style } };
+          
+          // For multiline texts, also update root-level properties if they're being changed
+          if (text.type === 'multiline-text') {
+            // Update root-level fontSize if fontSize is being changed
+            if (style.fontSize !== undefined) {
+              const fontSize = typeof style.fontSize === 'string' ? 
+                parseInt(style.fontSize) : style.fontSize;
+              updatedText.fontSize = fontSize;
+            }
+            
+            // Update root-level fontFamily if fontFamily is being changed  
+            if (style.fontFamily !== undefined) {
+              updatedText.fontFamily = style.fontFamily;
+            }
+          }
+          
+          return updatedText;
+        }),
         gradients: newGradients,
       };
     });

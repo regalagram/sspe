@@ -123,23 +123,26 @@ const getCurrentStrokeWidth = (): number => {
   return typeof strokeWidth === 'number' ? strokeWidth : 1;
 };
 
-// Duplicate selected texts with all styles
+// Duplicate selected texts using the built-in duplicateText method
 const duplicateTexts = () => {
   const store = useEditorStore.getState();
   const selectedTexts = store.selection.selectedTexts;
+  const newTextIds: string[] = [];
   
   selectedTexts.forEach(textId => {
-    const text = store.texts.find(t => t.id === textId);
-    if (text) {
-      const content = 'content' in text ? (text as any).content : 'Text';
-      const newTextId = store.addText(text.x + 20, text.y + 20, content);
-      
-      // Copy all styles from the original text
-      if (text.style && newTextId) {
-        store.updateTextStyle(newTextId, { ...text.style });
-      }
+    const newTextId = store.duplicateText(textId);
+    if (newTextId) {
+      newTextIds.push(newTextId);
     }
   });
+  
+  // Select the new duplicated texts
+  if (newTextIds.length > 0) {
+    store.clearSelection();
+    newTextIds.forEach((textId, index) => {
+      store.selectText(textId, index > 0);
+    });
+  }
 };
 
 // Start editing text (same as double-click or F2)

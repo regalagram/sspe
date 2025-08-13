@@ -29,6 +29,16 @@ export interface ToolbarAction {
     type: 'text' | 'number';
     placeholder?: string;
   };
+  strokeOptions?: {
+    getCurrentStrokeWidth: () => number;
+    getCurrentStrokeDash: () => string;
+    getCurrentStrokeLinecap: () => string;
+    getCurrentStrokeLinejoin: () => string;
+    onStrokeWidthChange: (width: number) => void;
+    onStrokeDashChange: (dash: string) => void;
+    onStrokeLinecapChange: (linecap: string) => void;
+    onStrokeLinejoinChange: (linejoin: string) => void;
+  };
   
   // Metadata
   priority?: number;

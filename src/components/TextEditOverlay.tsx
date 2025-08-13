@@ -166,17 +166,7 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
               const transformY = svgRect.top + transformedPoint.y;
               
               // Debug comparison
-              console.log('Position comparison:', {
-                method1_getBoundingClientRect: { x: textRect.x, y: textRect.y },
-                method2_transform: { x: transformX, y: transformY },
-                difference: { 
-                  x: textRect.x - transformX, 
-                  y: textRect.y - transformY 
-                },
-                originalTextPosition: { x: textElement.x, y: textElement.y },
-                viewport: { pan: viewport.pan, zoom: viewport.zoom }
-              });
-            }
+                          }
           }
         }
         
@@ -246,18 +236,7 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
         const baselineCorrection = calculateFontBaselineCorrection(textElement.style.fontFamily, fontSize);
         inputY += baselineCorrection;
         
-        console.log('Rotated text positioning - UNROTATED DIMENSIONS approach:', {
-          textRect: { x: textRect.x, y: textRect.y, width: textRect.width, height: textRect.height },
-          rotatedCenter: { x: textRect.x + textRect.width / 2, y: textRect.y + textRect.height / 2 },
-          originalBounds: originalTextBounds,
-          inputDimensions: { width: inputWidth, height: inputHeight },
-          inputPosition: { x: inputX, y: inputY },
-          baselineCorrection: baselineCorrection,
-          fontSize: fontSize,
-          rotation: rotation,
-          approach: 'unrotated_dimensions_with_font_baseline_correction'
-        });
-      }
+              }
       
       return {
         x: inputX,
@@ -365,14 +344,7 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
               const newLeft = rotatedCenterX - newWidth / 2;
               inputRef.current.style.left = `${newLeft}px`;
               
-              console.log('Recentered rotated text input:', {
-                oldWidth: currentWidth,
-                newWidth: newWidth,
-                widthChange: widthChange,
-                newLeft: newLeft,
-                rotatedCenter: { x: rotatedCenterX }
-              });
-            }
+                          }
           }
         }
         
@@ -559,14 +531,7 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
         input.style.justifyContent = 'center';
       }
       
-      console.log('Applied overlay styling for rotated text:', {
-        rotation: position.rotation,
-        isMultiline: isMultiline,
-        inputPosition: { x: position.x, y: position.y },
-        textAlign: isMultiline ? 'left' : 'center',
-        approach: 'no_rotation_overlay_with_alignment'
-      });
-    } else {
+          } else {
       // For non-rotated text, keep normal styling
       input.style.transform = '';
       input.style.transformOrigin = '';

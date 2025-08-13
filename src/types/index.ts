@@ -289,6 +289,7 @@ export interface EditorState {
   };
   // Floating toolbar state
   isFloatingToolbarHidden?: boolean;
+  floatingToolbarUpdateTimestamp?: number;
 }
 
 // Animation synchronization types
