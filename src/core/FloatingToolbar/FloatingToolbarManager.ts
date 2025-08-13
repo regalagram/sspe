@@ -15,16 +15,16 @@ export class FloatingToolbarManager {
   
   private config: FloatingToolbarConfig = {
     desktop: {
-      maxVisibleButtons: 8,
+      maxVisibleButtons: 10,
       buttonSize: 32,
       layout: 'horizontal',
       spacing: 4
     },
     mobile: {
-      maxVisibleButtons: 6,
-      buttonSize: 44,
+      maxVisibleButtons: 10,
+      buttonSize: 28,
       layout: 'adaptive',
-      spacing: 6
+      spacing: 4
     }
   };
 
