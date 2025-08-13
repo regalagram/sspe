@@ -5,8 +5,6 @@ import { WritingPencilTools } from './WritingPencilTools';
 import { WritingShapeTools } from './WritingShapeTools';
 import { WritingCurveTools } from './WritingCurveTools';
 import { WritingTextTools } from './WritingTextTools';
-import { WritingStyleTools } from './WritingStyleTools';
-import { WritingDeleteTools } from './WritingDeleteTools';
 import { SandwichButton } from './SandwichButton';
 
 interface WritingToolbarProps {
@@ -92,13 +90,7 @@ export const WritingToolbar: React.FC<WritingToolbarProps> = ({
         {/* Section 5: Text Tools */}
         <WritingTextTools />
 
-        {/* Section 6: Style Tools */}
-        <WritingStyleTools />
-
-        {/* Section 7: Delete Tools */}
-        <WritingDeleteTools />
-
-        {/* Section 7: Sandwich button for panels/sidebar */}
+        {/* Section 6: Sandwich button for panels/sidebar */}
         <SandwichButton 
           onMobileToggle={onMobileToggle}
           isMobileBottomSheetOpen={isMobileBottomSheetOpen}

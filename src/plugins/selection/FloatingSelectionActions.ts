@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { useEditorStore } from '../../store/editorStore';
+import { ReorderManager } from '../reorder/ReorderManager';
 
 // Utility functions for getting current selection state
 const getSelectedPaths = () => {
@@ -549,85 +550,53 @@ const deleteSubPaths = () => {
 
 // Bring subpaths to front
 const bringSubPathsToFront = () => {
+  const reorderManager = new ReorderManager();
   const store = useEditorStore.getState();
-  const selectedSubPaths = getSelectedSubPaths();
+  reorderManager.setEditorStore(store);
   
-  // Group by path to handle multiple subpaths in the same path efficiently
-  const pathUpdates = new Map();
-  
-  selectedSubPaths.forEach(({ path, subPath }) => {
-    if (path && subPath) {
-      if (!pathUpdates.has(path.id)) {
-        pathUpdates.set(path.id, {
-          path,
-          subPathsToMove: [subPath]
-        });
-      } else {
-        pathUpdates.get(path.id).subPathsToMove.push(subPath);
-      }
-    }
-  });
-  
-  // Apply updates for each path
-  pathUpdates.forEach(({ path, subPathsToMove }) => {
-    // Get current subpaths and move selected ones to the end
-    const otherSubPaths = path.subPaths.filter((sp: any) => 
-      !subPathsToMove.some((moveSubPath: any) => moveSubPath.id === sp.id)
-    );
-    const newSubPaths = [...otherSubPaths, ...subPathsToMove];
-    
-    // Update the path structure using replacePaths
-    const currentPaths = store.paths;
-    const newPaths = currentPaths.map(p => 
-      p.id === path.id ? { ...p, subPaths: newSubPaths } : p
-    );
-    store.replacePaths(newPaths);
-  });
-  
+  reorderManager.bringToFront();
   console.log('🔝 Brought subpaths to front');
 };
 
 // Send subpaths to back
 const sendSubPathsToBack = () => {
+  const reorderManager = new ReorderManager();
   const store = useEditorStore.getState();
-  const selectedSubPaths = getSelectedSubPaths();
+  reorderManager.setEditorStore(store);
   
-  // Group by path to handle multiple subpaths in the same path efficiently
-  const pathUpdates = new Map();
-  
-  selectedSubPaths.forEach(({ path, subPath }) => {
-    if (path && subPath) {
-      if (!pathUpdates.has(path.id)) {
-        pathUpdates.set(path.id, {
-          path,
-          subPathsToMove: [subPath]
-        });
-      } else {
-        pathUpdates.get(path.id).subPathsToMove.push(subPath);
-      }
-    }
-  });
-  
-  // Apply updates for each path
-  pathUpdates.forEach(({ path, subPathsToMove }) => {
-    // Get current subpaths and move selected ones to the beginning
-    const otherSubPaths = path.subPaths.filter((sp: any) => 
-      !subPathsToMove.some((moveSubPath: any) => moveSubPath.id === sp.id)
-    );
-    const newSubPaths = [...subPathsToMove, ...otherSubPaths];
-    
-    // Update the path structure using replacePaths
-    const currentPaths = store.paths;
-    const newPaths = currentPaths.map(p => 
-      p.id === path.id ? { ...p, subPaths: newSubPaths } : p
-    );
-    store.replacePaths(newPaths);
-  });
-  
+  reorderManager.sendToBack();
   console.log('🔽 Sent subpaths to back');
 };
 
-// Apply blur filter to subpaths
+// Get common stroke width for subpaths
+const getCommonSubPathStrokeWidth = (): number => {
+  const selectedSubPaths = getSelectedSubPaths();
+  if (selectedSubPaths.length === 0) return 1;
+  
+  const firstStrokeWidth = selectedSubPaths[0]?.path?.style?.strokeWidth;
+  const strokeWidth = typeof firstStrokeWidth === 'number' ? firstStrokeWidth : 1;
+  const allSame = selectedSubPaths.every(({ path }) => {
+    const pathStrokeWidth = path?.style?.strokeWidth;
+    return typeof pathStrokeWidth === 'number' && pathStrokeWidth === strokeWidth;
+  });
+  
+  return allSame ? strokeWidth : 1;
+};
+
+// Apply stroke width to subpaths
+const applySubPathStrokeWidth = (width: string | number) => {
+  const strokeWidth = typeof width === 'number' ? width : parseFloat(width);
+  if (isNaN(strokeWidth) || strokeWidth < 0) return;
+  
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  selectedSubPaths.forEach(({ path }) => {
+    if (path && path.id) {
+      store.updatePathStyle(path.id, { strokeWidth });
+    }
+  });
+};
 const applyBlurFilter = () => {
   const store = useEditorStore.getState();
   const selectedSubPaths = getSelectedSubPaths();
@@ -775,6 +744,20 @@ export const subPathActions: ToolbarAction[] = [
     tooltip: 'Change subpath stroke color'
   },
   {
+    id: 'subpath-stroke-width',
+    icon: Brush,
+    label: 'Stroke Width',
+    type: 'input',
+    input: {
+      currentValue: getCommonSubPathStrokeWidth(),
+      onChange: applySubPathStrokeWidth,
+      type: 'number',
+      placeholder: '1'
+    },
+    priority: 85,
+    tooltip: 'Change stroke width'
+  },
+  {
     id: 'subpath-arrange',
     icon: Layers,
     label: 'Arrange',
@@ -843,11 +826,96 @@ export const pathFloatingActionDefinition: FloatingActionDefinition = {
   priority: 85  // Lower priority than subpaths
 };
 
-export const multipleSelectionFloatingActionDefinition: FloatingActionDefinition = {
+// Mixed selection actions (text + subpath or other combinations)
+// Only show selection-relevant actions and universal styling options
+export const mixedSelectionActions: ToolbarAction[] = [
+  {
+    id: 'mixed-fill-color',
+    icon: Palette,
+    label: 'Fill Color',
+    type: 'color',
+    color: {
+      currentColor: getCommonFillColor(),
+      onChange: applyFillColor
+    },
+    priority: 100,
+    tooltip: 'Change fill color'
+  },
+  {
+    id: 'mixed-stroke-color',
+    icon: Brush,
+    label: 'Stroke Color',
+    type: 'color',
+    color: {
+      currentColor: getCommonStrokeColor(),
+      onChange: applyStrokeColor
+    },
+    priority: 90,
+    tooltip: 'Change stroke color'
+  },
+  {
+    id: 'mixed-stroke-width',
+    icon: Brush,
+    label: 'Stroke Width',
+    type: 'input',
+    input: {
+      currentValue: 1, // Default value for mixed selections
+      onChange: (value: string | number) => {
+        const width = typeof value === 'number' ? value : parseFloat(value);
+        if (!isNaN(width) && width >= 0) {
+          const store = useEditorStore.getState();
+          
+          // Apply to all selected elements
+          store.selection.selectedPaths.forEach(pathId => {
+            store.updatePathStyle(pathId, { strokeWidth: width });
+          });
+          
+          store.selection.selectedTexts.forEach(textId => {
+            store.updateTextStyle(textId, { strokeWidth: width });
+          });
+        }
+      },
+      type: 'number',
+      placeholder: '1'
+    },
+    priority: 85,
+    tooltip: 'Change stroke width'
+  },
+  {
+    id: 'mixed-group',
+    icon: Group,
+    label: 'Group',
+    type: 'button',
+    action: groupSelected,
+    priority: 70,
+    tooltip: 'Group selected elements'
+  },
+  {
+    id: 'mixed-duplicate',
+    icon: Copy,
+    label: 'Duplicate All',
+    type: 'button',
+    action: duplicateSelected,
+    priority: 20,
+    tooltip: 'Duplicate all selected elements'
+  },
+  {
+    id: 'mixed-delete',
+    icon: Trash2,
+    label: 'Delete All',
+    type: 'button',
+    action: deleteSelected,
+    priority: 10,
+    destructive: true,
+    tooltip: 'Delete all selected elements'
+  }
+];
+
+export const mixedSelectionFloatingActionDefinition: FloatingActionDefinition = {
   elementTypes: ['mixed'],
   selectionTypes: ['multiple'],
-  actions: multipleSelectionActions,
-  priority: 85
+  actions: mixedSelectionActions,
+  priority: 90  // High priority for mixed selections
 };
 
 export const groupFloatingActionDefinition: FloatingActionDefinition = {

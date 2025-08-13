@@ -10,10 +10,13 @@ import {
   Trash2,
   Plus,
   Minus,
-  RotateCcw
+  RotateCcw,
+  Edit,
+  Brush
 } from 'lucide-react';
 import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { useEditorStore } from '../../store/editorStore';
+import { textEditManager } from '../../managers/TextEditManager';
 
 // Get current text styles for selected texts
 const getCurrentTextStyles = () => {
@@ -106,7 +109,21 @@ const alignmentOptions = [
   }
 ];
 
-// Duplicate selected texts
+// Get current stroke color
+const getCurrentStrokeColor = (): string => {
+  const styles = getCurrentTextStyles();
+  const stroke = styles?.stroke;
+  return typeof stroke === 'string' ? stroke : '#000000';
+};
+
+// Get current stroke width
+const getCurrentStrokeWidth = (): number => {
+  const styles = getCurrentTextStyles();
+  const strokeWidth = styles?.strokeWidth;
+  return typeof strokeWidth === 'number' ? strokeWidth : 1;
+};
+
+// Duplicate selected texts with all styles
 const duplicateTexts = () => {
   const store = useEditorStore.getState();
   const selectedTexts = store.selection.selectedTexts;
@@ -115,9 +132,24 @@ const duplicateTexts = () => {
     const text = store.texts.find(t => t.id === textId);
     if (text) {
       const content = 'content' in text ? (text as any).content : 'Text';
-      store.addText(text.x + 20, text.y + 20, content);
+      const newTextId = store.addText(text.x + 20, text.y + 20, content);
+      
+      // Copy all styles from the original text
+      if (text.style && newTextId) {
+        store.updateTextStyle(newTextId, { ...text.style });
+      }
     }
   });
+};
+
+// Start editing text (same as double-click or F2)
+const editText = () => {
+  const store = useEditorStore.getState();
+  
+  if (store.selection.selectedTexts.length > 0) {
+    const textId = store.selection.selectedTexts[0];
+    textEditManager.startTextEdit(textId);
+  }
 };
 
 // Delete selected texts
@@ -219,25 +251,44 @@ export const textFloatingActions: ToolbarAction[] = [
     tooltip: 'Change text color'
   },
   {
-    id: 'alignment',
-    icon: AlignLeft,
-    label: 'Alignment',
-    type: 'dropdown',
-    dropdown: {
-      options: alignmentOptions,
-      currentValue: getCurrentAlignment()
+    id: 'text-stroke-color',
+    icon: Brush,
+    label: 'Stroke Color',
+    type: 'color',
+    color: {
+      currentColor: getCurrentStrokeColor(),
+      onChange: (color: string) => applyTextStyle({ stroke: color })
     },
-    priority: 60,
-    tooltip: 'Text alignment'
+    priority: 65,
+    tooltip: 'Change text stroke color'
   },
   {
-    id: 'convert-to-path',
-    icon: RotateCcw,
-    label: 'Convert to Path',
+    id: 'text-stroke-width',
+    icon: Brush,
+    label: 'Stroke Width',
+    type: 'input',
+    input: {
+      currentValue: getCurrentStrokeWidth(),
+      onChange: (value: string | number) => {
+        const width = typeof value === 'number' ? value : parseFloat(value);
+        if (!isNaN(width) && width >= 0) {
+          applyTextStyle({ strokeWidth: width });
+        }
+      },
+      type: 'number',
+      placeholder: '1'
+    },
+    priority: 60,
+    tooltip: 'Change stroke width'
+  },
+  {
+    id: 'edit-text',
+    icon: Edit,
+    label: 'Edit Text',
     type: 'button',
-    action: convertTextToPath,
+    action: editText,
     priority: 50,
-    tooltip: 'Convert text to path'
+    tooltip: 'Edit text content (double-click/F2)'
   },
   {
     id: 'duplicate-text',
@@ -246,7 +297,7 @@ export const textFloatingActions: ToolbarAction[] = [
     type: 'button',
     action: duplicateTexts,
     priority: 20,
-    tooltip: 'Duplicate text'
+    tooltip: 'Duplicate text with all styles'
   },
   {
     id: 'delete-text',
