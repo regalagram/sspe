@@ -261,18 +261,121 @@ export const CommandPointsRenderer: React.FC = () => {
           // Si hidePointsInSelect está activo y el subpath está seleccionado, no mostrar puntos
           if (enabledFeatures.hidePointsInSelect && isSubPathSelected) return null;
           const shouldShowSubPath = enabledFeatures.commandPointsEnabled || isSubPathSelected;
+          // Check if first and last commands coincide
+          const firstCommand = subPath.commands[0];
+          const lastCommand = subPath.commands[subPath.commands.length - 1];
+          const firstPosition = getAbsoluteCommandPosition(firstCommand, subPath, path.subPaths);
+          const lastPosition = getAbsoluteCommandPosition(lastCommand, subPath, path.subPaths);
+          const pointsCoincide = firstPosition && lastPosition && 
+            Math.abs(firstPosition.x - lastPosition.x) < 0.1 && 
+            Math.abs(firstPosition.y - lastPosition.y) < 0.1;
+
           return subPath.commands.map((command, commandIndex) => {
-            const position = getAbsoluteCommandPosition(command, subPath, path.subPaths);
-            if (!position) return null;
+            // Handle Z commands specially - they don't have their own position
+            const isZCommand = command.command === 'Z' || command.command === 'z';
+            
+            let position = null;
+            if (isZCommand) {
+              // Always show Z commands if feature is enabled (for testing)
+              if (!enabledFeatures.commandPointsEnabled) return null;
+              // Z commands don't have position, skip position-based checks
+            } else {
+              position = getAbsoluteCommandPosition(command, subPath, path.subPaths);
+              if (!position) return null;
+              const isCommandSelected = selection.selectedCommands.includes(command.id);
+              // Si hidePointsInSelect está activo y el comando está seleccionado, no mostrar punto
+              if (enabledFeatures.hidePointsInSelect && isCommandSelected) return null;
+              const shouldShowCommand = shouldShowSubPath || isCommandSelected;
+              if (!shouldShowCommand) return null;
+            }
+            
             const isCommandSelected = selection.selectedCommands.includes(command.id);
-            // Si hidePointsInSelect está activo y el comando está seleccionado, no mostrar punto
-            if (enabledFeatures.hidePointsInSelect && isCommandSelected) return null;
-            const shouldShowCommand = shouldShowSubPath || isCommandSelected;
-            if (!shouldShowCommand) return null;
             
             // Determine if this is the first or last command in the subpath
             const isFirstCommand = commandIndex === 0;
             const isLastCommand = commandIndex === subPath.commands.length - 1;
+            
+            // Handle Z commands specially - they close the path
+            if (isZCommand) {
+              console.log('Rendering Z command with special logic, commandIndex:', commandIndex, 'command:', command);
+              // Z commands are positioned at the first command's position
+              const firstCommandPosition = getAbsoluteCommandPosition(firstCommand, subPath, path.subPaths);
+              if (!firstCommandPosition) return null;
+              
+              // Calculate direction for Z command split (from last point to first point)
+              let zDirectionAngle = 0;
+              const penultimateCommand = subPath.commands[subPath.commands.length - 2];
+              if (penultimateCommand) {
+                const penultimatePosition = getAbsoluteCommandPosition(penultimateCommand, subPath, path.subPaths);
+                if (penultimatePosition) {
+                  const dx = firstCommandPosition.x - penultimatePosition.x;
+                  const dy = firstCommandPosition.y - penultimatePosition.y;
+                  zDirectionAngle = Math.atan2(dy, dx);
+                }
+              }
+              
+              const baseRadius = getControlPointSize(isMobile, isTablet);
+              let zRadius = (baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.commandPointsFactor) / viewport.zoom;
+              
+              // Calculate perpendicular angle for the split line
+              const zSplitAngle = zDirectionAngle + Math.PI / 2;
+              
+              // Calculate split line endpoints
+              const zSplitX1 = firstCommandPosition.x + Math.cos(zSplitAngle) * zRadius;
+              const zSplitY1 = firstCommandPosition.y + Math.sin(zSplitAngle) * zRadius;
+              const zSplitX2 = firstCommandPosition.x - Math.cos(zSplitAngle) * zRadius;
+              const zSplitY2 = firstCommandPosition.y - Math.sin(zSplitAngle) * zRadius;
+              
+              return (
+                <g key={`command-z-${command.id}-v${renderVersion}`}>
+                  {/* First half (red) for Z command */}
+                  <path
+                    d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX1} ${zSplitY1} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX2} ${zSplitY2} Z`}
+                    fill="#ef4444"
+                    stroke="#dc2626"
+                    strokeWidth={1 / viewport.zoom}
+                    style={{ 
+                      cursor: 'not-allowed',
+                      pointerEvents: 'all',
+                      opacity: 0.9
+                    }}
+                    data-command-id={command.id}
+                  />
+                  {/* Second half (red) for Z command */}
+                  <path
+                    d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX2} ${zSplitY2} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX1} ${zSplitY1} Z`}
+                    fill="#ef4444"
+                    stroke="#dc2626"
+                    strokeWidth={1 / viewport.zoom}
+                    style={{ 
+                      cursor: 'not-allowed',
+                      pointerEvents: 'all',
+                      opacity: 0.9
+                    }}
+                    data-command-id={command.id}
+                  />
+                  {/* Inner circle for selected Z command */}
+                  {isCommandSelected && (
+                    <circle
+                      cx={firstCommandPosition.x}
+                      cy={firstCommandPosition.y}
+                      r={zRadius * 0.3}
+                      fill="#ffffff"
+                      stroke="none"
+                      style={{ 
+                        pointerEvents: 'none',
+                        opacity: 0.9
+                      }}
+                    />
+                  )}
+                </g>
+              );
+            }
+            
+            // Skip rendering last command if it coincides with first (will render split visual instead)
+            if (isLastCommand && pointsCoincide && subPath.commands.length > 1) {
+              return null;
+            }
             
             const baseRadius = getControlPointSize(isMobile, isTablet);
             let radius = (baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.commandPointsFactor) / viewport.zoom;
@@ -303,6 +406,103 @@ export const CommandPointsRenderer: React.FC = () => {
               stroke = '#000000';
             }
             
+            // Check if there's a Z command in this subpath
+            const hasZCommand = subPath.commands.some(cmd => cmd.command === 'Z' || cmd.command === 'z');
+            
+            // Check if this is the first command and points coincide (but skip if there's a Z command)
+            if (isFirstCommand && pointsCoincide && subPath.commands.length > 1 && !hasZCommand) {
+              // Calculate direction angle for the split
+              let directionAngle = 0;
+              
+              if (subPath.commands.length >= 2) {
+                // Get second command position for direction calculation
+                const secondCommand = subPath.commands[1];
+                const secondPosition = getAbsoluteCommandPosition(secondCommand, subPath, path.subPaths);
+                
+                if (secondPosition) {
+                  // Calculate angle from first to second point (direction of the path)
+                  const dx = secondPosition.x - position.x;
+                  const dy = secondPosition.y - position.y;
+                  directionAngle = Math.atan2(dy, dx);
+                }
+              }
+              
+              // Calculate perpendicular angle for the split line (add 90 degrees)
+              const splitAngle = directionAngle + Math.PI / 2;
+              
+              // Calculate split line endpoints
+              const splitX1 = position.x + Math.cos(splitAngle) * radius;
+              const splitY1 = position.y + Math.sin(splitAngle) * radius;
+              const splitX2 = position.x - Math.cos(splitAngle) * radius;
+              const splitY2 = position.y - Math.sin(splitAngle) * radius;
+              
+              // Render split visual for coinciding points
+              const firstCommandSelected = selection.selectedCommands.includes(firstCommand.id);
+              const lastCommandSelected = selection.selectedCommands.includes(lastCommand.id);
+              
+              return (
+                <g key={`command-split-${command.id}-v${renderVersion}`}>
+                  {/* First half (red) - initial point */}
+                  <path
+                    d={`M ${position.x} ${position.y} L ${splitX1} ${splitY1} A ${radius} ${radius} 0 0 1 ${splitX2} ${splitY2} Z`}
+                    fill="#ef4444"
+                    stroke="#dc2626"
+                    strokeWidth={1 / viewport.zoom}
+                    style={{ 
+                      cursor: 'grab',
+                      pointerEvents: 'all',
+                      opacity: 0.9
+                    }}
+                    data-command-id={lastCommand.id}
+                  />
+                  {/* Second half (green) - final point */}
+                  <path
+                    d={`M ${position.x} ${position.y} L ${splitX2} ${splitY2} A ${radius} ${radius} 0 0 1 ${splitX1} ${splitY1} Z`}
+                    fill="#22c55e"
+                    stroke="#16a34a"
+                    strokeWidth={1 / viewport.zoom}
+                    style={{ 
+                      cursor: 'grab',
+                      pointerEvents: 'all',
+                      opacity: 0.9
+                    }}
+                    data-command-id={firstCommand.id}
+                  />
+                  {/* Inner circle for selected initial point */}
+                  {firstCommandSelected && (
+                    <circle
+                      cx={position.x + Math.cos(directionAngle) * radius * 0.3}
+                      cy={position.y + Math.sin(directionAngle) * radius * 0.3}
+                      r={radius * 0.2}
+                      fill="#ffffff"
+                      stroke="none"
+                      style={{ 
+                        pointerEvents: 'none',
+                        opacity: 0.8
+                      }}
+                    />
+                  )}
+                  {/* Inner circle for selected final point */}
+                  {lastCommandSelected && (
+                    <circle
+                      cx={position.x - Math.cos(directionAngle) * radius * 0.3}
+                      cy={position.y - Math.sin(directionAngle) * radius * 0.3}
+                      r={radius * 0.2}
+                      fill="#ffffff"
+                      stroke="none"
+                      style={{ 
+                        pointerEvents: 'none',
+                        opacity: 0.8
+                      }}
+                    />
+                  )}
+                </g>
+              );
+            }
+
+            // Regular rendering for non-coinciding points (skip if position is null)
+            if (!position) return null;
+            
             return (
               <g key={`command-${command.id}-v${renderVersion}`}>
                 <circle
@@ -325,7 +525,7 @@ export const CommandPointsRenderer: React.FC = () => {
                     cx={position.x}
                     cy={position.y}
                     r={radius * 0.4}
-                    fill={isFirstCommand ? '#ffffff' : '#ffffff'}
+                    fill="#ffffff"
                     stroke="none"
                     style={{ 
                       pointerEvents: 'none',
