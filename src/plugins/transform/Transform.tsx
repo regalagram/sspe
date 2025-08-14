@@ -21,6 +21,74 @@ const TransformPlugin: React.FC = () => {
   const viewport = useEditorStore((state) => state.viewport);
   const renderVersion = useEditorStore((state) => state.renderVersion);
 
+  // Function to check if selected commands are coincident (same position)
+  const areSelectedCommandsCoincident = (): boolean => {
+    const selectedCommands = selection.selectedCommands;
+    
+    console.log('Transform: Checking coincident commands', {
+      selectedCommandsCount: selectedCommands.length,
+      selectedCommands
+    });
+    
+    if (selectedCommands.length !== 2) {
+      console.log('Transform: Not exactly 2 commands selected, showing handles');
+      return false;
+    }
+
+    // Find positions of both commands
+    let positions: Array<{ x: number, y: number, id: string, command: string }> = [];
+    
+    for (const path of paths) {
+      for (const subPath of path.subPaths) {
+        for (let i = 0; i < subPath.commands.length; i++) {
+          const command = subPath.commands[i];
+          if (selectedCommands.includes(command.id)) {
+            if (command.command === 'Z' || command.command === 'z') {
+              // Z command closes the path, its position is the same as the first command
+              const firstCommand = subPath.commands[0];
+              if (firstCommand && firstCommand.x !== undefined && firstCommand.y !== undefined) {
+                positions.push({ 
+                  x: firstCommand.x, 
+                  y: firstCommand.y, 
+                  id: command.id,
+                  command: command.command 
+                });
+              }
+            } else if (command.x !== undefined && command.y !== undefined) {
+              positions.push({ 
+                x: command.x, 
+                y: command.y, 
+                id: command.id,
+                command: command.command 
+              });
+            }
+          }
+        }
+      }
+    }
+
+    console.log('Transform: Found command positions', positions);
+
+    // Check if we have exactly 2 positions and they are very close (coincident)
+    if (positions.length === 2) {
+      const tolerance = 0.1; // Very small tolerance for floating point comparison
+      const dx = Math.abs(positions[0].x - positions[1].x);
+      const dy = Math.abs(positions[0].y - positions[1].y);
+      const areCoincident = dx < tolerance && dy < tolerance;
+      
+      console.log('Transform: Coincidence check', {
+        dx, dy, tolerance, areCoincident,
+        pos1: positions[0],
+        pos2: positions[1]
+      });
+      
+      return areCoincident;
+    }
+
+    console.log('Transform: Not 2 positions found, showing handles');
+    return false;
+  };
+
   // Initialize transform manager with editor store
   useEffect(() => {
     transformManager.setEditorStore(useEditorStore.getState());
@@ -110,9 +178,19 @@ const TransformPlugin: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Check if transform box should be hidden for coincident commands
+  const shouldHideTransformBox = areSelectedCommandsCoincident();
+  
+  console.log('Transform: Render decision', {
+    hasBounds: !!bounds,
+    handlesCount: handles.length,
+    shouldHideTransformBox,
+    willRenderHandles: bounds && handles.length > 0 && !shouldHideTransformBox
+  });
+
   return (
     <>
-      {bounds && handles.length > 0 && (
+      {bounds && handles.length > 0 && !shouldHideTransformBox && (
         <>
           <TransformHandles bounds={bounds} handles={handles} />
           

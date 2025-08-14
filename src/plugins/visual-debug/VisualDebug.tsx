@@ -2,6 +2,7 @@ import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { getAbsoluteCommandPosition } from '../../utils/path-utils';
 import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';
+import { stickyPointsManager } from '../pointer-interaction/StickyPointsManager';
 
 interface VisualDebugControlsProps {
   commandPointsEnabled: boolean;
@@ -231,6 +232,56 @@ export const VisualDebugControls: React.FC<VisualDebugControlsProps> = ({
   );
 };
 
+// Sticky Visual Feedback Component
+export const StickyVisualFeedback: React.FC = () => {
+  const { viewport, visualDebugSizes, renderVersion } = useEditorStore();
+  const { isMobile, isTablet } = useMobileDetection();
+  
+  // Get current sticky state (renderVersion ensures reactivity)
+  const stickyState = stickyPointsManager.getStickyState();
+  
+  if (!stickyState.isActive || !stickyState.targetPosition) {
+    return null;
+  }
+  
+  const baseRadius = getControlPointSize(isMobile, isTablet);
+  const stickyRadius = (baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.commandPointsFactor) / viewport.zoom;
+  
+  // Render pulsing circle around sticky target
+  return (
+    <g>
+      {/* Outer pulsing ring */}
+      <circle
+        cx={stickyState.targetPosition.x}
+        cy={stickyState.targetPosition.y}
+        r={stickyRadius * 2.5}
+        fill="none"
+        stroke="#fbbf24"
+        strokeWidth={2 / viewport.zoom}
+        strokeDasharray={`${8 / viewport.zoom} ${4 / viewport.zoom}`}
+        style={{ 
+          pointerEvents: 'none',
+          opacity: 0.8,
+          animation: 'sticky-pulse 1s ease-in-out infinite alternate'
+        }}
+      />
+      {/* Inner solid ring */}
+      <circle
+        cx={stickyState.targetPosition.x}
+        cy={stickyState.targetPosition.y}
+        r={stickyRadius * 1.8}
+        fill="none"
+        stroke="#f59e0b"
+        strokeWidth={1 / viewport.zoom}
+        style={{ 
+          pointerEvents: 'none',
+          opacity: 0.6
+        }}
+      />
+    </g>
+  );
+};
+
 // Command Points Renderer Component
 export const CommandPointsRenderer: React.FC = () => {
   const { paths, selection, viewport, enabledFeatures, renderVersion, visualDebugSizes } = useEditorStore();
@@ -253,6 +304,7 @@ export const CommandPointsRenderer: React.FC = () => {
 
   return (
     <>
+      <StickyVisualFeedback />
       {paths.map((path) => 
         path.subPaths.map((subPath) => {
           // No mostrar puntos para subpaths bloqueados
@@ -343,7 +395,7 @@ export const CommandPointsRenderer: React.FC = () => {
                     stroke="#dc2626"
                     strokeWidth={1 / viewport.zoom}
                     style={{ 
-                      cursor: 'not-allowed',
+                      cursor: 'default',
                       pointerEvents: 'all',
                       opacity: 0.9
                     }}
@@ -356,10 +408,11 @@ export const CommandPointsRenderer: React.FC = () => {
                     stroke="#16a34a"
                     strokeWidth={1 / viewport.zoom}
                     style={{ 
-                      cursor: 'grab',
+                      cursor: 'default',
                       pointerEvents: 'all',
                       opacity: 0.9
                     }}
+                    className="command-point"
                     data-command-id={firstCommand.id}
                   />
                   {/* Inner circle for selected Z command */}
@@ -473,10 +526,11 @@ export const CommandPointsRenderer: React.FC = () => {
                     stroke="#dc2626"
                     strokeWidth={1 / viewport.zoom}
                     style={{ 
-                      cursor: 'grab',
+                      cursor: 'default',
                       pointerEvents: 'all',
                       opacity: 0.9
                     }}
+                    className="command-point"
                     data-command-id={lastCommand.id}
                   />
                   {/* Second half (green) - final point */}
@@ -486,10 +540,11 @@ export const CommandPointsRenderer: React.FC = () => {
                     stroke="#16a34a"
                     strokeWidth={1 / viewport.zoom}
                     style={{ 
-                      cursor: 'grab',
+                      cursor: 'default',
                       pointerEvents: 'all',
                       opacity: 0.9
                     }}
+                    className="command-point"
                     data-command-id={firstCommand.id}
                   />
                   {/* Inner circle for selected initial point */}
@@ -537,10 +592,11 @@ export const CommandPointsRenderer: React.FC = () => {
                   stroke={stroke}
                   strokeWidth={1 / viewport.zoom}
                   style={{ 
-                    cursor: 'grab',
                     pointerEvents: 'all',
-                    opacity: 0.9
+                    opacity: 0.9,
+                    cursor: 'default'
                   }}
+                  className="command-point"
                   data-command-id={command.id}
                 />
                 {/* Inner circle for selected initial/final points */}

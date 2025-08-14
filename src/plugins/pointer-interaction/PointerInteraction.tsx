@@ -4,6 +4,7 @@ import { snapToGrid, getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { moveAllCapturedElementsByDelta, captureAllSelectedElementsPositions, DraggedElementsData } from '../../utils/drag-utils';
 import { useEditorStore } from '../../store/editorStore';
+import { splitPointManager } from './SplitPointManager';
 import { 
   ElementType, 
   SelectionContext, 
@@ -16,6 +17,7 @@ import {
 import { transformManager } from '../transform/TransformManager';
 import { handleManager } from '../handles/HandleManager';
 import { stickyManager } from '../sticky-guidelines/StickyManager';
+import { stickyPointsManager } from './StickyPointsManager';
 
 // ================== TYPES & INTERFACES ==================
 
@@ -389,7 +391,7 @@ class DragManager {
       // This is more efficient than the batch utility for real-time dragging
       const selection = this.editorStore.selection;
       
-      // Move commands
+      // Move commands with sticky points support
       selection.selectedCommands?.forEach((commandId: string) => {
         // Find current command position
         let currentPosition: { x: number; y: number } | null = null;
@@ -403,19 +405,25 @@ class DragManager {
         });
         
         if (currentPosition) {
-          let newPosition = {
+          let targetPosition = {
             x: (currentPosition as { x: number; y: number }).x + incrementalDelta.x,  
             y: (currentPosition as { x: number; y: number }).y + incrementalDelta.y
           };
           
-          // Apply grid snapping if enabled - get current grid settings from store
-          const currentGridSettings = this.editorStore.grid;
-          if (currentGridSettings && currentGridSettings.snapToGrid) {
-            const snapped = snapToGrid(newPosition, currentGridSettings.size);
-            newPosition = snapped;
+          // Check for sticky points behavior
+          const stickyResult = stickyPointsManager.checkStickyBehavior(commandId, targetPosition);
+          if (stickyResult.shouldStick && stickyResult.stickyPosition) {
+            targetPosition = stickyResult.stickyPosition;
           }
           
-          this.editorStore.moveCommand(commandId, newPosition);
+          // Apply grid snapping if enabled - get current grid settings from store
+          const currentGridSettings = this.editorStore.grid;
+          if (currentGridSettings && currentGridSettings.snapToGrid && !stickyResult.shouldStick) {
+            const snapped = snapToGrid(targetPosition, currentGridSettings.size);
+            targetPosition = snapped;
+          }
+          
+          this.editorStore.moveCommand(commandId, targetPosition);
         }
       });
       
@@ -457,6 +465,7 @@ class DragManager {
     this.lastDelta = { x: 0, y: 0 }; // Reset delta tracking
     transformManager.setMoving(false);
     stickyManager.clearGuidelines();
+    stickyPointsManager.clearSticky(); // Clear sticky points state
   }
 
   private captureElementSnapshots(elements: SelectedElements): void {
@@ -948,6 +957,57 @@ class PointerInteractionManager {
       // Update the store reference in existing instance
       this.panZoomManager.updateStore(store);
     }
+    
+    // Initialize cursor to crosshair for empty areas and force pointer on interactive elements
+    setTimeout(() => {
+      const svgElements = document.querySelectorAll('.svg-editor svg');
+      svgElements.forEach(svg => {
+        if (!this.state.isSpacePressed) {
+          (svg as HTMLElement).style.cursor = 'crosshair';
+        }
+        
+        // Force pointer cursor on control points SPECIFICALLY
+        const controlPoints = svg.querySelectorAll('circle[data-control-point="x1y1"], circle[data-control-point="x2y2"], circle.control-point');
+        controlPoints.forEach(point => {
+          (point as HTMLElement).style.cursor = 'pointer';
+          // Also set as CSS property to override any inline styles
+          (point as HTMLElement).style.setProperty('cursor', 'pointer', 'important');
+        });
+        
+        // Also handle command points
+        const commandPoints = svg.querySelectorAll('circle[data-command-id], circle.command-point');
+        commandPoints.forEach(point => {
+          (point as HTMLElement).style.cursor = 'pointer';
+          (point as HTMLElement).style.setProperty('cursor', 'pointer', 'important');
+        });
+        
+        const paths = svg.querySelectorAll('path[data-command-id]');
+        paths.forEach(path => {
+          (path as HTMLElement).style.cursor = 'pointer';
+        });
+      });
+      
+      // Simple cursor enforcement - no aggressive loops
+      const simpleEnforceCursors = () => {
+        const controlPoints = document.querySelectorAll('.svg-editor svg circle[data-control-point]');
+        controlPoints.forEach(point => {
+          (point as HTMLElement).style.cursor = 'default';
+        });
+        
+        const commandPoints = document.querySelectorAll('.svg-editor svg circle[data-command-id]');
+        commandPoints.forEach(point => {
+          (point as HTMLElement).style.cursor = 'default';
+        });
+        
+        const commandPaths = document.querySelectorAll('.svg-editor svg path[data-command-id]');
+        commandPaths.forEach(path => {
+          (path as HTMLElement).style.cursor = 'default';
+        });
+      };
+      
+      // Run only once on initialization
+      simpleEnforceCursors();
+    }, 100);
   }
 
   private setupKeyboardListeners(): void {
@@ -988,7 +1048,7 @@ class PointerInteractionManager {
   private updateCursorForSpaceMode(isSpacePressed: boolean): void {
     const svgElements = document.querySelectorAll('svg');
     svgElements.forEach(svg => {
-      svg.style.cursor = isSpacePressed ? 'grab' : 'default';
+      svg.style.cursor = isSpacePressed ? 'pointer' : 'crosshair';
     });
   }
 
@@ -1217,7 +1277,7 @@ class PointerInteractionManager {
       this.state.isPanning = true;
       this.state.lastPointerPosition = { x: e.clientX, y: e.clientY };
       const svg = target.closest('svg');
-      if (svg) svg.style.cursor = 'grabbing';
+      if (svg) svg.style.cursor = 'pointer';
       return true;
     }
 
@@ -1256,6 +1316,38 @@ class PointerInteractionManager {
       modifiers,
     });
 
+    // Handle split point clicks (red/green divided points)
+    if (commandId && target.tagName.toLowerCase() === 'path' && !this.state.isSpacePressed) {
+      const svgPoint = this.getSVGPoint(e, context.svgRef);
+      const splitResult = splitPointManager.handleSplitPointClick(target, svgPoint);
+      if (splitResult) {
+        e.stopPropagation();
+        
+        // Get the current selection after split point manager handled it
+        const selectedElements = this.getSelectedElements();
+        console.log('SplitPoint: Selected elements after split handling:', selectedElements);
+        
+        // Always start drag for split points (whether both or individual selected)
+        // The SplitPointManager handles the selection logic correctly
+        console.log('SplitPoint: Starting drag with selection:', selectedElements);
+        
+        this.state.draggingElement = { id: commandId, type: 'command' };
+        const origin = this.getSVGPoint(e, context.svgRef);
+        
+        this.dragManager.startDrag(selectedElements, origin);
+        this.editorStore.hideFloatingToolbarDuringDrag();
+        
+        this.dispatchDragAction({
+          type: 'START_DRAG',
+          elements: selectedElements,
+          origin,
+          dragType: 'element'
+        });
+        
+        return true; // Stop processing here, don't continue to normal selection
+      }
+    }
+
     // Handle element selection and dragging
     if (elementType && elementId && !this.state.isSpacePressed) {
       e.stopPropagation();
@@ -1289,6 +1381,9 @@ class PointerInteractionManager {
         return true;
       }
 
+      // Clear split point states when selecting other elements
+      splitPointManager.clearStatesOnSelectionChange();
+      
       // Normal selection and drag preparation
       this.elementSelector.selectElement(elementId, elementTypeTyped, modifiers);
       
@@ -1464,7 +1559,7 @@ class PointerInteractionManager {
     // Update cursor for space mode
     if (this.state.isSpacePressed) {
       const svg = (e.target as Element).closest('svg');
-      if (svg) svg.style.cursor = 'grab';
+      if (svg) svg.style.cursor = 'pointer';
     }
 
     return wasHandling;
@@ -1483,9 +1578,9 @@ class PointerInteractionManager {
   };
 
   getCursor(): string {
-    if (this.state.isPanning) return 'grabbing';
-    if (this.state.isSpacePressed) return 'grab';
-    if (this.state.dragState.isDragging || this.state.draggingControlPoint) return 'grabbing';
+    if (this.state.isPanning) return 'pointer';
+    if (this.state.isSpacePressed) return 'pointer';
+    if (this.state.dragState.isDragging || this.state.draggingControlPoint) return 'pointer';
     return 'default';
   }
 

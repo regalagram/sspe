@@ -625,7 +625,7 @@ export const PathRenderer: React.FC = () => {
                   data-element-type="subpath"
                   data-element-id={subPath.id}
                   style={{
-                    cursor: 'grab',
+                    cursor: 'pointer',
                     pointerEvents: 'all',
                   }}
                   onPointerDown={(e) => {
@@ -724,8 +724,8 @@ export const PathRenderer: React.FC = () => {
                 style={{
                   pointerEvents: 'all',
                   cursor: dragState.isDragging && dragState.subPathId === subPath.id && dragState.dragStarted 
-                    ? 'grabbing' 
-                    : 'grab',
+                    ? 'pointer' 
+                    : 'pointer',
                   filter: `drop-shadow(0 0 ${3 / viewport.zoom}px ${contrastColor})`,
                 }}
                 onPointerDown={(e) => {

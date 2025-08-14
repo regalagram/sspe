@@ -224,7 +224,7 @@ export const AnimationTimeline: React.FC = () => {
               width: '2px',
               height: '100%',
               backgroundColor: '#007bff',
-              cursor: isDragging ? 'grabbing' : 'grab',
+              cursor: isDragging ? 'pointer' : 'pointer',
               zIndex: 10
             }}
             onPointerDown={handleScrubberPointerDown}

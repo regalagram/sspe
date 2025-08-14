@@ -73,7 +73,7 @@ const TextElementComponent: React.FC<{ text: TextElement }> = ({ text }) => {
         clipPath={text.style.clipPath}
         mask={text.style.mask}
         style={{
-          cursor: text.locked ? 'default' : (isBeingEdited ? 'text' : 'grab'),
+          cursor: text.locked ? 'default' : (isBeingEdited ? 'text' : 'pointer'),
           pointerEvents: text.locked ? 'none' : 'all',
           userSelect: isBeingEdited ? 'text' : 'none',
           opacity: isBeingEdited ? 0 : 1 // Completely hide during editing to prevent duplication
@@ -137,7 +137,7 @@ const TextElementComponent: React.FC<{ text: TextElement }> = ({ text }) => {
                   strokeDasharray={`${4 / viewport.zoom},${3 / viewport.zoom}`}
                   style={{
                     pointerEvents: 'all',
-                    cursor: 'grab',
+                    cursor: 'pointer',
                     filter: `drop-shadow(0 0 ${2 / viewport.zoom}px ${contrastColor})`,
                   }}
                   data-element-type="text"
@@ -217,7 +217,7 @@ const MultilineTextElementComponent: React.FC<{ text: MultilineTextElement }> = 
         clipPath={text.style.clipPath}
         mask={text.style.mask}
         style={{
-          cursor: text.locked ? 'default' : (isBeingEdited ? 'text' : 'grab'),
+          cursor: text.locked ? 'default' : (isBeingEdited ? 'text' : 'pointer'),
           pointerEvents: text.locked ? 'none' : 'all',
           userSelect: isBeingEdited ? 'text' : 'none',
           opacity: isBeingEdited ? 0 : 1 // Completely hide during editing to prevent duplication
@@ -280,7 +280,7 @@ const MultilineTextElementComponent: React.FC<{ text: MultilineTextElement }> = 
                 strokeDasharray={`${4 / viewport.zoom},${3 / viewport.zoom}`}
                 style={{
                   pointerEvents: 'all',
-                  cursor: 'grab',
+                  cursor: 'pointer',
                 }}
                 data-element-type="multiline-text"
                 data-element-id={text.id}

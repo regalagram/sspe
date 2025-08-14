@@ -71,7 +71,6 @@ button {
   border: 1px solid #ccc;
   border-radius: 4px;
   padding: 2px 2px;
-  cursor: pointer;
   font-size: 12px;
   transition: all 0.2s;
 }
@@ -92,7 +91,6 @@ button:focus {
 
 button:disabled {
   opacity: 0.5;
-  cursor: not-allowed;
 }
 
 button.active {
@@ -153,7 +151,6 @@ button.active:hover {
   height: 30px;
   border: 1px solid #ccc;
   border-radius: 3px;
-  cursor: pointer;
 }
 
 .tool-grid {
@@ -196,7 +193,20 @@ button.active:hover {
 }
 
 .command-point:hover {
-  transform: scale(1.2);
+  /* Removed transform to prevent glitch - transform: scale(1.2); */
+}
+
+.control-point {
+}
+
+.control-point:hover {
+}
+
+/* ONLY rules for points cursor - DEFAULT = ARROW */
+circle[data-control-point],
+circle[data-command-id],
+path[data-command-id] {
+  cursor: default !important;
 }
 
 .grid-overlay line {
@@ -566,7 +576,6 @@ html,body {
 .context-menu-item {
   position: relative;
   padding: 8px 16px;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -579,7 +588,6 @@ html,body {
 
 .context-menu-item.disabled {
   color: #9ca3af;
-  cursor: not-allowed;
 }
 
 .context-menu-separator {
@@ -681,7 +689,6 @@ html,body {
   padding: 12px 8px;
   min-width: 72px;
   height: 72px;
-  cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -700,7 +707,6 @@ html,body {
 
 .carousel-action.disabled {
   opacity: 0.5;
-  cursor: not-allowed;
   background: #f5f5f5;
 }
 
@@ -849,4 +855,20 @@ html,body {
   -webkit-box-shadow: none !important;
   -moz-box-shadow: none !important;
   background: transparent !important;
+}
+
+/* Sticky Points Animation */
+@keyframes sticky-pulse {
+  0% {
+    opacity: 0.8;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    opacity: 1;
+    stroke-dashoffset: 6;
+  }
+  100% {
+    opacity: 0.8;
+    stroke-dashoffset: 12;
+  }
 }

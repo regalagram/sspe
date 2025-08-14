@@ -196,10 +196,11 @@ export const HandleRenderer: React.FC = () => {
                               fill={colors.fill}
                               stroke={colors.stroke}
                               strokeWidth={1.5 / viewport.zoom}
-                              style={{ cursor: 'grab' }}
+                              className="control-point"
                               data-command-id={command.id}
                               data-control-point="x1y1"
                               opacity={1.0}
+                              style={{ cursor: 'default' }}
                               // Durante el drag, hacer el punto más visible
                               filter={isDragging && command.id === dragCommandId && dragHandleType === 'outgoing' ? 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' : undefined}
                             />
@@ -240,10 +241,11 @@ export const HandleRenderer: React.FC = () => {
                               fill={colors.fill}
                               stroke={colors.stroke}
                               strokeWidth={1.5 / viewport.zoom}
-                              style={{ cursor: 'grab' }}
+                              className="control-point"
                               data-command-id={command.id}
                               data-control-point="x2y2"
                               opacity={1.0}
+                              style={{ cursor: 'default' }}
                               // Durante el drag, hacer el punto más visible
                               filter={isDragging && command.id === dragCommandId && dragHandleType === 'incoming' ? 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' : undefined}
                             />

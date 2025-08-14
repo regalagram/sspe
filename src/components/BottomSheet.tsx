@@ -150,7 +150,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
     backgroundColor: '#d1d5db',
     borderRadius: '2px',
     margin: '8px auto 4px',
-    cursor: 'grab',
+    cursor: 'pointer',
     flexShrink: 0,
   };
 
