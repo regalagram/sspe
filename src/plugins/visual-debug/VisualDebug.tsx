@@ -285,18 +285,18 @@ export const CommandPointsRenderer: React.FC = () => {
             // Determine colors based on position and selection
             let fill: string, stroke: string;
             
-            if (isCommandSelected) {
-              // Selected commands keep their blue color
-              fill = '#007acc';
-              stroke = '#005299';
-            } else if (isFirstCommand) {
-              // Initial point is green
+            if (isFirstCommand) {
+              // Initial point is green (always, even when selected)
               fill = '#22c55e';
               stroke = '#16a34a';
             } else if (isLastCommand) {
-              // Final point is red
+              // Final point is red (always, even when selected)
               fill = '#ef4444';
               stroke = '#dc2626';
+            } else if (isCommandSelected) {
+              // Selected commands (only middle points) keep their blue color
+              fill = '#007acc';
+              stroke = '#005299';
             } else {
               // All other points are white with black outline
               fill = '#ffffff';
@@ -304,21 +304,36 @@ export const CommandPointsRenderer: React.FC = () => {
             }
             
             return (
-              <circle
-                key={`command-${command.id}-v${renderVersion}`}
-                cx={position.x}
-                cy={position.y}
-                r={radius}
-                fill={fill}
-                stroke={stroke}
-                strokeWidth={1 / viewport.zoom}
-                style={{ 
-                  cursor: 'grab',
-                  pointerEvents: 'all',
-                  opacity: 0.9
-                }}
-                data-command-id={command.id}
-              />
+              <g key={`command-${command.id}-v${renderVersion}`}>
+                <circle
+                  cx={position.x}
+                  cy={position.y}
+                  r={radius}
+                  fill={fill}
+                  stroke={stroke}
+                  strokeWidth={1 / viewport.zoom}
+                  style={{ 
+                    cursor: 'grab',
+                    pointerEvents: 'all',
+                    opacity: 0.9
+                  }}
+                  data-command-id={command.id}
+                />
+                {/* Inner circle for selected initial/final points */}
+                {isCommandSelected && (isFirstCommand || isLastCommand) && (
+                  <circle
+                    cx={position.x}
+                    cy={position.y}
+                    r={radius * 0.4}
+                    fill={isFirstCommand ? '#ffffff' : '#ffffff'}
+                    stroke="none"
+                    style={{ 
+                      pointerEvents: 'none',
+                      opacity: 0.8
+                    }}
+                  />
+                )}
+              </g>
             );
           });
         })
@@ -342,10 +357,8 @@ export const VisualDebugComponent: React.FC = () => {
     setVisualDebugTransformRotateFactor
   } = useEditorStore();
   const handleClearLocalStorage = () => {
-    if (window.confirm('¿Seguro que quieres borrar todos los datos locales de la app?')) {
-      localStorage.clear();
-      window.location.reload();
-    }
+    localStorage.clear();
+    window.location.reload();
   };
   return (
     <div>
@@ -363,7 +376,7 @@ export const VisualDebugComponent: React.FC = () => {
         }}
         onClick={handleClearLocalStorage}
       >
-        Borrar LocalStorage
+        Delete LocalStorage
       </button>
       <VisualDebugControls
         commandPointsEnabled={enabledFeatures.commandPointsEnabled}
