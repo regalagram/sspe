@@ -270,6 +270,9 @@ export const CommandPointsRenderer: React.FC = () => {
             Math.abs(firstPosition.x - lastPosition.x) < 0.1 && 
             Math.abs(firstPosition.y - lastPosition.y) < 0.1;
 
+          // Check if there's a Z command in this subpath (declare early)
+          const hasZCommand = subPath.commands.some(cmd => cmd.command === 'Z' || cmd.command === 'z');
+
           return subPath.commands.map((command, commandIndex) => {
             // Handle Z commands specially - they don't have their own position
             const isZCommand = command.command === 'Z' || command.command === 'z';
@@ -297,25 +300,26 @@ export const CommandPointsRenderer: React.FC = () => {
             
             // Handle Z commands specially - they close the path
             if (isZCommand) {
-              console.log('Rendering Z command with special logic, commandIndex:', commandIndex, 'command:', command);
               // Z commands are positioned at the first command's position
               const firstCommandPosition = getAbsoluteCommandPosition(firstCommand, subPath, path.subPaths);
               if (!firstCommandPosition) return null;
               
-              // Calculate direction for Z command split (from last point to first point)
+              // Calculate direction for Z command split (from first to second point, like coincidence case)
               let zDirectionAngle = 0;
-              const penultimateCommand = subPath.commands[subPath.commands.length - 2];
-              if (penultimateCommand) {
-                const penultimatePosition = getAbsoluteCommandPosition(penultimateCommand, subPath, path.subPaths);
-                if (penultimatePosition) {
-                  const dx = firstCommandPosition.x - penultimatePosition.x;
-                  const dy = firstCommandPosition.y - penultimatePosition.y;
+              if (subPath.commands.length >= 2) {
+                const secondCommand = subPath.commands[1];
+                const secondPosition = getAbsoluteCommandPosition(secondCommand, subPath, path.subPaths);
+                if (secondPosition) {
+                  const dx = secondPosition.x - firstCommandPosition.x;
+                  const dy = secondPosition.y - firstCommandPosition.y;
                   zDirectionAngle = Math.atan2(dy, dx);
                 }
               }
               
+              // Use same radius calculation as coincidence case (with 30% larger for initial)
               const baseRadius = getControlPointSize(isMobile, isTablet);
               let zRadius = (baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.commandPointsFactor) / viewport.zoom;
+              zRadius *= 1.3; // Same 30% larger as initial points
               
               // Calculate perpendicular angle for the split line
               const zSplitAngle = zDirectionAngle + Math.PI / 2;
@@ -325,6 +329,10 @@ export const CommandPointsRenderer: React.FC = () => {
               const zSplitY1 = firstCommandPosition.y + Math.sin(zSplitAngle) * zRadius;
               const zSplitX2 = firstCommandPosition.x - Math.cos(zSplitAngle) * zRadius;
               const zSplitY2 = firstCommandPosition.y - Math.sin(zSplitAngle) * zRadius;
+              
+              // Use the same split visual logic as coinciding points
+              const firstCommandSelected = selection.selectedCommands.includes(firstCommand.id);
+              const zCommandSelected = selection.selectedCommands.includes(command.id);
               
               return (
                 <g key={`command-z-${command.id}-v${renderVersion}`}>
@@ -341,30 +349,44 @@ export const CommandPointsRenderer: React.FC = () => {
                     }}
                     data-command-id={command.id}
                   />
-                  {/* Second half (red) for Z command */}
+                  {/* Second half (green) for initial M command */}
                   <path
                     d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX2} ${zSplitY2} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX1} ${zSplitY1} Z`}
-                    fill="#ef4444"
-                    stroke="#dc2626"
+                    fill="#22c55e"
+                    stroke="#16a34a"
                     strokeWidth={1 / viewport.zoom}
                     style={{ 
-                      cursor: 'not-allowed',
+                      cursor: 'grab',
                       pointerEvents: 'all',
                       opacity: 0.9
                     }}
-                    data-command-id={command.id}
+                    data-command-id={firstCommand.id}
                   />
                   {/* Inner circle for selected Z command */}
-                  {isCommandSelected && (
+                  {zCommandSelected && (
                     <circle
-                      cx={firstCommandPosition.x}
-                      cy={firstCommandPosition.y}
-                      r={zRadius * 0.3}
+                      cx={firstCommandPosition.x - Math.cos(zDirectionAngle) * zRadius * 0.3}
+                      cy={firstCommandPosition.y - Math.sin(zDirectionAngle) * zRadius * 0.3}
+                      r={zRadius * 0.2}
                       fill="#ffffff"
                       stroke="none"
                       style={{ 
                         pointerEvents: 'none',
-                        opacity: 0.9
+                        opacity: 0.8
+                      }}
+                    />
+                  )}
+                  {/* Inner circle for selected initial command */}
+                  {firstCommandSelected && (
+                    <circle
+                      cx={firstCommandPosition.x + Math.cos(zDirectionAngle) * zRadius * 0.3}
+                      cy={firstCommandPosition.y + Math.sin(zDirectionAngle) * zRadius * 0.3}
+                      r={zRadius * 0.2}
+                      fill="#ffffff"
+                      stroke="none"
+                      style={{ 
+                        pointerEvents: 'none',
+                        opacity: 0.8
                       }}
                     />
                   )}
@@ -374,6 +396,11 @@ export const CommandPointsRenderer: React.FC = () => {
             
             // Skip rendering last command if it coincides with first (will render split visual instead)
             if (isLastCommand && pointsCoincide && subPath.commands.length > 1) {
+              return null;
+            }
+            
+            // Skip rendering first command if there's a Z command (will render split visual instead)
+            if (isFirstCommand && hasZCommand) {
               return null;
             }
             
@@ -405,9 +432,6 @@ export const CommandPointsRenderer: React.FC = () => {
               fill = '#ffffff';
               stroke = '#000000';
             }
-            
-            // Check if there's a Z command in this subpath
-            const hasZCommand = subPath.commands.some(cmd => cmd.command === 'Z' || cmd.command === 'z');
             
             // Check if this is the first command and points coincide (but skip if there's a Z command)
             if (isFirstCommand && pointsCoincide && subPath.commands.length > 1 && !hasZCommand) {
