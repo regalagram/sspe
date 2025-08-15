@@ -32,12 +32,7 @@ export class SplitPointManager {
     const counterpartId = this.findCounterpartCommand(commandId);
     if (!counterpartId) return false;
 
-    console.log('SplitPointManager: Handling split point click', {
-      commandId,
-      counterpartId,
-      element: element.tagName
-    });
-
+    
     // Determine which half was clicked (red or green)
     const clickedHalf = this.determineClickedHalf(element, clickPosition, commandId, counterpartId);
     
@@ -51,14 +46,7 @@ export class SplitPointManager {
       this.splitStates.set(stateKey, currentState);
     }
     
-    console.log('SplitPointManager: State and click info', {
-      clickedHalf,
-      stateKey,
-      isNewState,
-      currentState: { ...currentState },
-      isFirstClick: currentState.clickCount === 0
-    });
-    
+        
     // Handle the click logic
     const now = Date.now();
     const timeSinceLastClick = now - currentState.lastClickTime;
@@ -74,12 +62,10 @@ export class SplitPointManager {
     
     if (isFirstEverClick || shouldReset) {
       // Very first click or after long pause - ALWAYS select both
-      console.log('SplitPointManager: First click or reset, selecting both', { isFirstEverClick, shouldReset, timeSinceLastClick });
-      this.selectBoth(currentState);
+            this.selectBoth(currentState);
     } else if (currentState.bothSelected && timeSinceLastClick > 200) {
       // Both are selected and enough time passed - select individual based on clicked half
-      console.log('SplitPointManager: Both selected, selecting individual:', actualClickedCommandId);
-      this.selectIndividual(actualClickedCommandId, currentState);
+            this.selectIndividual(actualClickedCommandId, currentState);
     } else if (!currentState.bothSelected) {
       // Individual is selected - check if clicking same or different half
       const store = useEditorStore.getState();
@@ -88,18 +74,15 @@ export class SplitPointManager {
       
       if (isClickingSameHalf) {
         // Clicking same half that's already selected - keep individual selection (allow drag)
-        console.log('SplitPointManager: Clicking same selected half, keeping individual selection:', actualClickedCommandId);
-        // Keep the current individual selection state
+                // Keep the current individual selection state
         currentState.bothSelected = false;
       } else {
         // Clicking different half - reassemble the pair
-        console.log('SplitPointManager: Clicking different half, reassembling pair');
-        this.selectBoth(currentState);
+                this.selectBoth(currentState);
       }
     } else {
       // Default case - select both (safer fallback)
-      console.log('SplitPointManager: Fallback to selecting both');
-      this.selectBoth(currentState);
+            this.selectBoth(currentState);
     }
 
     // Update state
@@ -130,13 +113,7 @@ export class SplitPointManager {
     // - Green path has data-command-id of initial command (index 0) 
     // - Red path has data-command-id of final command (last index)
     
-    console.log('SplitPointManager: Determining clicked half', {
-      elementCommandId: commandId,
-      commandIndex: commandInfo.commandIndex,
-      isElementInitialCommand,
-      willReturn: isElementInitialCommand ? 'initial' : 'final'
-    });
-    
+        
     return isElementInitialCommand ? 'initial' : 'final';
   }
 
@@ -237,8 +214,7 @@ export class SplitPointManager {
     
     // Select both commands (clear other selections)
     const commandsToSelect = [state.commandIds.initial, state.commandIds.final];
-    console.log('SplitPointManager: Selecting both commands:', commandsToSelect);
-    
+        
     store.selectMultiple(commandsToSelect, 'commands');
     state.bothSelected = true;
   }
@@ -249,23 +225,12 @@ export class SplitPointManager {
   private selectIndividual(commandId: string, state: SplitPointState): void {
     const store = useEditorStore.getState();
     
-    console.log('SplitPointManager: Selecting individual command:', commandId);
-    console.log('SplitPointManager: Before individual selection - current selection:', {
-      commands: store.selection.selectedCommands,
-      subPaths: store.selection.selectedSubPaths,
-      commandCount: store.selection.selectedCommands.length
-    });
-    
+            
     // Clear other selections and select only this command
     store.selectMultiple([commandId], 'commands');
     state.bothSelected = false;
     
-    console.log('SplitPointManager: After individual selection - expected:', {
-      expectedCommand: commandId,
-      expectedCount: 1,
-      bothSelected: false
-    });
-  }
+      }
 
   /**
    * Get unique key for split state
@@ -286,8 +251,7 @@ export class SplitPointManager {
    * Clear states when selection changes externally
    */
   clearStatesOnSelectionChange(): void {
-    console.log('SplitPointManager: Clearing states due to external selection change');
-    this.splitStates.clear();
+        this.splitStates.clear();
   }
 
   /**

@@ -1325,12 +1325,10 @@ class PointerInteractionManager {
         
         // Get the current selection after split point manager handled it
         const selectedElements = this.getSelectedElements();
-        console.log('SplitPoint: Selected elements after split handling:', selectedElements);
-        
+                
         // Always start drag for split points (whether both or individual selected)
         // The SplitPointManager handles the selection logic correctly
-        console.log('SplitPoint: Starting drag with selection:', selectedElements);
-        
+                
         this.state.draggingElement = { id: commandId, type: 'command' };
         const origin = this.getSVGPoint(e, context.svgRef);
         
@@ -1421,12 +1419,10 @@ class PointerInteractionManager {
       
       // If selecting a command that's not part of the current split pair, clear split states and force clean selection
       if (!isPartOfCurrentSplitPair && currentSelection.length === 2) {
-        console.log('PointerInteraction: Clearing split states - selecting different command');
-        splitPointManager.clearStatesOnSelectionChange();
+                splitPointManager.clearStatesOnSelectionChange();
         
         // Force clean selection by directly calling the store with selectMultiple
-        console.log('PointerInteraction: Using selectMultiple for clean selection of command:', commandId);
-        this.editorStore.selectMultiple([commandId], 'commands');
+                this.editorStore.selectMultiple([commandId], 'commands');
       } else {
         // Normal selection with original modifiers
         this.elementSelector.selectElement(commandId, 'command', modifiers);

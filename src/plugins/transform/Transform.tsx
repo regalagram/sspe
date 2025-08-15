@@ -209,19 +209,6 @@ const TransformPlugin: React.FC = () => {
   // Final decision: hide if either condition is true
   const finalShouldHide = shouldHideTransformBox || shouldHideForHandleDrag;
   
-  // Debug logging for the specific case
-  if (selection.selectedCommands.length === 2 && bounds && handles.length > 0) {
-    console.log('Transform DEBUG: Dual point case', {
-      selectedCommands: selection.selectedCommands.length,
-      hasBounds: !!bounds,
-      handlesCount: handles.length,
-      shouldHideTransformBox,
-      isHandleDragging,
-      finalShouldHide,
-      willRender: !finalShouldHide
-    });
-  }
-
   return (
     <>
       {bounds && handles.length > 0 && !finalShouldHide && (

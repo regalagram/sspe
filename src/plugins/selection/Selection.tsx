@@ -328,16 +328,6 @@ export const SelectionRectRenderer: React.FC = () => {
   // Hide selection rect for coincident commands (dual points)
   const shouldHideForCoincidentCommands = shouldHideSelectionForCoincidentCommands();
   
-  // Debug logging for selection rect issues
-  if (selectionRect && !shouldHideForCoincidentCommands) {
-    console.log('SelectionRect: SHOWING selection rect', {
-      selectedCommands: selection.selectedCommands.length,
-      selectedSubPaths: selection.selectedSubPaths.length,
-      shouldHide: shouldHideForCoincidentCommands,
-      selectionRect
-    });
-  }
-    
   if (!selectionRect || shouldHideForCoincidentCommands) {
         return null;
   }
