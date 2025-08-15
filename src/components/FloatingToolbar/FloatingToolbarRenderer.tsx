@@ -76,11 +76,11 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
         toolbarSize
       );
       
-      // On mobile, force positioning at the top
+      // On mobile, force positioning at the top - same position as WritingToolbar
       if (isMobileDevice && toolbarPosition) {
         toolbarPosition = {
           ...toolbarPosition,
-          y: 60 // Position just below the writing toolbar area
+          y: 8 // Same position as WritingToolbar: env(safe-area-inset-top, 8px)
         };
       }
             
@@ -88,7 +88,7 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
                 setPosition(toolbarPosition);
       } else {
         const fallbackPosition = isMobileDevice 
-          ? { x: 100, y: 60 } // Mobile fallback at top
+          ? { x: 100, y: 8 } // Mobile fallback at same position as WritingToolbar
           : { x: 100, y: 100 }; // Desktop fallback
                 setPosition(fallbackPosition);
       }
@@ -119,10 +119,29 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
   const overflowActions = actions.slice(currentConfig.maxVisibleButtons - 1);
   const hasOverflow = overflowActions.length > 0;
 
+  // Calculate toolbar width for mobile centering
+  const estimatedToolbarWidth = isMobileDevice ? 
+    (visibleActions.length + (hasOverflow ? 1 : 0)) * (currentConfig.buttonSize + currentConfig.spacing) + 12 : // 12px for padding
+    300; // Default width for desktop
+
+  // Calculate safe left position for mobile
+  const calculateMobileLeft = () => {
+    if (!isMobileDevice) return position.x;
+    
+    const screenWidth = window.innerWidth;
+    const margin = 8; // 8px margin from edges
+    const centeredPosition = (screenWidth - estimatedToolbarWidth) / 2;
+    
+    // Ensure it doesn't go beyond screen bounds
+    return Math.max(margin, Math.min(centeredPosition, screenWidth - estimatedToolbarWidth - margin));
+  };
+
   const toolbarStyle: React.CSSProperties = {
     position: 'fixed',
-    left: `${position.x}px`,
-    top: `${position.y}px`,
+    // On mobile, center within screen bounds, otherwise use calculated position
+    left: isMobileDevice ? `${calculateMobileLeft()}px` : `${position.x}px`,
+    // On mobile, use same top position as WritingToolbar, otherwise use calculated position
+    top: isMobileDevice ? 'env(safe-area-inset-top, 8px)' : `${position.y}px`,
     zIndex: isMobileDevice ? 9999 : 40, // Higher z-index on mobile to be above WritingToolbar
     display: 'flex',
     alignItems: 'center',
