@@ -15,7 +15,6 @@ interface Point {
 
 export class SplitPointManager {
   private splitStates: Map<string, SplitPointState> = new Map();
-  private doubleClickThreshold = 500; // ms
 
   /**
    * Handle click on a split point element
@@ -32,57 +31,56 @@ export class SplitPointManager {
     const counterpartId = this.findCounterpartCommand(commandId);
     if (!counterpartId) return false;
 
-    
+
     // Determine which half was clicked (red or green)
     const clickedHalf = this.determineClickedHalf(element, clickPosition, commandId, counterpartId);
-    
+
     // Get or create split state
     const stateKey = this.getSplitStateKey(commandId, counterpartId);
     let currentState = this.splitStates.get(stateKey);
     const isNewState = !currentState;
-    
+
     if (!currentState) {
       currentState = this.createInitialState(commandId, counterpartId);
       this.splitStates.set(stateKey, currentState);
     }
-    
-        
+
     // Handle the click logic
     const now = Date.now();
     const timeSinceLastClick = now - currentState.lastClickTime;
-    
+
     // Determine which actual command ID corresponds to the clicked half
     const actualClickedCommandId = clickedHalf === 'initial' ? currentState.commandIds.initial : currentState.commandIds.final;
-    
+
     // Check if this is the very first interaction with this split point pair
     const isFirstEverClick = isNewState || currentState.clickCount === 0;
-    
+
     // Also check if enough time has passed to reset (treat as new interaction)
     const shouldReset = timeSinceLastClick > 2000; // 2 seconds
-    
+
     if (isFirstEverClick || shouldReset) {
       // Very first click or after long pause - ALWAYS select both
-            this.selectBoth(currentState);
+      this.selectBoth(currentState);
     } else if (currentState.bothSelected && timeSinceLastClick > 200) {
       // Both are selected and enough time passed - select individual based on clicked half
-            this.selectIndividual(actualClickedCommandId, currentState);
+      this.selectIndividual(actualClickedCommandId, currentState);
     } else if (!currentState.bothSelected) {
       // Individual is selected - check if clicking same or different half
       const store = useEditorStore.getState();
       const currentlySelectedCommands = store.selection.selectedCommands;
       const isClickingSameHalf = currentlySelectedCommands.includes(actualClickedCommandId);
-      
+
       if (isClickingSameHalf) {
         // Clicking same half that's already selected - keep individual selection (allow drag)
-                // Keep the current individual selection state
+        // Keep the current individual selection state
         currentState.bothSelected = false;
       } else {
         // Clicking different half - reassemble the pair
-                this.selectBoth(currentState);
+        this.selectBoth(currentState);
       }
     } else {
       // Default case - select both (safer fallback)
-            this.selectBoth(currentState);
+      this.selectBoth(currentState);
     }
 
     // Update state
@@ -90,6 +88,8 @@ export class SplitPointManager {
     currentState.lastClickTime = now;
     currentState.clickCount++;
     this.splitStates.set(stateKey, currentState);
+
+    console.log('isFirstEverClick', isFirstEverClick, currentState);
 
     return true; // Handled
   }
@@ -101,30 +101,19 @@ export class SplitPointManager {
     // Get the command info to determine which is initial vs final
     const store = useEditorStore.getState();
     const commandInfo = this.findCommandInStore(commandId, store);
-    
+
     if (!commandInfo) return 'initial';
-    
+
     // The element has data-command-id, so we know which command this path represents
     // If this element's data-command-id is the initial command (index 0), it's the green side
     // If this element's data-command-id is the final command, it's the red side
     const isElementInitialCommand = commandInfo.commandIndex === 0;
-    
+
     // In the visual rendering:
     // - Green path has data-command-id of initial command (index 0) 
     // - Red path has data-command-id of final command (last index)
-    
-        
-    return isElementInitialCommand ? 'initial' : 'final';
-  }
 
-  /**
-   * Simple heuristic to determine if click was on red vs green side
-   */
-  private isClickOnRedSide(element: Element, clickPosition: Point, elementCenter: Point): boolean {
-    // This is a simplified implementation
-    // In a real scenario, you'd analyze the path's arc direction and split line
-    // For now, using a simple left/right division
-    return clickPosition.x > elementCenter.x;
+    return isElementInitialCommand ? 'initial' : 'final';
   }
 
   /**
@@ -133,23 +122,23 @@ export class SplitPointManager {
   private findCounterpartCommand(commandId: string): string | null {
     const store = useEditorStore.getState();
     const commandInfo = this.findCommandInStore(commandId, store);
-    
+
     if (!commandInfo) return null;
-    
+
     const { subPath, commandIndex } = commandInfo;
-    
+
     // If this is initial command (index 0), counterpart is final (last)
     if (commandIndex === 0) {
       const finalCommand = subPath.commands[subPath.commands.length - 1];
       return finalCommand.id;
     }
-    
+
     // If this is final command, counterpart is initial (first)
     if (commandIndex === subPath.commands.length - 1) {
       const initialCommand = subPath.commands[0];
       return initialCommand.id;
     }
-    
+
     return null; // Not a split point scenario
   }
 
@@ -180,11 +169,11 @@ export class SplitPointManager {
   private createInitialState(commandId: string, counterpartId: string): SplitPointState {
     const store = useEditorStore.getState();
     const commandInfo = this.findCommandInStore(commandId, store);
-    
+
     // Determine which command is initial (index 0) and which is final
     let initialId = commandId;
     let finalId = counterpartId;
-    
+
     if (commandInfo) {
       if (commandInfo.commandIndex === 0) {
         // commandId is initial, counterpartId is final
@@ -196,7 +185,7 @@ export class SplitPointManager {
         finalId = commandId;
       }
     }
-    
+
     return {
       bothSelected: false,
       lastClickedHalf: null,
@@ -211,10 +200,10 @@ export class SplitPointManager {
    */
   private selectBoth(state: SplitPointState): void {
     const store = useEditorStore.getState();
-    
+
     // Select both commands (clear other selections)
     const commandsToSelect = [state.commandIds.initial, state.commandIds.final];
-        
+
     store.selectMultiple(commandsToSelect, 'commands');
     state.bothSelected = true;
   }
@@ -224,13 +213,10 @@ export class SplitPointManager {
    */
   private selectIndividual(commandId: string, state: SplitPointState): void {
     const store = useEditorStore.getState();
-    
-            
     // Clear other selections and select only this command
     store.selectMultiple([commandId], 'commands');
     state.bothSelected = false;
-    
-      }
+  }
 
   /**
    * Get unique key for split state
@@ -251,7 +237,7 @@ export class SplitPointManager {
    * Clear states when selection changes externally
    */
   clearStatesOnSelectionChange(): void {
-        this.splitStates.clear();
+    this.splitStates.clear();
   }
 
   /**
