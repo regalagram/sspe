@@ -250,10 +250,21 @@ export class SplitPointManager {
     const store = useEditorStore.getState();
     
     console.log('SplitPointManager: Selecting individual command:', commandId);
+    console.log('SplitPointManager: Before individual selection - current selection:', {
+      commands: store.selection.selectedCommands,
+      subPaths: store.selection.selectedSubPaths,
+      commandCount: store.selection.selectedCommands.length
+    });
     
     // Clear other selections and select only this command
     store.selectMultiple([commandId], 'commands');
     state.bothSelected = false;
+    
+    console.log('SplitPointManager: After individual selection - expected:', {
+      expectedCommand: commandId,
+      expectedCount: 1,
+      bothSelected: false
+    });
   }
 
   /**

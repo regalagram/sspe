@@ -331,8 +331,10 @@ export const CommandPointsRenderer: React.FC = () => {
             
             let position = null;
             if (isZCommand) {
-              // Always show Z commands if feature is enabled (for testing)
-              if (!enabledFeatures.commandPointsEnabled) return null;
+              // Show Z commands if feature is enabled OR if subpath is selected OR if Z command is selected
+              const isZCommandSelected = selection.selectedCommands.includes(command.id);
+              const shouldShowZCommand = enabledFeatures.commandPointsEnabled || shouldShowSubPath || isZCommandSelected;
+              if (!shouldShowZCommand) return null;
               // Z commands don't have position, skip position-based checks
             } else {
               position = getAbsoluteCommandPosition(command, subPath, path.subPaths);
@@ -356,15 +358,51 @@ export const CommandPointsRenderer: React.FC = () => {
               const firstCommandPosition = getAbsoluteCommandPosition(firstCommand, subPath, path.subPaths);
               if (!firstCommandPosition) return null;
               
-              // Calculate direction for Z command split (from first to second point, like coincidence case)
+              // Calculate direction for Z command split using tangent calculation
               let zDirectionAngle = 0;
               if (subPath.commands.length >= 2) {
                 const secondCommand = subPath.commands[1];
-                const secondPosition = getAbsoluteCommandPosition(secondCommand, subPath, path.subPaths);
-                if (secondPosition) {
-                  const dx = secondPosition.x - firstCommandPosition.x;
-                  const dy = secondPosition.y - firstCommandPosition.y;
-                  zDirectionAngle = Math.atan2(dy, dx);
+                
+                // For different command types, calculate the tangent differently
+                if (secondCommand.command === 'C') {
+                  // For cubic Bézier curves, use the first control point to determine tangent
+                  if (secondCommand.x1 !== undefined && secondCommand.y1 !== undefined) {
+                    // Tangent direction from first point to first control point
+                    const dx = secondCommand.x1 - firstCommandPosition.x;
+                    const dy = secondCommand.y1 - firstCommandPosition.y;
+                    zDirectionAngle = Math.atan2(dy, dx);
+                  } else {
+                    // Fallback to end point if no control point
+                    const secondPosition = getAbsoluteCommandPosition(secondCommand, subPath, path.subPaths);
+                    if (secondPosition) {
+                      const dx = secondPosition.x - firstCommandPosition.x;
+                      const dy = secondPosition.y - firstCommandPosition.y;
+                      zDirectionAngle = Math.atan2(dy, dx);
+                    }
+                  }
+                } else if (secondCommand.command === 'Q') {
+                  // For quadratic Bézier curves, use the control point
+                  if (secondCommand.x1 !== undefined && secondCommand.y1 !== undefined) {
+                    const dx = secondCommand.x1 - firstCommandPosition.x;
+                    const dy = secondCommand.y1 - firstCommandPosition.y;
+                    zDirectionAngle = Math.atan2(dy, dx);
+                  } else {
+                    // Fallback to end point
+                    const secondPosition = getAbsoluteCommandPosition(secondCommand, subPath, path.subPaths);
+                    if (secondPosition) {
+                      const dx = secondPosition.x - firstCommandPosition.x;
+                      const dy = secondPosition.y - firstCommandPosition.y;
+                      zDirectionAngle = Math.atan2(dy, dx);
+                    }
+                  }
+                } else {
+                  // For L, M, and other commands, use direct line to the point
+                  const secondPosition = getAbsoluteCommandPosition(secondCommand, subPath, path.subPaths);
+                  if (secondPosition) {
+                    const dx = secondPosition.x - firstCommandPosition.x;
+                    const dy = secondPosition.y - firstCommandPosition.y;
+                    zDirectionAngle = Math.atan2(dy, dx);
+                  }
                 }
               }
               
@@ -488,19 +526,52 @@ export const CommandPointsRenderer: React.FC = () => {
             
             // Check if this is the first command and points coincide (but skip if there's a Z command)
             if (isFirstCommand && pointsCoincide && subPath.commands.length > 1 && !hasZCommand) {
-              // Calculate direction angle for the split
+              // Calculate direction angle for the split using tangent calculation
               let directionAngle = 0;
               
               if (subPath.commands.length >= 2) {
-                // Get second command position for direction calculation
                 const secondCommand = subPath.commands[1];
-                const secondPosition = getAbsoluteCommandPosition(secondCommand, subPath, path.subPaths);
                 
-                if (secondPosition) {
-                  // Calculate angle from first to second point (direction of the path)
-                  const dx = secondPosition.x - position.x;
-                  const dy = secondPosition.y - position.y;
-                  directionAngle = Math.atan2(dy, dx);
+                // For different command types, calculate the tangent differently
+                if (secondCommand.command === 'C') {
+                  // For cubic Bézier curves, use the first control point to determine tangent
+                  if (secondCommand.x1 !== undefined && secondCommand.y1 !== undefined) {
+                    // Tangent direction from current point to first control point
+                    const dx = secondCommand.x1 - position.x;
+                    const dy = secondCommand.y1 - position.y;
+                    directionAngle = Math.atan2(dy, dx);
+                  } else {
+                    // Fallback to end point if no control point
+                    const secondPosition = getAbsoluteCommandPosition(secondCommand, subPath, path.subPaths);
+                    if (secondPosition) {
+                      const dx = secondPosition.x - position.x;
+                      const dy = secondPosition.y - position.y;
+                      directionAngle = Math.atan2(dy, dx);
+                    }
+                  }
+                } else if (secondCommand.command === 'Q') {
+                  // For quadratic Bézier curves, use the control point
+                  if (secondCommand.x1 !== undefined && secondCommand.y1 !== undefined) {
+                    const dx = secondCommand.x1 - position.x;
+                    const dy = secondCommand.y1 - position.y;
+                    directionAngle = Math.atan2(dy, dx);
+                  } else {
+                    // Fallback to end point
+                    const secondPosition = getAbsoluteCommandPosition(secondCommand, subPath, path.subPaths);
+                    if (secondPosition) {
+                      const dx = secondPosition.x - position.x;
+                      const dy = secondPosition.y - position.y;
+                      directionAngle = Math.atan2(dy, dx);
+                    }
+                  }
+                } else {
+                  // For L, M, and other commands, use direct line to the point
+                  const secondPosition = getAbsoluteCommandPosition(secondCommand, subPath, path.subPaths);
+                  if (secondPosition) {
+                    const dx = secondPosition.x - position.x;
+                    const dy = secondPosition.y - position.y;
+                    directionAngle = Math.atan2(dy, dx);
+                  }
                 }
               }
               

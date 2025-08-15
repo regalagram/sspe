@@ -4,6 +4,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { transformManager, transformPointerHandlers, TransformBounds, TransformHandle } from './TransformManager';
 import { TransformHandles } from './TransformHandles';
 import { DimensionsInfo } from './DimensionsInfo';
+import { handleManager } from '../handles/HandleManager';
 
 const TransformPlugin: React.FC = () => {
   const [bounds, setBounds] = useState<TransformBounds | null>(null);
@@ -11,6 +12,7 @@ const TransformPlugin: React.FC = () => {
   const [isTransforming, setIsTransforming] = useState(false);
   const [transformMode, setTransformMode] = useState<string | null>(null);
   const [forceUpdate, setForceUpdate] = useState(0); // Force re-render when handles should hide/show
+  const [isHandleDragging, setIsHandleDragging] = useState(false);
   const selection = useEditorStore((state) => state.selection);
   const paths = useEditorStore((state) => state.paths);
   const texts = useEditorStore((state) => state.texts);
@@ -21,20 +23,25 @@ const TransformPlugin: React.FC = () => {
   const viewport = useEditorStore((state) => state.viewport);
   const renderVersion = useEditorStore((state) => state.renderVersion);
 
-  // Function to check if selected commands are coincident (same position)
-  const areSelectedCommandsCoincident = (): boolean => {
+  // Function to check if selected commands should hide transform box
+  const shouldHideTransformForCommands = (): boolean => {
     const selectedCommands = selection.selectedCommands;
     
-    console.log('Transform: Checking coincident commands', {
-      selectedCommandsCount: selectedCommands.length,
-      selectedCommands
-    });
-    
-    if (selectedCommands.length !== 2) {
-      console.log('Transform: Not exactly 2 commands selected, showing handles');
-      return false;
+    // Case 1: Exactly 2 commands selected (coincident pair)
+    if (selectedCommands.length === 2) {
+      return checkTwoCommandsCoincident(selectedCommands);
     }
+    
+    // Case 2: Single command that's Z or final command in a closed path
+    if (selectedCommands.length === 1) {
+      return checkSingleCommandShouldHideTransform(selectedCommands[0]);
+    }
+    
+    return false;
+  };
 
+  // Check if two commands are coincident
+  const checkTwoCommandsCoincident = (selectedCommands: string[]): boolean => {
     // Find positions of both commands
     let positions: Array<{ x: number, y: number, id: string, command: string }> = [];
     
@@ -67,8 +74,6 @@ const TransformPlugin: React.FC = () => {
       }
     }
 
-    console.log('Transform: Found command positions', positions);
-
     // Check if we have exactly 2 positions and they are very close (coincident)
     if (positions.length === 2) {
       const tolerance = 0.1; // Very small tolerance for floating point comparison
@@ -76,16 +81,26 @@ const TransformPlugin: React.FC = () => {
       const dy = Math.abs(positions[0].y - positions[1].y);
       const areCoincident = dx < tolerance && dy < tolerance;
       
-      console.log('Transform: Coincidence check', {
-        dx, dy, tolerance, areCoincident,
-        pos1: positions[0],
-        pos2: positions[1]
-      });
-      
       return areCoincident;
     }
 
-    console.log('Transform: Not 2 positions found, showing handles');
+    return false;
+  };
+
+  // Check if single command should hide transform (individual commands don't need transform box)
+  const checkSingleCommandShouldHideTransform = (commandId: string): boolean => {
+    for (const path of paths) {
+      for (const subPath of path.subPaths) {
+        for (let i = 0; i < subPath.commands.length; i++) {
+          const command = subPath.commands[i];
+          if (command.id === commandId) {
+            // Hide transform for ALL individual commands
+            // Individual commands don't need transform handles - they should just be draggable points
+            return true;
+          }
+        }
+      }
+    }
     return false;
   };
 
@@ -123,12 +138,19 @@ const TransformPlugin: React.FC = () => {
       setTransformMode(transformManager.getTransformMode());
     });
     
+    // Subscribe to handle manager drag state changes
+    const unsubscribeHandles = handleManager.addListener(() => {
+      const handleState = handleManager.getState();
+      setIsHandleDragging(handleState.dragState.isDragging);
+    });
+    
     return () => {
       if (updateTimeoutId) {
         clearTimeout(updateTimeoutId);
       }
       transformManager.clearStateChangeCallback();
       transformManager.cleanup();
+      unsubscribeHandles();
     };
   }, []);
 
@@ -178,19 +200,31 @@ const TransformPlugin: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Check if transform box should be hidden for coincident commands
-  const shouldHideTransformBox = areSelectedCommandsCoincident();
+  // Check if transform box should be hidden for commands
+  const shouldHideTransformBox = shouldHideTransformForCommands();
   
-  console.log('Transform: Render decision', {
-    hasBounds: !!bounds,
-    handlesCount: handles.length,
-    shouldHideTransformBox,
-    willRenderHandles: bounds && handles.length > 0 && !shouldHideTransformBox
-  });
+  // Also hide transform box when dragging handles (to prevent interference)
+  const shouldHideForHandleDrag = isHandleDragging;
+  
+  // Final decision: hide if either condition is true
+  const finalShouldHide = shouldHideTransformBox || shouldHideForHandleDrag;
+  
+  // Debug logging for the specific case
+  if (selection.selectedCommands.length === 2 && bounds && handles.length > 0) {
+    console.log('Transform DEBUG: Dual point case', {
+      selectedCommands: selection.selectedCommands.length,
+      hasBounds: !!bounds,
+      handlesCount: handles.length,
+      shouldHideTransformBox,
+      isHandleDragging,
+      finalShouldHide,
+      willRender: !finalShouldHide
+    });
+  }
 
   return (
     <>
-      {bounds && handles.length > 0 && !shouldHideTransformBox && (
+      {bounds && handles.length > 0 && !finalShouldHide && (
         <>
           <TransformHandles bounds={bounds} handles={handles} />
           

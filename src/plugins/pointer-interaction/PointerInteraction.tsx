@@ -1415,7 +1415,22 @@ class PointerInteractionManager {
     if (commandId && !this.state.isSpacePressed) {
       e.stopPropagation();
       
-      this.elementSelector.selectElement(commandId, 'command', modifiers);
+      // Check if this command is part of an existing split point pair
+      const currentSelection = this.editorStore.selection.selectedCommands;
+      const isPartOfCurrentSplitPair = this.isCommandPartOfSplitPair(commandId, currentSelection);
+      
+      // If selecting a command that's not part of the current split pair, clear split states and force clean selection
+      if (!isPartOfCurrentSplitPair && currentSelection.length === 2) {
+        console.log('PointerInteraction: Clearing split states - selecting different command');
+        splitPointManager.clearStatesOnSelectionChange();
+        
+        // Force clean selection by directly calling the store with selectMultiple
+        console.log('PointerInteraction: Using selectMultiple for clean selection of command:', commandId);
+        this.editorStore.selectMultiple([commandId], 'commands');
+      } else {
+        // Normal selection with original modifiers
+        this.elementSelector.selectElement(commandId, 'command', modifiers);
+      }
       this.state.draggingCommand = commandId;
       
       const selectedElements = this.getSelectedElements();
@@ -1582,6 +1597,49 @@ class PointerInteractionManager {
     if (this.state.isSpacePressed) return 'pointer';
     if (this.state.dragState.isDragging || this.state.draggingControlPoint) return 'pointer';
     return 'default';
+  }
+
+  /**
+   * Check if a command is part of the current split point pair
+   */
+  private isCommandPartOfSplitPair(commandId: string, currentSelection: string[]): boolean {
+    if (currentSelection.length !== 2) return false;
+    
+    // Check if this command is one of the currently selected commands
+    if (!currentSelection.includes(commandId)) return false;
+    
+    // Check if the current selection forms a split point pair
+    const [cmd1, cmd2] = currentSelection;
+    
+    // Need to find counterparts by checking if they are initial/final commands in same subpath
+    let cmd1Info = null;
+    let cmd2Info = null;
+    
+    const store = this.editorStore;
+    for (const path of store.paths) {
+      for (const subPath of path.subPaths) {
+        for (let i = 0; i < subPath.commands.length; i++) {
+          const command = subPath.commands[i];
+          if (command.id === cmd1) {
+            cmd1Info = { subPath, commandIndex: i, command };
+          }
+          if (command.id === cmd2) {
+            cmd2Info = { subPath, commandIndex: i, command };
+          }
+        }
+      }
+    }
+    
+    // Check if they are from the same subpath and are initial/final pair
+    if (cmd1Info && cmd2Info && cmd1Info.subPath.id === cmd2Info.subPath.id) {
+      const isInitialFinalPair = (
+        (cmd1Info.commandIndex === 0 && cmd2Info.commandIndex === cmd1Info.subPath.commands.length - 1) ||
+        (cmd2Info.commandIndex === 0 && cmd1Info.commandIndex === cmd2Info.subPath.commands.length - 1)
+      );
+      return isInitialFinalPair;
+    }
+    
+    return false;
   }
 
   cleanup(): void {

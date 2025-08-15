@@ -187,7 +187,7 @@ export const useRectSelection = () => {
 
 // Selection Rectangle Renderer
 export const SelectionRectRenderer: React.FC = () => {
-  const { viewport, selection } = useEditorStore();
+  const { viewport, selection, paths } = useEditorStore();
   const [, forceUpdate] = useState({});
 
   React.useEffect(() => {
@@ -197,6 +197,126 @@ export const SelectionRectRenderer: React.FC = () => {
     return unsubscribe;
   }, []);
 
+  // Function to check if selected commands are coincident (dual points) and should hide selection rect
+  const shouldHideSelectionForCoincidentCommands = (): boolean => {
+    const selectedCommands = selection.selectedCommands;
+    const selectedSubPaths = selection.selectedSubPaths;
+    
+    // Case 1: Check when exactly 2 commands are selected
+    if (selectedCommands.length === 2) {
+      // Find positions of both commands
+      let positions: Array<{ x: number, y: number, id: string }> = [];
+      
+      for (const path of paths) {
+        for (const subPath of path.subPaths) {
+          for (const command of subPath.commands) {
+            if (selectedCommands.includes(command.id)) {
+              if (command.command === 'Z' || command.command === 'z') {
+                // Z command closes the path, its position is the same as the first command
+                const firstCommand = subPath.commands[0];
+                if (firstCommand && firstCommand.x !== undefined && firstCommand.y !== undefined) {
+                  positions.push({ 
+                    x: firstCommand.x, 
+                    y: firstCommand.y, 
+                    id: command.id
+                  });
+                }
+              } else if (command.x !== undefined && command.y !== undefined) {
+                positions.push({ 
+                  x: command.x, 
+                  y: command.y, 
+                  id: command.id
+                });
+              }
+            }
+          }
+        }
+      }
+      
+      // Check if positions are coincident
+      if (positions.length === 2) {
+        const tolerance = 0.1;
+        const dx = Math.abs(positions[0].x - positions[1].x);
+        const dy = Math.abs(positions[0].y - positions[1].y);
+        return dx < tolerance && dy < tolerance;
+      }
+    }
+    
+    // Case 2: Check if single selected command is part of a dual point
+    if (selectedCommands.length === 1) {
+      const commandId = selectedCommands[0];
+      
+      for (const path of paths) {
+        for (const subPath of path.subPaths) {
+          for (let i = 0; i < subPath.commands.length; i++) {
+            const command = subPath.commands[i];
+            if (command.id === commandId) {
+              // Check if this is first or last command in a closed subpath
+              const firstCommand = subPath.commands[0];
+              const lastCommand = subPath.commands[subPath.commands.length - 1];
+              const hasZCommand = subPath.commands.some(cmd => cmd.command === 'Z' || cmd.command === 'z');
+              
+              // If this command is part of a dual point scenario
+              const isFirstCommand = i === 0;
+              const isLastCommand = i === subPath.commands.length - 1;
+              const isZCommand = command.command === 'Z' || command.command === 'z';
+              
+              if (hasZCommand && (isFirstCommand || isZCommand)) {
+                // First command or Z command in subpath with Z
+                return true;
+              }
+              
+              if (isFirstCommand || isLastCommand) {
+                // Check if first and last commands have coincident positions
+                if (firstCommand && lastCommand && 
+                    firstCommand.x !== undefined && firstCommand.y !== undefined && 
+                    lastCommand.x !== undefined && lastCommand.y !== undefined) {
+                  const tolerance = 0.1;
+                  const dx = Math.abs(firstCommand.x - lastCommand.x);
+                  const dy = Math.abs(firstCommand.y - lastCommand.y);
+                  if (dx < tolerance && dy < tolerance) {
+                    return true;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Case 3: Check if selected subpaths contain coincident points (dual points)
+    if (selectedSubPaths.length > 0) {
+      for (const path of paths) {
+        for (const subPath of path.subPaths) {
+          if (selectedSubPaths.includes(subPath.id)) {
+            // Check if this subpath has coincident first/last points or Z command
+            const firstCommand = subPath.commands[0];
+            const lastCommand = subPath.commands[subPath.commands.length - 1];
+            const hasZCommand = subPath.commands.some(cmd => cmd.command === 'Z' || cmd.command === 'z');
+            
+            if (hasZCommand) {
+              // Subpath with Z command has coincident first/last points
+              return true;
+            }
+            
+            // Check if first and last commands have coincident positions
+            if (firstCommand && lastCommand && firstCommand.x !== undefined && firstCommand.y !== undefined && lastCommand.x !== undefined && lastCommand.y !== undefined) {
+              const tolerance = 0.1;
+              const dx = Math.abs(firstCommand.x - lastCommand.x);
+              const dy = Math.abs(firstCommand.y - lastCommand.y);
+              if (dx < tolerance && dy < tolerance) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    return false;
+  };
+
   // Use selectionBox from store (for pointer-interaction drag selection) or fallback to rectSelectionManager
   const storeSelectionBox = selection.selectionBox;
   const managerSelectionRect = rectSelectionManager.getSelectionRect();
@@ -205,9 +325,20 @@ export const SelectionRectRenderer: React.FC = () => {
   // Prioritize store selectionBox over manager selectionRect
   const selectionRect = storeSelectionBox || (isManagerSelecting ? managerSelectionRect : null);
   
-  // Debug logging
+  // Hide selection rect for coincident commands (dual points)
+  const shouldHideForCoincidentCommands = shouldHideSelectionForCoincidentCommands();
+  
+  // Debug logging for selection rect issues
+  if (selectionRect && !shouldHideForCoincidentCommands) {
+    console.log('SelectionRect: SHOWING selection rect', {
+      selectedCommands: selection.selectedCommands.length,
+      selectedSubPaths: selection.selectedSubPaths.length,
+      shouldHide: shouldHideForCoincidentCommands,
+      selectionRect
+    });
+  }
     
-  if (!selectionRect) {
+  if (!selectionRect || shouldHideForCoincidentCommands) {
         return null;
   }
   
