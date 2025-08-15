@@ -139,7 +139,8 @@ export class TransformManager {
       }
     };
 
-    return transformBounds;
+    // Always normalize bounds to ensure width and height are positive before returning
+    return this.normalizeBounds(transformBounds);
   }
 
   // Create a temporary SVG element containing only the selected elements

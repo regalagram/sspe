@@ -44,6 +44,7 @@ export interface ToolbarAction {
   priority?: number;
   destructive?: boolean;
   disabled?: boolean;
+  visible?: boolean | (() => boolean);
   tooltip?: string;
   shortcut?: string;
 }

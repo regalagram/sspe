@@ -43,6 +43,7 @@ import { ContextMenuPlugin } from '../plugins/context-menu';
 import { KeyboardMovementPlugin } from '../plugins/keyboard-movement';
 import { TextPlacementPlugin } from '../plugins/text-placement';
 import { TextEditPlugin } from '../plugins/text-edit';
+import { CommandFloatingActionsPlugin } from '../plugins/commandFloatingActions';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -99,6 +100,7 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(ReorderPlugin);
   pluginManager.registerPlugin(PanelModePlugin);
   pluginManager.registerPlugin(KeyboardMovementPlugin); // Keyboard movement for selected elements
+  pluginManager.registerPlugin(CommandFloatingActionsPlugin); // Floating actions for command points
   pluginManager.registerPlugin(ShortcutsPlugin);
   
   // Register sandbox plugins (experimental features)

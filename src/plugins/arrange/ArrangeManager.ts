@@ -1,7 +1,8 @@
-import { SVGSubPath, TextElementType, SVGImage, SVGUse, SVGGroup } from '../../types';
+import { SVGSubPath, TextElementType, SVGImage, SVGUse, SVGGroup, SVGCommand } from '../../types';
 import { getSubPathBounds } from '../../utils/path-utils';
 import { calculateTextBoundsDOM } from '../../utils/text-utils';
 import { getElementBounds } from '../../utils/svg-elements-utils';
+import { getCommandPointPosition, isCommandArrangeable, getUniqueCommandPositions } from '../../utils/command-point-utils';
 import { useEditorStore } from '../../store/editorStore';
 
 interface ArrangeBounds {
@@ -15,8 +16,8 @@ interface ArrangeBounds {
 
 interface ArrangeElement {
   id: string;
-  type: 'subpath' | 'text' | 'image' | 'use' | 'group';
-  element: SVGSubPath | TextElementType | SVGImage | SVGUse | SVGGroup;
+  type: 'subpath' | 'text' | 'image' | 'use' | 'group' | 'command';
+  element: SVGSubPath | TextElementType | SVGImage | SVGUse | SVGGroup | SVGCommand;
   bounds: ArrangeBounds;
 }
 
@@ -30,6 +31,34 @@ export class ArrangeManager {
   private getSelectedElements(): ArrangeElement[] {
     const { paths, texts, images, uses, groups, selection } = useEditorStore.getState();
     const elements: ArrangeElement[] = [];
+
+    // Get selected command points
+    for (const commandId of selection.selectedCommands) {
+      for (const path of paths) {
+        for (const subPath of path.subPaths) {
+          const command = subPath.commands.find((cmd: SVGCommand) => cmd.id === commandId);
+          if (command && isCommandArrangeable(command)) {
+            const position = getCommandPointPosition(command);
+            if (position) {
+              elements.push({
+                id: commandId,
+                type: 'command',
+                element: command,
+                bounds: {
+                  x: position.x,
+                  y: position.y,
+                  width: 0, // Command points have no area
+                  height: 0,
+                  centerX: position.x,
+                  centerY: position.y,
+                }
+              });
+            }
+          }
+          break;
+        }
+      }
+    }
 
     // Get selected subpaths
     for (const subPathId of selection.selectedSubPaths) {
@@ -129,6 +158,14 @@ export class ArrangeManager {
 
     const editorState = useEditorStore.getState();
     switch (element.type) {
+      case 'command':
+        const command = element.element as SVGCommand;
+        const newPosition = {
+          x: command.x! + delta.x,
+          y: command.y! + delta.y
+        };
+        editorState.moveCommand(element.id, newPosition);
+        break;
       case 'subpath':
         editorState.translateSubPath(element.id, delta);
         break;
@@ -166,9 +203,33 @@ export class ArrangeManager {
     };
   }
 
+  // Check if we're dealing with pure command selection
+  private isPureCommandSelection(): boolean {
+    const { selection } = useEditorStore.getState();
+    return selection.selectedCommands.length > 0 && 
+           selection.selectedSubPaths.length === 0 &&
+           selection.selectedTexts.length === 0 &&
+           selection.selectedImages.length === 0 &&
+           selection.selectedUses.length === 0 &&
+           selection.selectedGroups.length === 0;
+  }
+
   // Alignment operations
   alignLeft() {
     console.log('⬅️ ArrangeManager.alignLeft() called');
+    
+    // Check if we have pure command selection - use optimized command actions
+    if (this.isPureCommandSelection()) {
+      const { selection } = useEditorStore.getState();
+      if (selection.selectedCommands.length < 2) return;
+      
+      const editorState = useEditorStore.getState();
+      editorState.alignCommandsLeft(selection.selectedCommands);
+      editorState.pushToHistory();
+      return;
+    }
+
+    // Fallback to general element handling
     const elements = this.getSelectedElements();
     console.log('⬅️ Selected elements:', elements.length);
     if (elements.length < 2) {
@@ -188,6 +249,17 @@ export class ArrangeManager {
   }
 
   alignCenter() {
+    // Check if we have pure command selection - use optimized command actions
+    if (this.isPureCommandSelection()) {
+      const { selection } = useEditorStore.getState();
+      if (selection.selectedCommands.length < 2) return;
+      
+      const editorState = useEditorStore.getState();
+      editorState.alignCommandsCenter(selection.selectedCommands);
+      editorState.pushToHistory();
+      return;
+    }
+
     const elements = this.getSelectedElements();
     if (elements.length < 2) return;
 
@@ -204,6 +276,17 @@ export class ArrangeManager {
   }
 
   alignRight() {
+    // Check if we have pure command selection - use optimized command actions
+    if (this.isPureCommandSelection()) {
+      const { selection } = useEditorStore.getState();
+      if (selection.selectedCommands.length < 2) return;
+      
+      const editorState = useEditorStore.getState();
+      editorState.alignCommandsRight(selection.selectedCommands);
+      editorState.pushToHistory();
+      return;
+    }
+
     const elements = this.getSelectedElements();
     if (elements.length < 2) return;
 
@@ -219,6 +302,17 @@ export class ArrangeManager {
   }
 
   alignTop() {
+    // Check if we have pure command selection - use optimized command actions
+    if (this.isPureCommandSelection()) {
+      const { selection } = useEditorStore.getState();
+      if (selection.selectedCommands.length < 2) return;
+      
+      const editorState = useEditorStore.getState();
+      editorState.alignCommandsTop(selection.selectedCommands);
+      editorState.pushToHistory();
+      return;
+    }
+
     const elements = this.getSelectedElements();
     if (elements.length < 2) return;
 
@@ -234,6 +328,17 @@ export class ArrangeManager {
   }
 
   alignMiddle() {
+    // Check if we have pure command selection - use optimized command actions
+    if (this.isPureCommandSelection()) {
+      const { selection } = useEditorStore.getState();
+      if (selection.selectedCommands.length < 2) return;
+      
+      const editorState = useEditorStore.getState();
+      editorState.alignCommandsMiddle(selection.selectedCommands);
+      editorState.pushToHistory();
+      return;
+    }
+
     const elements = this.getSelectedElements();
     if (elements.length < 2) return;
 
@@ -250,6 +355,17 @@ export class ArrangeManager {
   }
 
   alignBottom() {
+    // Check if we have pure command selection - use optimized command actions
+    if (this.isPureCommandSelection()) {
+      const { selection } = useEditorStore.getState();
+      if (selection.selectedCommands.length < 2) return;
+      
+      const editorState = useEditorStore.getState();
+      editorState.alignCommandsBottom(selection.selectedCommands);
+      editorState.pushToHistory();
+      return;
+    }
+
     const elements = this.getSelectedElements();
     if (elements.length < 2) return;
 
@@ -266,6 +382,18 @@ export class ArrangeManager {
 
   // Distribution operations
   distributeHorizontally() {
+    // Check if we have pure command selection - use optimized command actions
+    // Note: Command actions handle coincident points (e.g., first/last point overlap)
+    if (this.isPureCommandSelection()) {
+      const { selection } = useEditorStore.getState();
+      if (selection.selectedCommands.length < 3) return;
+      
+      const editorState = useEditorStore.getState();
+      editorState.distributeCommandsHorizontally(selection.selectedCommands);
+      editorState.pushToHistory();
+      return;
+    }
+
     const elements = this.getSelectedElements();
     if (elements.length < 3) return;
 
@@ -291,6 +419,18 @@ export class ArrangeManager {
   }
 
   distributeVertically() {
+    // Check if we have pure command selection - use optimized command actions
+    // Note: Command actions handle coincident points (e.g., first/last point overlap)
+    if (this.isPureCommandSelection()) {
+      const { selection } = useEditorStore.getState();
+      if (selection.selectedCommands.length < 3) return;
+      
+      const editorState = useEditorStore.getState();
+      editorState.distributeCommandsVertically(selection.selectedCommands);
+      editorState.pushToHistory();
+      return;
+    }
+
     const elements = this.getSelectedElements();
     if (elements.length < 3) return;
 
@@ -486,6 +626,7 @@ export class ArrangeManager {
     const editorState = useEditorStore.getState();
     const selection = editorState.selection;
     return (
+      selection.selectedCommands.length > 0 ||
       selection.selectedSubPaths.length > 0 ||
       selection.selectedTexts.length > 0 ||
       selection.selectedImages.length > 0 ||

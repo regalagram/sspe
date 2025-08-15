@@ -8,6 +8,7 @@ const ArrangeComponent: React.FC = () => {
   const [showPanel, setShowPanel] = useState(false);
   const selection = useEditorStore((state) => state.selection);
   const hasSelection = (
+    selection.selectedCommands.length > 0 ||
     selection.selectedSubPaths.length > 0 ||
     selection.selectedTexts.length > 0 ||
     selection.selectedImages.length > 0 ||

@@ -24,6 +24,7 @@ interface ArrangeUIProps {
 export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
   const selection = useEditorStore((state) => state.selection);
   const hasSelection = (
+    selection.selectedCommands.length > 0 ||
     selection.selectedSubPaths.length > 0 ||
     selection.selectedTexts.length > 0 ||
     selection.selectedImages.length > 0 ||
@@ -31,6 +32,7 @@ export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
     selection.selectedGroups.length > 0
   );
   const totalSelected = (
+    selection.selectedCommands.length +
     selection.selectedSubPaths.length +
     selection.selectedTexts.length +
     selection.selectedImages.length +
@@ -271,8 +273,8 @@ export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
           </div>
         </div>
 
-        {/* Stretch Section - Only for SubPaths */}
-        {selection.selectedSubPaths.length > 1 && (
+        {/* Stretch Section - Only for SubPaths (not command points) */}
+        {selection.selectedSubPaths.length > 1 && selection.selectedCommands.length === 0 && (
           <div style={sectionStyle}>
             <h3 style={titleStyle}>Stretch</h3>
             <div style={gridStyle}>
@@ -296,8 +298,8 @@ export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
           </div>
         )}
 
-        {/* Flip Section - Only for SubPaths */}
-        {selection.selectedSubPaths.length > 0 && (
+        {/* Flip Section - Only for SubPaths (not command points) */}
+        {selection.selectedSubPaths.length > 0 && selection.selectedCommands.length === 0 && (
           <div style={sectionStyle}>
             <h3 style={titleStyle}>Flip</h3>
             <div style={gridStyle}>
@@ -321,41 +323,44 @@ export const ArrangeUI: React.FC<ArrangeUIProps> = ({ onClose }) => {
           </div>
         )}
 
-        {/* Stack Section */}
-        <div style={sectionStyle}>
-          <h3 style={titleStyle}>Stack</h3>
-          <div style={gridStyle}>
-            <Button
-              onPointerDown={() => handleStack('pack')}
-              disabled={!hasMultipleSelection}
-              title="Pack Elements"
-            >
-              <Package size={12} />
-            </Button>
-            <Button
-              onPointerDown={() => handleStack('horizontal')}
-              disabled={!hasMultipleSelection}
-              title="Stack Horizontally"
-            >
-              <Columns3 size={12} />
-            </Button>
-            <Button
-              onPointerDown={() => handleStack('vertical')}
-              disabled={!hasMultipleSelection}
-              title="Stack Vertically"
-            >
-              <Rows3 size={12} />
-            </Button>
-            <div></div>
+        {/* Stack Section - Only for elements with area (not command points) */}
+        {selection.selectedCommands.length === 0 && (
+          <div style={sectionStyle}>
+            <h3 style={titleStyle}>Stack</h3>
+            <div style={gridStyle}>
+              <Button
+                onPointerDown={() => handleStack('pack')}
+                disabled={!hasMultipleSelection}
+                title="Pack Elements"
+              >
+                <Package size={12} />
+              </Button>
+              <Button
+                onPointerDown={() => handleStack('horizontal')}
+                disabled={!hasMultipleSelection}
+                title="Stack Horizontally"
+              >
+                <Columns3 size={12} />
+              </Button>
+              <Button
+                onPointerDown={() => handleStack('vertical')}
+                disabled={!hasMultipleSelection}
+                title="Stack Vertically"
+              >
+                <Rows3 size={12} />
+              </Button>
+              <div></div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Selection Info */}
         <div style={infoStyle}>
-          {!hasSelection && "Select elements"}
+          {!hasSelection && "Select elements or command points"}
           {hasSelection && !hasMultipleSelection && "Select multiple"}
           {hasMultipleSelection && !hasThreeOrMore && "Select 3+ for distribute"}
-          {hasThreeOrMore && `${selection.selectedSubPaths.length} selected`}
+          {hasThreeOrMore && selection.selectedCommands.length > 0 && `${selection.selectedCommands.length} command points selected`}
+          {hasThreeOrMore && selection.selectedCommands.length === 0 && `${totalSelected} elements selected`}
         </div>
       </div>
     </div>

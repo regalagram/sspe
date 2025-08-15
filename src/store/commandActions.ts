@@ -3,6 +3,7 @@ import { EditorState, SVGCommand, Point } from '../types';
 import { generateId } from '../utils/id-utils.js';
 import { getCommandBoundingBox } from '../utils/bbox-utils';
 import { transformManager } from '../plugins/transform/TransformManager';
+import { getCommandPointPosition, getCommandPointsBounds, calculateCommandMoveDelta, isCommandArrangeable, getUniqueCommandPositions } from '../utils/command-point-utils';
 
 export interface CommandActions {
   addCommand: (subPathId: string, command: Omit<SVGCommand, 'id'>) => string;
@@ -11,6 +12,16 @@ export interface CommandActions {
   removeCommand: (commandId: string) => void;
   moveCommand: (commandId: string, position: Point) => void;
   replaceSubPathCommands: (subPathId: string, commands: Omit<SVGCommand, 'id'>[]) => void;
+  
+  // Command point arranging actions
+  alignCommandsLeft: (commandIds: string[]) => void;
+  alignCommandsCenter: (commandIds: string[]) => void;
+  alignCommandsRight: (commandIds: string[]) => void;
+  alignCommandsTop: (commandIds: string[]) => void;
+  alignCommandsMiddle: (commandIds: string[]) => void;
+  alignCommandsBottom: (commandIds: string[]) => void;
+  distributeCommandsHorizontally: (commandIds: string[]) => void;
+  distributeCommandsVertically: (commandIds: string[]) => void;
 }
 
 function roundToPrecision(val: number | undefined, precision: number): number | undefined {
@@ -398,6 +409,209 @@ export const createCommandActions: StateCreator<
           selectedCommands: [],
         },
       };
+    });
+  },
+
+  // Command point arranging actions
+  alignCommandsLeft: (commandIds) => {
+    const state = get();
+    const commands = commandIds.map(id => {
+      for (const path of state.paths) {
+        for (const subPath of path.subPaths) {
+          const cmd = subPath.commands.find(c => c.id === id);
+          if (cmd) return cmd;
+        }
+      }
+      return null;
+    }).filter((cmd): cmd is SVGCommand => cmd !== null && isCommandArrangeable(cmd));
+
+    if (commands.length < 2) return;
+
+    const leftmostX = Math.min(...commands.map(cmd => cmd.x!));
+
+    commands.forEach(cmd => {
+      get().updateCommand(cmd.id, { x: leftmostX });
+    });
+  },
+
+  alignCommandsCenter: (commandIds) => {
+    const state = get();
+    const commands = commandIds.map(id => {
+      for (const path of state.paths) {
+        for (const subPath of path.subPaths) {
+          const cmd = subPath.commands.find(c => c.id === id);
+          if (cmd) return cmd;
+        }
+      }
+      return null;
+    }).filter((cmd): cmd is SVGCommand => cmd !== null && isCommandArrangeable(cmd));
+
+    if (commands.length < 2) return;
+
+    const bounds = getCommandPointsBounds(commands);
+    if (!bounds) return;
+
+    commands.forEach(cmd => {
+      get().updateCommand(cmd.id, { x: bounds.centerX });
+    });
+  },
+
+  alignCommandsRight: (commandIds) => {
+    const state = get();
+    const commands = commandIds.map(id => {
+      for (const path of state.paths) {
+        for (const subPath of path.subPaths) {
+          const cmd = subPath.commands.find(c => c.id === id);
+          if (cmd) return cmd;
+        }
+      }
+      return null;
+    }).filter((cmd): cmd is SVGCommand => cmd !== null && isCommandArrangeable(cmd));
+
+    if (commands.length < 2) return;
+
+    const rightmostX = Math.max(...commands.map(cmd => cmd.x!));
+
+    commands.forEach(cmd => {
+      get().updateCommand(cmd.id, { x: rightmostX });
+    });
+  },
+
+  alignCommandsTop: (commandIds) => {
+    const state = get();
+    const commands = commandIds.map(id => {
+      for (const path of state.paths) {
+        for (const subPath of path.subPaths) {
+          const cmd = subPath.commands.find(c => c.id === id);
+          if (cmd) return cmd;
+        }
+      }
+      return null;
+    }).filter((cmd): cmd is SVGCommand => cmd !== null && isCommandArrangeable(cmd));
+
+    if (commands.length < 2) return;
+
+    const topmostY = Math.min(...commands.map(cmd => cmd.y!));
+
+    commands.forEach(cmd => {
+      get().updateCommand(cmd.id, { y: topmostY });
+    });
+  },
+
+  alignCommandsMiddle: (commandIds) => {
+    const state = get();
+    const commands = commandIds.map(id => {
+      for (const path of state.paths) {
+        for (const subPath of path.subPaths) {
+          const cmd = subPath.commands.find(c => c.id === id);
+          if (cmd) return cmd;
+        }
+      }
+      return null;
+    }).filter((cmd): cmd is SVGCommand => cmd !== null && isCommandArrangeable(cmd));
+
+    if (commands.length < 2) return;
+
+    const bounds = getCommandPointsBounds(commands);
+    if (!bounds) return;
+
+    commands.forEach(cmd => {
+      get().updateCommand(cmd.id, { y: bounds.centerY });
+    });
+  },
+
+  alignCommandsBottom: (commandIds) => {
+    const state = get();
+    const commands = commandIds.map(id => {
+      for (const path of state.paths) {
+        for (const subPath of path.subPaths) {
+          const cmd = subPath.commands.find(c => c.id === id);
+          if (cmd) return cmd;
+        }
+      }
+      return null;
+    }).filter((cmd): cmd is SVGCommand => cmd !== null && isCommandArrangeable(cmd));
+
+    if (commands.length < 2) return;
+
+    const bottommostY = Math.max(...commands.map(cmd => cmd.y!));
+
+    commands.forEach(cmd => {
+      get().updateCommand(cmd.id, { y: bottommostY });
+    });
+  },
+
+  distributeCommandsHorizontally: (commandIds) => {
+    const state = get();
+    const commands = commandIds.map(id => {
+      for (const path of state.paths) {
+        for (const subPath of path.subPaths) {
+          const cmd = subPath.commands.find(c => c.id === id);
+          if (cmd) return cmd;
+        }
+      }
+      return null;
+    }).filter((cmd): cmd is SVGCommand => cmd !== null && isCommandArrangeable(cmd));
+
+    // Get unique positions, treating coincident points as one
+    const uniquePositions = getUniqueCommandPositions(commands);
+    
+    if (uniquePositions.length < 3) return;
+
+    // Sort by current X position
+    const sortedPositions = [...uniquePositions].sort((a, b) => a.position.x - b.position.x);
+
+    const leftmostX = sortedPositions[0].position.x;
+    const rightmostX = sortedPositions[sortedPositions.length - 1].position.x;
+    const totalDistance = rightmostX - leftmostX;
+    const spacing = totalDistance / (sortedPositions.length - 1);
+
+    sortedPositions.forEach((posGroup, index) => {
+      if (index === 0 || index === sortedPositions.length - 1) return; // Skip first and last
+      
+      const targetX = leftmostX + (spacing * index);
+      
+      // Move all commands in this position group to the new X position
+      posGroup.commands.forEach(cmd => {
+        get().updateCommand(cmd.id, { x: targetX });
+      });
+    });
+  },
+
+  distributeCommandsVertically: (commandIds) => {
+    const state = get();
+    const commands = commandIds.map(id => {
+      for (const path of state.paths) {
+        for (const subPath of path.subPaths) {
+          const cmd = subPath.commands.find(c => c.id === id);
+          if (cmd) return cmd;
+        }
+      }
+      return null;
+    }).filter((cmd): cmd is SVGCommand => cmd !== null && isCommandArrangeable(cmd));
+
+    // Get unique positions, treating coincident points as one
+    const uniquePositions = getUniqueCommandPositions(commands);
+    
+    if (uniquePositions.length < 3) return;
+
+    // Sort by current Y position
+    const sortedPositions = [...uniquePositions].sort((a, b) => a.position.y - b.position.y);
+
+    const topmostY = sortedPositions[0].position.y;
+    const bottommostY = sortedPositions[sortedPositions.length - 1].position.y;
+    const totalDistance = bottommostY - topmostY;
+    const spacing = totalDistance / (sortedPositions.length - 1);
+
+    sortedPositions.forEach((posGroup, index) => {
+      if (index === 0 || index === sortedPositions.length - 1) return; // Skip first and last
+      
+      const targetY = topmostY + (spacing * index);
+      
+      // Move all commands in this position group to the new Y position
+      posGroup.commands.forEach(cmd => {
+        get().updateCommand(cmd.id, { y: targetY });
+      });
     });
   },
 });

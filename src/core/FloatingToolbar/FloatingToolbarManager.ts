@@ -66,8 +66,16 @@ export class FloatingToolbarManager {
     
     for (const definition of this.actionDefinitions) {
       if (this.matchesDefinition(definition, elementTypes, selectionType)) {
-                // Filter out disabled actions
-        const validActions = definition.actions.filter(action => !action.disabled);
+                // Filter out disabled and invisible actions
+        const validActions = definition.actions.filter(action => {
+          if (action.disabled) return false;
+          
+          // Check visibility
+          if (action.visible === false) return false;
+          if (typeof action.visible === 'function' && !action.visible()) return false;
+          
+          return true;
+        });
         actions.push(...validActions);
       }
     }

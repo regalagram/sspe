@@ -1,5 +1,6 @@
 import { ToolbarPosition, BoundingRect } from '../../types/floatingToolbar';
 import { SelectionState, ViewportState } from '../../types';
+import { useEditorStore } from '../../store/editorStore';
 
 export class PositioningEngine {
   private static instance: PositioningEngine;
@@ -28,12 +29,15 @@ export class PositioningEngine {
     // Convert SVG coordinates to screen coordinates
     const screenBounds = this.svgToScreen(selectionBounds, viewport, canvasRect);
     
+    // Get rotation handler bounds to avoid overlap
+    const rotationHandlerBounds = this.getRotationHandlerBounds(selection, viewport, canvasRect);
+    
     // Try different positions in order of preference
     const positions = [
-      this.tryPositionTop(screenBounds, toolbarSize, canvasRect, margin),
-      this.tryPositionBottom(screenBounds, toolbarSize, canvasRect, margin),
-      this.tryPositionRight(screenBounds, toolbarSize, canvasRect, margin),
-      this.tryPositionLeft(screenBounds, toolbarSize, canvasRect, margin),
+      this.tryPositionTop(screenBounds, toolbarSize, canvasRect, margin, rotationHandlerBounds),
+      this.tryPositionBottom(screenBounds, toolbarSize, canvasRect, margin, rotationHandlerBounds),
+      this.tryPositionRight(screenBounds, toolbarSize, canvasRect, margin, rotationHandlerBounds),
+      this.tryPositionLeft(screenBounds, toolbarSize, canvasRect, margin, rotationHandlerBounds),
     ];
 
     // Return the first valid position
@@ -45,10 +49,12 @@ export class PositioningEngine {
 
     // Improved fallback: try multiple fallback positions that are guaranteed to be visible
     const fallbackPositions = [
-      // Try center top of selection
+      // Try center top of selection (considering rotation handler)
       {
         x: screenBounds.x + screenBounds.width / 2 - toolbarSize.width / 2,
-        y: screenBounds.y - toolbarSize.height - margin,
+        y: rotationHandlerBounds ? 
+           Math.min(screenBounds.y - toolbarSize.height - margin, rotationHandlerBounds.y - toolbarSize.height - margin) :
+           screenBounds.y - toolbarSize.height - margin,
         placement: 'top' as const
       },
       // Try center bottom of selection
@@ -272,6 +278,68 @@ export class PositioningEngine {
         return result;
   }
 
+  private getRotationHandlerBounds(
+    selection: SelectionState, 
+    viewport: ViewportState, 
+    canvasRect: DOMRect
+  ): BoundingRect | null {
+    // Only calculate rotation handler bounds if we have a valid selection that would show transform handles
+    const hasValidSelection = (
+      selection.selectedSubPaths.length > 0 || 
+      selection.selectedCommands.length > 1 ||
+      selection.selectedTexts?.length > 0 ||
+      selection.selectedTextPaths?.length > 0 ||
+      selection.selectedImages?.length > 0 ||
+      selection.selectedUses?.length > 0
+    );
+    
+    if (!hasValidSelection) return null;
+
+    // Get the selection bounds to calculate where the rotation handler would be
+    const selectionBounds = this.getSelectionBounds(selection, viewport);
+    if (!selectionBounds) return null;
+
+    // Convert to screen coordinates
+    const screenBounds = this.svgToScreen(selectionBounds, viewport, canvasRect);
+    
+    // Calculate rotation handler position using the same logic as TransformManager
+    // Import mobile detection values (simplified calculation)
+    const isMobile = window.innerWidth <= 768;
+    const isTablet = window.innerWidth <= 1024 && window.innerWidth > 768;
+    
+    // Base handle size calculation (from useMobileDetection hook)
+    const baseHandleSize = isMobile ? 44 : isTablet ? 36 : 28;
+    
+    // Get visual debug size factors from store
+    const store = useEditorStore.getState();
+    const visualDebugSizes = store.visualDebugSizes || {
+      globalFactor: 1,
+      transformRotateFactor: 1,
+      transformResizeFactor: 1
+    };
+    
+    // Calculate rotation handle size
+    const rotateHandleSize = (baseHandleSize * visualDebugSizes.globalFactor * visualDebugSizes.transformRotateFactor) / viewport.zoom;
+    
+    // Calculate rotation handle offset (same calculation as TransformManager)
+    const cornerHandleMargin = (baseHandleSize * visualDebugSizes.globalFactor * visualDebugSizes.transformResizeFactor) / viewport.zoom;
+    const baseOffset = 15 / viewport.zoom;
+    const resizeHandleRadius = (baseHandleSize * visualDebugSizes.globalFactor * visualDebugSizes.transformResizeFactor) / (2 * viewport.zoom);
+    const padding = 8 / viewport.zoom;
+    const rotationHandleOffset = baseOffset + cornerHandleMargin + resizeHandleRadius + padding;
+    
+    // Position of rotation handler (centered above the selection, same as TransformManager)
+    const rotationHandlerX = screenBounds.x + screenBounds.width / 2 - rotateHandleSize / 2;
+    const rotationHandlerY = screenBounds.y - rotationHandleOffset - rotateHandleSize / 2;
+    
+    return {
+      x: rotationHandlerX,
+      y: rotationHandlerY,
+      width: rotateHandleSize,
+      height: rotateHandleSize
+    };
+  }
+
   private svgToScreen(
     bounds: BoundingRect, 
     viewport: ViewportState, 
@@ -300,10 +368,22 @@ export class PositioningEngine {
     bounds: BoundingRect, 
     toolbarSize: { width: number; height: number },
     canvasRect: DOMRect,
-    margin: number
+    margin: number,
+    rotationHandlerBounds?: BoundingRect | null
   ): ToolbarPosition | null {
-    const x = bounds.x + bounds.width / 2 - toolbarSize.width / 2;
-    const y = bounds.y - toolbarSize.height - margin;
+    let x = bounds.x + bounds.width / 2 - toolbarSize.width / 2;
+    let y = bounds.y - toolbarSize.height - margin;
+    
+    // Check if rotation handler exists and would overlap
+    if (rotationHandlerBounds) {
+      const toolbarRect = { x, y, width: toolbarSize.width, height: toolbarSize.height };
+      
+      // Check for overlap with rotation handler
+      if (this.rectsOverlap(toolbarRect, rotationHandlerBounds)) {
+        // Position toolbar above the rotation handler with additional margin
+        y = rotationHandlerBounds.y - toolbarSize.height - margin;
+      }
+    }
     
     return { x, y, placement: 'top' };
   }
@@ -312,11 +392,14 @@ export class PositioningEngine {
     bounds: BoundingRect, 
     toolbarSize: { width: number; height: number },
     canvasRect: DOMRect,
-    margin: number
+    margin: number,
+    rotationHandlerBounds?: BoundingRect | null
   ): ToolbarPosition | null {
     const x = bounds.x + bounds.width / 2 - toolbarSize.width / 2;
     const y = bounds.y + bounds.height + margin;
     
+    // Bottom position is usually safe from rotation handler overlap since 
+    // rotation handler is positioned above the selection
     return { x, y, placement: 'bottom' };
   }
 
@@ -324,10 +407,22 @@ export class PositioningEngine {
     bounds: BoundingRect, 
     toolbarSize: { width: number; height: number },
     canvasRect: DOMRect,
-    margin: number
+    margin: number,
+    rotationHandlerBounds?: BoundingRect | null
   ): ToolbarPosition | null {
     const x = bounds.x + bounds.width + margin;
-    const y = bounds.y + bounds.height / 2 - toolbarSize.height / 2;
+    let y = bounds.y + bounds.height / 2 - toolbarSize.height / 2;
+    
+    // Check if rotation handler exists and would overlap vertically
+    if (rotationHandlerBounds) {
+      const toolbarRect = { x, y, width: toolbarSize.width, height: toolbarSize.height };
+      
+      // Check for overlap with rotation handler
+      if (this.rectsOverlap(toolbarRect, rotationHandlerBounds)) {
+        // Shift toolbar down to avoid rotation handler
+        y = rotationHandlerBounds.y + rotationHandlerBounds.height + margin;
+      }
+    }
     
     return { x, y, placement: 'right' };
   }
@@ -336,10 +431,22 @@ export class PositioningEngine {
     bounds: BoundingRect, 
     toolbarSize: { width: number; height: number },
     canvasRect: DOMRect,
-    margin: number
+    margin: number,
+    rotationHandlerBounds?: BoundingRect | null
   ): ToolbarPosition | null {
     const x = bounds.x - toolbarSize.width - margin;
-    const y = bounds.y + bounds.height / 2 - toolbarSize.height / 2;
+    let y = bounds.y + bounds.height / 2 - toolbarSize.height / 2;
+    
+    // Check if rotation handler exists and would overlap vertically
+    if (rotationHandlerBounds) {
+      const toolbarRect = { x, y, width: toolbarSize.width, height: toolbarSize.height };
+      
+      // Check for overlap with rotation handler
+      if (this.rectsOverlap(toolbarRect, rotationHandlerBounds)) {
+        // Shift toolbar down to avoid rotation handler
+        y = rotationHandlerBounds.y + rotationHandlerBounds.height + margin;
+      }
+    }
     
     return { x, y, placement: 'left' };
   }
@@ -356,6 +463,15 @@ export class PositioningEngine {
       position.y >= canvasRect.top + margin &&
       position.x + toolbarSize.width <= canvasRect.right - margin &&
       position.y + toolbarSize.height <= canvasRect.bottom - margin
+    );
+  }
+
+  private rectsOverlap(rect1: BoundingRect, rect2: BoundingRect): boolean {
+    return !(
+      rect1.x + rect1.width <= rect2.x ||   // rect1 is to the left of rect2
+      rect2.x + rect2.width <= rect1.x ||   // rect2 is to the left of rect1
+      rect1.y + rect1.height <= rect2.y ||  // rect1 is above rect2
+      rect2.y + rect2.height <= rect1.y     // rect2 is above rect1
     );
   }
 }
