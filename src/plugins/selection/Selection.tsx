@@ -211,7 +211,7 @@ export const SelectionRectRenderer: React.FC = () => {
         for (const subPath of path.subPaths) {
           for (const command of subPath.commands) {
             if (selectedCommands.includes(command.id)) {
-              if (command.command === 'Z' || command.command === 'z') {
+              if (command.command === 'Z') {
                 // Z command closes the path, its position is the same as the first command
                 const firstCommand = subPath.commands[0];
                 if (firstCommand && firstCommand.x !== undefined && firstCommand.y !== undefined) {
@@ -254,12 +254,12 @@ export const SelectionRectRenderer: React.FC = () => {
               // Check if this is first or last command in a closed subpath
               const firstCommand = subPath.commands[0];
               const lastCommand = subPath.commands[subPath.commands.length - 1];
-              const hasZCommand = subPath.commands.some(cmd => cmd.command === 'Z' || cmd.command === 'z');
+              const hasZCommand = subPath.commands.some(cmd => cmd.command === 'Z');
               
               // If this command is part of a dual point scenario
               const isFirstCommand = i === 0;
               const isLastCommand = i === subPath.commands.length - 1;
-              const isZCommand = command.command === 'Z' || command.command === 'z';
+              const isZCommand = command.command === 'Z';
               
               if (hasZCommand && (isFirstCommand || isZCommand)) {
                 // First command or Z command in subpath with Z
@@ -293,7 +293,7 @@ export const SelectionRectRenderer: React.FC = () => {
             // Check if this subpath has coincident first/last points or Z command
             const firstCommand = subPath.commands[0];
             const lastCommand = subPath.commands[subPath.commands.length - 1];
-            const hasZCommand = subPath.commands.some(cmd => cmd.command === 'Z' || cmd.command === 'z');
+            const hasZCommand = subPath.commands.some(cmd => cmd.command === 'Z');
             
             if (hasZCommand) {
               // Subpath with Z command has coincident first/last points

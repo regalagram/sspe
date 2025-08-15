@@ -323,11 +323,11 @@ export const CommandPointsRenderer: React.FC = () => {
             Math.abs(firstPosition.y - lastPosition.y) < 0.1;
 
           // Check if there's a Z command in this subpath (declare early)
-          const hasZCommand = subPath.commands.some(cmd => cmd.command === 'Z' || cmd.command === 'z');
+          const hasZCommand = subPath.commands.some(cmd => cmd.command === 'Z');
 
           return subPath.commands.map((command, commandIndex) => {
             // Handle Z commands specially - they don't have their own position
-            const isZCommand = command.command === 'Z' || command.command === 'z';
+            const isZCommand = command.command === 'Z';
             
             let position = null;
             if (isZCommand) {
@@ -373,21 +373,6 @@ export const CommandPointsRenderer: React.FC = () => {
                     zDirectionAngle = Math.atan2(dy, dx);
                   } else {
                     // Fallback to end point if no control point
-                    const secondPosition = getAbsoluteCommandPosition(secondCommand, subPath, path.subPaths);
-                    if (secondPosition) {
-                      const dx = secondPosition.x - firstCommandPosition.x;
-                      const dy = secondPosition.y - firstCommandPosition.y;
-                      zDirectionAngle = Math.atan2(dy, dx);
-                    }
-                  }
-                } else if (secondCommand.command === 'Q') {
-                  // For quadratic Bézier curves, use the control point
-                  if (secondCommand.x1 !== undefined && secondCommand.y1 !== undefined) {
-                    const dx = secondCommand.x1 - firstCommandPosition.x;
-                    const dy = secondCommand.y1 - firstCommandPosition.y;
-                    zDirectionAngle = Math.atan2(dy, dx);
-                  } else {
-                    // Fallback to end point
                     const secondPosition = getAbsoluteCommandPosition(secondCommand, subPath, path.subPaths);
                     if (secondPosition) {
                       const dx = secondPosition.x - firstCommandPosition.x;
@@ -525,7 +510,7 @@ export const CommandPointsRenderer: React.FC = () => {
             }
             
             // Check if this is the first command and points coincide (but skip if there's a Z command)
-            if (isFirstCommand && pointsCoincide && subPath.commands.length > 1 && !hasZCommand) {
+            if (isFirstCommand && pointsCoincide && subPath.commands.length > 1 && !hasZCommand && position) {
               // Calculate direction angle for the split using tangent calculation
               let directionAngle = 0;
               
@@ -542,21 +527,6 @@ export const CommandPointsRenderer: React.FC = () => {
                     directionAngle = Math.atan2(dy, dx);
                   } else {
                     // Fallback to end point if no control point
-                    const secondPosition = getAbsoluteCommandPosition(secondCommand, subPath, path.subPaths);
-                    if (secondPosition) {
-                      const dx = secondPosition.x - position.x;
-                      const dy = secondPosition.y - position.y;
-                      directionAngle = Math.atan2(dy, dx);
-                    }
-                  }
-                } else if (secondCommand.command === 'Q') {
-                  // For quadratic Bézier curves, use the control point
-                  if (secondCommand.x1 !== undefined && secondCommand.y1 !== undefined) {
-                    const dx = secondCommand.x1 - position.x;
-                    const dy = secondCommand.y1 - position.y;
-                    directionAngle = Math.atan2(dy, dx);
-                  } else {
-                    // Fallback to end point
                     const secondPosition = getAbsoluteCommandPosition(secondCommand, subPath, path.subPaths);
                     if (secondPosition) {
                       const dx = secondPosition.x - position.x;

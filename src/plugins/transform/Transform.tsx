@@ -50,7 +50,7 @@ const TransformPlugin: React.FC = () => {
         for (let i = 0; i < subPath.commands.length; i++) {
           const command = subPath.commands[i];
           if (selectedCommands.includes(command.id)) {
-            if (command.command === 'Z' || command.command === 'z') {
+            if (command.command === 'Z') {
               // Z command closes the path, its position is the same as the first command
               const firstCommand = subPath.commands[0];
               if (firstCommand && firstCommand.x !== undefined && firstCommand.y !== undefined) {

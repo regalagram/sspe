@@ -63,7 +63,7 @@ export class StickyPointsManager {
     if (!targetCommand) return { shouldStick: false };
 
     // Get target position
-    const targetPosition = getAbsoluteCommandPosition(targetCommand, subPath, [{ subPaths: [subPath] }]);
+    const targetPosition = getAbsoluteCommandPosition(targetCommand, subPath, [subPath]);
     if (!targetPosition) return { shouldStick: false };
 
     // Calculate distance to target
