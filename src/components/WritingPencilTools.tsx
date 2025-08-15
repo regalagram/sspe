@@ -81,7 +81,7 @@ export const WritingPencilTools: React.FC = () => {
         onToggle={() => setIsPencilSubmenuOpen(!isPencilSubmenuOpen)}
       >
         <SubmenuItem
-          icon={<Edit3 size={16} />}
+          icon={<Edit3 size={isMobile ? 12 : 13} />}
           label={isPencilActive ? "Exit Pencil Mode" : "Activate Pencil"}
           onClick={() => {
             handlePencilToggle();

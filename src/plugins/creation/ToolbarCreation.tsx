@@ -42,35 +42,35 @@ export const ToolbarCreationTools: React.FC = () => {
   const tools = [
     { 
       command: 'M' as const, 
-      icon: <Move size={16} />, 
+      icon: <Move size={isMobile ? 12 : 13} />, 
       label: 'M', 
       title: 'Move To (M)',
       description: 'Start new sub-path'
     },
     { 
       command: 'NEW_PATH' as const, 
-      icon: <Plus size={16} />, 
+      icon: <Plus size={isMobile ? 12 : 13} />, 
       label: 'M+', 
       title: 'New Path (Shift+M)',
       description: 'Create new path'
     },
     { 
       command: 'L' as const, 
-      icon: <Minus size={16} />, 
+      icon: <Minus size={isMobile ? 12 : 13} />, 
       label: 'L', 
       title: 'Line To (L)',
       description: 'Draw line'
     },
     { 
       command: 'C' as const, 
-      icon: <Spline size={16} />, 
+      icon: <Spline size={isMobile ? 12 : 13} />, 
       label: 'C', 
       title: 'Cubic Bezier (C)',
       description: 'Draw curve'
     },
     { 
       command: 'Z' as const, 
-      icon: <X size={16} />, 
+      icon: <X size={isMobile ? 12 : 13} />, 
       label: 'Z', 
       title: 'Close Path (Z)',
       description: 'Close path'
@@ -131,7 +131,7 @@ export const ToolbarCreationTools: React.FC = () => {
         {isCreateMode && (
           <>
             <MobileSubmenuItem
-              icon={<X size={16} />}
+              icon={<X size={isMobile ? 12 : 13} />}
               label="Exit Create Mode"
               onClick={() => handleToolAction(handleExitCreateMode)}
               active={true}

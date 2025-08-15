@@ -53,10 +53,10 @@ const getCurrentFontSize = (): number => {
 };
 
 // Get current text color
-const getCurrentTextColor = (): string => {
+const getCurrentTextColor = (): string | any => {
   const styles = getCurrentTextStyles();
   const fill = styles?.fill;
-  return typeof fill === 'string' ? fill : '#000000';
+  return fill || '#000000';
 };
 
 // Check if text is bold
@@ -110,10 +110,10 @@ const alignmentOptions = [
 ];
 
 // Get current stroke color
-const getCurrentStrokeColor = (): string => {
+const getCurrentStrokeColor = (): string | any => {
   const styles = getCurrentTextStyles();
   const stroke = styles?.stroke;
-  return typeof stroke === 'string' ? stroke : '#000000';
+  return stroke || '#000000';
 };
 
 // Get current stroke width
@@ -121,6 +121,50 @@ const getCurrentStrokeWidth = (): number => {
   const styles = getCurrentTextStyles();
   const strokeWidth = styles?.strokeWidth;
   return typeof strokeWidth === 'number' ? strokeWidth : 1;
+};
+
+// Get current stroke dash
+const getCurrentStrokeDash = (): string => {
+  const styles = getCurrentTextStyles();
+  const strokeDash = styles?.strokeDasharray;
+  return typeof strokeDash === 'string' ? strokeDash : 'none';
+};
+
+// Get current stroke linecap
+const getCurrentStrokeLinecap = (): string => {
+  const styles = getCurrentTextStyles();
+  const strokeLinecap = styles?.strokeLinecap;
+  return typeof strokeLinecap === 'string' ? strokeLinecap : 'butt';
+};
+
+// Get current stroke linejoin
+const getCurrentStrokeLinejoin = (): string => {
+  const styles = getCurrentTextStyles();
+  const strokeLinejoin = styles?.strokeLinejoin;
+  return typeof strokeLinejoin === 'string' ? strokeLinejoin : 'miter';
+};
+
+// Apply stroke dash to selected texts
+const applyStrokeDash = (dash: string) => {
+  applyTextStyle({ strokeDasharray: dash });
+};
+
+// Apply stroke linecap to selected texts
+const applyStrokeLinecap = (linecap: string) => {
+  applyTextStyle({ strokeLinecap: linecap });
+};
+
+// Apply stroke linejoin to selected texts
+const applyStrokeLinejoin = (linejoin: string) => {
+  applyTextStyle({ strokeLinejoin: linejoin });
+};
+
+// Apply stroke width to selected texts
+const applyStrokeWidth = (width: string | number) => {
+  const strokeWidth = typeof width === 'number' ? width : parseFloat(width);
+  if (!isNaN(strokeWidth) && strokeWidth >= 0) {
+    applyTextStyle({ strokeWidth });
+  }
 };
 
 // Duplicate selected texts using the built-in duplicateText method
@@ -187,30 +231,6 @@ export const textFloatingActions: ToolbarAction[] = [
     tooltip: 'Change font family'
   },
   {
-    id: 'font-size-increase',
-    icon: Plus,
-    label: 'Increase Size',
-    type: 'button',
-    action: () => {
-      const currentSize = getCurrentFontSize();
-      applyTextStyle({ fontSize: `${currentSize + 2}px` });
-    },
-    priority: 90,
-    tooltip: 'Increase font size'
-  },
-  {
-    id: 'font-size-decrease',
-    icon: Minus,
-    label: 'Decrease Size',
-    type: 'button',
-    action: () => {
-      const currentSize = getCurrentFontSize();
-      applyTextStyle({ fontSize: `${Math.max(8, currentSize - 2)}px` });
-    },
-    priority: 89,
-    tooltip: 'Decrease font size'
-  },
-  {
     id: 'bold',
     icon: Bold,
     label: 'Bold',
@@ -247,7 +267,7 @@ export const textFloatingActions: ToolbarAction[] = [
     type: 'color',
     color: {
       currentColor: getCurrentTextColor(),
-      onChange: (color: string) => applyTextStyle({ fill: color })
+      onChange: (color: string | any) => applyTextStyle({ fill: color })
     },
     priority: 70,
     tooltip: 'Change text color'
@@ -259,29 +279,34 @@ export const textFloatingActions: ToolbarAction[] = [
     type: 'color',
     color: {
       currentColor: getCurrentStrokeColor(),
-      onChange: (color: string) => applyTextStyle({ stroke: color })
+      onChange: (color: string | any) => applyTextStyle({ stroke: color })
     },
     priority: 65,
     tooltip: 'Change text stroke color'
   },
   {
-    id: 'text-stroke-width',
-    icon: Brush,
-    label: 'Stroke Width',
+    id: 'text-stroke-options',
+    icon: Minus,
+    label: 'Stroke Options',
     type: 'input',
     input: {
       currentValue: getCurrentStrokeWidth(),
-      onChange: (value: string | number) => {
-        const width = typeof value === 'number' ? value : parseFloat(value);
-        if (!isNaN(width) && width >= 0) {
-          applyTextStyle({ strokeWidth: width });
-        }
-      },
+      onChange: applyStrokeWidth,
       type: 'number',
       placeholder: '1'
     },
+    strokeOptions: {
+      getCurrentStrokeWidth: getCurrentStrokeWidth,
+      getCurrentStrokeDash: getCurrentStrokeDash,
+      getCurrentStrokeLinecap: getCurrentStrokeLinecap,
+      getCurrentStrokeLinejoin: getCurrentStrokeLinejoin,
+      onStrokeWidthChange: applyStrokeWidth,
+      onStrokeDashChange: applyStrokeDash,
+      onStrokeLinecapChange: applyStrokeLinecap,
+      onStrokeLinejoinChange: applyStrokeLinejoin
+    },
     priority: 60,
-    tooltip: 'Change stroke width'
+    tooltip: 'Configure stroke width, dash pattern, line cap, and line join'
   },
   {
     id: 'edit-text',

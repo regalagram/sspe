@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { MoreVertical } from 'lucide-react';
 import { ToolbarAction, DropdownOption } from '../../types/floatingToolbar';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
+import { createLinearGradient, createRadialGradient, createGradientStop } from '../../utils/gradient-utils';
+import { useEditorStore } from '../../store/editorStore';
 
 interface FloatingToolbarButtonProps {
   action: ToolbarAction;
@@ -150,12 +152,11 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
             top: `${buttonSize + 4}px`,
             left: '0',
             background: 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: '0px',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
             zIndex: 1001,
             minWidth: '150px',
-            maxWidth: '250px'
+            maxWidth: '250px',
+            padding: '0px'
           }}
           onPointerLeave={() => setShowDropdown(false)}
         >
@@ -180,11 +181,9 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
             top: `${buttonSize + 4}px`,
             left: '0',
             background: 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: '0px',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
             zIndex: 1001,
-            padding: '8px',
+            padding: '0px',
             minWidth: '120px'
           }}
           onPointerLeave={closeSubmenu}
@@ -216,11 +215,9 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
             top: `${buttonSize + 4}px`,
             left: '0',
             background: 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: '0px',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
             zIndex: 1001,
-            padding: '8px'
+            padding: '0px'
           }}
           onPointerLeave={closeSubmenu}
         >
@@ -230,6 +227,7 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
               action.color?.onChange(color);
               closeSubmenu();
             }}
+            actionId={action.id}
           />
         </div>
       )}
@@ -243,6 +241,8 @@ interface DropdownItemProps {
 }
 
 const DropdownItem: React.FC<DropdownItemProps> = ({ option, onSelect }) => {
+  const { isMobile, isTablet } = useMobileDetection();
+  const isMobileDevice = isMobile || isTablet;
   const handlePointerEnter = (e: React.PointerEvent) => {
     if (!option.disabled) {
       (e.currentTarget as HTMLDivElement).style.background = '#f3f4f6';
@@ -258,7 +258,7 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ option, onSelect }) => {
       style={{
         display: 'flex',
         alignItems: 'center',
-        padding: '8px 12px',
+        padding: '6px 12px',
         cursor: option.disabled ? 'not-allowed' : 'pointer',
         opacity: option.disabled ? 0.5 : 1,
         fontSize: '14px',
@@ -271,7 +271,7 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ option, onSelect }) => {
     >
       {option.icon && (
         <div style={{ marginRight: '8px' }}>
-          <option.icon size={16} />
+          <option.icon size={isMobileDevice ? 12 : 13} />
         </div>
       )}
       <span>{option.label}</span>
@@ -327,7 +327,7 @@ const InputFieldContent: React.FC<InputFieldContentProps> = ({ action, value, on
       flexDirection: 'column', 
       gap: '12px',
       minWidth: isMobileDevice ? '200px' : '180px',
-      padding: '4px'
+      padding: '6px 12px'
     }}>
       <label style={{ 
         fontSize: '12px', 
@@ -489,31 +489,29 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
   const currentLinecap = strokeOptions?.getCurrentStrokeLinecap?.() || 'butt';
   const currentLinejoin = strokeOptions?.getCurrentStrokeLinejoin?.() || 'miter';
   
-  // Predefined stroke width values
-  const predefinedWidths = [0.5, 1, 2, 4, 6, 8, 12, 16, 20, 24];
+  // Compact stroke width values - reduced set
+  const predefinedWidths = [0.5, 1, 2, 4, 8, 16];
   
-  // Predefined dash patterns
+  // Compact dash patterns - visual icons instead of text
   const dashPatterns = [
-    { id: 'none', label: 'Solid', value: 'none', preview: '————————' },
-    { id: 'short-dash', label: 'Short Dash', value: '5,5', preview: '— — — —' },
-    { id: 'long-dash', label: 'Long Dash', value: '10,5', preview: '——— ———' },
-    { id: 'dot', label: 'Dotted', value: '2,3', preview: '• • • • •' },
-    { id: 'dash-dot', label: 'Dash Dot', value: '8,3,2,3', preview: '—•—•—•' },
-    { id: 'dash-dot-dot', label: 'Dash Dot Dot', value: '8,3,2,3,2,3', preview: '—••—••' }
+    { id: 'none', label: '—', value: 'none', title: 'Solid' },
+    { id: 'short-dash', label: '- -', value: '5,5', title: 'Short Dash' },
+    { id: 'long-dash', label: '— —', value: '10,5', title: 'Long Dash' },
+    { id: 'dot', label: '• •', value: '2,3', title: 'Dotted' },
+    { id: 'dash-dot', label: '—•', value: '8,3,2,3', title: 'Dash Dot' }
   ];
   
-  // Line cap options
+  // Compact cap/join options - single letters
   const linecapOptions = [
-    { id: 'butt', label: 'Butt', value: 'butt' },
-    { id: 'round', label: 'Round', value: 'round' },
-    { id: 'square', label: 'Square', value: 'square' }
+    { id: 'butt', label: 'B', value: 'butt', title: 'Butt' },
+    { id: 'round', label: 'R', value: 'round', title: 'Round' },
+    { id: 'square', label: 'S', value: 'square', title: 'Square' }
   ];
   
-  // Line join options
   const linejoinOptions = [
-    { id: 'miter', label: 'Miter', value: 'miter' },
-    { id: 'round', label: 'Round', value: 'round' },
-    { id: 'bevel', label: 'Bevel', value: 'bevel' }
+    { id: 'miter', label: 'M', value: 'miter', title: 'Miter' },
+    { id: 'round', label: 'R', value: 'round', title: 'Round' },
+    { id: 'bevel', label: 'B', value: 'bevel', title: 'Bevel' }
   ];
 
   const handleWidthChange = (width: number) => {
@@ -536,102 +534,95 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
     <div style={{ 
       display: 'flex', 
       flexDirection: 'column', 
-      gap: '16px',
-      minWidth: isMobileDevice ? '280px' : '260px',
-      maxWidth: '320px',
-      padding: '8px'
+      gap: '8px',
+      minWidth: isMobileDevice ? '180px' : '160px',
+      maxWidth: '200px',
+      padding: '6px 12px'
     }}>
+      {/* Header - more compact */}
       <div style={{ 
-        fontSize: '14px', 
+        fontSize: '11px', 
         fontWeight: '600',
         color: '#374151',
         textAlign: 'center',
-        borderBottom: '1px solid #e5e7eb',
-        paddingBottom: '8px'
+        marginBottom: '2px'
       }}>
-        Stroke Options
+        Stroke: {currentWidth}px
       </div>
       
-      {/* Stroke Width Section */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>
-          Width: {currentWidth}px
-        </div>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(5, 1fr)', 
-          gap: '4px' 
-        }}>
-          {predefinedWidths.map(width => (
-            <button
-              key={width}
-              type="button"
-              onPointerDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleWidthChange(width);
-              }}
-              style={{
-                padding: '6px 4px',
-                fontSize: '10px',
-                border: currentWidth === width ? '2px solid #3b82f6' : '1px solid #d1d5db',
-                borderRadius: '0px',
-                background: currentWidth === width ? '#eff6ff' : 'white',
-                color: currentWidth === width ? '#3b82f6' : '#374151',
-                cursor: 'pointer',
-                fontWeight: currentWidth === width ? '600' : '400',
-                touchAction: 'manipulation'
-              }}
-            >
-              {width}
-            </button>
-          ))}
-        </div>
+      {/* Stroke Width - single row */}
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(6, 1fr)', 
+        gap: '2px' 
+      }}>
+        {predefinedWidths.map(width => (
+          <button
+            key={width}
+            type="button"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleWidthChange(width);
+            }}
+            style={{
+              padding: '4px 2px',
+              fontSize: '9px',
+              border: currentWidth === width ? '2px solid #3b82f6' : '1px solid #d1d5db',
+              borderRadius: '0px',
+              background: currentWidth === width ? '#eff6ff' : 'white',
+              color: currentWidth === width ? '#3b82f6' : '#374151',
+              cursor: 'pointer',
+              fontWeight: currentWidth === width ? '600' : '400',
+              touchAction: 'manipulation',
+              minHeight: '24px'
+            }}
+            title={`${width}px`}
+          >
+            {width}
+          </button>
+        ))}
       </div>
 
-      {/* Stroke Dash Section */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>
-          Dash Pattern
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {dashPatterns.map(pattern => (
-            <button
-              key={pattern.id}
-              type="button"
-              onPointerDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleDashChange(pattern.value);
-              }}
-              style={{
-                padding: '8px 12px',
-                fontSize: '11px',
-                border: currentDash === pattern.value ? '2px solid #3b82f6' : '1px solid #d1d5db',
-                borderRadius: '0px',
-                background: currentDash === pattern.value ? '#eff6ff' : 'white',
-                color: currentDash === pattern.value ? '#3b82f6' : '#374151',
-                cursor: 'pointer',
-                fontWeight: currentDash === pattern.value ? '600' : '400',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                touchAction: 'manipulation'
-              }}
-            >
-              <span>{pattern.label}</span>
-              <span style={{ fontFamily: 'monospace', fontSize: '10px' }}>{pattern.preview}</span>
-            </button>
-          ))}
-        </div>
+      {/* Dash Pattern - horizontal row */}
+      <div style={{ 
+        display: 'grid',
+        gridTemplateColumns: 'repeat(5, 1fr)',
+        gap: '2px'
+      }}>
+        {dashPatterns.map(pattern => (
+          <button
+            key={pattern.id}
+            type="button"
+            onPointerDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleDashChange(pattern.value);
+            }}
+            style={{
+              padding: '4px 2px',
+              fontSize: '8px',
+              border: currentDash === pattern.value ? '2px solid #3b82f6' : '1px solid #d1d5db',
+              borderRadius: '0px',
+              background: currentDash === pattern.value ? '#eff6ff' : 'white',
+              color: currentDash === pattern.value ? '#3b82f6' : '#374151',
+              cursor: 'pointer',
+              fontWeight: currentDash === pattern.value ? '600' : '400',
+              touchAction: 'manipulation',
+              fontFamily: 'monospace',
+              minHeight: '24px'
+            }}
+            title={pattern.title}
+          >
+            {pattern.label}
+          </button>
+        ))}
       </div>
 
-      {/* Line Cap Section */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>
-          Line Cap
-        </div>
-        <div style={{ display: 'flex', gap: '4px' }}>
+      {/* Cap & Join - combined in single row */}
+      <div style={{ display: 'flex', gap: '4px' }}>
+        {/* Line Cap */}
+        <div style={{ flex: 1, display: 'flex', gap: '2px' }}>
           {linecapOptions.map(option => (
             <button
               key={option.id}
@@ -643,29 +634,29 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
               }}
               style={{
                 flex: 1,
-                padding: '8px 12px',
-                fontSize: '10px',
+                padding: '4px 2px',
+                fontSize: '9px',
                 border: currentLinecap === option.value ? '2px solid #3b82f6' : '1px solid #d1d5db',
                 borderRadius: '0px',
                 background: currentLinecap === option.value ? '#eff6ff' : 'white',
                 color: currentLinecap === option.value ? '#3b82f6' : '#374151',
                 cursor: 'pointer',
                 fontWeight: currentLinecap === option.value ? '600' : '400',
-                touchAction: 'manipulation'
+                touchAction: 'manipulation',
+                minHeight: '24px'
               }}
+              title={`Cap: ${option.title}`}
             >
               {option.label}
             </button>
           ))}
         </div>
-      </div>
-
-      {/* Line Join Section */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: '500' }}>
-          Line Join
-        </div>
-        <div style={{ display: 'flex', gap: '4px' }}>
+        
+        {/* Divider */}
+        <div style={{ width: '1px', background: '#e5e7eb', margin: '2px 0' }} />
+        
+        {/* Line Join */}
+        <div style={{ flex: 1, display: 'flex', gap: '2px' }}>
           {linejoinOptions.map(option => (
             <button
               key={option.id}
@@ -677,16 +668,18 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
               }}
               style={{
                 flex: 1,
-                padding: '8px 12px',
-                fontSize: '10px',
+                padding: '4px 2px',
+                fontSize: '9px',
                 border: currentLinejoin === option.value ? '2px solid #3b82f6' : '1px solid #d1d5db',
                 borderRadius: '0px',
                 background: currentLinejoin === option.value ? '#eff6ff' : 'white',
                 color: currentLinejoin === option.value ? '#3b82f6' : '#374151',
                 cursor: 'pointer',
                 fontWeight: currentLinejoin === option.value ? '600' : '400',
-                touchAction: 'manipulation'
+                touchAction: 'manipulation',
+                minHeight: '24px'
               }}
+              title={`Join: ${option.title}`}
             >
               {option.label}
             </button>
@@ -694,7 +687,7 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
         </div>
       </div>
       
-      {/* Close button for mobile */}
+      {/* Close button for mobile - more compact */}
       {isMobileDevice && (
         <button
           type="button"
@@ -704,11 +697,11 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
             onClose();
           }}
           style={{
-            padding: '10px',
+            padding: '6px',
             background: '#f3f4f6',
             border: '1px solid #d1d5db',
             borderRadius: '0px',
-            fontSize: '12px',
+            fontSize: '10px',
             color: '#374151',
             cursor: 'pointer',
             fontWeight: '500',
@@ -723,40 +716,550 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
 };
 
 interface ColorPickerContentProps {
-  currentColor: string;
-  onChange: (color: string) => void;
+  currentColor: string | any; // Can be string color or GradientOrPattern object
+  onChange: (color: string | any) => void; // Can return string color or GradientOrPattern object
+  actionId?: string; // Add action ID to determine context
 }
 
-const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, onChange }) => {
-  const commonColors = [
-    '#000000', '#ffffff', '#ff0000', '#00ff00', '#0000ff',
-    '#ffff00', '#ff00ff', '#00ffff', '#ff8800', '#8800ff',
-    '#374151', '#6b7280', '#9ca3af', '#d1d5db', '#e5e7eb'
+const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, onChange, actionId }) => {
+  const { isMobile, isTablet } = useMobileDetection();
+  const isMobileDevice = isMobile || isTablet;
+
+  // Import the store to get real-time data
+  const { paths, texts, selection } = useEditorStore();
+
+  // Get the actual current style value dynamically
+  const getCurrentStyleValue = (): any => {
+    // Determine if we're dealing with fill or stroke based on action ID
+    const isStroke = actionId?.includes('stroke') || false;
+    
+    // Check if we're dealing with subpaths specifically
+    const isSubpathAction = actionId?.includes('subpath');
+    
+    // Get currently selected elements
+    const selectedPaths = selection.selectedPaths.map(id => paths.find(p => p.id === id)).filter(Boolean);
+    const selectedTexts = selection.selectedTexts.map(id => texts.find(t => t.id === id)).filter(Boolean);
+    
+    // Handle subpath selection
+    if (isSubpathAction && selection.selectedSubPaths.length > 0) {
+      // Find the path that contains the selected subpath
+      for (const subPathId of selection.selectedSubPaths) {
+        for (const path of paths) {
+          const foundSubPath = path.subPaths.find(sp => sp.id === subPathId);
+          if (foundSubPath) {
+            const styleValue = isStroke ? path.style.stroke : path.style.fill;
+            return styleValue;
+          }
+        }
+      }
+    }
+    
+    // Check paths
+    if (selectedPaths.length > 0) {
+      const firstPath = selectedPaths[0];
+      const styleValue = isStroke ? firstPath.style.stroke : firstPath.style.fill;
+      return styleValue;
+    }
+    
+    // Check texts
+    if (selectedTexts.length > 0) {
+      const firstText = selectedTexts[0];
+      const styleValue = isStroke ? firstText.style.stroke : firstText.style.fill;
+      return styleValue;
+    }
+    
+    return currentColor; // fallback
+  };
+
+  // Determine initial tab based on actual current style value
+  const getInitialTab = (): 'colors' | 'gradients' | 'patterns' => {
+    const actualValue = getCurrentStyleValue();
+    
+    if (typeof actualValue === 'object' && actualValue && actualValue !== null) {
+      if (actualValue.type === 'linear' || actualValue.type === 'radial') {
+        return 'gradients';
+      } else if (actualValue.type === 'pattern') {
+        return 'patterns';
+      }
+    }
+    return 'colors';
+  };
+
+  const [activeTab, setActiveTab] = useState<'colors' | 'gradients' | 'patterns'>(getInitialTab());
+
+  // Update active tab when selection changes
+  React.useEffect(() => {
+    const newTab = getInitialTab();
+    setActiveTab(newTab);
+  }, [selection.selectedPaths, selection.selectedTexts, selection.selectedSubPaths]);
+
+  // Soft color palette - 70 colors in 10x7 grid
+  const softColors = [
+    // Neutrals & grays
+    '#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#94a3b8', '#64748b', '#475569', '#334155', '#1e293b',
+    // Soft blues
+    '#dbeafe', '#bfdbfe', '#93c5fd', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af', '#1e3a8a', '#172554',
+    // Soft greens
+    '#dcfce7', '#bbf7d0', '#86efac', '#4ade80', '#22c55e', '#16a34a', '#15803d', '#166534', '#14532d', '#052e16',
+    // Soft purples
+    '#f3e8ff', '#e9d5ff', '#d8b4fe', '#c084fc', '#a855f7', '#9333ea', '#7c3aed', '#6d28d9', '#5b21b6', '#4c1d95',
+    // Soft pinks
+    '#fdf2f8', '#fce7f3', '#fbcfe8', '#f9a8d4', '#f472b6', '#ec4899', '#db2777', '#be185d', '#9d174d', '#831843',
+    // Soft oranges
+    '#fff7ed', '#ffedd5', '#fed7aa', '#fdba74', '#fb923c', '#f97316', '#ea580c', '#c2410c', '#9a3412', '#7c2d12',
+    // Soft reds
+    '#fef2f2', '#fecaca', '#fca5a5', '#f87171', '#ef4444', '#dc2626', '#b91c1c', '#991b1b', '#7f1d1d', '#450a0a'
   ];
 
+  // Working gradients based on GradientControls plugin presets
+  const createWorkingGradients = () => {
+    const linearPresets = [
+      { name: 'Sunset', angle: 90, stops: [{ offset: 0, color: '#ff7b7b' }, { offset: 100, color: '#ff6b35' }] },
+      { name: 'Ocean', angle: 135, stops: [{ offset: 0, color: '#667eea' }, { offset: 100, color: '#764ba2' }] },
+      { name: 'Forest', angle: 45, stops: [{ offset: 0, color: '#11998e' }, { offset: 100, color: '#38ef7d' }] },
+      { name: 'Purple Dream', angle: 180, stops: [{ offset: 0, color: '#c471ed' }, { offset: 100, color: '#f64f59' }] },
+      { name: 'Cool Blue', angle: 0, stops: [{ offset: 0, color: '#2193b0' }, { offset: 100, color: '#6dd5ed' }] },
+      { name: 'Fire', angle: 45, stops: [{ offset: 0, color: '#ff9a9e' }, { offset: 50, color: '#fecfef' }, { offset: 100, color: '#fecfef' }] },
+      { name: 'Warm Flame', angle: 0, stops: [{ offset: 0, color: '#ff9a9e' }, { offset: 100, color: '#fad0c4' }] },
+      { name: 'Juicy Peach', angle: 90, stops: [{ offset: 0, color: '#ffecd2' }, { offset: 100, color: '#fcb69f' }] },
+      { name: 'Lady Lips', angle: 45, stops: [{ offset: 0, color: '#ff9a9e' }, { offset: 100, color: '#fecfef' }] },
+      { name: 'Winter Neva', angle: 135, stops: [{ offset: 0, color: '#a1c4fd' }, { offset: 100, color: '#c2e9fb' }] },
+      { name: 'Heavy Rain', angle: 0, stops: [{ offset: 0, color: '#cfd9df' }, { offset: 100, color: '#e2ebf0' }] },
+      { name: 'Saint Petersburg', angle: 90, stops: [{ offset: 0, color: '#f5f7fa' }, { offset: 100, color: '#c3cfe2' }] },
+      { name: 'Happy Fisher', angle: 45, stops: [{ offset: 0, color: '#89f7fe' }, { offset: 100, color: '#66a6ff' }] },
+      { name: 'Fly High', angle: 135, stops: [{ offset: 0, color: '#48c6ef' }, { offset: 100, color: '#6f86d6' }] },
+      { name: 'Fresh Milk', angle: 0, stops: [{ offset: 0, color: '#feada6' }, { offset: 100, color: '#f5efef' }] },
+      { name: 'Aqua Splash', angle: 90, stops: [{ offset: 0, color: '#13547a' }, { offset: 100, color: '#80d0c7' }] },
+      { name: 'Passionate Bed', angle: 135, stops: [{ offset: 0, color: '#ff758c' }, { offset: 100, color: '#ff7eb3' }] },
+      { name: 'Mountain Rock', angle: 0, stops: [{ offset: 0, color: '#868f96' }, { offset: 100, color: '#596164' }] },
+      { name: 'Desert Hump', angle: 90, stops: [{ offset: 0, color: '#c79081' }, { offset: 100, color: '#dfa579' }] },
+      { name: 'Eternal Constance', angle: 45, stops: [{ offset: 0, color: '#09203f' }, { offset: 100, color: '#537895' }] },
+      { name: 'Healthy Water', angle: 135, stops: [{ offset: 0, color: '#96deda' }, { offset: 100, color: '#50c9c3' }] },
+      { name: 'Vicious Stance', angle: 0, stops: [{ offset: 0, color: '#29323c' }, { offset: 100, color: '#485563' }] },
+      { name: 'Night Sky', angle: 90, stops: [{ offset: 0, color: '#1e3c72' }, { offset: 100, color: '#2a5298' }] },
+      { name: 'Gentle Care', angle: 45, stops: [{ offset: 0, color: '#ffc3a0' }, { offset: 100, color: '#ffafbd' }] },
+      { name: 'Morning Salad', angle: 135, stops: [{ offset: 0, color: '#b7f8db' }, { offset: 100, color: '#50a7c2' }] },
+      { name: 'Summer Breeze', angle: 0, stops: [{ offset: 0, color: '#ffeaa7' }, { offset: 100, color: '#fab1a0' }] }
+    ];
+
+    const radialPresets = [
+      { name: 'Sun', stops: [{ offset: 0, color: '#ffeaa7' }, { offset: 100, color: '#fab1a0' }] },
+      { name: 'Moon', stops: [{ offset: 0, color: '#ddd6fe' }, { offset: 100, color: '#818cf8' }] },
+      { name: 'Emerald', stops: [{ offset: 0, color: '#d299c2' }, { offset: 100, color: '#fef9d3' }] },
+      { name: 'Rose', stops: [{ offset: 0, color: '#ff9a9e' }, { offset: 100, color: '#fad0c4' }] }
+    ];
+
+    const createGradientFromPreset = (preset: any, isLinear: boolean = true) => {
+      const gradientStops = preset.stops.map((stop: any) => 
+        createGradientStop(stop.offset, stop.color, 1)
+      );
+
+      if (isLinear) {
+        // Convert angle to x1,y1,x2,y2 coordinates (same as in GradientControls)
+        const angle = preset.angle || 0;
+        const radians = (angle * Math.PI) / 180;
+        const x1 = 0.5 + 0.5 * Math.cos(radians + Math.PI);
+        const y1 = 0.5 + 0.5 * Math.sin(radians + Math.PI);
+        const x2 = 0.5 + 0.5 * Math.cos(radians);
+        const y2 = 0.5 + 0.5 * Math.sin(radians);
+        
+        return createLinearGradient(x1, y1, x2, y2, gradientStops);
+      } else {
+        return createRadialGradient(0.5, 0.5, 0.5, gradientStops);
+      }
+    };
+
+    // Create CSS preview for gradients
+    const createPreview = (preset: any, isLinear: boolean = true) => {
+      const colorStops = preset.stops.map((stop: any) => `${stop.color} ${stop.offset}%`).join(', ');
+      if (isLinear) {
+        return `linear-gradient(${preset.angle || 0}deg, ${colorStops})`;
+      } else {
+        return `radial-gradient(circle, ${colorStops})`;
+      }
+    };
+
+    return [
+      ...linearPresets.map(preset => ({
+        ...createGradientFromPreset(preset, true),
+        preview: createPreview(preset, true),
+        name: preset.name
+      })),
+      ...radialPresets.map(preset => ({
+        ...createGradientFromPreset(preset, false),
+        preview: createPreview(preset, false),
+        name: preset.name
+      }))
+    ];
+  };
+
+  const predefinedGradients = createWorkingGradients();
+
+  // Predefined patterns that match the existing system
+  const predefinedPatterns = [
+    {
+      id: 'pattern-dots',
+      name: 'Dots',
+      type: 'pattern' as const,
+      width: 20, height: 20,
+      content: '<circle cx="10" cy="10" r="3" fill="#374151"/>',
+      preview: '• • •'
+    },
+    {
+      id: 'pattern-lines',
+      name: 'Lines',
+      type: 'pattern' as const,
+      width: 10, height: 10,
+      content: '<rect x="0" y="0" width="2" height="10" fill="#374151"/>',
+      preview: '|||'
+    },
+    {
+      id: 'pattern-diagonal',
+      name: 'Diagonal',
+      type: 'pattern' as const,
+      width: 10, height: 10,
+      content: '<path d="M0,10 L10,0" stroke="#374151" stroke-width="2"/>',
+      preview: '///'
+    },
+    {
+      id: 'pattern-cross',
+      name: 'Cross',
+      type: 'pattern' as const,
+      width: 20, height: 20,
+      content: '<rect x="9" y="0" width="2" height="20" fill="#374151"/><rect x="0" y="9" width="20" height="2" fill="#374151"/>',
+      preview: '+++'
+    },
+    {
+      id: 'pattern-grid',
+      name: 'Grid',
+      type: 'pattern' as const,
+      width: 20, height: 20,
+      content: '<rect width="20" height="20" fill="none" stroke="#374151" stroke-width="1"/>',
+      preview: '⚏'
+    },
+    {
+      id: 'pattern-waves',
+      name: 'Waves',
+      type: 'pattern' as const,
+      width: 24, height: 12,
+      content: '<path d="M0,6 Q6,0 12,6 T24,6" stroke="#374151" stroke-width="2" fill="none"/>',
+      preview: '~~~'
+    },
+    {
+      id: 'pattern-zigzag',
+      name: 'ZigZag',
+      type: 'pattern' as const,
+      width: 16, height: 16,
+      content: '<path d="M0,8 L4,0 L8,8 L12,0 L16,8" stroke="#374151" stroke-width="2" fill="none"/>',
+      preview: 'ΛΛΛ'
+    },
+    {
+      id: 'pattern-checkerboard',
+      name: 'Checkerboard',
+      type: 'pattern' as const,
+      width: 20, height: 20,
+      content: '<rect x="0" y="0" width="10" height="10" fill="#374151"/><rect x="10" y="10" width="10" height="10" fill="#374151"/>',
+      preview: '▣▣'
+    },
+    {
+      id: 'pattern-scales',
+      name: 'Scales',
+      type: 'pattern' as const,
+      width: 20, height: 20,
+      content: '<path d="M10,0 Q20,10 10,20 Q0,10 10,0" fill="none" stroke="#374151" stroke-width="1.5"/>',
+      preview: '◐◑'
+    },
+    {
+      id: 'pattern-hexagon',
+      name: 'Hexagon',
+      type: 'pattern' as const,
+      width: 24, height: 21,
+      content: '<polygon points="12,2 20,7 20,14 12,19 4,14 4,7" fill="none" stroke="#374151" stroke-width="1.5"/>',
+      preview: '⬡⬢'
+    },
+    {
+      id: 'pattern-stars',
+      name: 'Stars',
+      type: 'pattern' as const,
+      width: 20, height: 20,
+      content: '<path d="M10,2 L12,8 L18,8 L13,12 L15,18 L10,14 L5,18 L7,12 L2,8 L8,8 Z" fill="#374151"/>',
+      preview: '★★'
+    },
+    {
+      id: 'pattern-triangles',
+      name: 'Triangles',
+      type: 'pattern' as const,
+      width: 20, height: 17,
+      content: '<polygon points="10,2 18,16 2,16" fill="none" stroke="#374151" stroke-width="1.5"/>',
+      preview: '△△'
+    }
+  ];
+
+  // Helper functions to check if current item is selected
+  const isColorSelected = (color: string): boolean => {
+    const actualValue = getCurrentStyleValue();
+    return typeof actualValue === 'string' && actualValue === color;
+  };
+
+  const isGradientSelected = (gradient: any): boolean => {
+    const actualValue = getCurrentStyleValue();
+    
+    if (typeof actualValue === 'object' && actualValue && gradient) {
+      // First try exact ID match
+      if (actualValue.id === gradient.id) {
+        return true;
+      }
+      
+      // Then try similarity match for gradients of same type
+      if (actualValue.type === gradient.type) {
+        if (actualValue.type === 'linear') {
+          // Compare coordinates and stops for linear gradients
+          const coordsMatch = Math.abs(actualValue.x1 - gradient.x1) < 0.1 &&
+                             Math.abs(actualValue.y1 - gradient.y1) < 0.1 &&
+                             Math.abs(actualValue.x2 - gradient.x2) < 0.1 &&
+                             Math.abs(actualValue.y2 - gradient.y2) < 0.1;
+          
+          const stopsMatch = actualValue.stops && gradient.stops &&
+                            actualValue.stops.length === gradient.stops.length &&
+                            actualValue.stops.every((stop: any, i: number) => 
+                              gradient.stops[i] && 
+                              stop.color === gradient.stops[i].color &&
+                              Math.abs(stop.offset - gradient.stops[i].offset) < 0.01
+                            );
+          
+          return coordsMatch && stopsMatch;
+        } else if (actualValue.type === 'radial') {
+          // Compare center and radius for radial gradients
+          const centerMatch = Math.abs(actualValue.cx - gradient.cx) < 0.1 &&
+                             Math.abs(actualValue.cy - gradient.cy) < 0.1 &&
+                             Math.abs(actualValue.r - gradient.r) < 0.1;
+          
+          const stopsMatch = actualValue.stops && gradient.stops &&
+                            actualValue.stops.length === gradient.stops.length &&
+                            actualValue.stops.every((stop: any, i: number) => 
+                              gradient.stops[i] && 
+                              stop.color === gradient.stops[i].color &&
+                              Math.abs(stop.offset - gradient.stops[i].offset) < 0.01
+                            );
+          
+          return centerMatch && stopsMatch;
+        }
+      }
+    }
+    
+    return false;
+  };
+
+  const isPatternSelected = (pattern: any): boolean => {
+    const actualValue = getCurrentStyleValue();
+    return typeof actualValue === 'object' && 
+           actualValue && 
+           actualValue.id === pattern.id;
+  };
+
+  const handleColorSelect = (color: string) => {
+    onChange(color);
+  };
+
+  const handleGradientSelect = (gradient: any) => {
+    // Return the gradient object directly, not a URL string
+    onChange(gradient);
+  };
+
+  const handlePatternSelect = (pattern: any) => {
+    // Return the pattern object directly, not a URL string
+    onChange(pattern);
+  };
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '4px' }}>
-      {commonColors.map(color => (
+    <div style={{ 
+      padding: '6px 12px',
+      minWidth: isMobileDevice ? '240px' : '220px'
+    }}>
+      {/* Tab Navigation */}
+      <div style={{ 
+        display: 'flex', 
+        marginBottom: '8px',
+        borderBottom: '1px solid #e5e7eb'
+      }}>
+        {(['colors', 'gradients', 'patterns'] as const).map(tab => (
+          <button
+            key={tab}
+            onPointerDown={() => setActiveTab(tab)}
+            style={{
+              flex: 1,
+              padding: '6px 8px',
+              fontSize: '10px',
+              fontWeight: '500',
+              border: 'none',
+              borderRadius: '0px',
+              background: activeTab === tab ? '#f3f4f6' : 'transparent',
+              color: activeTab === tab ? '#000000' : '#6b7280',
+              cursor: 'pointer',
+              textTransform: 'capitalize',
+              borderBottom: activeTab === tab ? '2px solid #000000' : '2px solid transparent',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            {tab === 'colors' ? 'Colores' : tab === 'gradients' ? 'Gradientes' : 'Patrones'}
+          </button>
+        ))}
+      </div>
+
+      {/* Colors Tab */}
+      {activeTab === 'colors' && (
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(10, 1fr)', 
+          gap: '2px'
+        }}>
+          {softColors.map(color => (
+            <button
+              key={color}
+              style={{
+                aspectRatio: '1',
+                background: color,
+                border: isColorSelected(color) ? '2px solid #000000' : '1px solid #e5e7eb',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                transition: 'all 0.1s ease'
+              }}
+              onPointerDown={() => handleColorSelect(color)}
+              onPointerEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.1)';
+                (e.currentTarget as HTMLButtonElement).style.zIndex = '10';
+              }}
+              onPointerLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
+                (e.currentTarget as HTMLButtonElement).style.zIndex = '1';
+              }}
+              title={color}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Gradients Tab */}
+      {activeTab === 'gradients' && (
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(6, 1fr)', 
+          gap: '2px'
+        }}>
+          {predefinedGradients.map(gradient => (
+            <button
+              key={gradient.id}
+              style={{
+                aspectRatio: '1.5/1',
+                background: gradient.preview,
+                border: isGradientSelected(gradient) ? '2px solid #000000' : '1px solid #e5e7eb',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                transition: 'all 0.1s ease',
+                position: 'relative'
+              }}
+              onPointerDown={() => handleGradientSelect(gradient)}
+              onPointerEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.05)';
+                (e.currentTarget as HTMLButtonElement).style.zIndex = '10';
+              }}
+              onPointerLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
+                (e.currentTarget as HTMLButtonElement).style.zIndex = '1';
+              }}
+              title={gradient.name}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Patterns Tab */}
+      {activeTab === 'patterns' && (
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(50px, 1fr))', 
+          gap: '3px'
+        }}>
+          {predefinedPatterns.map(pattern => (
+            <button
+              key={pattern.id}
+              style={{
+                aspectRatio: '2/1',
+                background: '#f8fafc',
+                border: isPatternSelected(pattern) ? '2px solid #000000' : '1px solid #e5e7eb',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                transition: 'all 0.1s ease',
+                fontSize: '10px',
+                fontFamily: 'monospace',
+                color: '#374151',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                lineHeight: '0.8'
+              }}
+              onPointerDown={() => handlePatternSelect(pattern)}
+              onPointerEnter={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.05)';
+                (e.currentTarget as HTMLButtonElement).style.background = '#f1f5f9';
+                (e.currentTarget as HTMLButtonElement).style.zIndex = '10';
+              }}
+              onPointerLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
+                (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc';
+                (e.currentTarget as HTMLButtonElement).style.zIndex = '1';
+              }}
+              title={pattern.name}
+            >
+              {pattern.preview}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Quick Actions */}
+      <div style={{ 
+        marginTop: '8px', 
+        paddingTop: '6px', 
+        borderTop: '1px solid #e5e7eb',
+        display: 'flex',
+        gap: '4px'
+      }}>
         <button
-          key={color}
+          onPointerDown={() => handleColorSelect('none')}
           style={{
-            width: '24px',
-            height: '24px',
-            background: color,
-            border: currentColor === color ? '2px solid #374151' : '1px solid #e5e7eb',
-            borderRadius: '4px',
+            flex: 1,
+            padding: '4px 6px',
+            fontSize: '9px',
+            border: '1px solid #e5e7eb',
+            background: isColorSelected('none') ? '#f3f4f6' : 'white',
+            color: '#6b7280',
             cursor: 'pointer',
-            transition: 'transform 0.1s ease'
+            borderRadius: '2px',
+            fontWeight: '500'
           }}
-          onPointerDown={() => onChange(color)}
-          onPointerEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.1)';
+          title="No fill/stroke"
+        >
+          None
+        </button>
+        <button
+          onPointerDown={() => handleColorSelect('transparent')}
+          style={{
+            flex: 1,
+            padding: '4px 6px',
+            fontSize: '9px',
+            border: '1px solid #e5e7eb',
+            background: isColorSelected('transparent') ? '#f3f4f6' : 'white',
+            color: '#6b7280',
+            cursor: 'pointer',
+            borderRadius: '2px',
+            fontWeight: '500'
           }}
-          onPointerLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
-          }}
-        />
-      ))}
+          title="Transparent"
+        >
+          Clear
+        </button>
+      </div>
     </div>
   );
 };

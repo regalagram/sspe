@@ -85,15 +85,15 @@ export const ToolbarZoomControls: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            minWidth: '46px',
+            minWidth: '30px',
             height: `${toolbarHeight}px`,
             background: isZoomSubmenuOpen ? '#e5e7eb' : 'white',
             fontSize: '12px',
-            fontWeight: 600,
+            fontWeight: 400,
             color: '#374151',
             border: 'none',
             gap: '4px',
-            padding: '0 8px',
+            padding: '0 0px',
             cursor: 'pointer',
             transition: 'all 0.15s ease'
           }}>

@@ -331,11 +331,8 @@ export const generateSVGCode = (editorState: any): string => {
     if (value === 'none') return 'none';
     if (typeof value === 'string') return value;
     if (typeof value === 'object' && value !== null && value.id) {
-      // Debug: Log pattern/gradient conversion
-      console.log('Converting object to URL:', value.type, value.id, `-> url(#${value.id})`);
       return `url(#${value.id})`;
     }
-    console.log('Unexpected value type in convertStyleValue:', typeof value, value);
     return null;
   };
 
@@ -462,8 +459,6 @@ export const generateSVGCode = (editorState: any): string => {
   const renderUse = (use: any) => {
     const style = use.style || {};
     
-    // Debug: Log the use element being processed
-    console.log('Rendering use element:', use.id, 'with style:', JSON.stringify(style, null, 2));
     
     const fillValue = convertStyleValue(style.fill);
     const strokeValue = convertStyleValue(style.stroke);
@@ -645,11 +640,9 @@ export const generateSVGCode = (editorState: any): string => {
     
     // Check for gradient/pattern references
     if (typeof style.fill === 'object' && style.fill?.id) {
-      console.log('Found fill reference:', style.fill.type, style.fill.id);
       usedGradientIds.add(style.fill.id);
     }
     if (typeof style.stroke === 'object' && style.stroke?.id) {
-      console.log('Found stroke reference:', style.stroke.type, style.stroke.id);
       usedGradientIds.add(style.stroke.id);
     }
     
@@ -706,7 +699,6 @@ export const generateSVGCode = (editorState: any): string => {
     
     // Add gradients and patterns
     if (allGradients.length > 0) {
-      console.log('Processing gradients/patterns:', allGradients.map((g: any) => `${g.type}:${g.id}`));
       const gradientDefs = allGradients.map((gradient: any) => {
         // Find animations that target this gradient
         const gradientAnimations = animations.filter((anim: any) => 

@@ -5,6 +5,7 @@ import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useEditorStore } from '../store/editorStore';
 import { createLinearGradient, createRadialGradient, createGradientStop } from '../utils/gradient-utils';
 import { createPatternFromPreset, patternPresets } from '../plugins/gradients/patternPresets';
+import { useMobileDetection } from '../hooks/useMobileDetection';
 
 export const WritingStyleTools: React.FC = () => {
   const { 
@@ -18,6 +19,7 @@ export const WritingStyleTools: React.FC = () => {
     addGradient 
   } = useEditorStore();
   const [isStyleSubmenuOpen, setIsStyleSubmenuOpen] = useState(false);
+  const { isMobile } = useMobileDetection();
 
   const hasSelection = selection.selectedPaths.length > 0 || 
                       selection.selectedSubPaths.length > 0 || 
@@ -286,7 +288,7 @@ export const WritingStyleTools: React.FC = () => {
             position: 'relative',
             opacity: hasSelection ? 1 : 0.5
           }}>
-            <Palette size={16} />
+            <Palette size={isMobile ? 12 : 13} />
           </div>
         }
         isOpen={isStyleSubmenuOpen}
@@ -444,7 +446,7 @@ export const WritingStyleTools: React.FC = () => {
             {popularPatterns.map(pattern => (
               <SubmenuItem
                 key={pattern.id}
-                icon={<Grid3X3 size={16} />}
+                icon={<Grid3X3 size={isMobile ? 12 : 13} />}
                 label={pattern.name}
                 onClick={() => {
                   handleApplyPattern(pattern.id, 'fill');

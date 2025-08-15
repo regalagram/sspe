@@ -37,27 +37,28 @@ export const WritingShapeTools: React.FC = () => {
   };
 
   // Icon mapping for shapes
-  const getShapeIcon = (templateId: string): React.ReactElement => {
+  const getShapeIcon = (templateId: string, size?: number): React.ReactElement => {
+    const iconSize = size || (isMobile ? 12 : 13);
     const iconMap: Record<string, React.ReactElement> = {
-      'debug-dot': <Dot />,
-      'rectangle': <Square />,
-      'square': <Square />,
-      'circle': <Circle />,
-      'ellipse': <Circle />,
-      'triangle': <Triangle />,
-      'diamond': <Diamond />,
-      'pentagon': <Hexagon />, // Using hexagon as closest available
-      'hexagon': <Hexagon />,
-      'octagon': <Hexagon />, // Using hexagon as closest available
-      'star': <Star />,
-      'arrow-right': <ArrowRight />,
-      'arrow-left': <ArrowLeft />,
-      'arrow-up': <ArrowUp />,
-      'arrow-down': <ArrowDown />,
-      'heart': <Heart />,
-      'cloud': <Cloud />,
+      'debug-dot': <Dot size={iconSize} />,
+      'rectangle': <Square size={iconSize} />,
+      'square': <Square size={iconSize} />,
+      'circle': <Circle size={iconSize} />,
+      'ellipse': <Circle size={iconSize} />,
+      'triangle': <Triangle size={iconSize} />,
+      'diamond': <Diamond size={iconSize} />,
+      'pentagon': <Hexagon size={iconSize} />, // Using hexagon as closest available
+      'hexagon': <Hexagon size={iconSize} />,
+      'octagon': <Hexagon size={iconSize} />, // Using hexagon as closest available
+      'star': <Star size={iconSize} />,
+      'arrow-right': <ArrowRight size={iconSize} />,
+      'arrow-left': <ArrowLeft size={iconSize} />,
+      'arrow-up': <ArrowUp size={iconSize} />,
+      'arrow-down': <ArrowDown size={iconSize} />,
+      'heart': <Heart size={iconSize} />,
+      'cloud': <Cloud size={iconSize} />,
     };
-    return iconMap[templateId] || <Square />;
+    return iconMap[templateId] || <Square size={iconSize} />;
   };
 
   // Get popular shapes for quick access
@@ -104,7 +105,7 @@ export const WritingShapeTools: React.FC = () => {
         {isShapeActive && (
           <>
             <SubmenuItem
-              icon={<X size={16} />}
+              icon={<X size={isMobile ? 12 : 13} />}
               label="Exit Shape Mode"
               onClick={() => {
                 handleExitShapeMode();

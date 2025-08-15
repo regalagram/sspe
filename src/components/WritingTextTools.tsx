@@ -108,7 +108,7 @@ export const WritingTextTools: React.FC = () => {
         {isTextActive && (
           <>
             <SubmenuItem
-              icon={<X size={16} />}
+              icon={<X size={isMobile ? 12 : 13} />}
               label="Exit Text Mode"
               onClick={() => {
                 handleExitTextMode();
@@ -125,21 +125,21 @@ export const WritingTextTools: React.FC = () => {
         )}
 
         <SubmenuItem
-          icon={<Type size={16} />}
+          icon={<Type size={isMobile ? 12 : 13} />}
           label="Add Text"
           onClick={handleAddText}
           active={activeTextType === 'single'}
         />
         
         <SubmenuItem
-          icon={<AlignJustify size={16} />}
+          icon={<AlignJustify size={isMobile ? 12 : 13} />}
           label="Add Multiline Text"
           onClick={handleAddMultilineText}
           active={activeTextType === 'multiline'}
         />
         
         <SubmenuItem
-          icon={<Spline size={16} />}
+          icon={<Spline size={isMobile ? 12 : 13} />}
           label="Add TextPath"
           onClick={handleAddTextPath}
           active={false}

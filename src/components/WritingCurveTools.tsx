@@ -66,7 +66,7 @@ export const WritingCurveTools: React.FC = () => {
         onToggle={() => setIsCurveSubmenuOpen(!isCurveSubmenuOpen)}
       >
         <SubmenuItem
-          icon={<Spline size={16} />}
+          icon={<Spline size={isMobile ? 12 : 13} />}
           label={isCurveActive ? "Exit Curve Mode" : "Activate Curve Editing"}
           onClick={() => {
             handleCurveToggle();
@@ -87,7 +87,7 @@ export const WritingCurveTools: React.FC = () => {
               Curve Actions
             </div>
             <SubmenuItem
-              icon={<LogOut size={16} />}
+              icon={<LogOut size={isMobile ? 12 : 13} />}
               label="Delete Selected Point"
               onClick={() => {
                 handleDeletePoint();
@@ -95,7 +95,7 @@ export const WritingCurveTools: React.FC = () => {
               }}
             />
             <SubmenuItem
-              icon={<CornerUpRight size={16} />}
+              icon={<CornerUpRight size={isMobile ? 12 : 13} />}
               label="Finish Path"
               onClick={() => {
                 handleFinishPath();

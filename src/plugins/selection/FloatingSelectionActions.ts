@@ -1,6 +1,7 @@
 import { 
   Palette, 
-  Brush, 
+  Brush,
+  Minus, 
   Copy, 
   Trash2,
   Group,
@@ -62,37 +63,53 @@ const getSelectedGroups = () => {
 };
 
 // Get common fill color
-const getCommonFillColor = (): string => {
+const getCommonFillColor = (): string | any => {
   const paths = getSelectedPaths();
   if (paths.length === 0) return '#000000';
   
   const firstFill = paths[0]?.style?.fill;
-  const fillColor = typeof firstFill === 'string' ? firstFill : '#000000';
+  if (!firstFill) return '#000000';
+  
+  // Check if all paths have the same fill value (could be string color or gradient object)
   const allSame = paths.every(p => {
     const pathFill = p?.style?.fill;
-    return typeof pathFill === 'string' && pathFill === fillColor;
+    if (typeof firstFill === 'string' && typeof pathFill === 'string') {
+      return pathFill === firstFill;
+    } else if (typeof firstFill === 'object' && typeof pathFill === 'object') {
+      // For gradient objects, compare by id
+      return pathFill?.id === firstFill?.id;
+    }
+    return false;
   });
   
-  return allSame ? fillColor : '#000000';
+  return allSame ? firstFill : '#000000';
 };
 
 // Get common stroke color
-const getCommonStrokeColor = (): string => {
+const getCommonStrokeColor = (): string | any => {
   const paths = getSelectedPaths();
   if (paths.length === 0) return '#000000';
   
   const firstStroke = paths[0]?.style?.stroke;
-  const strokeColor = typeof firstStroke === 'string' ? firstStroke : '#000000';
+  if (!firstStroke) return '#000000';
+  
+  // Check if all paths have the same stroke value (could be string color or gradient object)
   const allSame = paths.every(p => {
     const pathStroke = p?.style?.stroke;
-    return typeof pathStroke === 'string' && pathStroke === strokeColor;
+    if (typeof firstStroke === 'string' && typeof pathStroke === 'string') {
+      return pathStroke === firstStroke;
+    } else if (typeof firstStroke === 'object' && typeof pathStroke === 'object') {
+      // For gradient objects, compare by id
+      return pathStroke?.id === firstStroke?.id;
+    }
+    return false;
   });
   
-  return allSame ? strokeColor : '#000000';
+  return allSame ? firstStroke : '#000000';
 };
 
 // Apply fill color to selected elements
-const applyFillColor = (color: string) => {
+const applyFillColor = (color: string | any) => {
   const store = useEditorStore.getState();
   
   store.selection.selectedPaths.forEach(pathId => {
@@ -105,7 +122,7 @@ const applyFillColor = (color: string) => {
 };
 
 // Apply stroke color to selected elements
-const applyStrokeColor = (color: string) => {
+const applyStrokeColor = (color: string | any) => {
   const store = useEditorStore.getState();
   
   store.selection.selectedPaths.forEach(pathId => {
@@ -698,40 +715,56 @@ export const groupActions: ToolbarAction[] = [
 ];
 
 // SubPath-specific utility functions
-const getCommonSubPathFillColor = (): string => {
+const getCommonSubPathFillColor = (): string | any => {
   const store = useEditorStore.getState();
   const selectedSubPaths = getSelectedSubPaths();
   if (selectedSubPaths.length === 0) return '#000000';
   
   const firstSubPath = selectedSubPaths[0];
   const firstFill = firstSubPath?.path?.style?.fill;
-  const fillColor = typeof firstFill === 'string' ? firstFill : '#000000';
+  if (!firstFill) return '#000000';
+  
+  // Check if all subpaths have the same fill value (could be string color or gradient object)
   const allSame = selectedSubPaths.every(sp => {
     const pathFill = sp?.path?.style?.fill;
-    return typeof pathFill === 'string' && pathFill === fillColor;
+    if (typeof firstFill === 'string' && typeof pathFill === 'string') {
+      return pathFill === firstFill;
+    } else if (typeof firstFill === 'object' && typeof pathFill === 'object') {
+      // For gradient objects, compare by id
+      return pathFill?.id === firstFill?.id;
+    }
+    return false;
   });
   
-  return allSame ? fillColor : '#000000';
+  return allSame ? firstFill : '#000000';
 };
 
-const getCommonSubPathStrokeColor = (): string => {
+const getCommonSubPathStrokeColor = (): string | any => {
   const store = useEditorStore.getState();
   const selectedSubPaths = getSelectedSubPaths();
   if (selectedSubPaths.length === 0) return '#000000';
   
   const firstSubPath = selectedSubPaths[0];
   const firstStroke = firstSubPath?.path?.style?.stroke;
-  const strokeColor = typeof firstStroke === 'string' ? firstStroke : '#000000';
+  if (!firstStroke) return '#000000';
+  
+  // Check if all subpaths have the same stroke value (could be string color or gradient object)
   const allSame = selectedSubPaths.every(sp => {
     const pathStroke = sp?.path?.style?.stroke;
-    return typeof pathStroke === 'string' && pathStroke === strokeColor;
+    if (typeof firstStroke === 'string' && typeof pathStroke === 'string') {
+      return pathStroke === firstStroke;
+    } else if (typeof firstStroke === 'object' && typeof pathStroke === 'object') {
+      // For gradient objects, compare by id
+      return pathStroke?.id === firstStroke?.id;
+    }
+    return false;
   });
   
-  return allSame ? strokeColor : '#000000';
+  return allSame ? firstStroke : '#000000';
 };
 
 // Apply fill color to selected subpaths
-const applySubPathFillColor = (color: string) => {
+const applySubPathFillColor = (color: string | any) => {
   const store = useEditorStore.getState();
   const selectedSubPaths = getSelectedSubPaths();
   
@@ -743,7 +776,7 @@ const applySubPathFillColor = (color: string) => {
 };
 
 // Apply stroke color to selected subpaths
-const applySubPathStrokeColor = (color: string) => {
+const applySubPathStrokeColor = (color: string | any) => {
   const store = useEditorStore.getState();
   const selectedSubPaths = getSelectedSubPaths();
   
@@ -1173,7 +1206,7 @@ export const subPathActions: ToolbarAction[] = [
   },
   {
     id: 'subpath-stroke-options',
-    icon: Brush,
+    icon: Minus,
     label: 'Stroke Options',
     type: 'input',
     input: {
@@ -1311,7 +1344,7 @@ export const mixedSelectionActions: ToolbarAction[] = [
   },
   {
     id: 'mixed-stroke-width',
-    icon: Brush,
+    icon: Minus,
     label: 'Stroke Width',
     type: 'input',
     input: {
