@@ -5,19 +5,11 @@ import { getSVGPoint } from '../../utils/transform-utils';
 import { moveAllCapturedElementsByDelta, captureAllSelectedElementsPositions, DraggedElementsData } from '../../utils/drag-utils';
 import { useEditorStore } from '../../store/editorStore';
 import { splitPointManager } from './SplitPointManager';
-import { 
-  ElementType, 
-  SelectionContext, 
-  isElementSelected, 
-  hasMultiSelection, 
-  isElementInSelectedGroup, 
-  shouldPreserveSelection,
-  logSelectionDebug 
-} from '../../utils/selection-utils';
 import { transformManager } from '../transform/TransformManager';
 import { handleManager } from '../handles/HandleManager';
 import { stickyManager } from '../sticky-guidelines/StickyManager';
 import { stickyPointsManager } from './StickyPointsManager';
+import { ElementType, SelectionContext, isElementSelected, hasMultiSelection, shouldPreserveSelection, logSelectionDebug } from '../../utils/selection-utils';
 
 // ================== TYPES & INTERFACES ==================
 
@@ -86,7 +78,7 @@ interface DragState {
   type: 'command' | 'element' | 'controlPoint' | 'area' | null;
 }
 
-type DragAction = 
+type DragAction =
   | { type: 'START_DRAG'; elements: SelectedElements; origin: Point; dragType: 'command' | 'element' | 'controlPoint' | 'area' }
   | { type: 'UPDATE_DRAG'; position: Point }
   | { type: 'END_DRAG' }
@@ -101,6 +93,8 @@ interface PointerInteractionState {
   lastPointerPosition: Point;
   dragState: DragState;
   selectionBounds: ElementBounds | null;
+  hasMovement: boolean;
+  splitPointClickInfo: { commandId1: string; commandId2: string } | null;
 }
 
 // ================== UTILITY FUNCTIONS ==================
@@ -165,7 +159,7 @@ class ElementSelector {
 
   selectElement(elementId: string, elementType: ElementType, modifiers: KeyModifiers): void {
     const { selection } = this.editorStore;
-    
+
     this.debugManager.logSelection('ElementSelector.selectElement called with', {
       elementId,
       elementType,
@@ -182,7 +176,7 @@ class ElementSelector {
     } else {
       this.handleNormalSelection(elementId, elementType);
     }
-    
+
     // Log selection after operation
     const newSelection = this.editorStore.selection;
     this.debugManager.logSelection('Selection after operation', {
@@ -199,9 +193,9 @@ class ElementSelector {
       groups: this.editorStore.groups,
       paths: this.editorStore.paths
     };
-    
+
     const isSelected = isElementSelected(elementId, elementType, context.selection);
-    
+
     if (isSelected) {
       this.removeFromSelection(elementId, elementType);
     } else {
@@ -245,39 +239,39 @@ class ElementSelector {
 
   private selectSingle(elementId: string, elementType: ElementType): void {
     this.debugManager.logSelection('selectSingle called with', { elementId, elementType });
-    
+
     switch (elementType) {
-      case 'image': 
+      case 'image':
         this.debugManager.logSelection('Calling selectImage', {});
-        this.editorStore.selectImage(elementId); 
+        this.editorStore.selectImage(elementId);
         break;
-      case 'use': 
+      case 'use':
         this.debugManager.logSelection('Calling selectUse', {});
-        this.editorStore.selectUse(elementId); 
+        this.editorStore.selectUse(elementId);
         break;
-      case 'text': 
+      case 'text':
         this.debugManager.logSelection('Calling selectText', {});
-        this.editorStore.selectText(elementId); 
+        this.editorStore.selectText(elementId);
         break;
-      case 'multiline-text': 
+      case 'multiline-text':
         this.debugManager.logSelection('Calling selectText for multiline-text', {});
-        this.editorStore.selectText(elementId); 
+        this.editorStore.selectText(elementId);
         break;
-      case 'textPath': 
+      case 'textPath':
         this.debugManager.logSelection('Calling selectTextPath', {});
-        this.editorStore.selectTextPath(elementId); 
+        this.editorStore.selectTextPath(elementId);
         break;
-      case 'group': 
+      case 'group':
         this.debugManager.logSelection('Calling selectGroup', {});
-        this.editorStore.selectGroup(elementId); 
+        this.editorStore.selectGroup(elementId);
         break;
-      case 'command': 
+      case 'command':
         this.debugManager.logSelection('Calling selectCommand', {});
-        this.editorStore.selectCommand(elementId); 
+        this.editorStore.selectCommand(elementId);
         break;
-      case 'subpath': 
+      case 'subpath':
         this.debugManager.logSelection('Calling selectSubPath', {});
-        this.editorStore.selectSubPath(elementId); 
+        this.editorStore.selectSubPath(elementId);
         break;
     }
   }
@@ -285,7 +279,7 @@ class ElementSelector {
   private addToSelectionWithoutPromotion(elementId: string, elementType: ElementType): void {
     const currentState = useEditorStore.getState();
     const newSelection = { ...currentState.selection };
-    
+
     switch (elementType) {
       case 'image':
         if (!newSelection.selectedImages.includes(elementId)) {
@@ -324,7 +318,7 @@ class ElementSelector {
         }
         break;
     }
-    
+
     useEditorStore.setState({ selection: newSelection });
   }
 }
@@ -340,6 +334,7 @@ class DragManager {
   private draggingCommandId?: string; // Track which command is being dragged
   private isDualPointDrag: boolean = false; // Track if we're dragging dual points
   private stickyDisabledForDrag: boolean = false; // Track if sticky is disabled for this drag
+  private hasClearedSplitState: boolean = false; // Track if we've cleared split state for individual movement
 
   constructor(editorStore: any, config: PointerInteractionConfig, debugManager: DebugManager) {
     this.editorStore = editorStore;
@@ -356,33 +351,34 @@ class DragManager {
   startDrag(elements: SelectedElements, origin: Point, draggingCommandId?: string): void {
     this.debugManager.logDragOperation('Starting drag with elements', elements);
     this.debugManager.logDragManager('instanceId in startDrag', this.instanceId);
-    
+
     // Store which command is being dragged
     this.draggingCommandId = draggingCommandId;
-    
+
     // Detect if this is a dual point drag scenario
     const selectedCommands = this.editorStore.selection.selectedCommands || [];
-    this.isDualPointDrag = this.isDualPointIndividualSelection(selectedCommands) || 
-                          this.isDualPointPairSelection(selectedCommands);
-    
+    this.isDualPointDrag = this.isDualPointIndividualSelection(selectedCommands) ||
+      this.isDualPointPairSelection(selectedCommands);
+
     // If dual point drag, disable sticky points for the entire drag operation
     if (this.isDualPointDrag) {
       this.stickyDisabledForDrag = true;
     } else {
       this.stickyDisabledForDrag = false;
     }
-    
+
     // Use centralized utility to capture elements instead of individual snapshots
     this.capturedElementsData = captureAllSelectedElementsPositions();
     this.debugManager.logDragOperation('Captured elements data', this.capturedElementsData);
-    
+
     // Initialize sticky guidelines drag operation to capture original bounds
     // This prevents amplification of sticky guidelines during text/image dragging
     stickyManager.startDragOperation();
-    
-    // Reset last delta
+
+    // Reset last delta and split state clearing
     this.lastDelta = { x: 0, y: 0 };
-    
+    this.hasClearedSplitState = false;
+
     transformManager.setMoving(true);
     this.editorStore.pushToHistory();
   }
@@ -391,32 +387,39 @@ class DragManager {
     this.debugManager.logDragOperation('Updating drag with delta', delta);
     this.debugManager.logDragManager('instanceId in updateDrag', this.instanceId);
     this.debugManager.logDragOperation('Element snapshots count', this.elementSnapshots.size);
-    
+
+
     // Apply sticky guidelines if enabled
     const snappedDelta = this.applyStickyGuidelines(delta);
-    
+
     // Calculate incremental delta (difference from last applied delta)
     const incrementalDelta = {
       x: snappedDelta.x - this.lastDelta.x,
       y: snappedDelta.y - this.lastDelta.y
     };
-    
+
     this.debugManager.logDragOperation('Incremental delta', incrementalDelta);
-    
+
     // Only apply movement if there's a meaningful change
     if (Math.abs(incrementalDelta.x) > 0.001 || Math.abs(incrementalDelta.y) > 0.001) {
       // Apply incremental movement directly using existing move functions
       // This is more efficient than the batch utility for real-time dragging
       const selection = this.editorStore.selection;
-      
+
       // Move commands using simplified logic with global sticky state
       const selectedCommands = selection.selectedCommands || [];
-      
+
       if (this.isDualPointDrag && this.isDualPointIndividualSelection(selectedCommands)) {
         // Individual dual point selection: only move the clicked command
         const clickedCommandId = this.draggingCommandId;
         if (clickedCommandId && selectedCommands.includes(clickedCommandId)) {
           this.moveSingleCommandDuringDrag(clickedCommandId, incrementalDelta, this.stickyDisabledForDrag);
+          
+          // Clear split state once when we start moving an individual half
+          if (!this.hasClearedSplitState) {
+            splitPointManager.clearSplitStateForCommand(clickedCommandId);
+            this.hasClearedSplitState = true;
+          }
         }
       } else {
         // Normal movement or dual pair movement: move all selected commands
@@ -424,7 +427,7 @@ class DragManager {
           this.moveSingleCommandDuringDrag(commandId, incrementalDelta, this.stickyDisabledForDrag);
         });
       }
-      
+
       // For other element types, still use the batch utility since they handle deltas correctly
       const selectedElements = this.getSelectedElementsData();
       if (selectedElements && (
@@ -445,7 +448,7 @@ class DragManager {
           this.config.gridSize
         );
       }
-      
+
       // Update last applied delta for next frame
       this.lastDelta = { ...snappedDelta };
     }
@@ -463,12 +466,12 @@ class DragManager {
     if (!selectedCommands || selectedCommands.length !== 1) {
       return false;
     }
-    
+
     // Check if this single command is part of a coincident pair
     const commandId = selectedCommands[0];
     return this.isCommandPartOfCoincidentPair(commandId);
   }
-  
+
   /**
    * Check if we have a dual point pair selection (2 coincident commands)
    */
@@ -476,11 +479,11 @@ class DragManager {
     if (!selectedCommands || selectedCommands.length !== 2) {
       return false;
     }
-    
+
     // Check if both commands are part of the same coincident pair
     return this.areCommandsCoincidentPair(selectedCommands[0], selectedCommands[1]);
   }
-  
+
   /**
    * Check if two commands form a coincident pair
    */
@@ -488,7 +491,7 @@ class DragManager {
     // Find both commands and check if they coincide
     let command1Info: any = null;
     let command2Info: any = null;
-    
+
     for (const path of this.editorStore.paths) {
       for (const subPath of path.subPaths) {
         for (let i = 0; i < subPath.commands.length; i++) {
@@ -501,36 +504,36 @@ class DragManager {
         }
       }
     }
-    
+
     if (!command1Info || !command2Info || command1Info.subPath !== command2Info.subPath) {
       return false;
     }
-    
+
     // Check if they are initial and final commands in the same subpath
     const subPath = command1Info.subPath;
     const isOneInitial = command1Info.index === 0 || command2Info.index === 0;
     const isOneFinal = command1Info.index === subPath.commands.length - 1 || command2Info.index === subPath.commands.length - 1;
-    
+
     if (isOneInitial && isOneFinal) {
       // Check if positions coincide
       const initialCommand = subPath.commands[0];
       const finalCommand = subPath.commands[subPath.commands.length - 1];
-      
-      if (initialCommand && finalCommand && 
-          initialCommand.x !== undefined && initialCommand.y !== undefined &&
-          finalCommand.x !== undefined && finalCommand.y !== undefined) {
-        
+
+      if (initialCommand && finalCommand &&
+        initialCommand.x !== undefined && initialCommand.y !== undefined &&
+        finalCommand.x !== undefined && finalCommand.y !== undefined) {
+
         const tolerance = 0.1;
         const dx = Math.abs(initialCommand.x - finalCommand.x);
         const dy = Math.abs(initialCommand.y - finalCommand.y);
-        
+
         return dx < tolerance && dy < tolerance;
       }
     }
-    
+
     return false;
   }
-  
+
   /**
    * Get current position of a command
    */
@@ -545,29 +548,29 @@ class DragManager {
     }
     return null;
   }
-  
+
   /**
    * Calculate target position with sticky points and grid snapping
    */
-  private calculateTargetPosition(commandId: string, incrementalDelta: Point, disableSticky: boolean): { 
-    currentPosition: { x: number; y: number }, 
-    targetPosition: { x: number; y: number } 
+  private calculateTargetPosition(commandId: string, incrementalDelta: Point, disableSticky: boolean): {
+    currentPosition: { x: number; y: number },
+    targetPosition: { x: number; y: number }
   } | null {
     const currentPosition = this.getCurrentCommandPosition(commandId);
     if (!currentPosition) return null;
-    
+
     let targetPosition = {
       x: currentPosition.x + incrementalDelta.x,
       y: currentPosition.y + incrementalDelta.y
     };
-    
+
     if (!disableSticky) {
       // Apply sticky points behavior
       const stickyResult = stickyPointsManager.checkStickyBehavior(commandId, targetPosition);
       if (stickyResult.shouldStick && stickyResult.stickyPosition) {
         targetPosition = stickyResult.stickyPosition;
       }
-      
+
       // Apply grid snapping if enabled
       const currentGridSettings = this.editorStore.grid;
       if (currentGridSettings && currentGridSettings.snapToGrid) {
@@ -575,7 +578,7 @@ class DragManager {
         targetPosition = snapped;
       }
     }
-    
+
     return { currentPosition, targetPosition };
   }
 
@@ -592,20 +595,20 @@ class DragManager {
             // Check if this is initial or final command in a closed path
             const isInitial = i === 0;
             const isFinal = i === subPath.commands.length - 1;
-            
+
             if (isInitial || isFinal) {
               // Get positions to check if they coincide
               const initialCommand = subPath.commands[0];
               const finalCommand = subPath.commands[subPath.commands.length - 1];
-              
-              if (initialCommand && finalCommand && 
-                  initialCommand.x !== undefined && initialCommand.y !== undefined &&
-                  finalCommand.x !== undefined && finalCommand.y !== undefined) {
-                
+
+              if (initialCommand && finalCommand &&
+                initialCommand.x !== undefined && initialCommand.y !== undefined &&
+                finalCommand.x !== undefined && finalCommand.y !== undefined) {
+
                 const tolerance = 0.1;
                 const dx = Math.abs(initialCommand.x - finalCommand.x);
                 const dy = Math.abs(initialCommand.y - finalCommand.y);
-                
+
                 return dx < tolerance && dy < tolerance;
               }
             }
@@ -616,7 +619,7 @@ class DragManager {
     }
     return false;
   }
-  
+
   /**
    * Move a single command during drag with optional sticky points and grid snapping
    */
@@ -631,13 +634,13 @@ class DragManager {
         }
       });
     });
-    
+
     if (currentPosition) {
       let targetPosition = {
-        x: (currentPosition as { x: number; y: number }).x + incrementalDelta.x,  
+        x: (currentPosition as { x: number; y: number }).x + incrementalDelta.x,
         y: (currentPosition as { x: number; y: number }).y + incrementalDelta.y
       };
-      
+
       // Apply sticky points and grid snapping based on the disableSticky parameter
       if (!disableSticky) {
         // Check for sticky points behavior
@@ -645,7 +648,7 @@ class DragManager {
         if (stickyResult.shouldStick && stickyResult.stickyPosition) {
           targetPosition = stickyResult.stickyPosition;
         }
-        
+
         // Apply grid snapping if enabled - get current grid settings from store
         const currentGridSettings = this.editorStore.grid;
         if (currentGridSettings && currentGridSettings.snapToGrid) {
@@ -653,7 +656,7 @@ class DragManager {
           targetPosition = snapped;
         }
       }
-      
+
       this.editorStore.moveCommand(commandId, targetPosition);
     }
   }
@@ -661,14 +664,14 @@ class DragManager {
   endDrag(): void {
     this.debugManager.logDragOperation('endDrag called, clearing snapshots', this.elementSnapshots.size);
     this.debugManager.logDragManager('instanceId in endDrag', this.instanceId);
-    
+
     // Reset dual point drag state
-    
     this.elementSnapshots.clear();
     this.lastDelta = { x: 0, y: 0 }; // Reset delta tracking
     this.draggingCommandId = undefined; // Clear dragging command ID
     this.isDualPointDrag = false; // Reset dual point drag state
     this.stickyDisabledForDrag = false; // Re-enable sticky for future drags
+    this.hasClearedSplitState = false; // Reset split state clearing
     transformManager.setMoving(false);
     stickyManager.clearGuidelines();
     stickyPointsManager.clearSticky(); // Clear sticky points state
@@ -676,9 +679,9 @@ class DragManager {
 
   private captureElementSnapshots(elements: SelectedElements): void {
     this.elementSnapshots.clear();
-    
+
     this.debugManager.logElementProcessing('captureElementSnapshots called with', elements);
-    
+
     // Get fresh store data
     const store = this.editorStore;
     const images = store.images || [];
@@ -687,7 +690,7 @@ class DragManager {
     const textPaths = store.textPaths || [];
     const paths = store.paths || [];
     const groups = store.groups || [];
-    
+
     this.debugManager.logElementProcessing('Available store data', {
       images: images.length,
       uses: uses.length,
@@ -805,7 +808,7 @@ class DragManager {
         }
       }
     });
-    
+
     this.debugManager.logElementProcessing('Total snapshots captured', this.elementSnapshots.size);
     this.debugManager.logElementProcessing('Snapshot keys', Array.from(this.elementSnapshots.keys()));
   }
@@ -826,15 +829,15 @@ class DragManager {
       return delta;
     }
 
-    
+
     // CRITICAL FIX: Use original selection bounds if available, otherwise current bounds
     // This prevents amplification during selection movement
     let selectionBounds = stickyManager.getOriginalSelectionBounds();
-      
+
     if (!selectionBounds) {
-            selectionBounds = stickyManager.calculateSelectionBounds();
+      selectionBounds = stickyManager.calculateSelectionBounds();
     } else {
-          }
+    }
 
     if (selectionBounds) {
       const targetPosition = {
@@ -842,7 +845,7 @@ class DragManager {
         y: selectionBounds.y + delta.y
       };
 
-      
+
       const result = stickyManager.handleSelectionMoving(targetPosition, selectionBounds);
       if (result.snappedBounds) {
         return {
@@ -856,22 +859,22 @@ class DragManager {
   }
 
   private shouldUseSticky(): boolean {
-        
+
     if (!this.config.enableStickyGuidelines) {
-            return false;
+      return false;
     }
-    
+
     const { enabledFeatures, selection } = this.editorStore;
     if (!enabledFeatures?.stickyGuidelinesEnabled) {
-            return false;
+      return false;
     }
 
     // Skip sticky guidelines if groups are involved in multi-selection
     const hasGroupsInSelection = selection.selectedGroups && selection.selectedGroups.length > 0;
     const hasMultiSelection = this.elementSnapshots.size > 1;
-    
+
     const result = !(hasGroupsInSelection && hasMultiSelection);
-        return result;
+    return result;
   }
 
   private moveElement(snapshot: ElementSnapshot, delta: Point): void {
@@ -903,28 +906,28 @@ class DragManager {
    */
   private transformDeltaForRotation(delta: Point, transform: string): Point {
     if (!transform) return delta;
-    
+
     // Handle rotate(angle, cx, cy) transform
     const rotateMatch = transform.match(/rotate\(([^,]+),\s*([^,]+),\s*([^)]+)\)/);
     if (rotateMatch) {
       const angle = parseFloat(rotateMatch[1]) * Math.PI / 180; // Convert to radians
-      
+
       // Apply inverse rotation to the delta (rotate by -angle)
       const cos = Math.cos(-angle);
       const sin = Math.sin(-angle);
-      
+
       return {
         x: delta.x * cos - delta.y * sin,
         y: delta.x * sin + delta.y * cos
       };
     }
-    
+
     return delta;
   }
 
   private moveElementInStore(snapshot: ElementSnapshot, newPosition: Point): void {
     const { moveImage, moveUse, moveText, moveGroup, moveCommand } = this.editorStore;
-    
+
     this.debugManager.logMovement('moveElementInStore called for', { id: snapshot.id, type: snapshot.type });
 
     switch (snapshot.type) {
@@ -932,12 +935,12 @@ class DragManager {
         const currentImage = this.editorStore.images.find((img: any) => img.id === snapshot.id);
         if (currentImage) {
           let delta = { x: newPosition.x - currentImage.x, y: newPosition.y - currentImage.y };
-          
+
           // If image has rotation transform, apply inverse rotation to delta
           if (currentImage.transform) {
             delta = this.transformDeltaForRotation(delta, currentImage.transform);
           }
-          
+
           this.debugManager.logMovement('Image delta', delta);
           if (Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001) {
             moveImage(snapshot.id, delta);
@@ -981,7 +984,7 @@ class DragManager {
           x: newPosition.x - snapshot.currentPosition.x,
           y: newPosition.y - snapshot.currentPosition.y
         };
-        
+
         this.debugManager.logMovement('Group delta', deltaFromCurrent);
         if (Math.abs(deltaFromCurrent.x) > 0.001 || Math.abs(deltaFromCurrent.y) > 0.001) {
           moveGroup(snapshot.id, deltaFromCurrent);
@@ -992,7 +995,7 @@ class DragManager {
         this.debugManager.logMovement('Command move to', newPosition);
         moveCommand(snapshot.id, newPosition);
         break;
-        
+
       default:
         this.debugManager.logMovement('Unknown element type', snapshot.type);
     }
@@ -1045,39 +1048,39 @@ class DebugManager {
 
   logElementDetection(data: any): void {
     if (this.config.debugMode) {
-          }
+    }
   }
 
   logDragOperation(operation: string, data: any): void {
     if (this.config.debugMode) {
-          }
+    }
   }
 
   logSelection(operation: string, data: any): void {
     if (this.config.debugMode) {
-          }
+    }
   }
 
   logDragManager(operation: string, data: any): void {
     if (this.config.debugMode) {
-          }
+    }
   }
 
   logElementProcessing(operation: string, data: any): void {
     if (this.config.debugMode) {
-          }
+    }
   }
 
   logMovement(operation: string, data: any): void {
     if (this.config.debugMode) {
-          }
+    }
   }
 
   logGeneric(message: string, data?: any): void {
     if (this.config.debugMode) {
       if (data !== undefined) {
-              } else {
-              }
+      } else {
+      }
     }
   }
 }
@@ -1088,13 +1091,13 @@ class PointerInteractionManager {
   private state: PointerInteractionState;
   private editorStore: any;
   private config: PointerInteractionConfig;
-  
+
   // Specialized managers
   private elementSelector!: ElementSelector;
   private dragManager!: DragManager;
   private panZoomManager!: PanZoomManager;
   private debugManager!: DebugManager;
-  
+
   // Performance optimizations
   private elementCache = new Map<string, SVGElement>();
   private updateStickyGuidelines!: ReturnType<typeof debounce>;
@@ -1118,6 +1121,8 @@ class PointerInteractionManager {
       lastPointerPosition: { x: 0, y: 0 },
       dragState: createInitialDragState(),
       selectionBounds: null,
+      hasMovement: false,
+      splitPointClickInfo: null,
     };
 
     // Initialize debounced function after config is set
@@ -1135,13 +1140,13 @@ class PointerInteractionManager {
 
   setEditorStore(store: any): void {
     this.editorStore = store;
-    
+
     // Update config with current grid settings from store
     if (store.grid) {
       this.config.snapToGrid = store.grid.snapToGrid;
       this.config.gridSize = store.grid.size;
     }
-    
+
     // Only create managers if they don't exist yet to preserve state
     if (!this.elementSelector) {
       this.elementSelector = new ElementSelector(store, this.config, this.debugManager);
@@ -1149,21 +1154,21 @@ class PointerInteractionManager {
       // Update the store reference in existing instance
       this.elementSelector.updateStore(store);
     }
-    
+
     if (!this.dragManager) {
       this.dragManager = new DragManager(store, this.config, this.debugManager);
     } else {
       // Update the store reference in existing instance
       this.dragManager.updateStore(store);
     }
-    
+
     if (!this.panZoomManager) {
       this.panZoomManager = new PanZoomManager(store, this.config);
     } else {
       // Update the store reference in existing instance
       this.panZoomManager.updateStore(store);
     }
-    
+
     // Initialize cursor to crosshair for empty areas and force pointer on interactive elements
     setTimeout(() => {
       const svgElements = document.querySelectorAll('.svg-editor svg');
@@ -1171,7 +1176,7 @@ class PointerInteractionManager {
         if (!this.state.isSpacePressed) {
           (svg as HTMLElement).style.cursor = 'crosshair';
         }
-        
+
         // Force pointer cursor on control points SPECIFICALLY
         const controlPoints = svg.querySelectorAll('circle[data-control-point="x1y1"], circle[data-control-point="x2y2"], circle.control-point');
         controlPoints.forEach(point => {
@@ -1179,38 +1184,38 @@ class PointerInteractionManager {
           // Also set as CSS property to override any inline styles
           (point as HTMLElement).style.setProperty('cursor', 'pointer', 'important');
         });
-        
+
         // Also handle command points
         const commandPoints = svg.querySelectorAll('circle[data-command-id], circle.command-point');
         commandPoints.forEach(point => {
           (point as HTMLElement).style.cursor = 'pointer';
           (point as HTMLElement).style.setProperty('cursor', 'pointer', 'important');
         });
-        
+
         const paths = svg.querySelectorAll('path[data-command-id]');
         paths.forEach(path => {
           (path as HTMLElement).style.cursor = 'pointer';
         });
       });
-      
+
       // Simple cursor enforcement - no aggressive loops
       const simpleEnforceCursors = () => {
         const controlPoints = document.querySelectorAll('.svg-editor svg circle[data-control-point]');
         controlPoints.forEach(point => {
           (point as HTMLElement).style.cursor = 'default';
         });
-        
+
         const commandPoints = document.querySelectorAll('.svg-editor svg circle[data-command-id]');
         commandPoints.forEach(point => {
           (point as HTMLElement).style.cursor = 'default';
         });
-        
+
         const commandPaths = document.querySelectorAll('.svg-editor svg path[data-command-id]');
         commandPaths.forEach(path => {
           (path as HTMLElement).style.cursor = 'default';
         });
       };
-      
+
       // Run only once on initialization
       simpleEnforceCursors();
     }, 100);
@@ -1269,21 +1274,21 @@ class PointerInteractionManager {
 
   private findElementWithData(element: SVGElement, svgRef: React.RefObject<SVGSVGElement | null>): { elementType: string | null; elementId: string | null } {
     let current: Element | null = element;
-    
+
     const getClassName = (el: Element) => {
       if (el instanceof SVGElement && el.className && typeof el.className === 'object' && 'baseVal' in el.className) {
         return el.className.baseVal;
       }
       return (el as any).className || '';
     };
-    
+
     this.debugManager.logGeneric('findElementWithData called with element', {
       tagName: element.tagName,
       className: getClassName(element),
       id: element.id,
       attributes: Array.from(element.attributes).map(attr => ({ name: attr.name, value: attr.value }))
     });
-    
+
     // Special check for subpaths at the start
     if (current && current.getAttribute('data-element-type') === 'subpath') {
       this.debugManager.logGeneric('🔥 FOUND SUBPATH DIRECTLY!', {
@@ -1292,11 +1297,11 @@ class PointerInteractionManager {
         tagName: current.tagName
       });
     }
-    
+
     while (current && current !== svgRef.current) {
       const elementType = current.getAttribute('data-element-type');
       const elementId = current.getAttribute('data-element-id');
-      
+
       this.debugManager.logGeneric('Checking element', {
         tagName: current.tagName,
         elementType,
@@ -1305,20 +1310,20 @@ class PointerInteractionManager {
         id: current.id,
         attributes: Array.from(current.attributes).map(attr => ({ name: attr.name, value: attr.value }))
       });
-      
+
       // Special logging for subpaths
       if (elementType === 'subpath') {
         this.debugManager.logGeneric('🔥 SUBPATH DETECTED!', { elementType, elementId });
       }
-      
+
       if (elementType && elementId) {
         this.debugManager.logGeneric('Found element with data', { elementType, elementId });
         return { elementType, elementId };
       }
-      
+
       current = current.parentElement;
     }
-    
+
     this.debugManager.logGeneric('No element with data found');
     return { elementType: null, elementId: null };
   }
@@ -1355,31 +1360,31 @@ class PointerInteractionManager {
     // CRITICAL FIX: Verificar inmediatamente si hay gestos multi-touch activos
     // @ts-ignore - acceso a variable global para comunicación entre plugins  
     const isGestureBlocked = window.gestureBlocked || false;
-    
+
     // Si hay gesture bloqueado (multi-touch), abortar inmediatamente la selección
     if (e.pointerType === 'touch' && isGestureBlocked) {
       return; // Salir sin hacer nada
     }
-    
+
     // Clear current selection unless holding shift
     if (!modifiers.shift) {
       this.editorStore.clearSelection();
-      
+
       // Clear any existing drag state
       this.dispatchDragAction({ type: 'RESET' });
       this.state.draggingElement = null;
       this.state.draggingCommand = null;
-      
+
       // Reset drag manager state
       this.dragManager.endDrag();
-      
+
       // Show floating toolbar after drag
       this.editorStore.showFloatingToolbarAfterDrag();
-      
-            
+
+
       this.debugManager.logSelection('Cleared selection and drag state on empty space click', this.getSelectedElements());
     }
-    
+
     // Start area selection drag
     const origin = this.getSVGPoint(e, context.svgRef);
     const emptySelection: SelectedElements = {
@@ -1397,19 +1402,19 @@ class PointerInteractionManager {
       origin,
       dragType: 'area'
     });
-    
-        this.debugManager.logGeneric('Started area selection', { origin });
+
+    this.debugManager.logGeneric('Started area selection', { origin });
   }
 
   // ================== EVENT HANDLERS ==================
 
-  handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
-        const { commandId, controlPoint } = context;
+  handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => { 
+    const { commandId, controlPoint } = context;
     const target = e.target as SVGElement;
     const modifiers = this.getKeyModifiers(e);
-    
+
     // Always log pointer down to verify the method is called
-        
+
     this.debugManager.logGeneric('🔥 POINTER DOWN FIRED!', {
       targetTag: target.tagName,
       targetDataType: target.getAttribute('data-element-type'),
@@ -1419,7 +1424,7 @@ class PointerInteractionManager {
       commandId,
       controlPoint
     });
-    
+
     // DEBUG: Log the click target
     this.debugManager.logGeneric('Pointer down on target', {
       tagName: target.tagName,
@@ -1429,18 +1434,18 @@ class PointerInteractionManager {
         .filter(attr => attr.name.startsWith('data-'))
         .map(attr => ({ name: attr.name, value: attr.value }))
     });
-    
+
     // DEBUG: Log what elements are near the click point
     const point = this.getSVGPoint(e, context.svgRef);
     this.debugManager.logGeneric('SVG click coordinates', point);
-    
+
     // DEBUG: Check what elements exist in the SVG
     if (context.svgRef.current) {
       const allImages = context.svgRef.current.querySelectorAll('image[data-element-id]');
       const allTexts = context.svgRef.current.querySelectorAll('text[data-element-id]');
       const allGroups = context.svgRef.current.querySelectorAll('g[data-element-id]');
       const allSubpaths = context.svgRef.current.querySelectorAll('path[data-element-type="subpath"]');
-      
+
       this.debugManager.logGeneric('Elements in SVG', {
         images: allImages.length,
         texts: allTexts.length,
@@ -1450,7 +1455,7 @@ class PointerInteractionManager {
         textIds: Array.from(allTexts).map(text => text.getAttribute('data-element-id')),
         subpathIds: Array.from(allSubpaths).map(sp => sp.getAttribute('data-element-id'))
       });
-      
+
       // DEBUG: Check if any image/text is at the click coordinates
       const elementsAtPoint = document.elementsFromPoint(e.clientX, e.clientY);
       this.debugManager.logGeneric('Elements from point', {
@@ -1463,7 +1468,7 @@ class PointerInteractionManager {
           dataId: el.getAttribute('data-element-id')
         }))
       });
-      
+
       // Special check for subpaths at point
       const subpathsAtPoint = elementsAtPoint.filter(el => el.getAttribute('data-element-type') === 'subpath');
       if (subpathsAtPoint.length > 0) {
@@ -1476,7 +1481,7 @@ class PointerInteractionManager {
         });
       }
     }
-    
+
     // Handle space + click for panning
     if (this.state.isSpacePressed && e.button === 0) {
       e.stopPropagation();
@@ -1503,17 +1508,17 @@ class PointerInteractionManager {
       const handleType = controlPoint === 'x1y1' ? 'outgoing' : 'incoming';
       handleManager.startDragHandle(commandId, handleType, startPoint);
       transformManager.setMoving(true);
-      
+
       // Hide floating toolbar during control point drag
       this.editorStore.hideFloatingToolbarDuringDrag();
-      
+
       this.editorStore.pushToHistory();
       return true;
     }
 
     // Find element under cursor
     const { elementType, elementId } = this.findElementWithData(target, context.svgRef);
-    
+
     this.debugManager.logElementDetection({
       commandId,
       controlPoint,
@@ -1528,26 +1533,38 @@ class PointerInteractionManager {
       const splitResult = splitPointManager.handleSplitPointClick(target, svgPoint);
       if (splitResult) {
         e.stopPropagation();
-        
+
+        // Store split point info for potential individual selection on pointer up
+        const selectedCommands = this.editorStore.selection.selectedCommands || [];
+        if (selectedCommands.length === 2) {
+          this.state.splitPointClickInfo = { 
+            commandId1: selectedCommands[0], 
+            commandId2: selectedCommands[1] 
+          };
+        }
+
+        // Reset movement tracking
+        this.state.hasMovement = false;
+
         // Get the current selection after split point manager handled it
         const selectedElements = this.getSelectedElements();
-                
+
         // Always start drag for split points (whether both or individual selected)
         // The SplitPointManager handles the selection logic correctly
-                
+
         this.state.draggingElement = { id: commandId, type: 'command' };
         const origin = this.getSVGPoint(e, context.svgRef);
-        
+
         this.dragManager.startDrag(selectedElements, origin, commandId);
         this.editorStore.hideFloatingToolbarDuringDrag();
-        
+
         this.dispatchDragAction({
           type: 'START_DRAG',
           elements: selectedElements,
           origin,
           dragType: 'element'
         });
-        
+
         return true; // Stop processing here, don't continue to normal selection
       }
     }
@@ -1555,21 +1572,21 @@ class PointerInteractionManager {
     // Handle element selection and dragging
     if (elementType && elementId && !this.state.isSpacePressed) {
       e.stopPropagation();
-      
+
       const elementTypeTyped = elementType as ElementType;
-      
+
       // For double-clicks on text elements, let text-edit plugin handle them
       if (context.isDoubleClick && (elementTypeTyped === 'text' || elementTypeTyped === 'multiline-text')) {
-                return false; // Don't handle, let text-edit plugin process it
+        return false; // Don't handle, let text-edit plugin process it
       }
-      
+
       // DEBUG: Log what's being detected and selected
       this.debugManager.logElementDetection({
         elementType: elementTypeTyped,
         elementId,
         modifiers
       });
-      
+
       // Special logging for subpaths
       if (elementTypeTyped === 'subpath') {
         this.debugManager.logGeneric('🔥 SUBPATH SELECTION ATTEMPT!', {
@@ -1578,7 +1595,7 @@ class PointerInteractionManager {
           modifiers
         });
       }
-      
+
       // Handle shift-click for multi-selection
       if (modifiers.shift) {
         this.elementSelector.selectElement(elementId, elementTypeTyped, modifiers);
@@ -1587,24 +1604,24 @@ class PointerInteractionManager {
 
       // Clear split point states when selecting other elements
       splitPointManager.clearStatesOnSelectionChange();
-      
+
       // Normal selection and drag preparation
       this.elementSelector.selectElement(elementId, elementTypeTyped, modifiers);
-      
+
       // DEBUG: Log selection after element selection
       const selectedElements = this.getSelectedElements();
       this.debugManager.logSelection('Selected elements after selection', selectedElements);
-      
+
       this.state.draggingElement = { id: elementId, type: elementTypeTyped };
-      
+
       // Start drag operation
       const origin = this.getSVGPoint(e, context.svgRef);
-      
+
       this.dragManager.startDrag(selectedElements, origin);
-      
+
       // Hide floating toolbar during drag
       this.editorStore.hideFloatingToolbarDuringDrag();
-      
+
       this.dispatchDragAction({
         type: 'START_DRAG',
         elements: selectedElements,
@@ -1618,31 +1635,31 @@ class PointerInteractionManager {
     // Handle command selection and dragging
     if (commandId && !this.state.isSpacePressed) {
       e.stopPropagation();
-      
+
       // Check if this command is part of an existing split point pair
       const currentSelection = this.editorStore.selection.selectedCommands;
       const isPartOfCurrentSplitPair = this.isCommandPartOfSplitPair(commandId, currentSelection);
-      
+
       // If selecting a command that's not part of the current split pair, clear split states and force clean selection
       if (!isPartOfCurrentSplitPair && currentSelection.length === 2) {
-                splitPointManager.clearStatesOnSelectionChange();
-        
+        splitPointManager.clearStatesOnSelectionChange();
+
         // Force clean selection by directly calling the store with selectMultiple
-                this.editorStore.selectMultiple([commandId], 'commands');
+        this.editorStore.selectMultiple([commandId], 'commands');
       } else {
         // Normal selection with original modifiers
         this.elementSelector.selectElement(commandId, 'command', modifiers);
       }
       this.state.draggingCommand = commandId;
-      
+
       const selectedElements = this.getSelectedElements();
       const origin = this.getSVGPoint(e, context.svgRef);
-      
+
       this.dragManager.startDrag(selectedElements, origin, commandId);
-      
+
       // Hide floating toolbar during drag
       this.editorStore.hideFloatingToolbarDuringDrag();
-      
+
       this.dispatchDragAction({
         type: 'START_DRAG',
         elements: selectedElements,
@@ -1657,8 +1674,8 @@ class PointerInteractionManager {
     // Handle empty space clicks (deselection and area selection)
     if (!this.state.isSpacePressed) {
       e.stopPropagation();
-      
-            
+
+
       this.debugManager.logGeneric('🔥 EMPTY SPACE CLICK DETECTED!', {
         clickX: e.clientX,
         clickY: e.clientY,
@@ -1668,7 +1685,7 @@ class PointerInteractionManager {
         elementId,
         pointerType: e.pointerType
       });
-      
+
       // Para otros casos, proceder con área de selección normal
       this.handleImmediateAreaSelection(e, context, modifiers);
       return true;
@@ -1711,11 +1728,17 @@ class PointerInteractionManager {
         y: currentPoint.y - this.state.dragState.origin.y
       };
 
+      // Track if there's actual movement (more than 1px threshold)
+      const hasMovement = Math.abs(delta.x) > 1 || Math.abs(delta.y) > 1;
+      if (hasMovement) {
+        this.state.hasMovement = true;
+      }
+
       this.dispatchDragAction({ type: 'UPDATE_DRAG', position: currentPoint });
-      
+
       // Only call dragManager.updateDrag for element/command drags, not area selection
       if (this.state.dragState.type === 'area') {
-                // For area selection, update the selection box instead of moving elements
+        // For area selection, update the selection box instead of moving elements
         this.editorStore.updateSelectionBox({
           x: Math.min(this.state.dragState.origin.x, currentPoint.x),
           y: Math.min(this.state.dragState.origin.y, currentPoint.y),
@@ -1735,16 +1758,16 @@ class PointerInteractionManager {
   };
 
   handlePointerUp = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
-    const wasHandling = this.state.isPanning || 
-                       !!this.state.draggingControlPoint || 
-                       this.state.dragState.isDragging;
+    const wasHandling = this.state.isPanning ||
+      !!this.state.draggingControlPoint ||
+      this.state.dragState.isDragging;
 
     // End control point dragging
     if (this.state.draggingControlPoint) {
       handleManager.endDragHandle();
       this.state.draggingControlPoint = null;
       transformManager.setMoving(false);
-      
+
       // Show floating toolbar after control point drag
       this.editorStore.showFloatingToolbarAfterDrag();
     }
@@ -1755,16 +1778,22 @@ class PointerInteractionManager {
       if (this.state.dragState.type === 'area') {
         const currentSelectionBox = this.editorStore.selection.selectionBox;
         if (currentSelectionBox) {
-                    this.editorStore.selectInBox(currentSelectionBox);
+          this.editorStore.selectInBox(currentSelectionBox);
         }
-                this.editorStore.updateSelectionBox(null);
+        this.editorStore.updateSelectionBox(null);
       }
-      
+
+      // Check if this was a split point click without movement - trigger individual selection
+      if (!this.state.hasMovement && this.state.splitPointClickInfo) {
+        const { commandId1, commandId2 } = this.state.splitPointClickInfo;
+        splitPointManager.triggerIndividualSelectionOnPointerUp(commandId1, commandId2);
+      }
+
       this.dragManager.endDrag();
-      
+
       // Show floating toolbar after drag
       this.editorStore.showFloatingToolbarAfterDrag();
-      
+
       this.dispatchDragAction({ type: 'END_DRAG' });
     }
 
@@ -1772,6 +1801,8 @@ class PointerInteractionManager {
     this.state.draggingCommand = null;
     this.state.draggingElement = null;
     this.state.isPanning = false;
+    this.state.hasMovement = false;
+    this.state.splitPointClickInfo = null;
 
     // Update cursor for space mode
     if (this.state.isSpacePressed) {
@@ -1790,7 +1821,7 @@ class PointerInteractionManager {
     const center = { x: e.clientX, y: e.clientY };
     const zoomFactor = 1 - e.deltaY * 0.001;
     this.panZoomManager.handleZoom(zoomFactor, center);
-    
+
     return true;
   };
 
@@ -1806,17 +1837,17 @@ class PointerInteractionManager {
    */
   private isCommandPartOfSplitPair(commandId: string, currentSelection: string[]): boolean {
     if (currentSelection.length !== 2) return false;
-    
+
     // Check if this command is one of the currently selected commands
     if (!currentSelection.includes(commandId)) return false;
-    
+
     // Check if the current selection forms a split point pair
     const [cmd1, cmd2] = currentSelection;
-    
+
     // Need to find counterparts by checking if they are initial/final commands in same subpath
     let cmd1Info = null;
     let cmd2Info = null;
-    
+
     const store = this.editorStore;
     for (const path of store.paths) {
       for (const subPath of path.subPaths) {
@@ -1831,7 +1862,7 @@ class PointerInteractionManager {
         }
       }
     }
-    
+
     // Check if they are from the same subpath and are initial/final pair
     if (cmd1Info && cmd2Info && cmd1Info.subPath.id === cmd2Info.subPath.id) {
       const isInitialFinalPair = (
@@ -1840,7 +1871,7 @@ class PointerInteractionManager {
       );
       return isInitialFinalPair;
     }
-    
+
     return false;
   }
 

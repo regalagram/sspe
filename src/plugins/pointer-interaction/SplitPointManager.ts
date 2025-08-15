@@ -5,7 +5,6 @@ interface SplitPointState {
   lastClickedHalf: 'initial' | 'final' | null;
   clickCount: number;
   commandIds: { initial: string; final: string };
-  lastClickTime: number;
 }
 
 interface Point {
@@ -47,49 +46,24 @@ export class SplitPointManager {
 
     // Handle the click logic
     const now = Date.now();
-    const timeSinceLastClick = now - currentState.lastClickTime;
 
     // Determine which actual command ID corresponds to the clicked half
     const actualClickedCommandId = clickedHalf === 'initial' ? currentState.commandIds.initial : currentState.commandIds.final;
 
-    // Check if this is the very first interaction with this split point pair
-    const isFirstEverClick = isNewState || currentState.clickCount === 0;
-
-    // Also check if enough time has passed to reset (treat as new interaction)
-    const shouldReset = timeSinceLastClick > 2000; // 2 seconds
-
-    if (isFirstEverClick || shouldReset) {
-      // Very first click or after long pause - ALWAYS select both
-      this.selectBoth(currentState);
-    } else if (currentState.bothSelected && timeSinceLastClick > 200) {
-      // Both are selected and enough time passed - select individual based on clicked half
+    // Check if clicking the same half as lastClickedHalf - if so, select individual immediately
+    if (currentState.lastClickedHalf && currentState.lastClickedHalf === clickedHalf && currentState.clickCount === 1) {
+      // Clicking the same half as before - select individual
+      const actualClickedCommandId = clickedHalf === 'initial' ? currentState.commandIds.initial : currentState.commandIds.final;
       this.selectIndividual(actualClickedCommandId, currentState);
-    } else if (!currentState.bothSelected) {
-      // Individual is selected - check if clicking same or different half
-      const store = useEditorStore.getState();
-      const currentlySelectedCommands = store.selection.selectedCommands;
-      const isClickingSameHalf = currentlySelectedCommands.includes(actualClickedCommandId);
-
-      if (isClickingSameHalf) {
-        // Clicking same half that's already selected - keep individual selection (allow drag)
-        // Keep the current individual selection state
-        currentState.bothSelected = false;
-      } else {
-        // Clicking different half - reassemble the pair
-        this.selectBoth(currentState);
-      }
     } else {
-      // Default case - select both (safer fallback)
+      // Different half or no previous half - select both
+      currentState.clickCount = 0;
       this.selectBoth(currentState);
     }
 
     // Update state
     currentState.lastClickedHalf = clickedHalf;
-    currentState.lastClickTime = now;
-    currentState.clickCount++;
     this.splitStates.set(stateKey, currentState);
-
-    console.log('isFirstEverClick', isFirstEverClick, currentState);
 
     return true; // Handled
   }
@@ -191,7 +165,6 @@ export class SplitPointManager {
       lastClickedHalf: null,
       clickCount: 0,
       commandIds: { initial: initialId, final: finalId },
-      lastClickTime: 0
     };
   }
 
@@ -238,6 +211,46 @@ export class SplitPointManager {
    */
   clearStatesOnSelectionChange(): void {
     this.splitStates.clear();
+  }
+
+  /**
+   * Clear state for a specific split point pair
+   * This is called when an individual half is moved, breaking the pair
+   */
+  clearSplitState(commandId1: string, commandId2: string): void {
+    const key = this.getSplitStateKey(commandId1, commandId2);
+    this.splitStates.delete(key);
+  }
+
+  /**
+   * Clear split state if the given command is part of a split point pair
+   * This is a helper for PointerInteraction to call when a command is moved individually
+   */
+  clearSplitStateForCommand(commandId: string): void {
+    const counterpartId = this.findCounterpartCommand(commandId);
+    if (counterpartId) {
+      this.clearSplitState(commandId, counterpartId);
+    }
+  }
+
+
+  /**
+   * Trigger individual selection based on lastClickedHalf
+   * This is called by PointerInteraction when a click completes without movement
+   */
+  triggerIndividualSelectionOnPointerUp(commandId1: string, commandId2: string): void {
+    const key = this.getSplitStateKey(commandId1, commandId2);
+    const state = this.splitStates.get(key);
+    
+    if (state && state.bothSelected && state.lastClickedHalf) {
+      // Determine which command to select based on lastClickedHalf
+      const commandToSelect = state.lastClickedHalf === 'initial' 
+        ? state.commandIds.initial 
+        : state.commandIds.final;
+      
+      this.selectIndividual(commandToSelect, state);
+      state.clickCount = 1;
+    }
   }
 
   /**
