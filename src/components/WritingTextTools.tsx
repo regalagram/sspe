@@ -4,10 +4,17 @@ import { ToolbarButton, ToolbarSection } from './ToolbarButton';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useEditorStore } from '../store/editorStore';
 import { toolModeManager } from '../managers/ToolModeManager';
+import { useMobileDetection } from '../hooks/useMobileDetection';
 
 export const WritingTextTools: React.FC = () => {
+  const { isMobile } = useMobileDetection();
   const [isTextSubmenuOpen, setIsTextSubmenuOpen] = useState(false);
   const [toolModeState, setToolModeState] = useState(toolModeManager.getState());
+
+  // Match floating toolbar button sizing
+  const buttonSize = isMobile ? 28 : 32;
+  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+  const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
   
   const { 
     addText, 
@@ -70,29 +77,29 @@ export const WritingTextTools: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '48px',
-            height: '40px',
-            background: isTextActive ? '#374151' : (isTextSubmenuOpen ? '#e5e7eb' : 'white'),
+            width: `${buttonSize}px`,
+            height: `${buttonSize}px`,
+            background: isTextActive ? '#374151' : (isTextSubmenuOpen ? '#f3f4f6' : 'white'),
             fontSize: '12px',
             fontWeight: 600,
             color: isTextActive ? 'white' : '#374151',
             border: 'none',
-            gap: '4px',
-            padding: '0 4px',
+            borderRadius: '0px',
+            gap: '2px',
             cursor: 'pointer',
             transition: 'all 0.15s ease',
-            position: 'relative'
+            position: 'relative',
+            opacity: 1,
+            touchAction: 'manipulation'
           }}>
-            {isTextActive && activeTextType ? (
-              activeTextType === 'multiline' ? <AlignJustify size={16} /> : <Type size={16} />
-            ) : (
-              <Type size={16} />
+            {React.cloneElement(
+              isTextActive && activeTextType ? (
+                activeTextType === 'multiline' ? <AlignJustify /> : <Type />
+              ) : (
+                <Type />
+              ),
+              { size: iconSize }
             )}
-            <ChevronDown size={12} style={{ 
-              marginLeft: '2px',
-              transform: isTextSubmenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.2s ease'
-            }} />
           </div>
         }
         isOpen={isTextSubmenuOpen}

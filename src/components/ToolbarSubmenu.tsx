@@ -195,25 +195,26 @@ export const ToolbarSubmenu: React.FC<ToolbarSubmenuProps> = ({
   // Always show toolbar submenu (removed mobile-only restriction)
 
   const submenuStyle: React.CSSProperties = {
-    position: 'fixed', // Use fixed for portal
+    position: 'fixed',
     top: `${submenuPosition.top}px`,
     left: `${submenuPosition.left}px`,
     backgroundColor: 'white',
     border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    borderRadius: '0px',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
     zIndex: 99999,
     minWidth: '180px',
     maxWidth: '220px',
-    padding: '8px',
+    padding: '4px',
     display: isOpen ? 'block' : 'none',
     maxHeight: '300px',
     overflowY: 'auto',
     WebkitOverflowScrolling: 'touch',
-    // Force visibility
     opacity: 1,
     visibility: 'visible',
     pointerEvents: 'auto',
+    userSelect: 'none',
+    touchAction: 'manipulation'
   };
 
   return (
@@ -255,10 +256,10 @@ export const SubmenuItem: React.FC<SubmenuItemProps> = ({
     alignItems: 'center',
     gap: '8px',
     padding: '8px 12px',
-    borderRadius: '6px',
+    borderRadius: '0px',
     cursor: disabled ? 'not-allowed' : 'pointer',
-    backgroundColor: active ? '#e0f2fe' : 'transparent',
-    color: disabled ? '#9ca3af' : active ? '#0277bd' : '#374151',
+    backgroundColor: active ? '#374151' : 'transparent',
+    color: disabled ? '#9ca3af' : active ? 'white' : '#374151',
     fontSize: '14px',
     fontWeight: active ? 600 : 400,
     transition: 'all 0.15s ease',
@@ -267,6 +268,7 @@ export const SubmenuItem: React.FC<SubmenuItemProps> = ({
     width: '100%',
     textAlign: 'left',
     whiteSpace: 'nowrap',
+    opacity: disabled ? 0.5 : 1
   };
 
   const handleClick = () => {

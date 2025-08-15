@@ -5,6 +5,7 @@ import { WritingPencilTools } from './WritingPencilTools';
 import { WritingShapeTools } from './WritingShapeTools';
 import { WritingCurveTools } from './WritingCurveTools';
 import { WritingTextTools } from './WritingTextTools';
+import { useMobileDetection } from '../hooks/useMobileDetection';
 
 interface WritingToolbarProps {
   toolbarPlugins?: UIComponentDefinition[];
@@ -13,42 +14,42 @@ interface WritingToolbarProps {
 export const WritingToolbar: React.FC<WritingToolbarProps> = ({ 
   toolbarPlugins = []
 }) => {
-  // Always use the optimized toolbar with dropdown buttons and fixed positioning
+  const { isMobile, isTablet } = useMobileDetection();
+  const isMobileDevice = isMobile || isTablet;
+  
+  // Match floating toolbar dimensions exactly
   const toolbarStyle: React.CSSProperties = {
-    background: 'rgba(255, 255, 255, 0.95)', // Semi-transparent for overlay effect
-    backdropFilter: 'blur(10px)', // Blur effect for modern look
-    WebkitBackdropFilter: 'blur(10px)', // Safari support
-    border: '1px solid rgba(229, 231, 235, 0.5)', // Border all around
-    boxShadow: '0 2px 12px rgba(0, 0, 0, 0.15)',
-    position: 'fixed', // Fixed position instead of sticky
-    top: 'env(safe-area-inset-top, 8px)', // Top margin with safe area support
-    left: '50%', // Center horizontally
-    transform: 'translateX(-50%)', // Center alignment
-    zIndex: 9998, // Very high z-index to stay above everything
+    background: 'white',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+    position: 'fixed',
+    top: 'env(safe-area-inset-top, 8px)',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    zIndex: 9998,
     overflowX: 'visible',
-    overflowY: 'visible', // Allow dropdowns to be visible
+    overflowY: 'visible',
     WebkitOverflowScrolling: 'touch',
-    scrollbarWidth: 'none', // Firefox
-    msOverflowStyle: 'none', // IE/Edge
-    // iOS Safari specific fixes
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none',
     WebkitBackfaceVisibility: 'hidden',
     backfaceVisibility: 'hidden',
-    WebkitTransform: 'translate3d(-50%, 0, 0)', // Combine transforms
-    // Compact sizing - only what's needed
+    WebkitTransform: 'translate3d(-50%, 0, 0)',
     width: 'fit-content',
     minHeight: 'fit-content',
+    userSelect: 'none',
+    touchAction: 'manipulation'
   };
 
   const toolbarContentStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center', // Center all buttons horizontally
-    padding: '0px', // No vertical padding
-    gap: '0px', // Optimized gap between sections
-    minHeight: 'fit-content', // Natural height based on button size
-    overflow: 'visible', // Allow submenus to overflow
-    position: 'relative', // Establish positioning context
-    whiteSpace: 'nowrap', // Prevent wrapping
+    justifyContent: 'center',
+    padding: '0px',
+    gap: '0px',
+    height: isMobileDevice ? '28px' : '32px', // Match button sizes exactly
+    overflow: 'visible',
+    position: 'relative',
+    whiteSpace: 'nowrap'
   };
 
   // CSS to hide scrollbar in WebKit browsers

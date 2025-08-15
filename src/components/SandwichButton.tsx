@@ -19,6 +19,9 @@ export const SandwichButton: React.FC<SandwichButtonProps> = ({
   // Desktop accordion state
   const { accordionVisible, toggleAccordionVisible } = usePanelModeStore();
 
+  // Match toolbar height
+  const toolbarHeight = isMobile ? 28 : 32;
+
   const handleClick = () => {
     if (isMobileDevice && onMobileToggle) {
       // Mobile: toggle bottom sheet
@@ -38,8 +41,8 @@ export const SandwichButton: React.FC<SandwichButtonProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          width: '40px',
-          height: '40px',
+          width: `${toolbarHeight}px`,
+          height: `${toolbarHeight}px`,
           background: 'white',
           fontSize: '12px',
           fontWeight: 600,
@@ -63,7 +66,7 @@ export const SandwichButton: React.FC<SandwichButtonProps> = ({
           (e.currentTarget as HTMLDivElement).style.background = 'white';
         }}
       >
-        <Menu size={16} />
+        <Menu size={isMobile ? 12 : 13} />
       </div>
     </>
   );

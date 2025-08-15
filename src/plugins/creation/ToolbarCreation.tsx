@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Move, Minus, Pen, X, ChevronDown } from 'lucide-react';
+import { Plus, Move, Minus, Pen, X, ChevronDown, MousePointerClick, Spline } from 'lucide-react';
 import { MobileToolbarButton, MobileToolbarSection } from '../../components/ToolbarButton';
 import { MobileToolbarSubmenu, MobileSubmenuItem } from '../../components/ToolbarSubmenu';
 import { useEditorStore } from '../../store/editorStore';
@@ -16,6 +16,11 @@ export const ToolbarCreationTools: React.FC = () => {
     isCreationSubmenuOpen, 
     setCreationSubmenuOpen 
   } = useMobileToolbarStore();
+
+  // Match floating toolbar button sizing
+  const buttonSize = isMobile ? 28 : 32;
+  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+  const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
 
   // Always show toolbar creation tools (removed mobile-only restriction)
 
@@ -58,7 +63,7 @@ export const ToolbarCreationTools: React.FC = () => {
     },
     { 
       command: 'C' as const, 
-      icon: <Pen size={16} />, 
+      icon: <Spline size={16} />, 
       label: 'C', 
       title: 'Cubic Bezier (C)',
       description: 'Draw curve'
@@ -98,29 +103,26 @@ export const ToolbarCreationTools: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '48px', // Fixed width to prevent jumping
-            height: '40px',
-            background: hasActiveTool ? '#374151' : (isCreationSubmenuOpen ? '#e5e7eb' : 'white'),
+            width: `${buttonSize}px`,
+            height: `${buttonSize}px`,
+            background: hasActiveTool ? '#374151' : (isCreationSubmenuOpen ? '#f3f4f6' : 'white'),
             fontSize: '12px',
             fontWeight: 600,
             color: hasActiveTool ? 'white' : '#374151',
             border: 'none',
-            gap: '4px',
-            padding: '0 4px', // Reduced padding since width is fixed
+            borderRadius: '0px',
+            gap: '2px',
             cursor: 'pointer',
             transition: 'all 0.15s ease',
-            position: 'relative'
+            position: 'relative',
+            opacity: 1,
+            touchAction: 'manipulation'
           }}>
             {hasActiveTool && activeTool ? (
-              <span style={{ fontSize: '14px' }}>{activeTool.label}</span>
+              <span style={{ fontSize: '10px' }}>{activeTool.label}</span>
             ) : (
-              <Pen size={16} />
+              <MousePointerClick size={iconSize} />
             )}
-            <ChevronDown size={12} style={{ 
-              marginLeft: '2px',
-              transform: isCreationSubmenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.2s ease'
-            }} />
           </div>
         }
         isOpen={isCreationSubmenuOpen}

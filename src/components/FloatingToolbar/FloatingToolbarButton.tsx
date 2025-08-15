@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MoreVertical, ChevronDown } from 'lucide-react';
+import { MoreVertical } from 'lucide-react';
 import { ToolbarAction, DropdownOption } from '../../types/floatingToolbar';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 
@@ -7,12 +7,16 @@ interface FloatingToolbarButtonProps {
   action: ToolbarAction;
   size?: number;
   compact?: boolean;
+  isSubmenuOpen?: boolean;
+  onSubmenuToggle?: () => void;
 }
 
 export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
   action,
   size,
-  compact = false
+  compact = false,
+  isSubmenuOpen = false,
+  onSubmenuToggle
 }) => {
   const { isMobile, isTablet } = useMobileDetection();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -25,7 +29,19 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
   
   const isMobileDevice = isMobile || isTablet;
   const buttonSize = size || (isMobileDevice ? 44 : 32);
-  const iconSize = Math.floor(buttonSize * 0.5);
+  const iconSize = isMobileDevice ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+
+  // Helper function to close submenu
+  const closeSubmenu = () => {
+    if (onSubmenuToggle && isSubmenuOpen) {
+      onSubmenuToggle();
+    } else {
+      // Fallback to local state for backwards compatibility
+      setShowDropdown(false);
+      setShowColorPicker(false);
+      setShowInputField(false);
+    }
+  };
 
   const buttonStyle: React.CSSProperties = {
     width: `${buttonSize}px`,
@@ -35,8 +51,8 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
     justifyContent: 'center',
     background: getButtonBackground(),
     color: getButtonColor(),
-    border: action.destructive ? '1px solid #ef4444' : '1px solid #e5e7eb',
-    borderRadius: '6px',
+    border: 'none',
+    borderRadius: '0px',
     cursor: action.disabled ? 'not-allowed' : 'pointer',
     transition: 'all 0.15s ease',
     position: 'relative',
@@ -48,6 +64,8 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
     if (action.disabled) return '#f9fafb';
     if (action.type === 'toggle' && action.toggle?.isActive()) return '#374151';
     if (action.destructive) return '#fef2f2';
+    // Add background feedback when submenu is open (like WritingToolbar)
+    if (isSubmenuOpen && (action.type === 'dropdown' || action.type === 'input' || action.type === 'color')) return '#f3f4f6';
     return 'white';
   }
 
@@ -73,13 +91,25 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
         action.toggle?.onToggle();
         break;
       case 'dropdown':
-        setShowDropdown(!showDropdown);
+        if (onSubmenuToggle) {
+          onSubmenuToggle();
+        } else {
+          setShowDropdown(!showDropdown);
+        }
         break;
       case 'color':
-        setShowColorPicker(!showColorPicker);
+        if (onSubmenuToggle) {
+          onSubmenuToggle();
+        } else {
+          setShowColorPicker(!showColorPicker);
+        }
         break;
       case 'input':
-        setShowInputField(!showInputField);
+        if (onSubmenuToggle) {
+          onSubmenuToggle();
+        } else {
+          setShowInputField(!showInputField);
+        }
         break;
       default:
         action.action?.();
@@ -110,30 +140,10 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
         aria-label={action.label}
       >
         <action.icon size={iconSize} />
-        {action.type === 'dropdown' && (
-          <ChevronDown 
-            size={iconSize * 0.6} 
-            style={{ 
-              marginLeft: '2px',
-              transform: showDropdown ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.2s ease'
-            }} 
-          />
-        )}
-        {action.type === 'input' && (
-          <ChevronDown 
-            size={iconSize * 0.6} 
-            style={{ 
-              marginLeft: '2px',
-              transform: showInputField ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.2s ease'
-            }} 
-          />
-        )}
       </button>
 
       {/* Dropdown Menu */}
-      {showDropdown && action.dropdown && (
+      {isSubmenuOpen && action.dropdown && (
         <div
           style={{
             position: 'absolute',
@@ -141,7 +151,7 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
             left: '0',
             background: 'white',
             border: '1px solid #e5e7eb',
-            borderRadius: '6px',
+            borderRadius: '0px',
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
             zIndex: 1001,
             minWidth: '150px',
@@ -163,7 +173,7 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
       )}
 
       {/* Input Field */}
-      {showInputField && action.input && (
+      {isSubmenuOpen && action.input && (
         <div
           style={{
             position: 'absolute',
@@ -171,18 +181,18 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
             left: '0',
             background: 'white',
             border: '1px solid #e5e7eb',
-            borderRadius: '6px',
+            borderRadius: '0px',
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
             zIndex: 1001,
             padding: '8px',
             minWidth: '120px'
           }}
-          onPointerLeave={() => setShowInputField(false)}
+          onPointerLeave={closeSubmenu}
         >
           {isComplexStroke ? (
             <StrokeOptionsContent 
               action={action}
-              onClose={() => setShowInputField(false)}
+              onClose={closeSubmenu}
             />
           ) : (
             <InputFieldContent 
@@ -192,14 +202,14 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
                 setInputValue(value);
                 action.input?.onChange(value);
               }}
-              onClose={() => setShowInputField(false)}
+              onClose={closeSubmenu}
             />
           )}
         </div>
       )}
 
       {/* Color Picker */}
-      {showColorPicker && action.color && (
+      {isSubmenuOpen && action.color && (
         <div
           style={{
             position: 'absolute',
@@ -207,18 +217,18 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
             left: '0',
             background: 'white',
             border: '1px solid #e5e7eb',
-            borderRadius: '6px',
+            borderRadius: '0px',
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
             zIndex: 1001,
             padding: '8px'
           }}
-          onPointerLeave={() => setShowColorPicker(false)}
+          onPointerLeave={closeSubmenu}
         >
           <ColorPickerContent 
             currentColor={action.color.currentColor}
             onChange={(color) => {
               action.color?.onChange(color);
-              setShowColorPicker(false);
+              closeSubmenu();
             }}
           />
         </div>
@@ -351,7 +361,7 @@ const InputFieldContent: React.FC<InputFieldContentProps> = ({ action, value, on
                 padding: '6px 4px',
                 fontSize: '11px',
                 border: currentNumericValue === val ? '2px solid #3b82f6' : '1px solid #d1d5db',
-                borderRadius: '4px',
+                borderRadius: '0px',
                 background: currentNumericValue === val ? '#eff6ff' : 'white',
                 color: currentNumericValue === val ? '#3b82f6' : '#374151',
                 cursor: 'pointer',
@@ -393,7 +403,7 @@ const InputFieldContent: React.FC<InputFieldContentProps> = ({ action, value, on
               width: '100%',
               height: '6px',
               background: '#e5e7eb',
-              borderRadius: '3px',
+              borderRadius: '0px',
               outline: 'none',
               cursor: 'pointer',
               touchAction: 'manipulation'
@@ -565,7 +575,7 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
                 padding: '6px 4px',
                 fontSize: '10px',
                 border: currentWidth === width ? '2px solid #3b82f6' : '1px solid #d1d5db',
-                borderRadius: '4px',
+                borderRadius: '0px',
                 background: currentWidth === width ? '#eff6ff' : 'white',
                 color: currentWidth === width ? '#3b82f6' : '#374151',
                 cursor: 'pointer',
@@ -598,7 +608,7 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
                 padding: '8px 12px',
                 fontSize: '11px',
                 border: currentDash === pattern.value ? '2px solid #3b82f6' : '1px solid #d1d5db',
-                borderRadius: '4px',
+                borderRadius: '0px',
                 background: currentDash === pattern.value ? '#eff6ff' : 'white',
                 color: currentDash === pattern.value ? '#3b82f6' : '#374151',
                 cursor: 'pointer',
@@ -636,7 +646,7 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
                 padding: '8px 12px',
                 fontSize: '10px',
                 border: currentLinecap === option.value ? '2px solid #3b82f6' : '1px solid #d1d5db',
-                borderRadius: '4px',
+                borderRadius: '0px',
                 background: currentLinecap === option.value ? '#eff6ff' : 'white',
                 color: currentLinecap === option.value ? '#3b82f6' : '#374151',
                 cursor: 'pointer',
@@ -670,7 +680,7 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
                 padding: '8px 12px',
                 fontSize: '10px',
                 border: currentLinejoin === option.value ? '2px solid #3b82f6' : '1px solid #d1d5db',
-                borderRadius: '4px',
+                borderRadius: '0px',
                 background: currentLinejoin === option.value ? '#eff6ff' : 'white',
                 color: currentLinejoin === option.value ? '#3b82f6' : '#374151',
                 cursor: 'pointer',
@@ -697,7 +707,7 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
             padding: '10px',
             background: '#f3f4f6',
             border: '1px solid #d1d5db',
-            borderRadius: '6px',
+            borderRadius: '0px',
             fontSize: '12px',
             color: '#374151',
             cursor: 'pointer',

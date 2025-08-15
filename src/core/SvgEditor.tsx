@@ -15,7 +15,6 @@ import { AccordionSidebar } from '../plugins/panelmode/AccordionSidebar';
 import { SVGDefinitions } from '../components/SVGDefinitions';
 import { MobileContainer } from '../components/MobileContainer';
 import { Toolbar } from '../components/Toolbar';
-import { WritingToolbar } from '../components/WritingToolbar';
 import { FloatingToolbarRenderer } from '../components/FloatingToolbar/FloatingToolbarRenderer';
 import { extractGradientsFromPaths } from '../utils/gradient-utils';
 
@@ -39,7 +38,6 @@ export const SvgEditor: React.FC = () => {
   // State for mobile bottom sheet
   const [mobileBottomSheetOpen, setMobileBottomSheetOpen] = React.useState(false);
   const [mobileToggleFunction, setMobileToggleFunction] = React.useState<(() => void) | null>(null);
-  const [isFloatingToolbarVisible, setIsFloatingToolbarVisible] = React.useState(false);
 
   // Callbacks for mobile bottom sheet
   const handleBottomSheetStateChange = React.useCallback((isOpen: boolean) => {
@@ -50,12 +48,6 @@ export const SvgEditor: React.FC = () => {
     setMobileToggleFunction(() => toggleFn);
   }, []);
 
-  // Callback for floating toolbar visibility changes (mobile only)
-  const handleFloatingToolbarVisibilityChange = React.useCallback((isVisible: boolean) => {
-    if (isMobileDevice) {
-      setIsFloatingToolbarVisible(isVisible);
-    }
-  }, [isMobileDevice]);
   
   // Use custom hooks for cleaner separation of concerns
   const { getCursor } = useCombinedCursor();
@@ -160,13 +152,10 @@ export const SvgEditor: React.FC = () => {
     </svg>
   );
 
-  // Mobile version with bottom sheet and both toolbars
+  // Mobile version with bottom sheet and consolidated toolbar
   if (isMobileDevice) {
     return (
       <div className="svg-editor" style={editorStyle}>
-        {/* Writing toolbar at top - conditionally shown based on floating toolbar */}
-        {!isFloatingToolbarVisible && <WritingToolbar />}
-        
         <MobileContainer
           sidebarPlugins={allPanels} // Use all panels like desktop
           toolbarPlugins={toolbarPanels}
@@ -177,16 +166,14 @@ export const SvgEditor: React.FC = () => {
         </MobileContainer>
         
         {/* Floating toolbar for contextual actions */}
-        <FloatingToolbarRenderer onVisibilityChange={handleFloatingToolbarVisibilityChange} />
+        <FloatingToolbarRenderer />
       </div>
     );
   }
 
-  // Desktop version with accordion sidebar and both toolbars
+  // Desktop version with accordion sidebar and consolidated toolbar
   return (
     <div className="svg-editor" style={editorStyle}>
-      {/* Writing toolbar at top */}
-      <WritingToolbar />
       
       {/* Controls toolbar at bottom */}
       <Toolbar toolbarPlugins={toolbarPanels} />

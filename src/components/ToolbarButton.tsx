@@ -26,13 +26,13 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
   const isMobileDevice = isMobile || isTablet;
 
   const sizes = {
-    small: isMobileDevice ? 32 : 28,
-    medium: isMobileDevice ? 40 : 32,
-    large: isMobileDevice ? 48 : 40
+    small: isMobileDevice ? 24 : 24,
+    medium: isMobileDevice ? 28 : 32, // Match floating toolbar: 28px mobile, 32px desktop
+    large: isMobileDevice ? 36 : 40
   };
 
   const buttonSize = sizes[size];
-  const iconSize = Math.floor(buttonSize * 0.45);
+  const iconSize = isMobileDevice ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
   const fontSize = Math.floor(buttonSize * 0.25);
 
   const buttonStyle: React.CSSProperties = {
@@ -53,7 +53,8 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
     WebkitTapHighlightColor: 'transparent',
     outline: 'none',
     position: 'relative',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    opacity: disabled ? 0.5 : 1
   };
 
   const handlePointerDown = () => {
@@ -64,7 +65,7 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
 
   const handlePointerEnter = (e: React.PointerEvent) => {
     if (!disabled && !active) {
-      (e.currentTarget as HTMLButtonElement).style.background = `${color}10`;
+      (e.currentTarget as HTMLButtonElement).style.background = '#f3f4f6';
     }
   };
 

@@ -14,6 +14,9 @@ export const ToolbarZoomControls: React.FC = () => {
     setZoomSubmenuOpen 
   } = useMobileToolbarStore();
 
+  // Match toolbar height
+  const toolbarHeight = isMobile ? 28 : 32;
+
   // Always show toolbar zoom controls (removed mobile-only restriction)
 
   const hasSelection = selection.selectedCommands.length > 0 || 
@@ -68,7 +71,7 @@ export const ToolbarZoomControls: React.FC = () => {
   return (
     <MobileToolbarSection title="Zoom Controls">
       <MobileToolbarButton
-        icon={<ZoomOut />}
+        icon={<ZoomOut size={isMobile ? 12 : 13} />}
         onClick={handleZoomOut}
         color="#374151"
         title="Zoom Out (Ctrl+-)"
@@ -83,7 +86,7 @@ export const ToolbarZoomControls: React.FC = () => {
             alignItems: 'center',
             justifyContent: 'center',
             minWidth: '46px',
-            height: '40px',
+            height: `${toolbarHeight}px`,
             background: isZoomSubmenuOpen ? '#e5e7eb' : 'white',
             fontSize: '12px',
             fontWeight: 600,
@@ -102,33 +105,33 @@ export const ToolbarZoomControls: React.FC = () => {
         position="top"
       >
         <MobileSubmenuItem
-          icon={<Maximize2 size={16} />}
+          icon={<Maximize2 size={isMobile ? 12 : 13} />}
           label="Fit to Screen"
           onClick={() => handleZoomAction(zoomToFit)}
         />
         {hasSelection && (
           <MobileSubmenuItem
-            icon={<Target size={16} />}
+            icon={<Target size={isMobile ? 12 : 13} />}
             label="Fit Selection"
             onClick={() => handleZoomAction(zoomToSelection)}
           />
         )}
         {hasSubPathSelection && (
           <MobileSubmenuItem
-            icon={<Target size={16} />}
+            icon={<Target size={isMobile ? 12 : 13} />}
             label="Fit SubPath"
             onClick={() => handleZoomAction(zoomToSubPath)}
           />
         )}
         <MobileSubmenuItem
-          icon={<RotateCcw size={16} />}
+          icon={<RotateCcw size={isMobile ? 12 : 13} />}
           label="Reset View"
           onClick={() => handleZoomAction(resetView)}
         />
       </MobileToolbarSubmenu>
       
       <MobileToolbarButton
-        icon={<ZoomIn />}
+        icon={<ZoomIn size={isMobile ? 12 : 13} />}
         onClick={handleZoomIn}
         color="#374151"
         title="Zoom In (Ctrl++)"

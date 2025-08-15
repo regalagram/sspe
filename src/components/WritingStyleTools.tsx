@@ -287,11 +287,6 @@ export const WritingStyleTools: React.FC = () => {
             opacity: hasSelection ? 1 : 0.5
           }}>
             <Palette size={16} />
-            <ChevronDown size={12} style={{ 
-              marginLeft: '2px',
-              transform: isStyleSubmenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.2s ease'
-            }} />
           </div>
         }
         isOpen={isStyleSubmenuOpen}

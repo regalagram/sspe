@@ -6,10 +6,17 @@ import { useEditorStore } from '../store/editorStore';
 import { toolModeManager } from '../managers/ToolModeManager';
 import { shapeManager } from '../plugins/shapes/ShapeManager';
 import { SHAPE_TEMPLATES } from '../plugins/shapes/ShapeDefinitions';
+import { useMobileDetection } from '../hooks/useMobileDetection';
 
 export const WritingShapeTools: React.FC = () => {
+  const { isMobile } = useMobileDetection();
   const [isShapeSubmenuOpen, setIsShapeSubmenuOpen] = useState(false);
   const [toolModeState, setToolModeState] = useState(toolModeManager.getState());
+
+  // Match floating toolbar button sizing
+  const buttonSize = isMobile ? 28 : 32;
+  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+  const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
 
   // Subscribe to tool mode changes
   useEffect(() => {
@@ -30,27 +37,27 @@ export const WritingShapeTools: React.FC = () => {
   };
 
   // Icon mapping for shapes
-  const getShapeIcon = (templateId: string) => {
-    const iconMap: Record<string, React.ReactNode> = {
-      'debug-dot': <Dot size={16} />,
-      'rectangle': <Square size={16} />,
-      'square': <Square size={16} />,
-      'circle': <Circle size={16} />,
-      'ellipse': <Circle size={16} />,
-      'triangle': <Triangle size={16} />,
-      'diamond': <Diamond size={16} />,
-      'pentagon': <Hexagon size={16} />, // Using hexagon as closest available
-      'hexagon': <Hexagon size={16} />,
-      'octagon': <Hexagon size={16} />, // Using hexagon as closest available
-      'star': <Star size={16} />,
-      'arrow-right': <ArrowRight size={16} />,
-      'arrow-left': <ArrowLeft size={16} />,
-      'arrow-up': <ArrowUp size={16} />,
-      'arrow-down': <ArrowDown size={16} />,
-      'heart': <Heart size={16} />,
-      'cloud': <Cloud size={16} />,
+  const getShapeIcon = (templateId: string): React.ReactElement => {
+    const iconMap: Record<string, React.ReactElement> = {
+      'debug-dot': <Dot />,
+      'rectangle': <Square />,
+      'square': <Square />,
+      'circle': <Circle />,
+      'ellipse': <Circle />,
+      'triangle': <Triangle />,
+      'diamond': <Diamond />,
+      'pentagon': <Hexagon />, // Using hexagon as closest available
+      'hexagon': <Hexagon />,
+      'octagon': <Hexagon />, // Using hexagon as closest available
+      'star': <Star />,
+      'arrow-right': <ArrowRight />,
+      'arrow-left': <ArrowLeft />,
+      'arrow-up': <ArrowUp />,
+      'arrow-down': <ArrowDown />,
+      'heart': <Heart />,
+      'cloud': <Cloud />,
     };
-    return iconMap[templateId] || <Square size={16} />;
+    return iconMap[templateId] || <Square />;
   };
 
   // Get popular shapes for quick access
@@ -70,25 +77,25 @@ export const WritingShapeTools: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '48px',
-            height: '40px',
-            background: isShapeActive ? '#374151' : (isShapeSubmenuOpen ? '#e5e7eb' : 'white'),
+            width: `${buttonSize}px`,
+            height: `${buttonSize}px`,
+            background: isShapeActive ? '#374151' : (isShapeSubmenuOpen ? '#f3f4f6' : 'white'),
             fontSize: '12px',
             fontWeight: 600,
             color: isShapeActive ? 'white' : '#374151',
             border: 'none',
-            gap: '4px',
-            padding: '0 4px',
+            borderRadius: '0px',
+            gap: '2px',
             cursor: 'pointer',
             transition: 'all 0.15s ease',
-            position: 'relative'
+            position: 'relative',
+            opacity: 1,
+            touchAction: 'manipulation'
           }}>
-            {isShapeActive && activeTemplate ? getShapeIcon(activeTemplate.id) : <Square size={16} />}
-            <ChevronDown size={12} style={{ 
-              marginLeft: '2px',
-              transform: isShapeSubmenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.2s ease'
-            }} />
+            {React.cloneElement(
+              isShapeActive && activeTemplate ? getShapeIcon(activeTemplate.id) : <Square />, 
+              { size: iconSize }
+            )}
           </div>
         }
         isOpen={isShapeSubmenuOpen}

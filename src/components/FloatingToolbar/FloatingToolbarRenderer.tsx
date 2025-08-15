@@ -8,19 +8,16 @@ import { PositioningEngine } from '../../core/FloatingToolbar/PositioningEngine'
 import { useEditorStore } from '../../store/editorStore';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 
-interface FloatingToolbarRendererProps {
-  onVisibilityChange?: (isVisible: boolean) => void;
-}
+interface FloatingToolbarRendererProps {}
 
-export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = ({
-  onVisibilityChange
-}) => {
+export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = () => {
   const { selection, viewport, isFloatingToolbarHidden, paths, texts, groups, images, floatingToolbarUpdateTimestamp } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   const [actions, setActions] = useState<ToolbarAction[]>([]);
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const [showOverflow, setShowOverflow] = useState(false);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
+  const [activeSubmenuId, setActiveSubmenuId] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   
   const isMobileDevice = isMobile || isTablet;
@@ -28,6 +25,19 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
   const positioningEngine = PositioningEngine.getInstance();
   const config = toolbarManager.getConfig();
   const currentConfig = isMobileDevice ? config.mobile : config.desktop;
+
+  // Handle submenu toggling - only one submenu can be open at a time
+  const handleSubmenuToggle = (actionId: string) => {
+    setActiveSubmenuId(prevActiveId => {
+      if (prevActiveId === actionId) {
+        // Close if clicking on the same button
+        return null;
+      } else {
+        // Close any other submenu and open this one
+        return actionId;
+      }
+    });
+  };
 
   // Find the SVG container for the portal
   useEffect(() => {
@@ -76,11 +86,11 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
         toolbarSize
       );
       
-      // On mobile, force positioning at the top - same position as WritingToolbar
+      // On mobile, force positioning at the top
       if (isMobileDevice && toolbarPosition) {
         toolbarPosition = {
           ...toolbarPosition,
-          y: 8 // Same position as WritingToolbar: env(safe-area-inset-top, 8px)
+          y: 8 // Position at top: env(safe-area-inset-top, 8px)
         };
       }
             
@@ -88,26 +98,17 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
                 setPosition(toolbarPosition);
       } else {
         const fallbackPosition = isMobileDevice 
-          ? { x: 100, y: 8 } // Mobile fallback at same position as WritingToolbar
+          ? { x: 100, y: 8 } // Mobile fallback at top position
           : { x: 100, y: 100 }; // Desktop fallback
                 setPosition(fallbackPosition);
-      }
-      
-      // Notify visibility change
-      if (onVisibilityChange) {
-        onVisibilityChange(true);
       }
     } else {
             setActions([]);
       setPosition(null);
       setShowOverflow(false);
-      
-      // Notify visibility change
-      if (onVisibilityChange) {
-        onVisibilityChange(false);
-      }
+      setActiveSubmenuId(null); // Reset active submenu when toolbar disappears
     }
-  }, [selection, viewport, isFloatingToolbarHidden, paths, texts, groups, images, toolbarManager, positioningEngine, onVisibilityChange, isMobileDevice]);
+  }, [selection, viewport, isFloatingToolbarHidden, paths, texts, groups, images, toolbarManager, positioningEngine, isMobileDevice]);
 
   // DEBUG: Log for development
     
@@ -119,43 +120,37 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
   const overflowActions = actions.slice(currentConfig.maxVisibleButtons - 1);
   const hasOverflow = overflowActions.length > 0;
 
-  // Calculate toolbar width for mobile centering
-  const estimatedToolbarWidth = isMobileDevice ? 
-    (visibleActions.length + (hasOverflow ? 1 : 0)) * (currentConfig.buttonSize + currentConfig.spacing) + 12 : // 12px for padding
-    300; // Default width for desktop
-
-  // Calculate safe left position for mobile
-  const calculateMobileLeft = () => {
-    if (!isMobileDevice) return position.x;
-    
-    const screenWidth = window.innerWidth;
-    const margin = 8; // 8px margin from edges
-    const centeredPosition = (screenWidth - estimatedToolbarWidth) / 2;
-    
-    // Ensure it doesn't go beyond screen bounds
-    return Math.max(margin, Math.min(centeredPosition, screenWidth - estimatedToolbarWidth - margin));
-  };
+  // No complex calculations needed for mobile - use simple fixed positioning
 
   const toolbarStyle: React.CSSProperties = {
     position: 'fixed',
-    // On mobile, center within screen bounds, otherwise use calculated position
-    left: isMobileDevice ? `${calculateMobileLeft()}px` : `${position.x}px`,
-    // On mobile, use same top position as WritingToolbar, otherwise use calculated position
+    // On mobile, use fixed positioning at top
+    left: isMobileDevice ? '50%' : `${position.x}px`,
     top: isMobileDevice ? 'env(safe-area-inset-top, 8px)' : `${position.y}px`,
-    zIndex: isMobileDevice ? 9999 : 40, // Higher z-index on mobile to be above WritingToolbar
+    zIndex: isMobileDevice ? 9999 : 40,
     display: 'flex',
     alignItems: 'center',
-    gap: `${currentConfig.spacing}px`,
+    gap: '0px',
     background: 'white',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    padding: '6px',
+    padding: '0px',
     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
     userSelect: 'none',
     touchAction: 'manipulation',
-    animation: 'fadeInScale 0.2s ease-out forwards',
+    animation: isMobileDevice ? 'none' : 'fadeInScale 0.2s ease-out forwards',
     transformOrigin: getTransformOrigin((position as any).placement || 'top'),
-    pointerEvents: 'auto' // Ensure toolbar can be interacted with
+    pointerEvents: 'auto',
+    // Mobile-optimized properties
+    overflowX: 'visible',
+    overflowY: 'visible',
+    WebkitOverflowScrolling: 'touch',
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none',
+    WebkitBackfaceVisibility: 'hidden',
+    backfaceVisibility: 'hidden',
+    transform: isMobileDevice ? 'translateX(-50%)' : 'none',
+    WebkitTransform: isMobileDevice ? 'translate3d(-50%, 0, 0)' : 'none',
+    width: 'fit-content',
+    minHeight: 'fit-content'
   };
 
   function getTransformOrigin(placement: string): string {
@@ -181,17 +176,18 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
             transform: scale(1);
           }
         }
+        
+        /* Ensure mobile transform is preserved */
+        @media (max-width: 768px) {
+          .floating-toolbar-content {
+            animation: none !important;
+          }
+        }
       `}</style>
       
       <div 
         ref={toolbarRef} 
-        style={{
-          ...toolbarStyle,
-          // On mobile, make it less intrusive
-          ...(isMobileDevice && {
-            touchAction: 'none', // Prevent default touch behaviors on the toolbar itself
-          })
-        }}
+        style={toolbarStyle}
         className="floating-toolbar-content"
         onPointerDown={(e) => {
           // Only stop propagation for direct toolbar button interactions,
@@ -213,6 +209,8 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
             key={action.id}
             action={action}
             size={currentConfig.buttonSize}
+            isSubmenuOpen={activeSubmenuId === action.id}
+            onSubmenuToggle={() => handleSubmenuToggle(action.id)}
           />
         ))}
         
@@ -234,18 +232,18 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
               <div
                 style={{
                   position: 'absolute',
-                  top: `${currentConfig.buttonSize + 4}px`,
+                  top: `${currentConfig.buttonSize + 2}px`,
                   right: '0',
                   background: 'white',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '6px',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  zIndex: 41, // Slightly higher than main toolbar
-                  padding: '4px',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                  zIndex: 41,
+                  padding: '0px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '2px',
-                  minWidth: `${currentConfig.buttonSize}px`
+                  gap: '0px',
+                  minWidth: `${currentConfig.buttonSize}px`,
+                  userSelect: 'none',
+                  touchAction: 'manipulation'
                 }}
                 onPointerLeave={() => setShowOverflow(false)}
                 onPointerDown={(e) => {
@@ -263,6 +261,8 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
                     action={action}
                     size={currentConfig.buttonSize}
                     compact
+                    isSubmenuOpen={activeSubmenuId === action.id}
+                    onSubmenuToggle={() => handleSubmenuToggle(action.id)}
                   />
                 ))}
               </div>

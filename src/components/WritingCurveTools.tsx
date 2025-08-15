@@ -5,10 +5,17 @@ import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useEditorStore } from '../store/editorStore';
 import { toolModeManager } from '../managers/ToolModeManager';
 import { curvesManager } from '../plugins/curves/CurvesManager';
+import { useMobileDetection } from '../hooks/useMobileDetection';
 
 export const WritingCurveTools: React.FC = () => {
+  const { isMobile } = useMobileDetection();
   const { mode, selection } = useEditorStore();
   const [isCurveSubmenuOpen, setIsCurveSubmenuOpen] = useState(false);
+
+  // Match floating toolbar button sizing
+  const buttonSize = isMobile ? 28 : 32;
+  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+  const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
 
   const isCurveActive = mode.current === 'curves';
   const hasSelection = selection.selectedCommands.length > 0;
@@ -37,25 +44,22 @@ export const WritingCurveTools: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '48px',
-            height: '40px',
-            background: isCurveActive ? '#374151' : (isCurveSubmenuOpen ? '#e5e7eb' : 'white'),
+            width: `${buttonSize}px`,
+            height: `${buttonSize}px`,
+            background: isCurveActive ? '#374151' : (isCurveSubmenuOpen ? '#f3f4f6' : 'white'),
             fontSize: '12px',
             fontWeight: 600,
             color: isCurveActive ? 'white' : '#374151',
             border: 'none',
-            gap: '4px',
-            padding: '0 4px',
+            borderRadius: '0px',
+            gap: '2px',
             cursor: 'pointer',
             transition: 'all 0.15s ease',
-            position: 'relative'
+            position: 'relative',
+            opacity: 1,
+            touchAction: 'manipulation'
           }}>
-            <Spline size={16} />
-            <ChevronDown size={12} style={{ 
-              marginLeft: '2px',
-              transform: isCurveSubmenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.2s ease'
-            }} />
+            <Spline size={iconSize} />
           </div>
         }
         isOpen={isCurveSubmenuOpen}
