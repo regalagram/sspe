@@ -25,26 +25,37 @@ import {
 } from 'lucide-react';
 
 // Helper functions for conditional visibility
-const getSelectedCommands = () => {
+const getSelectedCommandsWithContext = () => {
   const store = useEditorStore.getState();
-  const commands = store.selection.selectedCommands.map(id => {
+  const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
+  
+  store.selection.selectedCommands.forEach(id => {
     for (const path of store.paths) {
       for (const subPath of path.subPaths) {
         const cmd = subPath.commands.find(c => c.id === id);
-        if (cmd) return cmd;
+        if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+          commandsWithContext.push({
+            command: cmd,
+            subPathCommands: subPath.commands
+          });
+          return;
+        }
       }
     }
-    return null;
-  }).filter((cmd): cmd is NonNullable<typeof cmd> => cmd !== null && isCommandArrangeable(cmd));
+  });
   
-  return commands;
+  return commandsWithContext;
+};
+
+const getSelectedCommands = () => {
+  return getSelectedCommandsWithContext().map(ctx => ctx.command);
 };
 
 const getUniquePositionsCount = () => {
-  const commands = getSelectedCommands();
-  if (commands.length === 0) return 0;
+  const commandsWithContext = getSelectedCommandsWithContext();
+  if (commandsWithContext.length === 0) return 0;
   
-  const uniquePositions = getUniqueCommandPositions(commands);
+  const uniquePositions = getUniqueCommandPositions(commandsWithContext);
   return uniquePositions.length;
 };
 

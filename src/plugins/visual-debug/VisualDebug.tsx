@@ -312,7 +312,11 @@ export const CommandPointsRenderer: React.FC = () => {
           const isSubPathSelected = selection.selectedSubPaths.includes(subPath.id);
           // Si hidePointsInSelect está activo y el subpath está seleccionado, no mostrar puntos
           if (enabledFeatures.hidePointsInSelect && isSubPathSelected) return null;
-          const shouldShowSubPath = enabledFeatures.commandPointsEnabled || isSubPathSelected;
+          // Check if any command in this subpath is selected
+          const hasSelectedCommandInSubPath = subPath.commands.some(cmd => 
+            selection.selectedCommands.includes(cmd.id)
+          );
+          const shouldShowSubPath = enabledFeatures.commandPointsEnabled || isSubPathSelected || hasSelectedCommandInSubPath;
           // Check if first and last commands coincide
           const firstCommand = subPath.commands[0];
           const lastCommand = subPath.commands[subPath.commands.length - 1];
@@ -476,8 +480,14 @@ export const CommandPointsRenderer: React.FC = () => {
             }
             
             // Skip rendering first command if there's a Z command (will render split visual instead)
+            // UNLESS the first command is specifically selected in a multi-command selection
             if (isFirstCommand && hasZCommand) {
-              return null;
+              const isFirstCommandSelected = selection.selectedCommands.includes(firstCommand.id);
+              const hasMultipleCommandsSelected = selection.selectedCommands.length > 1;
+              // Only skip if the first command is NOT selected in a multi-command selection
+              if (!(isFirstCommandSelected && hasMultipleCommandsSelected)) {
+                return null;
+              }
             }
             
             const baseRadius = getControlPointSize(isMobile, isTablet);

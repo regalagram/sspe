@@ -415,146 +415,219 @@ export const createCommandActions: StateCreator<
   // Command point arranging actions
   alignCommandsLeft: (commandIds) => {
     const state = get();
-    const commands = commandIds.map(id => {
+    const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
+    
+    commandIds.forEach(id => {
       for (const path of state.paths) {
         for (const subPath of path.subPaths) {
           const cmd = subPath.commands.find(c => c.id === id);
-          if (cmd) return cmd;
+          if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+            commandsWithContext.push({
+              command: cmd,
+              subPathCommands: subPath.commands
+            });
+            return;
+          }
         }
       }
-      return null;
-    }).filter((cmd): cmd is SVGCommand => cmd !== null && isCommandArrangeable(cmd));
+    });
 
-    if (commands.length < 2) return;
+    if (commandsWithContext.length < 2) return;
 
-    const leftmostX = Math.min(...commands.map(cmd => cmd.x!));
+    // Get unique positions to handle coincident points
+    const uniquePositions = getUniqueCommandPositions(commandsWithContext);
+    if (uniquePositions.length < 2) return;
+    
+    const leftmostX = Math.min(...uniquePositions.map(pos => pos.position.x));
 
-    commands.forEach(cmd => {
-      get().updateCommand(cmd.id, { x: leftmostX });
+    commandsWithContext.forEach(({ command }) => {
+      get().updateCommand(command.id, { x: leftmostX });
     });
   },
 
   alignCommandsCenter: (commandIds) => {
     const state = get();
-    const commands = commandIds.map(id => {
+    const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
+    
+    commandIds.forEach(id => {
       for (const path of state.paths) {
         for (const subPath of path.subPaths) {
           const cmd = subPath.commands.find(c => c.id === id);
-          if (cmd) return cmd;
+          if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+            commandsWithContext.push({
+              command: cmd,
+              subPathCommands: subPath.commands
+            });
+            return;
+          }
         }
       }
-      return null;
-    }).filter((cmd): cmd is SVGCommand => cmd !== null && isCommandArrangeable(cmd));
+    });
 
-    if (commands.length < 2) return;
+    if (commandsWithContext.length < 2) return;
 
-    const bounds = getCommandPointsBounds(commands);
-    if (!bounds) return;
+    // Get unique positions to handle coincident points
+    const uniquePositions = getUniqueCommandPositions(commandsWithContext);
+    if (uniquePositions.length < 2) return;
+    
+    const allX = uniquePositions.map(pos => pos.position.x);
+    const centerX = (Math.min(...allX) + Math.max(...allX)) / 2;
 
-    commands.forEach(cmd => {
-      get().updateCommand(cmd.id, { x: bounds.centerX });
+    commandsWithContext.forEach(({ command }) => {
+      get().updateCommand(command.id, { x: centerX });
     });
   },
 
   alignCommandsRight: (commandIds) => {
     const state = get();
-    const commands = commandIds.map(id => {
+    const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
+    
+    commandIds.forEach(id => {
       for (const path of state.paths) {
         for (const subPath of path.subPaths) {
           const cmd = subPath.commands.find(c => c.id === id);
-          if (cmd) return cmd;
+          if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+            commandsWithContext.push({
+              command: cmd,
+              subPathCommands: subPath.commands
+            });
+            return;
+          }
         }
       }
-      return null;
-    }).filter((cmd): cmd is SVGCommand => cmd !== null && isCommandArrangeable(cmd));
+    });
 
-    if (commands.length < 2) return;
+    if (commandsWithContext.length < 2) return;
 
-    const rightmostX = Math.max(...commands.map(cmd => cmd.x!));
+    // Get unique positions to handle coincident points
+    const uniquePositions = getUniqueCommandPositions(commandsWithContext);
+    if (uniquePositions.length < 2) return;
+    
+    const rightmostX = Math.max(...uniquePositions.map(pos => pos.position.x));
 
-    commands.forEach(cmd => {
-      get().updateCommand(cmd.id, { x: rightmostX });
+    commandsWithContext.forEach(({ command }) => {
+      get().updateCommand(command.id, { x: rightmostX });
     });
   },
 
   alignCommandsTop: (commandIds) => {
     const state = get();
-    const commands = commandIds.map(id => {
+    const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
+    
+    commandIds.forEach(id => {
       for (const path of state.paths) {
         for (const subPath of path.subPaths) {
           const cmd = subPath.commands.find(c => c.id === id);
-          if (cmd) return cmd;
+          if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+            commandsWithContext.push({
+              command: cmd,
+              subPathCommands: subPath.commands
+            });
+            return;
+          }
         }
       }
-      return null;
-    }).filter((cmd): cmd is SVGCommand => cmd !== null && isCommandArrangeable(cmd));
+    });
 
-    if (commands.length < 2) return;
+    if (commandsWithContext.length < 2) return;
 
-    const topmostY = Math.min(...commands.map(cmd => cmd.y!));
+    // Get unique positions to handle coincident points
+    const uniquePositions = getUniqueCommandPositions(commandsWithContext);
+    if (uniquePositions.length < 2) return;
+    
+    const topmostY = Math.min(...uniquePositions.map(pos => pos.position.y));
 
-    commands.forEach(cmd => {
-      get().updateCommand(cmd.id, { y: topmostY });
+    commandsWithContext.forEach(({ command }) => {
+      get().updateCommand(command.id, { y: topmostY });
     });
   },
 
   alignCommandsMiddle: (commandIds) => {
     const state = get();
-    const commands = commandIds.map(id => {
+    const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
+    
+    commandIds.forEach(id => {
       for (const path of state.paths) {
         for (const subPath of path.subPaths) {
           const cmd = subPath.commands.find(c => c.id === id);
-          if (cmd) return cmd;
+          if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+            commandsWithContext.push({
+              command: cmd,
+              subPathCommands: subPath.commands
+            });
+            return;
+          }
         }
       }
-      return null;
-    }).filter((cmd): cmd is SVGCommand => cmd !== null && isCommandArrangeable(cmd));
+    });
 
-    if (commands.length < 2) return;
+    if (commandsWithContext.length < 2) return;
 
-    const bounds = getCommandPointsBounds(commands);
-    if (!bounds) return;
+    // Get unique positions to handle coincident points
+    const uniquePositions = getUniqueCommandPositions(commandsWithContext);
+    if (uniquePositions.length < 2) return;
+    
+    const allY = uniquePositions.map(pos => pos.position.y);
+    const centerY = (Math.min(...allY) + Math.max(...allY)) / 2;
 
-    commands.forEach(cmd => {
-      get().updateCommand(cmd.id, { y: bounds.centerY });
+    commandsWithContext.forEach(({ command }) => {
+      get().updateCommand(command.id, { y: centerY });
     });
   },
 
   alignCommandsBottom: (commandIds) => {
     const state = get();
-    const commands = commandIds.map(id => {
+    const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
+    
+    commandIds.forEach(id => {
       for (const path of state.paths) {
         for (const subPath of path.subPaths) {
           const cmd = subPath.commands.find(c => c.id === id);
-          if (cmd) return cmd;
+          if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+            commandsWithContext.push({
+              command: cmd,
+              subPathCommands: subPath.commands
+            });
+            return;
+          }
         }
       }
-      return null;
-    }).filter((cmd): cmd is SVGCommand => cmd !== null && isCommandArrangeable(cmd));
+    });
 
-    if (commands.length < 2) return;
+    if (commandsWithContext.length < 2) return;
 
-    const bottommostY = Math.max(...commands.map(cmd => cmd.y!));
+    // Get unique positions to handle coincident points
+    const uniquePositions = getUniqueCommandPositions(commandsWithContext);
+    if (uniquePositions.length < 2) return;
+    
+    const bottommostY = Math.max(...uniquePositions.map(pos => pos.position.y));
 
-    commands.forEach(cmd => {
-      get().updateCommand(cmd.id, { y: bottommostY });
+    commandsWithContext.forEach(({ command }) => {
+      get().updateCommand(command.id, { y: bottommostY });
     });
   },
 
   distributeCommandsHorizontally: (commandIds) => {
     const state = get();
-    const commands = commandIds.map(id => {
+    const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
+    
+    commandIds.forEach(id => {
       for (const path of state.paths) {
         for (const subPath of path.subPaths) {
           const cmd = subPath.commands.find(c => c.id === id);
-          if (cmd) return cmd;
+          if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+            commandsWithContext.push({
+              command: cmd,
+              subPathCommands: subPath.commands
+            });
+            return;
+          }
         }
       }
-      return null;
-    }).filter((cmd): cmd is SVGCommand => cmd !== null && isCommandArrangeable(cmd));
+    });
 
     // Get unique positions, treating coincident points as one
-    const uniquePositions = getUniqueCommandPositions(commands);
+    const uniquePositions = getUniqueCommandPositions(commandsWithContext);
     
     if (uniquePositions.length < 3) return;
 
@@ -580,18 +653,25 @@ export const createCommandActions: StateCreator<
 
   distributeCommandsVertically: (commandIds) => {
     const state = get();
-    const commands = commandIds.map(id => {
+    const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
+    
+    commandIds.forEach(id => {
       for (const path of state.paths) {
         for (const subPath of path.subPaths) {
           const cmd = subPath.commands.find(c => c.id === id);
-          if (cmd) return cmd;
+          if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+            commandsWithContext.push({
+              command: cmd,
+              subPathCommands: subPath.commands
+            });
+            return;
+          }
         }
       }
-      return null;
-    }).filter((cmd): cmd is SVGCommand => cmd !== null && isCommandArrangeable(cmd));
+    });
 
     // Get unique positions, treating coincident points as one
-    const uniquePositions = getUniqueCommandPositions(commands);
+    const uniquePositions = getUniqueCommandPositions(commandsWithContext);
     
     if (uniquePositions.length < 3) return;
 
