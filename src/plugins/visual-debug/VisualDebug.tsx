@@ -559,7 +559,7 @@ export const CommandPointsRenderer: React.FC = () => {
               const lastCommandSelected = selection.selectedCommands.includes(lastCommand.id);
               
               return (
-                <g key={`command-split-${command.id}-v${renderVersion}`}>
+                <g key={`command-split-${firstCommand.id}-${lastCommand.id}-v${renderVersion}`}>
                   {/* First half (red) - initial point */}
                   <path
                     d={`M ${position.x} ${position.y} L ${splitX1} ${splitY1} A ${radius} ${radius} 0 0 1 ${splitX2} ${splitY2} Z`}

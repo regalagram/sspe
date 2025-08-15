@@ -337,6 +337,9 @@ class DragManager {
   private lastDelta: Point = { x: 0, y: 0 }; // Track last applied delta
   private instanceId: string;
   private debugManager: DebugManager;
+  private draggingCommandId?: string; // Track which command is being dragged
+  private isDualPointDrag: boolean = false; // Track if we're dragging dual points
+  private stickyDisabledForDrag: boolean = false; // Track if sticky is disabled for this drag
 
   constructor(editorStore: any, config: PointerInteractionConfig, debugManager: DebugManager) {
     this.editorStore = editorStore;
@@ -350,9 +353,24 @@ class DragManager {
     this.editorStore = store;
   }
 
-  startDrag(elements: SelectedElements, origin: Point): void {
+  startDrag(elements: SelectedElements, origin: Point, draggingCommandId?: string): void {
     this.debugManager.logDragOperation('Starting drag with elements', elements);
     this.debugManager.logDragManager('instanceId in startDrag', this.instanceId);
+    
+    // Store which command is being dragged
+    this.draggingCommandId = draggingCommandId;
+    
+    // Detect if this is a dual point drag scenario
+    const selectedCommands = this.editorStore.selection.selectedCommands || [];
+    this.isDualPointDrag = this.isDualPointIndividualSelection(selectedCommands) || 
+                          this.isDualPointPairSelection(selectedCommands);
+    
+    // If dual point drag, disable sticky points for the entire drag operation
+    if (this.isDualPointDrag) {
+      this.stickyDisabledForDrag = true;
+    } else {
+      this.stickyDisabledForDrag = false;
+    }
     
     // Use centralized utility to capture elements instead of individual snapshots
     this.capturedElementsData = captureAllSelectedElementsPositions();
@@ -360,7 +378,7 @@ class DragManager {
     
     // Initialize sticky guidelines drag operation to capture original bounds
     // This prevents amplification of sticky guidelines during text/image dragging
-        stickyManager.startDragOperation();
+    stickyManager.startDragOperation();
     
     // Reset last delta
     this.lastDelta = { x: 0, y: 0 };
@@ -391,41 +409,21 @@ class DragManager {
       // This is more efficient than the batch utility for real-time dragging
       const selection = this.editorStore.selection;
       
-      // Move commands with sticky points support
-      selection.selectedCommands?.forEach((commandId: string) => {
-        // Find current command position
-        let currentPosition: { x: number; y: number } | null = null;
-        this.editorStore.paths.forEach((path: any) => {
-          path.subPaths.forEach((subPath: any) => {
-            const command = subPath.commands.find((cmd: any) => cmd.id === commandId);
-            if (command && command.x !== undefined && command.y !== undefined) {
-              currentPosition = { x: command.x, y: command.y };
-            }
-          });
-        });
-        
-        if (currentPosition) {
-          let targetPosition = {
-            x: (currentPosition as { x: number; y: number }).x + incrementalDelta.x,  
-            y: (currentPosition as { x: number; y: number }).y + incrementalDelta.y
-          };
-          
-          // Check for sticky points behavior
-          const stickyResult = stickyPointsManager.checkStickyBehavior(commandId, targetPosition);
-          if (stickyResult.shouldStick && stickyResult.stickyPosition) {
-            targetPosition = stickyResult.stickyPosition;
-          }
-          
-          // Apply grid snapping if enabled - get current grid settings from store
-          const currentGridSettings = this.editorStore.grid;
-          if (currentGridSettings && currentGridSettings.snapToGrid && !stickyResult.shouldStick) {
-            const snapped = snapToGrid(targetPosition, currentGridSettings.size);
-            targetPosition = snapped;
-          }
-          
-          this.editorStore.moveCommand(commandId, targetPosition);
+      // Move commands using simplified logic with global sticky state
+      const selectedCommands = selection.selectedCommands || [];
+      
+      if (this.isDualPointDrag && this.isDualPointIndividualSelection(selectedCommands)) {
+        // Individual dual point selection: only move the clicked command
+        const clickedCommandId = this.draggingCommandId;
+        if (clickedCommandId && selectedCommands.includes(clickedCommandId)) {
+          this.moveSingleCommandDuringDrag(clickedCommandId, incrementalDelta, this.stickyDisabledForDrag);
         }
-      });
+      } else {
+        // Normal movement or dual pair movement: move all selected commands
+        selectedCommands.forEach((commandId: string) => {
+          this.moveSingleCommandDuringDrag(commandId, incrementalDelta, this.stickyDisabledForDrag);
+        });
+      }
       
       // For other element types, still use the batch utility since they handle deltas correctly
       const selectedElements = this.getSelectedElementsData();
@@ -458,11 +456,219 @@ class DragManager {
     }
   }
 
+  /**
+   * Check if we're in a dual point scenario with individual selection
+   */
+  private isDualPointIndividualSelection(selectedCommands: string[] | undefined): boolean {
+    if (!selectedCommands || selectedCommands.length !== 1) {
+      return false;
+    }
+    
+    // Check if this single command is part of a coincident pair
+    const commandId = selectedCommands[0];
+    return this.isCommandPartOfCoincidentPair(commandId);
+  }
+  
+  /**
+   * Check if we have a dual point pair selection (2 coincident commands)
+   */
+  private isDualPointPairSelection(selectedCommands: string[] | undefined): boolean {
+    if (!selectedCommands || selectedCommands.length !== 2) {
+      return false;
+    }
+    
+    // Check if both commands are part of the same coincident pair
+    return this.areCommandsCoincidentPair(selectedCommands[0], selectedCommands[1]);
+  }
+  
+  /**
+   * Check if two commands form a coincident pair
+   */
+  private areCommandsCoincidentPair(commandId1: string, commandId2: string): boolean {
+    // Find both commands and check if they coincide
+    let command1Info: any = null;
+    let command2Info: any = null;
+    
+    for (const path of this.editorStore.paths) {
+      for (const subPath of path.subPaths) {
+        for (let i = 0; i < subPath.commands.length; i++) {
+          const command = subPath.commands[i];
+          if (command.id === commandId1) {
+            command1Info = { command, subPath, index: i };
+          } else if (command.id === commandId2) {
+            command2Info = { command, subPath, index: i };
+          }
+        }
+      }
+    }
+    
+    if (!command1Info || !command2Info || command1Info.subPath !== command2Info.subPath) {
+      return false;
+    }
+    
+    // Check if they are initial and final commands in the same subpath
+    const subPath = command1Info.subPath;
+    const isOneInitial = command1Info.index === 0 || command2Info.index === 0;
+    const isOneFinal = command1Info.index === subPath.commands.length - 1 || command2Info.index === subPath.commands.length - 1;
+    
+    if (isOneInitial && isOneFinal) {
+      // Check if positions coincide
+      const initialCommand = subPath.commands[0];
+      const finalCommand = subPath.commands[subPath.commands.length - 1];
+      
+      if (initialCommand && finalCommand && 
+          initialCommand.x !== undefined && initialCommand.y !== undefined &&
+          finalCommand.x !== undefined && finalCommand.y !== undefined) {
+        
+        const tolerance = 0.1;
+        const dx = Math.abs(initialCommand.x - finalCommand.x);
+        const dy = Math.abs(initialCommand.y - finalCommand.y);
+        
+        return dx < tolerance && dy < tolerance;
+      }
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Get current position of a command
+   */
+  private getCurrentCommandPosition(commandId: string): { x: number; y: number } | null {
+    for (const path of this.editorStore.paths) {
+      for (const subPath of path.subPaths) {
+        const command = subPath.commands.find((cmd: any) => cmd.id === commandId);
+        if (command && command.x !== undefined && command.y !== undefined) {
+          return { x: command.x, y: command.y };
+        }
+      }
+    }
+    return null;
+  }
+  
+  /**
+   * Calculate target position with sticky points and grid snapping
+   */
+  private calculateTargetPosition(commandId: string, incrementalDelta: Point, disableSticky: boolean): { 
+    currentPosition: { x: number; y: number }, 
+    targetPosition: { x: number; y: number } 
+  } | null {
+    const currentPosition = this.getCurrentCommandPosition(commandId);
+    if (!currentPosition) return null;
+    
+    let targetPosition = {
+      x: currentPosition.x + incrementalDelta.x,
+      y: currentPosition.y + incrementalDelta.y
+    };
+    
+    if (!disableSticky) {
+      // Apply sticky points behavior
+      const stickyResult = stickyPointsManager.checkStickyBehavior(commandId, targetPosition);
+      if (stickyResult.shouldStick && stickyResult.stickyPosition) {
+        targetPosition = stickyResult.stickyPosition;
+      }
+      
+      // Apply grid snapping if enabled
+      const currentGridSettings = this.editorStore.grid;
+      if (currentGridSettings && currentGridSettings.snapToGrid) {
+        const snapped = snapToGrid(targetPosition, currentGridSettings.size);
+        targetPosition = snapped;
+      }
+    }
+    
+    return { currentPosition, targetPosition };
+  }
+
+  /**
+   * Check if a command is part of a coincident pair (dual point)
+   */
+  private isCommandPartOfCoincidentPair(commandId: string): boolean {
+    // Find the command and check if it coincides with another
+    for (const path of this.editorStore.paths) {
+      for (const subPath of path.subPaths) {
+        for (let i = 0; i < subPath.commands.length; i++) {
+          const command = subPath.commands[i];
+          if (command.id === commandId) {
+            // Check if this is initial or final command in a closed path
+            const isInitial = i === 0;
+            const isFinal = i === subPath.commands.length - 1;
+            
+            if (isInitial || isFinal) {
+              // Get positions to check if they coincide
+              const initialCommand = subPath.commands[0];
+              const finalCommand = subPath.commands[subPath.commands.length - 1];
+              
+              if (initialCommand && finalCommand && 
+                  initialCommand.x !== undefined && initialCommand.y !== undefined &&
+                  finalCommand.x !== undefined && finalCommand.y !== undefined) {
+                
+                const tolerance = 0.1;
+                const dx = Math.abs(initialCommand.x - finalCommand.x);
+                const dy = Math.abs(initialCommand.y - finalCommand.y);
+                
+                return dx < tolerance && dy < tolerance;
+              }
+            }
+            return false;
+          }
+        }
+      }
+    }
+    return false;
+  }
+  
+  /**
+   * Move a single command during drag with optional sticky points and grid snapping
+   */
+  private moveSingleCommandDuringDrag(commandId: string, incrementalDelta: Point, disableSticky: boolean = false): void {
+    // Find current command position
+    let currentPosition: { x: number; y: number } | null = null;
+    this.editorStore.paths.forEach((path: any) => {
+      path.subPaths.forEach((subPath: any) => {
+        const command = subPath.commands.find((cmd: any) => cmd.id === commandId);
+        if (command && command.x !== undefined && command.y !== undefined) {
+          currentPosition = { x: command.x, y: command.y };
+        }
+      });
+    });
+    
+    if (currentPosition) {
+      let targetPosition = {
+        x: (currentPosition as { x: number; y: number }).x + incrementalDelta.x,  
+        y: (currentPosition as { x: number; y: number }).y + incrementalDelta.y
+      };
+      
+      // Apply sticky points and grid snapping based on the disableSticky parameter
+      if (!disableSticky) {
+        // Check for sticky points behavior
+        const stickyResult = stickyPointsManager.checkStickyBehavior(commandId, targetPosition);
+        if (stickyResult.shouldStick && stickyResult.stickyPosition) {
+          targetPosition = stickyResult.stickyPosition;
+        }
+        
+        // Apply grid snapping if enabled - get current grid settings from store
+        const currentGridSettings = this.editorStore.grid;
+        if (currentGridSettings && currentGridSettings.snapToGrid) {
+          const snapped = snapToGrid(targetPosition, currentGridSettings.size);
+          targetPosition = snapped;
+        }
+      }
+      
+      this.editorStore.moveCommand(commandId, targetPosition);
+    }
+  }
+
   endDrag(): void {
     this.debugManager.logDragOperation('endDrag called, clearing snapshots', this.elementSnapshots.size);
     this.debugManager.logDragManager('instanceId in endDrag', this.instanceId);
+    
+    // Reset dual point drag state
+    
     this.elementSnapshots.clear();
     this.lastDelta = { x: 0, y: 0 }; // Reset delta tracking
+    this.draggingCommandId = undefined; // Clear dragging command ID
+    this.isDualPointDrag = false; // Reset dual point drag state
+    this.stickyDisabledForDrag = false; // Re-enable sticky for future drags
     transformManager.setMoving(false);
     stickyManager.clearGuidelines();
     stickyPointsManager.clearSticky(); // Clear sticky points state
@@ -1332,7 +1538,7 @@ class PointerInteractionManager {
         this.state.draggingElement = { id: commandId, type: 'command' };
         const origin = this.getSVGPoint(e, context.svgRef);
         
-        this.dragManager.startDrag(selectedElements, origin);
+        this.dragManager.startDrag(selectedElements, origin, commandId);
         this.editorStore.hideFloatingToolbarDuringDrag();
         
         this.dispatchDragAction({
@@ -1432,7 +1638,7 @@ class PointerInteractionManager {
       const selectedElements = this.getSelectedElements();
       const origin = this.getSVGPoint(e, context.svgRef);
       
-      this.dragManager.startDrag(selectedElements, origin);
+      this.dragManager.startDrag(selectedElements, origin, commandId);
       
       // Hide floating toolbar during drag
       this.editorStore.hideFloatingToolbarDuringDrag();
