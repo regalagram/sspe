@@ -3,13 +3,19 @@ import { UIComponentDefinition } from '../core/PluginSystem';
 import { MobileUndoRedoControls } from '../plugins/undo-redo/ToolbarUndoRedo';
 import { MobileZoomControls } from '../plugins/zoom/ToolbarZoom';
 import { AnimationPlayButton } from './AnimationPlayButton';
+import { SandwichButton } from './SandwichButton';
 
 interface ToolbarProps {
   toolbarPlugins: UIComponentDefinition[];
+  // For mobile bottom sheet control
+  onMobileToggle?: () => void;
+  isMobileBottomSheetOpen?: boolean;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ 
-  toolbarPlugins 
+  toolbarPlugins,
+  onMobileToggle,
+  isMobileBottomSheetOpen
 }) => {
   // Always use the optimized toolbar with dropdown buttons and fixed positioning
   const toolbarStyle: React.CSSProperties = {
@@ -75,6 +81,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
         {/* Section 3: Animation Controls */}
         <AnimationPlayButton />
+
+        {/* Section 4: Sandwich button for panels/sidebar */}
+        <SandwichButton 
+          onMobileToggle={onMobileToggle}
+          isMobileBottomSheetOpen={isMobileBottomSheetOpen}
+        />
       </div>
     </div>
   );

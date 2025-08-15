@@ -39,6 +39,7 @@ export const SvgEditor: React.FC = () => {
   // State for mobile bottom sheet
   const [mobileBottomSheetOpen, setMobileBottomSheetOpen] = React.useState(false);
   const [mobileToggleFunction, setMobileToggleFunction] = React.useState<(() => void) | null>(null);
+  const [isFloatingToolbarVisible, setIsFloatingToolbarVisible] = React.useState(false);
 
   // Callbacks for mobile bottom sheet
   const handleBottomSheetStateChange = React.useCallback((isOpen: boolean) => {
@@ -48,6 +49,13 @@ export const SvgEditor: React.FC = () => {
   const handleToggleBottomSheetRef = React.useCallback((toggleFn: () => void) => {
     setMobileToggleFunction(() => toggleFn);
   }, []);
+
+  // Callback for floating toolbar visibility changes (mobile only)
+  const handleFloatingToolbarVisibilityChange = React.useCallback((isVisible: boolean) => {
+    if (isMobileDevice) {
+      setIsFloatingToolbarVisible(isVisible);
+    }
+  }, [isMobileDevice]);
   
   // Use custom hooks for cleaner separation of concerns
   const { getCursor } = useCombinedCursor();
@@ -156,11 +164,8 @@ export const SvgEditor: React.FC = () => {
   if (isMobileDevice) {
     return (
       <div className="svg-editor" style={editorStyle}>
-        {/* Writing toolbar at top */}
-        <WritingToolbar 
-          onMobileToggle={mobileToggleFunction || undefined}
-          isMobileBottomSheetOpen={mobileBottomSheetOpen}
-        />
+        {/* Writing toolbar at top - conditionally shown based on floating toolbar */}
+        {!isFloatingToolbarVisible && <WritingToolbar />}
         
         <MobileContainer
           sidebarPlugins={allPanels} // Use all panels like desktop
@@ -172,7 +177,7 @@ export const SvgEditor: React.FC = () => {
         </MobileContainer>
         
         {/* Floating toolbar for contextual actions */}
-        <FloatingToolbarRenderer />
+        <FloatingToolbarRenderer onVisibilityChange={handleFloatingToolbarVisibilityChange} />
       </div>
     );
   }

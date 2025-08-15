@@ -112,6 +112,8 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({
       {/* Always visible optimized Toolbar */}
       <Toolbar 
         toolbarPlugins={toolbarPlugins}
+        onMobileToggle={handleToggleBottomSheet}
+        isMobileBottomSheetOpen={isBottomSheetOpen}
       />
       
       {/* Main Content Area - Full background canvas */}

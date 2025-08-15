@@ -37,7 +37,7 @@ export function isCommandArrangeable(command: SVGCommand, subPathCommands?: SVGC
   // Z commands are arrangeable if there's a valid first command to reference
   if (command.command === 'Z' && subPathCommands && subPathCommands.length > 0) {
     const firstCommand = subPathCommands.find(cmd => cmd.command === 'M');
-    return firstCommand && firstCommand.x !== undefined && firstCommand.y !== undefined;
+    return !!(firstCommand && firstCommand.x !== undefined && firstCommand.y !== undefined);
   }
   
   return false;

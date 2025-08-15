@@ -3,6 +3,7 @@ import {
   FloatingActionDefinition, 
   ToolbarAction 
 } from '../../types/floatingToolbar';
+import { SVGCommand } from '../../types';
 import { useEditorStore } from '../../store/editorStore';
 import { getUniqueCommandPositions, isCommandArrangeable } from '../../utils/command-point-utils';
 import { 

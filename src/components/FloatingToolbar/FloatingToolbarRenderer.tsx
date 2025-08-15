@@ -8,7 +8,13 @@ import { PositioningEngine } from '../../core/FloatingToolbar/PositioningEngine'
 import { useEditorStore } from '../../store/editorStore';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 
-export const FloatingToolbarRenderer: React.FC = () => {
+interface FloatingToolbarRendererProps {
+  onVisibilityChange?: (isVisible: boolean) => void;
+}
+
+export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = ({
+  onVisibilityChange
+}) => {
   const { selection, viewport, isFloatingToolbarHidden, paths, texts, groups, images, floatingToolbarUpdateTimestamp } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   const [actions, setActions] = useState<ToolbarAction[]>([]);
@@ -64,25 +70,44 @@ export const FloatingToolbarRenderer: React.FC = () => {
       // Always calculate position, regardless of hidden state
       // This ensures position is updated when toolbar becomes visible again
       const toolbarSize = { width: 300, height: 44 };
-      const toolbarPosition = positioningEngine.calculatePosition(
+      let toolbarPosition = positioningEngine.calculatePosition(
         selection,
         viewport,
         toolbarSize
       );
       
+      // On mobile, force positioning at the top
+      if (isMobileDevice && toolbarPosition) {
+        toolbarPosition = {
+          ...toolbarPosition,
+          y: 60 // Position just below the writing toolbar area
+        };
+      }
             
       if (toolbarPosition) {
                 setPosition(toolbarPosition);
       } else {
-        const fallbackPosition = { x: 100, y: 100 };
+        const fallbackPosition = isMobileDevice 
+          ? { x: 100, y: 60 } // Mobile fallback at top
+          : { x: 100, y: 100 }; // Desktop fallback
                 setPosition(fallbackPosition);
+      }
+      
+      // Notify visibility change
+      if (onVisibilityChange) {
+        onVisibilityChange(true);
       }
     } else {
             setActions([]);
       setPosition(null);
       setShowOverflow(false);
+      
+      // Notify visibility change
+      if (onVisibilityChange) {
+        onVisibilityChange(false);
+      }
     }
-  }, [selection, viewport, isFloatingToolbarHidden, paths, texts, groups, images, toolbarManager, positioningEngine]);
+  }, [selection, viewport, isFloatingToolbarHidden, paths, texts, groups, images, toolbarManager, positioningEngine, onVisibilityChange, isMobileDevice]);
 
   // DEBUG: Log for development
     
@@ -98,7 +123,7 @@ export const FloatingToolbarRenderer: React.FC = () => {
     position: 'fixed',
     left: `${position.x}px`,
     top: `${position.y}px`,
-    zIndex: 40, // Lower z-index to reduce interference with touch events
+    zIndex: isMobileDevice ? 9999 : 40, // Higher z-index on mobile to be above WritingToolbar
     display: 'flex',
     alignItems: 'center',
     gap: `${currentConfig.spacing}px`,
