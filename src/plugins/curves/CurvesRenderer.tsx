@@ -78,7 +78,8 @@ export const CurvesRenderer: React.FC = () => {
             r={point.selected ? commandPointRadius : commandPointRadius * 0.8}
             fill={point.selected ? '#007acc' : 'white'}
             stroke="#007acc"
-            strokeWidth={2 / viewport.zoom}
+            strokeWidth={2}
+            vectorEffect="non-scaling-stroke"
             className="curve-point"
             style={{ cursor: 'pointer' }}
           />
@@ -133,7 +134,8 @@ export const CurvesRenderer: React.FC = () => {
           r={commandPointRadius * 0.8}
           fill="white"
           stroke="#007acc"
-          strokeWidth={1 / viewport.zoom}
+          strokeWidth={1}
+          vectorEffect="non-scaling-stroke"
           strokeDasharray="3,3"
           opacity={0.7}
         />
@@ -169,7 +171,8 @@ export const CurvesRenderer: React.FC = () => {
                   r={commandPointRadius * 1.5}
                   fill="none"
                   stroke="#007acc"
-                  strokeWidth={2 / viewport.zoom}
+                  strokeWidth={2}
+            vectorEffect="non-scaling-stroke"
                   opacity={0.7}
                 />
                 <text

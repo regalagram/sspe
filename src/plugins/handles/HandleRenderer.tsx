@@ -12,6 +12,7 @@ const getControlPointSize = (isMobile: boolean, isTablet: boolean): number => {
   return 8;
 };
 
+
 // Helper function to get handle colors based on type and display mode
 const getHandleColors = (type: ControlPointType, isOptionPressed: boolean, isNextCommandDisplay: boolean = false) => {
   // Control points: white fill with blue border
@@ -184,7 +185,8 @@ export const HandleRenderer: React.FC = () => {
                               x2={controlPoints[0].x}
                               y2={controlPoints[0].y}
                               stroke={colors.lineColor}
-                              strokeWidth={1 / viewport.zoom}
+                              strokeWidth={1}
+                              vectorEffect="non-scaling-stroke"
                               strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
                               pointerEvents="none"
                               opacity={1.0}
@@ -195,7 +197,8 @@ export const HandleRenderer: React.FC = () => {
                               r={radius * 0.7}
                               fill={colors.fill}
                               stroke={colors.stroke}
-                              strokeWidth={1.5 / viewport.zoom}
+                              strokeWidth={1.5}
+                              vectorEffect="non-scaling-stroke"
                               className="control-point"
                               data-command-id={command.id}
                               data-control-point="x1y1"
@@ -229,7 +232,8 @@ export const HandleRenderer: React.FC = () => {
                               x2={controlPoints[1].x}
                               y2={controlPoints[1].y}
                               stroke={colors.lineColor}
-                              strokeWidth={1 / viewport.zoom}
+                              strokeWidth={1}
+                              vectorEffect="non-scaling-stroke"
                               strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
                               pointerEvents="none"
                               opacity={1.0}
@@ -240,7 +244,8 @@ export const HandleRenderer: React.FC = () => {
                               r={radius * 0.7}
                               fill={colors.fill}
                               stroke={colors.stroke}
-                              strokeWidth={1.5 / viewport.zoom}
+                              strokeWidth={1.5}
+                              vectorEffect="non-scaling-stroke"
                               className="control-point"
                               data-command-id={command.id}
                               data-control-point="x2y2"

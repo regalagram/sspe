@@ -9,6 +9,7 @@ import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
 import { toolModeManager } from '../../managers/ToolModeManager';
 
+
 // Rectangle Selection Manager
 interface RectSelectionState {
   isSelecting: boolean;
@@ -341,7 +342,8 @@ export const SelectionRectRenderer: React.FC = () => {
       height={selectionRect.height}
       fill="rgba(0, 120, 204, 0.15)"
       stroke="#007acc"
-      strokeWidth={1 / viewport.zoom}
+      strokeWidth={1}
+      vectorEffect="non-scaling-stroke"
       style={{ pointerEvents: 'none' }}
     />
   );

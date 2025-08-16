@@ -35,8 +35,8 @@ export const StickyRenderer: React.FC = () => {
         return null;
   }
 
-  const strokeWidth = 1 / viewport.zoom;
-  const dashArray = `${4 / viewport.zoom} ${4 / viewport.zoom}`;
+  const strokeWidth = 1;
+  const dashArray = "4 4";
 
   
   return (
@@ -93,6 +93,7 @@ export const StickyRenderer: React.FC = () => {
               y2={guideline.position}
               stroke={style.color}
               strokeWidth={style.strokeWidth}
+              vectorEffect="non-scaling-stroke"
               strokeDasharray={style.dashArray}
               style={{
                 pointerEvents: 'none',
@@ -116,6 +117,7 @@ export const StickyRenderer: React.FC = () => {
               y2={viewportBottom}
               stroke={style.color}
               strokeWidth={style.strokeWidth}
+              vectorEffect="non-scaling-stroke"
               strokeDasharray={style.dashArray}
               style={{
                 pointerEvents: 'none',
@@ -135,7 +137,7 @@ export const StickyRenderer: React.FC = () => {
         // Different styles for moving vs static elements for better visual feedback
         const isMoving = projection.isMovingElement;
         const opacity = isMoving ? 0.9 : 0.5; // Moving elements more opaque
-        const strokeWidth = isMoving ? 1.5 / viewport.zoom : 1 / viewport.zoom; // Moving elements thicker
+        const strokeWidth = isMoving ? 1.5 : 1; // Moving elements thicker
         const color = '#00ff00'; // Solid green for all projections
         // No dash array - solid lines as requested
         
@@ -153,6 +155,7 @@ export const StickyRenderer: React.FC = () => {
               y2={projection.position}
               stroke={color}
               strokeWidth={strokeWidth}
+              vectorEffect="non-scaling-stroke"
               style={{
                 pointerEvents: 'none',
                 opacity: opacity
@@ -176,6 +179,7 @@ export const StickyRenderer: React.FC = () => {
               y2={viewportBottom}
               stroke={color}
               strokeWidth={strokeWidth}
+              vectorEffect="non-scaling-stroke"
               style={{
                 pointerEvents: 'none',
                 opacity: opacity

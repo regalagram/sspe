@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { transformManager, TransformHandle, TransformBounds } from './TransformManager';
 import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';
+
 interface TransformHandlesProps {
   bounds: TransformBounds;
   handles: TransformHandle[];
@@ -19,7 +20,7 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
   const handleOpacity = shouldHideHandles ? 0 : 1;
   const boundingBoxOpacity = shouldHideHandles ? 0 : 1;
   const baseHandleSize = getControlPointSize(isMobile, isTablet);
-  const strokeWidth = 1 / viewport.zoom;
+  const strokeWidth = 1;
   const hoverMultiplier = isMobile ? 1.3 : isTablet ? 1.4 : 1.5;
   function getCornerOffset(handle: TransformHandle, size: number) {
     const margin = (
@@ -72,7 +73,8 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
         fill="none"
         stroke="#007acc"
         strokeWidth={strokeWidth}
-        strokeDasharray={`${4 / viewport.zoom},${2 / viewport.zoom}`}
+        vectorEffect="non-scaling-stroke"
+        strokeDasharray="4,2"
         pointerEvents="none"
         opacity={boundingBoxOpacity}
         style={{ transition: 'opacity 0.2s ease' }}
@@ -114,6 +116,7 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
                 fillOpacity={0.3}
                 stroke="#007acc"
                 strokeWidth={strokeWidth}
+        vectorEffect="non-scaling-stroke"
                 data-handle-id={handle.id}
                 data-handle-type="transform"
                 style={{
@@ -132,6 +135,7 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
                 fillOpacity={0.4}
                 stroke="#28a745"
                 strokeWidth={strokeWidth}
+        vectorEffect="non-scaling-stroke"
                 data-handle-id={handle.id}
                 data-handle-type="transform"
                 style={{
@@ -150,6 +154,7 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
                   fillOpacity={0.3}
                   stroke="#007acc"
                   strokeWidth={strokeWidth}
+        vectorEffect="non-scaling-stroke"
                   data-handle-id={handle.id}
                   data-handle-type="rotation"
                   style={{

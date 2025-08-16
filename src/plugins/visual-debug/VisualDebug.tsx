@@ -257,8 +257,9 @@ export const StickyVisualFeedback: React.FC = () => {
         r={stickyRadius * 2.5}
         fill="none"
         stroke="#fbbf24"
-        strokeWidth={2 / viewport.zoom}
-        strokeDasharray={`${8 / viewport.zoom} ${4 / viewport.zoom}`}
+        strokeWidth={2}
+        vectorEffect="non-scaling-stroke"
+        strokeDasharray="8 4"
         style={{ 
           pointerEvents: 'none',
           opacity: 0.8,
@@ -272,7 +273,8 @@ export const StickyVisualFeedback: React.FC = () => {
         r={stickyRadius * 1.8}
         fill="none"
         stroke="#f59e0b"
-        strokeWidth={1 / viewport.zoom}
+        strokeWidth={1}
+        vectorEffect="non-scaling-stroke"
         style={{ 
           pointerEvents: 'none',
           opacity: 0.6
@@ -420,7 +422,8 @@ export const CommandPointsRenderer: React.FC = () => {
                     d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX1} ${zSplitY1} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX2} ${zSplitY2} Z`}
                     fill="#ef4444"
                     stroke="#dc2626"
-                    strokeWidth={1 / viewport.zoom}
+                    strokeWidth={1}
+        vectorEffect="non-scaling-stroke"
                     style={{ 
                       cursor: 'default',
                       pointerEvents: 'all',
@@ -433,7 +436,8 @@ export const CommandPointsRenderer: React.FC = () => {
                     d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX2} ${zSplitY2} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX1} ${zSplitY1} Z`}
                     fill="#22c55e"
                     stroke="#16a34a"
-                    strokeWidth={1 / viewport.zoom}
+                    strokeWidth={1}
+        vectorEffect="non-scaling-stroke"
                     style={{ 
                       cursor: 'default',
                       pointerEvents: 'all',
@@ -575,7 +579,8 @@ export const CommandPointsRenderer: React.FC = () => {
                     d={`M ${position.x} ${position.y} L ${splitX1} ${splitY1} A ${radius} ${radius} 0 0 1 ${splitX2} ${splitY2} Z`}
                     fill="#ef4444"
                     stroke="#dc2626"
-                    strokeWidth={1 / viewport.zoom}
+                    strokeWidth={1}
+        vectorEffect="non-scaling-stroke"
                     style={{ 
                       cursor: 'default',
                       pointerEvents: 'all',
@@ -589,7 +594,8 @@ export const CommandPointsRenderer: React.FC = () => {
                     d={`M ${position.x} ${position.y} L ${splitX2} ${splitY2} A ${radius} ${radius} 0 0 1 ${splitX1} ${splitY1} Z`}
                     fill="#22c55e"
                     stroke="#16a34a"
-                    strokeWidth={1 / viewport.zoom}
+                    strokeWidth={1}
+        vectorEffect="non-scaling-stroke"
                     style={{ 
                       cursor: 'default',
                       pointerEvents: 'all',
@@ -641,7 +647,8 @@ export const CommandPointsRenderer: React.FC = () => {
                   r={radius}
                   fill={fill}
                   stroke={stroke}
-                  strokeWidth={1 / viewport.zoom}
+                  strokeWidth={1}
+        vectorEffect="non-scaling-stroke"
                   style={{ 
                     pointerEvents: 'all',
                     opacity: 0.9,
