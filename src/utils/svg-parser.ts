@@ -884,26 +884,40 @@ export function parseSVGToSubPaths(svgString: string, useComputedStyles = false)
     
     for (const pathElement of Array.from(pathElements)) {
       const pathData = pathElement.getAttribute('d');
-      if (!pathData) continue;
+      
+      // Check if this path has animations that define the 'd' attribute
+      const hasAnimatedD = pathElement.querySelector('animate[attributeName="d"]') !== null;
+      
+      // Skip paths that have neither static 'd' nor animated 'd'
+      if (!pathData && !hasAnimatedD) continue;
       
       // Use existing ID if present, otherwise generate a new one
       const pathId = pathElement.getAttribute('id') || generateId();
       
       try {
-        const commands = parsePathData(pathData);
+        // Parse path data if available, otherwise create empty command list for animated-only paths
+        const commands = pathData ? parsePathData(pathData) : [];
         const style = parsePathStyle(pathElement, useComputedStyles);
         
         if (style.filter) {
           console.log('🎯 PATH WITH FILTER FOUND:', { 
-            pathData: pathData.substring(0, 50) + '...', 
+            pathData: pathData ? pathData.substring(0, 50) + '...' : '(animated)', 
             filter: style.filter,
             fullStyle: style
           });
         }
         
-        if (commands.length > 0) {
-          // Decompose the path into sub-paths
-          const subPaths = decomposeIntoSubPaths(commands);
+        // Always create the path if it has static commands OR animations
+        if (commands.length > 0 || hasAnimatedD) {
+          // Decompose the path into sub-paths, or create empty subpath for animated-only paths
+          const subPaths = commands.length > 0 ? decomposeIntoSubPaths(commands) : [
+            {
+              id: generateId(),
+              commands: [] // Empty commands for animated-only path
+            }
+          ];
+          
+          console.log(`📐 Creating path with ${commands.length} static commands and ${hasAnimatedD ? 'animated' : 'no'} d attribute`);
           
           paths.push({
             id: pathId,

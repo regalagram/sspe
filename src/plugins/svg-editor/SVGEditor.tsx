@@ -1594,13 +1594,6 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
       // Parse the complete SVG including paths, texts, textPaths, images, gradients, patterns, filters, groups, and animations
       const { paths: newPaths, texts: newTexts, textPaths: newTextPaths, images: newImages, gradients: newGradients, filters: newFilters, groups: newGroups, animations: newAnimations, animationChains: newAnimationChains } = parseCompleteSVG(svgCode);
       
-      console.log('📊 Parsed SVG content via SVGEditor:', { 
-        paths: newPaths.length, 
-        texts: newTexts.length, 
-        images: newImages.length, 
-        animations: newAnimations.length,
-        animationChains: (newAnimationChains || []).length 
-      });
       
       // Create a mapping of original filter IDs to new IDs for reference updates
       const filterIdMapping: Record<string, string> = {};
@@ -1671,11 +1664,9 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
           const addedFilter = storeState.filters[storeState.filters.length - 1];
           if (addedFilter && addedFilter.id) {
             filterIdMapping[originalId] = addedFilter.id;
-            console.log(`Filter ID mapping: ${originalId} -> ${addedFilter.id}`);
           }
         });
         
-        console.log('Filter ID mapping:', filterIdMapping);
         
         // Update filter references in all elements before importing
         const updatedPaths = updateFilterReferences(newPaths);
@@ -1683,8 +1674,6 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         const updatedGroups = updateFilterReferences(newGroups);
         const updatedImages = updateFilterReferences(newImages); // Use newImages, not existing images
         
-        console.log(`➕ Original images (SVGEditor replace):`, newImages.length);
-        console.log(`➕ Updated images (SVGEditor replace):`, updatedImages.length);
         
         // Clear existing animations and import new ones
         const currentAnimations = [...animations];
@@ -1704,7 +1693,6 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
           elementIdMapping[group.id] = group.id; // For now, groups keep their IDs
         });
         
-        console.log(`🔗 Element ID mapping:`, elementIdMapping);
 
         // Create animation ID mapping for chains
         const animationIdMapping: { [key: string]: string } = {};
@@ -1715,32 +1703,23 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
           const updatedAnimation = { ...animation };
           if (elementIdMapping[animation.targetElementId]) {
             updatedAnimation.targetElementId = elementIdMapping[animation.targetElementId];
-            console.log(`🎯 Updated animation target: ${animation.targetElementId} -> ${updatedAnimation.targetElementId}`);
-          } else {
-            console.warn(`⚠️  Animation target not found in mapping: ${animation.targetElementId}`);
           }
           
           // Also update mpath reference if it exists and is in our mapping
           if (updatedAnimation.mpath && elementIdMapping[updatedAnimation.mpath]) {
             const originalMpath = updatedAnimation.mpath;
             updatedAnimation.mpath = elementIdMapping[updatedAnimation.mpath];
-            console.log(`🎯 Updated mpath reference: ${originalMpath} -> ${updatedAnimation.mpath}`);
-          } else if (updatedAnimation.mpath) {
-            console.warn(`⚠️  Mpath reference not found in mapping: ${updatedAnimation.mpath}`);
           }
           
           // Remove the parsed ID to allow addAnimation to generate a new one and apply deduplication
           const { id: originalId, ...animationWithoutId } = updatedAnimation;
           const newId = addAnimation(animationWithoutId);
           animationIdMapping[originalId] = newId;
-          console.log(`🔗 Animation ID mapping: ${originalId} -> ${newId}`);
         });
 
         // Create auto-generated animation chains if any were detected, updating with new IDs
         if (newAnimationChains && newAnimationChains.length > 0) {
-          console.log(`🔗 Creating ${newAnimationChains.length} auto-generated animation chains from begin times (SVGEditor)`);
           newAnimationChains.forEach((chain: any) => {
-            console.log(`🔗 Creating chain: ${chain.name} with ${chain.animations.length} animations`);
             
             // Update animation IDs in the chain
             const updatedChainAnimations = chain.animations.map((chainAnim: any) => ({
@@ -1761,7 +1740,6 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         replaceGroups(updatedGroups);
         replaceImages(updatedImages); // Replace images instead of updating existing ones
         
-        console.log(`✅ Images in store after replace (SVGEditor): ${useEditorStore.getState().images.length}`);
       } else {
         // Append to existing content
         // First add new filters and create ID mapping
@@ -1773,11 +1751,9 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
           const addedFilter = storeState.filters[storeState.filters.length - 1];
           if (addedFilter && addedFilter.id) {
             filterIdMapping[originalId] = addedFilter.id;
-            console.log(`Filter ID mapping (append): ${originalId} -> ${addedFilter.id}`);
           }
         });
         
-        console.log('Filter ID mapping (append):', filterIdMapping);
         
         // Update filter references in all elements before merging
         const updatedPaths = updateFilterReferences(newPaths);
@@ -1793,7 +1769,6 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         const currentGroups = [...groups];
         const currentImages = [...images];
         
-        console.log(`➕ Adding ${updatedNewImages.length} new images to existing ${currentImages.length} images (SVGEditor append)`);
         
         // Create element ID mapping to track original -> final IDs (append mode)
         const elementIdMapping: { [key: string]: string } = {};
@@ -1809,7 +1784,6 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
           elementIdMapping[group.id] = group.id; // For now, groups keep their IDs
         });
         
-        console.log(`🔗 Element ID mapping (append):`, elementIdMapping);
 
         // Create animation ID mapping for chains  
         const animationIdMapping: { [key: string]: string } = {};
@@ -1820,32 +1794,23 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
           const updatedAnimation = { ...animation };
           if (elementIdMapping[animation.targetElementId]) {
             updatedAnimation.targetElementId = elementIdMapping[animation.targetElementId];
-            console.log(`🎯 Updated animation target (append): ${animation.targetElementId} -> ${updatedAnimation.targetElementId}`);
-          } else {
-            console.warn(`⚠️  Animation target not found in mapping (append): ${animation.targetElementId}`);
           }
           
           // Also update mpath reference if it exists and is in our mapping
           if (updatedAnimation.mpath && elementIdMapping[updatedAnimation.mpath]) {
             const originalMpath = updatedAnimation.mpath;
             updatedAnimation.mpath = elementIdMapping[updatedAnimation.mpath];
-            console.log(`🎯 Updated mpath reference (append): ${originalMpath} -> ${updatedAnimation.mpath}`);
-          } else if (updatedAnimation.mpath) {
-            console.warn(`⚠️  Mpath reference not found in mapping (append): ${updatedAnimation.mpath}`);
           }
           
           // Remove the parsed ID to allow addAnimation to generate a new one and apply deduplication
           const { id: originalId, ...animationWithoutId } = updatedAnimation;
           const newId = addAnimation(animationWithoutId);
           animationIdMapping[originalId] = newId;
-          console.log(`🔗 Animation ID mapping (append): ${originalId} -> ${newId}`);
         });
 
         // Create auto-generated animation chains if any were detected, updating with new IDs
         if (newAnimationChains && newAnimationChains.length > 0) {
-          console.log(`🔗 Creating ${newAnimationChains.length} auto-generated animation chains from begin times (SVGEditor append)`);
           newAnimationChains.forEach((chain: any) => {
-            console.log(`🔗 Creating chain: ${chain.name} with ${chain.animations.length} animations`);
             
             // Update animation IDs in the chain
             const updatedChainAnimations = chain.animations.map((chainAnim: any) => ({
@@ -1866,7 +1831,6 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         replaceGroups([...currentGroups, ...updatedGroups]);
         replaceImages([...currentImages, ...updatedNewImages]); // Merge existing and new images
         
-        console.log(`✅ Images in store after append (SVGEditor): ${useEditorStore.getState().images.length}`);
       }
       
       // Auto-adjust viewport if enabled
@@ -1874,7 +1838,6 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
         resetViewportCompletely();
       }
       
-      console.log(`Imported (${importSettings.mode}): ${newPaths.length} paths, ${newTexts.length} texts, ${newTextPaths.length} textPaths, ${newImages.length} images, ${newGradients.length} gradients/patterns, ${newFilters.length} filters, ${newGroups.length} groups, ${newAnimations.length} animations`);
       
     } catch (error) {
       console.error('Error parsing SVG:', error);

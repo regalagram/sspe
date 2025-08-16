@@ -158,8 +158,9 @@ export const renderAnimationsForElement = (
   const elementAnimations = animations.filter(animation => animation.targetElementId === elementId);
   
   return elementAnimations.map((animation) => {
-    // Always use indefinite - animations controlled programmatically
-    const beginValue = 'indefinite';
+    // Determine if this animation should be editor-controlled or run autonomously
+    const isEditorControlled = animationState && animationState.isPlaying !== undefined;
+    const beginValue = isEditorControlled ? 'indefinite' : (animation.begin || '0s');
     
     const commonProps = {
       key: animation.id,
@@ -316,8 +317,9 @@ const AnimationElement: React.FC<{ animation: SVGAnimation; animationKey: number
     };
   }, [animationState.isPlaying, animationState.restartKey, animation.id]);
   
-  // Always use 'indefinite' for begin - we control timing programmatically
-  const beginValue = 'indefinite';
+  // Determine if this animation should be editor-controlled or run autonomously
+  const isEditorControlled = animationState && animationState.isPlaying !== undefined;
+  const beginValue = isEditorControlled ? 'indefinite' : (animation.begin || '0s');
   
   // Add a key that includes animation key to force re-mount only when needed
   const stableKey = `${animation.id}-${animationKey}`;
