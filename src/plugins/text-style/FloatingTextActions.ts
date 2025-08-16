@@ -12,11 +12,52 @@ import {
   Minus,
   RotateCcw,
   Edit,
-  Brush
+  Brush,
+  Filter
 } from 'lucide-react';
 import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { useEditorStore } from '../../store/editorStore';
 import { textEditManager } from '../../managers/TextEditManager';
+import {
+  createDropShadowFilter,
+  createBlurFilter,
+  createGrayscaleFilter,
+  createSepiaFilter,
+  createInvertFilter,
+  createBrightnessFilter,
+  createContrastFilter,
+  createSaturateFilter,
+  createHueRotateFilter,
+  createEmbossFilter,
+  createSharpenFilter,
+  createEdgeDetectFilter,
+  createGlowFilter,
+  createBevelFilter,
+  createMotionBlurFilter,
+  createNoiseFilter,
+  createWaveDistortionFilter,
+  createPosterizeFilter,
+  createOilPaintingFilter,
+  createWatercolorFilter,
+  createVintageFilter,
+  createChromaticAberrationFilter,
+  createNeonGlowFilter,
+  createMosaicFilter,
+  createGlitchFilter,
+  createPixelateFilter,
+  createDancingStrokeFilter,
+  createSmokeFilter,
+  createWavesFilter,
+  createPaperTextureFilter,
+  createZebraFilter,
+  createNetFilter,
+  createDustFilter,
+  createColoredStripesFilter,
+  createColoredSpotsFilter,
+  createColoredFlameFilter,
+  createAdvancedWatercolorFilter,
+  formatSVGReference
+} from '../../utils/svg-elements-utils';
 
 // Get current text styles for selected texts
 const getCurrentTextStyles = () => {
@@ -167,6 +208,87 @@ const applyStrokeWidth = (width: string | number) => {
   }
 };
 
+// Generic function to apply filters to texts
+const applyFilterToTexts = (filterCreatorFn: () => any) => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  if (selectedTexts.length === 0) return;
+  
+  // Create the filter
+  const filterData = filterCreatorFn();
+  store.addFilter(filterData);
+  
+  // Apply using a timeout to ensure the store is updated
+  setTimeout(() => {
+    // Access filters from the store directly to get the most current state
+    const storeState = useEditorStore.getState();
+    const currentFilters = storeState.filters;
+    const newFilter = currentFilters[currentFilters.length - 1]; // Get the last added filter
+    
+    if (newFilter && newFilter.id) {
+      const filterRef = formatSVGReference(newFilter.id);
+      
+      // Apply filter to each selected text
+      selectedTexts.forEach(textId => {
+        storeState.updateTextStyle(textId, { 
+          filter: filterRef
+        });
+      });
+    }
+  }, 0);
+};
+
+// Specific filter functions for text
+const applyBlurFilterToText = () => applyFilterToTexts(createBlurFilter);
+const applyDropShadowToText = () => applyFilterToTexts(createDropShadowFilter);
+const applyGrayscaleFilterToText = () => applyFilterToTexts(createGrayscaleFilter);
+const applySepiaFilterToText = () => applyFilterToTexts(createSepiaFilter);
+const applyInvertFilterToText = () => applyFilterToTexts(createInvertFilter);
+const applyBrightnessFilterToText = () => applyFilterToTexts(createBrightnessFilter);
+const applyContrastFilterToText = () => applyFilterToTexts(createContrastFilter);
+const applySaturateFilterToText = () => applyFilterToTexts(createSaturateFilter);
+const applyHueRotateFilterToText = () => applyFilterToTexts(createHueRotateFilter);
+const applyEmbossFilterToText = () => applyFilterToTexts(createEmbossFilter);
+const applySharpenFilterToText = () => applyFilterToTexts(createSharpenFilter);
+const applyEdgeDetectFilterToText = () => applyFilterToTexts(createEdgeDetectFilter);
+const applyGlowFilterToText = () => applyFilterToTexts(createGlowFilter);
+const applyBevelFilterToText = () => applyFilterToTexts(createBevelFilter);
+const applyMotionBlurFilterToText = () => applyFilterToTexts(createMotionBlurFilter);
+const applyNoiseFilterToText = () => applyFilterToTexts(createNoiseFilter);
+const applyWaveDistortionFilterToText = () => applyFilterToTexts(createWaveDistortionFilter);
+const applyPosterizeFilterToText = () => applyFilterToTexts(createPosterizeFilter);
+const applyOilPaintingFilterToText = () => applyFilterToTexts(createOilPaintingFilter);
+const applyWatercolorFilterToText = () => applyFilterToTexts(createWatercolorFilter);
+const applyVintageFilterToText = () => applyFilterToTexts(createVintageFilter);
+const applyChromaticAberrationFilterToText = () => applyFilterToTexts(createChromaticAberrationFilter);
+const applyNeonGlowFilterToText = () => applyFilterToTexts(createNeonGlowFilter);
+const applyMosaicFilterToText = () => applyFilterToTexts(createMosaicFilter);
+const applyGlitchFilterToText = () => applyFilterToTexts(createGlitchFilter);
+const applyPixelateFilterToText = () => applyFilterToTexts(createPixelateFilter);
+const applyDancingStrokeFilterToText = () => applyFilterToTexts(createDancingStrokeFilter);
+const applySmokeFilterToText = () => applyFilterToTexts(createSmokeFilter);
+const applyWavesFilterToText = () => applyFilterToTexts(createWavesFilter);
+const applyPaperTextureFilterToText = () => applyFilterToTexts(createPaperTextureFilter);
+const applyZebraFilterToText = () => applyFilterToTexts(createZebraFilter);
+const applyNetFilterToText = () => applyFilterToTexts(createNetFilter);
+const applyDustFilterToText = () => applyFilterToTexts(createDustFilter);
+const applyColoredStripesFilterToText = () => applyFilterToTexts(createColoredStripesFilter);
+const applyColoredSpotsFilterToText = () => applyFilterToTexts(createColoredSpotsFilter);
+const applyColoredFlameFilterToText = () => applyFilterToTexts(createColoredFlameFilter);
+const applyAdvancedWatercolorFilterToText = () => applyFilterToTexts(createAdvancedWatercolorFilter);
+
+// Text filter options - Essential 7 filters
+const textFilterOptions = [
+  { id: 'text-blur', label: 'Blur', action: applyBlurFilterToText },
+  { id: 'text-shadow', label: 'Drop Shadow', action: applyDropShadowToText },
+  { id: 'text-glow', label: 'Glow', action: applyGlowFilterToText },
+  { id: 'text-grayscale', label: 'Grayscale', action: applyGrayscaleFilterToText },
+  { id: 'text-sepia', label: 'Sepia', action: applySepiaFilterToText },
+  { id: 'text-emboss', label: 'Emboss', action: applyEmbossFilterToText },
+  { id: 'text-neon-glow', label: 'Neon Glow', action: applyNeonGlowFilterToText }
+];
+
 // Duplicate selected texts using the built-in duplicateText method
 const duplicateTexts = () => {
   const store = useEditorStore.getState();
@@ -307,6 +429,17 @@ export const textFloatingActions: ToolbarAction[] = [
     },
     priority: 60,
     tooltip: 'Configure stroke width, dash pattern, line cap, and line join'
+  },
+  {
+    id: 'text-filters',
+    icon: Filter,
+    label: 'Filters',
+    type: 'dropdown',
+    dropdown: {
+      options: textFilterOptions
+    },
+    priority: 55,
+    tooltip: 'Apply filters'
   },
   {
     id: 'edit-text',

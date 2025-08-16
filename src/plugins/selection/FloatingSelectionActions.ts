@@ -30,6 +30,46 @@ import {
   areCommandsInSameSubPath,
   simplifySegmentWithPointsOnPath
 } from '../../utils/path-simplification-utils';
+import {
+  createDropShadowFilter,
+  createBlurFilter,
+  createGrayscaleFilter,
+  createSepiaFilter,
+  createInvertFilter,
+  createBrightnessFilter,
+  createContrastFilter,
+  createSaturateFilter,
+  createHueRotateFilter,
+  createEmbossFilter,
+  createSharpenFilter,
+  createEdgeDetectFilter,
+  createGlowFilter,
+  createBevelFilter,
+  createMotionBlurFilter,
+  createNoiseFilter,
+  createWaveDistortionFilter,
+  createPosterizeFilter,
+  createOilPaintingFilter,
+  createWatercolorFilter,
+  createVintageFilter,
+  createChromaticAberrationFilter,
+  createNeonGlowFilter,
+  createMosaicFilter,
+  createGlitchFilter,
+  createPixelateFilter,
+  createDancingStrokeFilter,
+  createSmokeFilter,
+  createWavesFilter,
+  createPaperTextureFilter,
+  createZebraFilter,
+  createNetFilter,
+  createDustFilter,
+  createColoredStripesFilter,
+  createColoredSpotsFilter,
+  createColoredFlameFilter,
+  createAdvancedWatercolorFilter,
+  formatSVGReference
+} from '../../utils/svg-elements-utils';
 
 // Utility functions for getting current selection state
 const getSelectedPaths = () => {
@@ -1060,34 +1100,77 @@ const simplifySubPaths = () => {
   }
 };
 
-const applyBlurFilter = () => {
+// Generic function to apply filters to subpaths
+const applyFilterToSubPaths = (filterCreatorFn: () => any) => {
   const store = useEditorStore.getState();
   const selectedSubPaths = getSelectedSubPaths();
   
-  selectedSubPaths.forEach(({ path }) => {
-    if (path && path.id) {
-      // Apply a simple blur filter
-      store.updatePathStyle(path.id, { 
-        filter: 'blur(2px)' 
+  if (selectedSubPaths.length === 0) return;
+  
+  // Create the filter
+  const filterData = filterCreatorFn();
+  store.addFilter(filterData);
+  
+  // Apply using a timeout to ensure the store is updated
+  setTimeout(() => {
+    // Access filters from the store directly to get the most current state
+    const storeState = useEditorStore.getState();
+    const currentFilters = storeState.filters;
+    const newFilter = currentFilters[currentFilters.length - 1]; // Get the last added filter
+    
+    if (newFilter && newFilter.id) {
+      const filterRef = formatSVGReference(newFilter.id);
+      
+      // Apply filter to each selected subpath's parent path
+      selectedSubPaths.forEach(({ path }) => {
+        if (path && path.id) {
+          storeState.updatePathStyle(path.id, { 
+            filter: filterRef
+          });
+        }
       });
     }
-  });
+  }, 0);
 };
 
-// Apply drop shadow to subpaths
-const applyDropShadow = () => {
-  const store = useEditorStore.getState();
-  const selectedSubPaths = getSelectedSubPaths();
-  
-  selectedSubPaths.forEach(({ path }) => {
-    if (path && path.id) {
-      // Apply a drop shadow filter
-      store.updatePathStyle(path.id, { 
-        filter: 'drop-shadow(2px 2px 4px rgba(0,0,0,0.3))' 
-      });
-    }
-  });
-};
+// Specific filter functions
+const applyBlurFilter = () => applyFilterToSubPaths(createBlurFilter);
+const applyDropShadow = () => applyFilterToSubPaths(createDropShadowFilter);
+const applyGrayscaleFilter = () => applyFilterToSubPaths(createGrayscaleFilter);
+const applySepiaFilter = () => applyFilterToSubPaths(createSepiaFilter);
+const applyInvertFilter = () => applyFilterToSubPaths(createInvertFilter);
+const applyBrightnessFilter = () => applyFilterToSubPaths(createBrightnessFilter);
+const applyContrastFilter = () => applyFilterToSubPaths(createContrastFilter);
+const applySaturateFilter = () => applyFilterToSubPaths(createSaturateFilter);
+const applyHueRotateFilter = () => applyFilterToSubPaths(createHueRotateFilter);
+const applyEmbossFilter = () => applyFilterToSubPaths(createEmbossFilter);
+const applySharpenFilter = () => applyFilterToSubPaths(createSharpenFilter);
+const applyEdgeDetectFilter = () => applyFilterToSubPaths(createEdgeDetectFilter);
+const applyGlowFilter = () => applyFilterToSubPaths(createGlowFilter);
+const applyBevelFilter = () => applyFilterToSubPaths(createBevelFilter);
+const applyMotionBlurFilter = () => applyFilterToSubPaths(createMotionBlurFilter);
+const applyNoiseFilter = () => applyFilterToSubPaths(createNoiseFilter);
+const applyWaveDistortionFilter = () => applyFilterToSubPaths(createWaveDistortionFilter);
+const applyPosterizeFilter = () => applyFilterToSubPaths(createPosterizeFilter);
+const applyOilPaintingFilter = () => applyFilterToSubPaths(createOilPaintingFilter);
+const applyWatercolorFilter = () => applyFilterToSubPaths(createWatercolorFilter);
+const applyVintageFilter = () => applyFilterToSubPaths(createVintageFilter);
+const applyChromaticAberrationFilter = () => applyFilterToSubPaths(createChromaticAberrationFilter);
+const applyNeonGlowFilter = () => applyFilterToSubPaths(createNeonGlowFilter);
+const applyMosaicFilter = () => applyFilterToSubPaths(createMosaicFilter);
+const applyGlitchFilter = () => applyFilterToSubPaths(createGlitchFilter);
+const applyPixelateFilter = () => applyFilterToSubPaths(createPixelateFilter);
+const applyDancingStrokeFilter = () => applyFilterToSubPaths(createDancingStrokeFilter);
+const applySmokeFilter = () => applyFilterToSubPaths(createSmokeFilter);
+const applyWavesFilter = () => applyFilterToSubPaths(createWavesFilter);
+const applyPaperTextureFilter = () => applyFilterToSubPaths(createPaperTextureFilter);
+const applyZebraFilter = () => applyFilterToSubPaths(createZebraFilter);
+const applyNetFilter = () => applyFilterToSubPaths(createNetFilter);
+const applyDustFilter = () => applyFilterToSubPaths(createDustFilter);
+const applyColoredStripesFilter = () => applyFilterToSubPaths(createColoredStripesFilter);
+const applyColoredSpotsFilter = () => applyFilterToSubPaths(createColoredSpotsFilter);
+const applyColoredFlameFilter = () => applyFilterToSubPaths(createColoredFlameFilter);
+const applyAdvancedWatercolorFilter = () => applyFilterToSubPaths(createAdvancedWatercolorFilter);
 
 // Add fade animation to subpaths
 const addFadeAnimation = () => {
@@ -1153,16 +1236,13 @@ const subPathArrangeOptions = [
 ];
 
 const subPathFilterOptions = [
-  { 
-    id: 'subpath-blur', 
-    label: 'Blur', 
-    action: applyBlurFilter 
-  },
-  { 
-    id: 'subpath-shadow', 
-    label: 'Drop Shadow', 
-    action: applyDropShadow 
-  }
+  { id: 'subpath-blur', label: 'Blur', action: applyBlurFilter },
+  { id: 'subpath-shadow', label: 'Drop Shadow', action: applyDropShadow },
+  { id: 'subpath-glow', label: 'Glow', action: applyGlowFilter },
+  { id: 'subpath-grayscale', label: 'Grayscale', action: applyGrayscaleFilter },
+  { id: 'subpath-sepia', label: 'Sepia', action: applySepiaFilter },
+  { id: 'subpath-emboss', label: 'Emboss', action: applyEmbossFilter },
+  { id: 'subpath-neon-glow', label: 'Neon Glow', action: applyNeonGlowFilter }
 ];
 
 const subPathAnimationOptions = [

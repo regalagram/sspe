@@ -167,6 +167,10 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
               onSelect={() => {
                 option.action();
                 setShowDropdown(false);
+                // Also close via external handler if provided
+                if (onSubmenuToggle) {
+                  onSubmenuToggle();
+                }
               }}
             />
           ))}
@@ -219,7 +223,7 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
             zIndex: 1001,
             padding: '0px'
           }}
-          onPointerLeave={closeSubmenu}
+          onPointerLeave={isMobileDevice ? undefined : closeSubmenu}
         >
           <ColorPickerContent 
             currentColor={action.color.currentColor}
@@ -757,14 +761,14 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
     // Check paths
     if (selectedPaths.length > 0) {
       const firstPath = selectedPaths[0];
-      const styleValue = isStroke ? firstPath.style.stroke : firstPath.style.fill;
+      const styleValue = isStroke ? firstPath?.style?.stroke : firstPath?.style?.fill;
       return styleValue;
     }
     
     // Check texts
     if (selectedTexts.length > 0) {
       const firstText = selectedTexts[0];
-      const styleValue = isStroke ? firstText.style.stroke : firstText.style.fill;
+      const styleValue = isStroke ? firstText?.style?.stroke : firstText?.style?.fill;
       return styleValue;
     }
     
@@ -1085,7 +1089,11 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
         {(['colors', 'gradients', 'patterns'] as const).map(tab => (
           <button
             key={tab}
-            onPointerDown={() => setActiveTab(tab)}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setActiveTab(tab);
+            }}
             style={{
               flex: 1,
               padding: '6px 8px',
