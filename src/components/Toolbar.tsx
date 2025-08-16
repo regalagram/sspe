@@ -92,7 +92,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         {/* Section 3: Zoom Controls */}
         <MobileZoomControls />
 
-        {/* Section 4: Sandwich button for panels/sidebar */}
+        {/* Section 4: Animation Controls */}
+        <AnimationPlayButton />
+
+        {/* Section 5: Sandwich button for panels/sidebar */}
         <SandwichButton 
           onMobileToggle={onMobileToggle}
           isMobileBottomSheetOpen={isMobileBottomSheetOpen}

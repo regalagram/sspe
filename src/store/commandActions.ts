@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { EditorState, SVGCommand, Point } from '../types';
+import { EditorState, SVGCommand, Point, SVGSubPath } from '../types';
 import { generateId } from '../utils/id-utils.js';
 import { getCommandBoundingBox } from '../utils/bbox-utils';
 import { transformManager } from '../plugins/transform/TransformManager';
@@ -270,19 +270,99 @@ export const createCommandActions: StateCreator<
     }),
 
   removeCommand: (commandId) =>
-    set((state) => ({
-      paths: state.paths.map((path) => ({
-        ...path,
-        subPaths: path.subPaths.map((subPath) => ({
-          ...subPath,
-          commands: subPath.commands.filter((cmd) => cmd.id !== commandId),
-        })),
-      })),
-      selection: {
-        ...state.selection,
-        selectedCommands: state.selection.selectedCommands.filter(id => id !== commandId),
-      },
-    })),
+    set((state) => {
+      // Find the command to be removed and its context
+      let commandToRemove: SVGCommand | null = null;
+      let commandIndex = -1;
+      let subPathId = '';
+      let parentSubPath: SVGSubPath | null = null;
+
+      for (const path of state.paths) {
+        for (const subPath of path.subPaths) {
+          const cmdIndex = subPath.commands.findIndex(cmd => cmd.id === commandId);
+          if (cmdIndex !== -1) {
+            commandToRemove = subPath.commands[cmdIndex];
+            commandIndex = cmdIndex;
+            subPathId = subPath.id;
+            parentSubPath = subPath;
+            break;
+          }
+        }
+        if (commandToRemove) break;
+      }
+
+      if (!commandToRemove || !parentSubPath) {
+        return state; // Command not found
+      }
+
+      // Check if we're removing an M command that's not the first command
+      const isMoveTo = commandToRemove.command === 'M';
+      const isFirstCommand = commandIndex === 0;
+
+      let shouldRemoveSubPath = false;
+      let newCommands = [...parentSubPath.commands];
+
+      if (isMoveTo && isFirstCommand) {
+        // We're removing the first M command
+        newCommands = newCommands.filter(cmd => cmd.id !== commandId);
+        
+        if (newCommands.length === 0) {
+          // No commands left, remove the entire subpath
+          shouldRemoveSubPath = true;
+        } else {
+          // Convert the next command to M
+          const nextCommand = newCommands[0];
+          newCommands[0] = {
+            ...nextCommand,
+            command: 'M'
+          };
+          
+          // Check if after conversion we have M-Z sequence (invalid)
+          if (newCommands.length === 2 && newCommands[1].command === 'Z') {
+            shouldRemoveSubPath = true;
+          }
+        }
+      } else {
+        // Regular command removal (not first M)
+        newCommands = newCommands.filter(cmd => cmd.id !== commandId);
+        
+        // Check if subpath becomes empty
+        if (newCommands.length === 0) {
+          shouldRemoveSubPath = true;
+        }
+      }
+
+      if (shouldRemoveSubPath) {
+        // Remove the entire subpath
+        return {
+          paths: state.paths.map((path) => ({
+            ...path,
+            subPaths: path.subPaths.filter((subPath) => subPath.id !== subPathId),
+          })),
+          selection: {
+            ...state.selection,
+            selectedCommands: state.selection.selectedCommands.filter(id => id !== commandId),
+            selectedSubPaths: state.selection.selectedSubPaths.filter(id => id !== subPathId),
+          },
+        };
+      } else {
+        // Update the subpath with modified commands
+        return {
+          paths: state.paths.map((path) => ({
+            ...path,
+            subPaths: path.subPaths.map((subPath) =>
+              subPath.id === subPathId
+                ? { ...subPath, commands: newCommands }
+                : subPath
+            ),
+          })),
+          selection: {
+            ...state.selection,
+            selectedCommands: state.selection.selectedCommands.filter(id => id !== commandId),
+          },
+        };
+      }
+    }),
 
   moveCommand: (commandId, position) =>
     set((state) => {
