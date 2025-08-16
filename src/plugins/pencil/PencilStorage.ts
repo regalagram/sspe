@@ -13,6 +13,7 @@ export interface PencilStorageData {
     pressureDecay: number;
     lowPassAlpha: number;
   };
+  rawDrawingMode: boolean;
 }
 
 const STORAGE_KEY = 'pencil-tool-settings';
@@ -70,7 +71,8 @@ export class PencilStorage {
         minDistance: 1.5,
         pressureDecay: 0.7,
         lowPassAlpha: 0.3,
-      }
+      },
+      rawDrawingMode: true
     };
   }
 
@@ -95,6 +97,9 @@ export class PencilStorage {
     if (typeof smootherParams.pressureDecay !== 'number') return false;
     if (typeof smootherParams.lowPassAlpha !== 'number') return false;
 
+    // Check rawDrawingMode
+    if (typeof data.rawDrawingMode !== 'boolean') return false;
+
     // Validate ranges
     if (smootherParams.simplifyTolerance < 0.1 || smootherParams.simplifyTolerance > 10) return false;
     if (smootherParams.smoothingFactor < 0 || smootherParams.smoothingFactor > 1) return false;
@@ -105,10 +110,11 @@ export class PencilStorage {
     return true;
   }
 
-  static createSnapshot(strokeStyle: any, smootherParams: any): PencilStorageData {
+  static createSnapshot(strokeStyle: any, smootherParams: any, rawDrawingMode: boolean = false): PencilStorageData {
     return {
       strokeStyle: { ...strokeStyle },
-      smootherParams: { ...smootherParams }
+      smootherParams: { ...smootherParams },
+      rawDrawingMode
     };
   }
 }

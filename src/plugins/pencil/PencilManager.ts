@@ -19,6 +19,7 @@ interface PencilState {
     strokeLinecap: 'round';
     strokeLinejoin: 'round';
   };
+  rawDrawingMode: boolean;
 }
 
 class PencilManager {
@@ -34,7 +35,8 @@ class PencilManager {
       fill: 'none',
       strokeLinecap: 'round',
       strokeLinejoin: 'round',
-    }
+    },
+    rawDrawingMode: true
   };
 
   private editorStore: any;
@@ -59,6 +61,9 @@ class PencilManager {
       // Apply stroke style
       this.state.strokeStyle = { ...savedData.strokeStyle };
 
+      // Apply raw drawing mode
+      this.state.rawDrawingMode = savedData.rawDrawingMode;
+
       // Apply smoother parameters
       smoother.setSimplifyTolerance(savedData.smootherParams.simplifyTolerance);
       smoother.setSmoothingFactor(savedData.smootherParams.smoothingFactor);
@@ -74,7 +79,8 @@ class PencilManager {
   private saveToStorage() {
     const data: PencilStorageData = {
       strokeStyle: { ...this.state.strokeStyle },
-      smootherParams: smoother.getParameters()
+      smootherParams: smoother.getParameters(),
+      rawDrawingMode: this.state.rawDrawingMode
     };
     PencilStorage.save(data);
   }
@@ -320,7 +326,35 @@ class PencilManager {
       return;
     }
 
-    // Apply smoothing and simplification
+    // Check if raw drawing mode is enabled
+    if (this.state.rawDrawingMode) {
+      // Raw mode: Direct conversion to line commands without optimization
+      const svgCommands: Omit<SVGCommand, 'id'>[] = [];
+      
+      if (this.state.rawPoints.length > 0) {
+        // Start with move command - use the first raw point
+        svgCommands.push({
+          command: 'M',
+          x: this.state.rawPoints[0].x,
+          y: this.state.rawPoints[0].y
+        });
+
+        // Add line commands for all subsequent points
+        for (let i = 1; i < this.state.rawPoints.length; i++) {
+          svgCommands.push({
+            command: 'L',
+            x: this.state.rawPoints[i].x,
+            y: this.state.rawPoints[i].y
+          });
+        }
+      }
+
+      // Replace subpath commands with raw version
+      replaceSubPathCommands(this.state.currentSubPath, svgCommands);
+      return;
+    }
+
+    // Normal mode: Apply smoothing and simplification
     const smoothedPoints = smoother.smoothPoints(this.state.rawPoints);
 
     // Calculate pressure for potential variable stroke width
@@ -407,6 +441,17 @@ class PencilManager {
     return { ...this.state.strokeStyle };
   }
 
+  // Method to get raw drawing mode
+  getRawDrawingMode() {
+    return this.state.rawDrawingMode;
+  }
+
+  // Method to set raw drawing mode
+  setRawDrawingMode(enabled: boolean) {
+    this.state.rawDrawingMode = enabled;
+    this.saveToStorage(); // Auto-save when mode changes
+  }
+
   // Method to set smoothing parameters
   setSmoothingFactor(factor: number) {
     this.smoothingFactor = Math.max(0, Math.min(1, factor));
@@ -468,6 +513,7 @@ class PencilManager {
     // Reset to defaults
     const defaults = PencilStorage.getDefaults();
     this.state.strokeStyle = { ...defaults.strokeStyle };
+    this.state.rawDrawingMode = defaults.rawDrawingMode;
 
     smoother.setSimplifyTolerance(defaults.smootherParams.simplifyTolerance);
     smoother.setSmoothingFactor(defaults.smootherParams.smoothingFactor);

@@ -1109,7 +1109,7 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
               transition: 'all 0.15s ease'
             }}
           >
-            {tab === 'colors' ? 'Colores' : tab === 'gradients' ? 'Gradientes' : 'Patrones'}
+            {tab === 'colors' ? 'Colors' : tab === 'gradients' ? 'Gradients' : 'Patterns'}
           </button>
         ))}
       </div>

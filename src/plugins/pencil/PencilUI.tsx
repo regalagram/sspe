@@ -9,6 +9,7 @@ export const PencilUI: React.FC = () => {
   const { mode, setCreateMode, exitCreateMode } = useEditorStore();
   const [strokeStyle, setStrokeStyle] = useState(pencilManager.getStrokeStyle());
   const [smootherParams, setSmootherParams] = useState(pencilManager.getSmootherParameters());
+  const [rawDrawingMode, setRawDrawingMode] = useState(pencilManager.getRawDrawingMode());
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   
@@ -49,6 +50,12 @@ export const PencilUI: React.FC = () => {
     pencilManager.clearSavedSettings();
     setStrokeStyle(pencilManager.getStrokeStyle());
     setSmootherParams(pencilManager.getSmootherParameters());
+    setRawDrawingMode(pencilManager.getRawDrawingMode());
+  };
+
+  const handleRawDrawingModeChange = (enabled: boolean) => {
+    pencilManager.setRawDrawingMode(enabled);
+    setRawDrawingMode(enabled);
   };
 
   const handlePreset = (presetType: 'precise' | 'fluid' | 'quick') => {
@@ -91,6 +98,7 @@ export const PencilUI: React.FC = () => {
     if (isPencilActive) {
       setStrokeStyle(pencilManager.getStrokeStyle());
       setSmootherParams(pencilManager.getSmootherParameters());
+      setRawDrawingMode(pencilManager.getRawDrawingMode());
     }
   }, [isPencilActive]);
 
@@ -246,6 +254,49 @@ export const PencilUI: React.FC = () => {
               </span>
             </div>
 
+            {/* Raw Drawing Mode Toggle */}
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              gap: '6px',
+              padding: '8px',
+              backgroundColor: rawDrawingMode ? '#fff3e0' : '#f8f8f8',
+              borderRadius: '4px',
+              border: `1px solid ${rawDrawingMode ? '#ffcc02' : '#e0e0e0'}`
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <input
+                  type="checkbox"
+                  checked={rawDrawingMode}
+                  onChange={(e) => handleRawDrawingModeChange(e.target.checked)}
+                  style={{ 
+                    width: '16px',
+                    height: '16px',
+                    cursor: 'pointer'
+                  }}
+                />
+                <label style={{ 
+                  fontSize: '12px', 
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  color: rawDrawingMode ? '#f57c00' : '#333'
+                }}>
+                  Raw Drawing Mode
+                </label>
+              </div>
+              <span style={{ 
+                fontSize: '10px', 
+                color: '#666',
+                fontStyle: 'italic',
+                lineHeight: '1.3'
+              }}>
+                {rawDrawingMode 
+                  ? 'Default mode - follows exact mouse movement (uncheck for optimized drawing)'
+                  : 'Optimized drawing with smoothing and simplification enabled'
+                }
+              </span>
+            </div>
+
             {/* Visual Preview */}
             <div style={{ 
               display: 'flex', 
@@ -285,36 +336,67 @@ export const PencilUI: React.FC = () => {
               </div>
             </div>
 
-            {/* Advanced Parameters Toggle */}
-            <div style={{ 
-              borderTop: '1px solid #e0e0e0',
-              paddingTop: '8px',
-              marginTop: '8px'
-            }}>
-              <button
-                onPointerDown={() => setShowAdvanced(!showAdvanced)}
-                style={{
-                  width: '100%',
-                  padding: '6px',
-                  backgroundColor: '#f8f8f8',
-                  border: '1px solid #e0e0e0',
-                  borderRadius: '4px',
-                  fontSize: '11px',
+            {/* Advanced Parameters Toggle - Only show if not in raw mode */}
+            {!rawDrawingMode && (
+              <div style={{ 
+                borderTop: '1px solid #e0e0e0',
+                paddingTop: '8px',
+                marginTop: '8px'
+              }}>
+                <button
+                  onPointerDown={() => setShowAdvanced(!showAdvanced)}
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    backgroundColor: '#f8f8f8',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    color: '#666',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <span>Advanced Settings</span>
+                  <span>{showAdvanced ? '▲' : '▼'}</span>
+                </button>
+              </div>
+            )}
+
+            {/* Raw Mode Info - Show when raw mode is enabled */}
+            {rawDrawingMode && (
+              <div style={{ 
+                borderTop: '1px solid #e0e0e0',
+                paddingTop: '8px',
+                marginTop: '8px',
+                padding: '8px',
+                backgroundColor: '#fff8e1',
+                borderRadius: '4px',
+                border: '1px solid #ffcc02'
+              }}>
+                <div style={{ 
+                  fontSize: '11px', 
                   fontWeight: '500',
-                  cursor: 'pointer',
+                  color: '#f57c00',
+                  marginBottom: '4px'
+                }}>
+                  Raw Drawing Mode Active
+                </div>
+                <div style={{ 
+                  fontSize: '10px', 
                   color: '#666',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between'
-                }}
-              >
-                <span>Advanced Settings</span>
-                <span>{showAdvanced ? '▲' : '▼'}</span>
-              </button>
-            </div>
+                  lineHeight: '1.4'
+                }}>
+                  This is the default mode. The drawing follows your exact mouse movement with no smoothing or simplification. Uncheck the option above to enable optimized drawing.
+                </div>
+              </div>
+            )}
 
             {/* Advanced Parameters */}
-            {showAdvanced && (
+            {showAdvanced && !rawDrawingMode && (
               <div style={{ 
                 display: 'flex', 
                 flexDirection: 'column', 
