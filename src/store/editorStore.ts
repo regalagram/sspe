@@ -77,6 +77,24 @@ const loadInitialState = (): EditorState => {
           stroke: '#ff0000',
           strokeWidth: 2
         }
+      },
+      {
+        id: 'symbol-path-1',
+        subPaths: [
+          {
+            id: 'symbol-subpath-1',
+            commands: [
+              { id: 'symbol-cmd-1', command: 'M', x: 10, y: 10 },
+              { id: 'symbol-cmd-2', command: 'L', x: 40, y: 10 },
+              { id: 'symbol-cmd-3', command: 'L', x: 25, y: 40 },
+              { id: 'symbol-cmd-4', command: 'Z' }
+            ]
+          }
+        ],
+        style: {
+          fill: '#4f46e5',
+          stroke: 'none'
+        }
       }
     ],
     texts: [
@@ -111,15 +129,61 @@ const loadInitialState = (): EditorState => {
       }
     ],
     textPaths: [],
-    groups: [],
+    groups: [
+      {
+        id: 'test-group-1',
+        name: 'Sample Group',
+        children: [
+          { type: 'path', id: 'test-path-1' }
+        ],
+        transform: 'translate(50, 50)',
+        style: {},
+        locked: false,
+        visible: true
+      }
+    ],
     gradients: [],
-    images: [],
+    images: [
+      {
+        id: 'test-image-1',
+        type: 'image',
+        x: 500,
+        y: 50,
+        width: 100,
+        height: 100,
+        href: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzRmNDZlNSIvPgogIDx0ZXh0IHg9IjUwIiB5PSI1NSIgZmlsbD0id2hpdGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SW1hZ2U8L3RleHQ+Cjwvc3ZnPgo=',
+        style: {},
+        transform: '',
+        locked: false
+      }
+    ],
     clipPaths: [],
     masks: [],
     filters: [],
     markers: [],
-    symbols: [],
-    uses: [],
+    symbols: [
+      {
+        id: 'test-symbol-1',
+        type: 'symbol',
+        viewBox: '0 0 50 50',
+        children: [
+          { type: 'path', id: 'symbol-path-1' }
+        ],
+        locked: false
+      }
+    ],
+    uses: [
+      {
+        id: 'test-use-1',
+        type: 'use',
+        x: 600,
+        y: 200,
+        href: '#test-symbol-1',
+        style: {},
+        transform: 'scale(2)',
+        locked: false
+      }
+    ],
     animations: [],
     animationState: {
       isPlaying: false,

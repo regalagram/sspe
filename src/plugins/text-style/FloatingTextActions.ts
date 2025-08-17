@@ -20,7 +20,8 @@ import {
   AlignHorizontalJustifyCenter,
   AlignVerticalSpaceAround,
   AlignHorizontalSpaceAround,
-  RotateCcw
+  RotateCcw,
+  Lock
 } from 'lucide-react';
 import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { useEditorStore } from '../../store/editorStore';
@@ -85,6 +86,19 @@ const applyTextStyle = (styleUpdates: any) => {
   selectedTexts.forEach(textId => {
     store.updateTextStyle(textId, styleUpdates);
   });
+};
+
+// Helper function to update text properties (position, transform, etc.) regardless of text type
+const updateTextProperty = (textId: string, updates: any) => {
+  const store = useEditorStore.getState();
+  const textElement = store.texts.find(t => t.id === textId);
+  if (textElement) {
+    if (textElement.type === 'text') {
+      store.updateText(textId, updates);
+    } else if (textElement.type === 'multiline-text') {
+      store.updateMultilineText(textId, updates);
+    }
+  }
 };
 
 // Get current font family
@@ -358,7 +372,7 @@ const alignTextsLeft = () => {
   // Align all texts to the leftmost position
   texts.forEach(text => {
     if (text) {
-      store.updateText(text.id, { x: leftmostX });
+      updateTextProperty(text.id, { x: leftmostX });
     }
   });
 };
@@ -380,7 +394,7 @@ const alignTextsCenter = () => {
   // Align all texts to center
   texts.forEach(text => {
     if (text) {
-      store.updateText(text.id, { x: centerX });
+      updateTextProperty(text.id, { x: centerX });
     }
   });
 };
@@ -400,7 +414,7 @@ const alignTextsRight = () => {
   // Align all texts to the rightmost position
   texts.forEach(text => {
     if (text) {
-      store.updateText(text.id, { x: rightmostX });
+      updateTextProperty(text.id, { x: rightmostX });
     }
   });
 };
@@ -420,7 +434,7 @@ const alignTextsTop = () => {
   // Align all texts to the topmost position
   texts.forEach(text => {
     if (text) {
-      store.updateText(text.id, { y: topmostY });
+      updateTextProperty(text.id, { y: topmostY });
     }
   });
 };
@@ -442,7 +456,7 @@ const alignTextsMiddle = () => {
   // Align all texts to middle
   texts.forEach(text => {
     if (text) {
-      store.updateText(text.id, { y: middleY });
+      updateTextProperty(text.id, { y: middleY });
     }
   });
 };
@@ -462,7 +476,7 @@ const alignTextsBottom = () => {
   // Align all texts to the bottommost position
   texts.forEach(text => {
     if (text) {
-      store.updateText(text.id, { y: bottommostY });
+      updateTextProperty(text.id, { y: bottommostY });
     }
   });
 };
@@ -487,7 +501,7 @@ const distributeTextsHorizontally = () => {
   sortedTexts.forEach((text, index) => {
     if (text && index > 0 && index < sortedTexts.length - 1) {
       const newX = leftmostX + spacing * index;
-      store.updateText(text.id, { x: newX });
+      updateTextProperty(text.id, { x: newX });
     }
   });
 };
@@ -512,7 +526,7 @@ const distributeTextsVertically = () => {
   sortedTexts.forEach((text, index) => {
     if (text && index > 0 && index < sortedTexts.length - 1) {
       const newY = topmostY + spacing * index;
-      store.updateText(text.id, { y: newY });
+      updateTextProperty(text.id, { y: newY });
     }
   });
 };
@@ -610,6 +624,51 @@ const editText = () => {
     const textId = store.selection.selectedTexts[0];
     textEditManager.startTextEdit(textId);
   }
+};
+
+// Lock/unlock selected texts
+const toggleTextLock = () => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  if (selectedTexts.length === 0) return;
+  
+  store.pushToHistory();
+  
+  // Determine if we should lock or unlock based on the first selected text
+  const firstText = store.texts.find(text => text.id === selectedTexts[0]);
+  const shouldLock = !firstText?.locked;
+  
+  // Apply lock/unlock to all selected texts
+  selectedTexts.forEach(textId => {
+    const textElement = store.texts.find(t => t.id === textId);
+    if (textElement) {
+      if (textElement.type === 'text') {
+        store.updateText(textId, { locked: shouldLock });
+      } else if (textElement.type === 'multiline-text') {
+        store.updateMultilineText(textId, { locked: shouldLock });
+      }
+    }
+  });
+  
+  // If locking, clear selection as locked texts shouldn't be selectable
+  if (shouldLock) {
+    store.clearSelection();
+  }
+};
+
+// Check if selected texts are locked
+const areTextsLocked = (): boolean => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  if (selectedTexts.length === 0) return false;
+  
+  // Check if any of the selected texts are locked
+  return selectedTexts.some(textId => {
+    const text = store.texts.find(t => t.id === textId);
+    return text?.locked === true;
+  });
 };
 
 // Delete selected texts
@@ -831,6 +890,18 @@ export const textFloatingActions: ToolbarAction[] = [
     action: clearTextStyle,
     priority: 15,
     tooltip: 'Reset text to default style'
+  },
+  {
+    id: 'text-lock',
+    icon: Lock,
+    label: 'Lock/Unlock',
+    type: 'toggle',
+    toggle: {
+      isActive: areTextsLocked,
+      onToggle: toggleTextLock
+    },
+    priority: 12,
+    tooltip: 'Toggle text lock state'
   },
   {
     id: 'delete-text',

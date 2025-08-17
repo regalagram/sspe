@@ -44,6 +44,7 @@ import { KeyboardMovementPlugin } from '../plugins/keyboard-movement';
 import { TextPlacementPlugin } from '../plugins/text-placement';
 import { TextEditPlugin } from '../plugins/text-edit';
 import { CommandFloatingActionsPlugin } from '../plugins/commandFloatingActions';
+import { StructureTreePlugin } from '../plugins/structure-tree';
 
 /**
  * Initialize all plugins in the correct dependency order
@@ -84,6 +85,7 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(GroupControlsPlugin);
   pluginManager.registerPlugin(SVGPlugin);
   pluginManager.registerPlugin(SubPathListPlugin);
+  pluginManager.registerPlugin(StructureTreePlugin); // Tree structure view with lock controls
   
   // Register plugins that depend on others
   pluginManager.registerPlugin(PencilPlugin); // Depends on mouse-interaction

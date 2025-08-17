@@ -25,19 +25,20 @@ const ImageElementComponent: React.FC<{ image: any }> = ({ image }) => {
         preserveAspectRatio={image.preserveAspectRatio || 'xMidYMid'}
         transform={image.transform}
         style={{
-          opacity: image.style?.opacity ?? 1,
+          opacity: image.locked ? (image.style?.opacity ?? 1) * 0.6 : (image.style?.opacity ?? 1),
           clipPath: image.style?.clipPath,
           mask: image.style?.mask,
           filter: image.style?.filter,
         }}
         data-element-type="image"
         data-element-id={image.id}
+        data-locked={image.locked}
         onError={() => handleImageError(image.id)}
       />
       {/* Include animations as siblings that target the image */}
       {animations}
       
-      {isSelected && (
+      {isSelected && !image.locked && (
         <rect
           x={image.x}
           y={image.y}
@@ -70,10 +71,9 @@ export const ImageRenderer: React.FC = () => {
 
   return (
     <g data-layer="images">
-      {images.map((image) => {
-        if (image.locked) return null;
-        return <ImageElementComponent key={image.id} image={image} />;
-      })}
+      {images.map((image) => (
+        <ImageElementComponent key={image.id} image={image} />
+      ))}
     </g>
   );
 };

@@ -12,6 +12,7 @@ export interface SVGCommand {
   y1?: number;  // Control point 1 y for curves
   x2?: number;  // Control point 2 x for curves
   y2?: number;  // Control point 2 y for curves
+  locked?: boolean; // If true, command is locked and unselectable
 }
 
 export interface SVGSubPath {
@@ -24,6 +25,7 @@ export interface SVGPath {
   id: string;
   subPaths: SVGSubPath[];
   style: PathStyle;
+  locked?: boolean; // If true, path is locked and unselectable
 }
 
 export interface GradientStop {

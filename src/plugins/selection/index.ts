@@ -2,9 +2,13 @@ import { Plugin } from '../../core/PluginSystem';
 import { SelectionToolsComponent, SelectionRectRenderer } from './Selection';
 import { 
   subPathFloatingActionDefinition,
-  pathFloatingActionDefinition, 
+  updatedPathFloatingActionDefinition, 
   groupFloatingActionDefinition,
-  mixedSelectionFloatingActionDefinition
+  mixedSelectionFloatingActionDefinition,
+  imageFloatingActionDefinition,
+  symbolFloatingActionDefinition,
+  useFloatingActionDefinition,
+  commandFloatingActionDefinition
 } from './FloatingSelectionActions';
 
 export const SelectionPlugin: Plugin = {
@@ -30,8 +34,12 @@ export const SelectionPlugin: Plugin = {
 
   floatingActions: [
     subPathFloatingActionDefinition,
-    pathFloatingActionDefinition,
+    updatedPathFloatingActionDefinition,
     mixedSelectionFloatingActionDefinition,
-    groupFloatingActionDefinition
+    groupFloatingActionDefinition,
+    imageFloatingActionDefinition,
+    symbolFloatingActionDefinition,
+    useFloatingActionDefinition,
+    commandFloatingActionDefinition
   ]
 };

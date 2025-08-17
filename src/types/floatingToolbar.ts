@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type ElementType = 'text' | 'path' | 'subpath' | 'group' | 'use' | 'image' | 'command' | 'mixed';
+export type ElementType = 'text' | 'path' | 'subpath' | 'group' | 'use' | 'image' | 'command' | 'symbol' | 'mixed';
 export type SelectionType = 'single' | 'multiple';
 
 export interface ToolbarAction {

@@ -243,7 +243,7 @@ export class FloatingToolbarManager {
     if (actionId.includes('clear-style') || actionId.includes('clear-text-style') || actionId.includes('subpath-clear-style') || actionId.includes('mixed-clear-style')) return 'clear-style';
     
     // Lock actions
-    if (actionId.includes('lock') && (actionId.includes('subpath') || actionId.includes('mixed'))) return 'lock';
+    if (actionId.includes('lock') && (actionId.includes('subpath') || actionId.includes('mixed') || actionId.includes('text') || actionId.includes('image') || actionId.includes('symbol') || actionId.includes('use') || actionId.includes('command') || actionId.includes('path'))) return 'lock';
     
     // Color and fill actions
     if (actionId.includes('fill-color') || actionId.includes('text-color')) return 'fill-color';

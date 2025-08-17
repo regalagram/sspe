@@ -298,23 +298,47 @@ const deleteSelected = () => {
   store.clearSelection();
 };
 
-// Lock/unlock mixed selections (only affects subpaths)
+// Lock/unlock mixed selections (affects all selected elements)
 const toggleMixedLock = () => {
   const store = useEditorStore.getState();
-  const { selectedSubPaths } = store.selection;
+  const { selectedTexts, selectedSubPaths, selectedPaths, selectedImages, selectedSymbols, selectedUses, selectedCommands } = store.selection;
   
-  if (selectedSubPaths.length === 0) return;
+  // Check if any elements are selected
+  const hasSelection = selectedTexts.length > 0 || selectedSubPaths.length > 0 || selectedPaths.length > 0 || 
+                      selectedImages.length > 0 || selectedSymbols.length > 0 || selectedUses.length > 0 || selectedCommands.length > 0;
+  
+  if (!hasSelection) return;
   
   store.pushToHistory();
   
-  // Determine if we should lock or unlock based on the first selected subpath
-  const firstSubPath = store.paths
-    .flatMap(path => path.subPaths)
-    .find(subPath => subPath.id === selectedSubPaths[0]);
+  // Determine lock state based on first available element
+  let shouldLock = true;
   
-  const shouldLock = !firstSubPath?.locked;
+  if (selectedTexts.length > 0) {
+    const firstText = store.texts.find(text => text.id === selectedTexts[0]);
+    shouldLock = !firstText?.locked;
+  } else if (selectedSubPaths.length > 0) {
+    const firstSubPath = store.paths.flatMap(path => path.subPaths).find(subPath => subPath.id === selectedSubPaths[0]);
+    shouldLock = !firstSubPath?.locked;
+  } else if (selectedPaths.length > 0) {
+    const firstPath = store.paths.find(path => path.id === selectedPaths[0]);
+    shouldLock = !firstPath?.locked;
+  } else if (selectedImages.length > 0) {
+    const firstImage = store.images.find(img => img.id === selectedImages[0]);
+    shouldLock = !firstImage?.locked;
+  } else if (selectedSymbols.length > 0) {
+    const firstSymbol = store.symbols.find(sym => sym.id === selectedSymbols[0]);
+    shouldLock = !firstSymbol?.locked;
+  } else if (selectedUses.length > 0) {
+    const firstUse = store.uses.find(use => use.id === selectedUses[0]);
+    shouldLock = !firstUse?.locked;
+  }
   
-  // Apply lock/unlock to all selected subpaths
+  // Apply lock to all selected elements
+  selectedTexts.forEach(textId => {
+    store.updateText(textId, { locked: shouldLock });
+  });
+  
   selectedSubPaths.forEach(subPathId => {
     const pathWithSubPath = store.paths.find(path => 
       path.subPaths.some(sp => sp.id === subPathId)
@@ -333,26 +357,290 @@ const toggleMixedLock = () => {
     }
   });
   
-  // If locking, clear the entire selection as locked subpaths shouldn't be selectable
+  selectedPaths.forEach(pathId => {
+    const pathIndex = store.paths.findIndex(p => p.id === pathId);
+    if (pathIndex >= 0) {
+      const updatedPath = { ...store.paths[pathIndex], locked: shouldLock };
+      const newPaths = [...store.paths];
+      newPaths[pathIndex] = updatedPath;
+      store.replacePaths(newPaths);
+    }
+  });
+  
+  selectedImages.forEach(imageId => {
+    store.updateImage(imageId, { locked: shouldLock });
+  });
+  
+  selectedSymbols.forEach(symbolId => {
+    store.updateSymbol(symbolId, { locked: shouldLock });
+  });
+  
+  selectedUses.forEach(useId => {
+    store.updateUse(useId, { locked: shouldLock });
+  });
+  
+  selectedCommands.forEach(commandId => {
+    for (const path of store.paths) {
+      for (const subPath of path.subPaths) {
+        const commandIndex = subPath.commands.findIndex(cmd => cmd.id === commandId);
+        if (commandIndex >= 0) {
+          const updatedCommands = [...subPath.commands];
+          updatedCommands[commandIndex] = {
+            ...updatedCommands[commandIndex],
+            locked: shouldLock
+          };
+          store.replaceSubPathCommands(subPath.id, updatedCommands);
+        }
+      }
+    }
+  });
+  
+  // If locking, clear the entire selection
   if (shouldLock) {
     store.clearSelection();
   }
 };
 
-// Check if any subpaths in mixed selection are locked
-const areMixedSubPathsLocked = (): boolean => {
+// Check if any elements in mixed selection are locked
+const areMixedElementsLocked = (): boolean => {
   const store = useEditorStore.getState();
-  const { selectedSubPaths } = store.selection;
+  const { selectedTexts, selectedSubPaths, selectedPaths, selectedImages, selectedSymbols, selectedUses, selectedCommands } = store.selection;
   
-  if (selectedSubPaths.length === 0) return false;
+  // Check texts
+  if (selectedTexts.some(textId => {
+    const text = store.texts.find(t => t.id === textId);
+    return text?.locked === true;
+  })) return true;
   
-  // Check if any of the selected subpaths are locked
-  return selectedSubPaths.some(subPathId => {
-    const subPath = store.paths
-      .flatMap(path => path.subPaths)
-      .find(sp => sp.id === subPathId);
+  // Check subpaths
+  if (selectedSubPaths.some(subPathId => {
+    const subPath = store.paths.flatMap(path => path.subPaths).find(sp => sp.id === subPathId);
     return subPath?.locked === true;
+  })) return true;
+  
+  // Check paths
+  if (selectedPaths.some(pathId => {
+    const path = store.paths.find(p => p.id === pathId);
+    return path?.locked === true;
+  })) return true;
+  
+  // Check images
+  if (selectedImages.some(imageId => {
+    const image = store.images.find(img => img.id === imageId);
+    return image?.locked === true;
+  })) return true;
+  
+  // Check symbols
+  if (selectedSymbols.some(symbolId => {
+    const symbol = store.symbols.find(sym => sym.id === symbolId);
+    return symbol?.locked === true;
+  })) return true;
+  
+  // Check uses
+  if (selectedUses.some(useId => {
+    const use = store.uses.find(u => u.id === useId);
+    return use?.locked === true;
+  })) return true;
+  
+  // Check commands
+  if (selectedCommands.some(commandId => {
+    for (const path of store.paths) {
+      for (const subPath of path.subPaths) {
+        const command = subPath.commands.find(cmd => cmd.id === commandId);
+        if (command?.locked === true) return true;
+      }
+    }
+    return false;
+  })) return true;
+  
+  return false;
+};
+
+// Lock/unlock functions for different element types
+
+// Lock/unlock selected images
+const toggleImageLock = () => {
+  const store = useEditorStore.getState();
+  const selectedImages = store.selection.selectedImages;
+  
+  if (selectedImages.length === 0) return;
+  
+  store.pushToHistory();
+  
+  // Determine if we should lock or unlock based on the first selected image
+  const firstImage = store.images.find(img => img.id === selectedImages[0]);
+  const shouldLock = !firstImage?.locked;
+  
+  // Apply lock/unlock to all selected images
+  selectedImages.forEach(imageId => {
+    store.updateImage(imageId, { locked: shouldLock });
   });
+  
+  // If locking, clear selection
+  if (shouldLock) {
+    store.clearSelection();
+  }
+};
+
+// Check if selected images are locked
+const areImagesLocked = (): boolean => {
+  const store = useEditorStore.getState();
+  const selectedImages = store.selection.selectedImages;
+  
+  if (selectedImages.length === 0) return false;
+  
+  return selectedImages.some(imageId => {
+    const image = store.images.find(img => img.id === imageId);
+    return image?.locked === true;
+  });
+};
+
+// Lock/unlock selected symbols
+const toggleSymbolLock = () => {
+  const store = useEditorStore.getState();
+  const selectedSymbols = store.selection.selectedSymbols;
+  
+  if (selectedSymbols.length === 0) return;
+  
+  store.pushToHistory();
+  
+  const firstSymbol = store.symbols.find(sym => sym.id === selectedSymbols[0]);
+  const shouldLock = !firstSymbol?.locked;
+  
+  selectedSymbols.forEach(symbolId => {
+    store.updateSymbol(symbolId, { locked: shouldLock });
+  });
+  
+  if (shouldLock) {
+    store.clearSelection();
+  }
+};
+
+// Lock/unlock selected uses
+const toggleUseLock = () => {
+  const store = useEditorStore.getState();
+  const selectedUses = store.selection.selectedUses;
+  
+  if (selectedUses.length === 0) return;
+  
+  store.pushToHistory();
+  
+  const firstUse = store.uses.find(use => use.id === selectedUses[0]);
+  const shouldLock = !firstUse?.locked;
+  
+  selectedUses.forEach(useId => {
+    store.updateUse(useId, { locked: shouldLock });
+  });
+  
+  if (shouldLock) {
+    store.clearSelection();
+  }
+};
+
+// Lock/unlock selected paths
+const togglePathLock = () => {
+  const store = useEditorStore.getState();
+  const selectedPaths = store.selection.selectedPaths;
+  
+  if (selectedPaths.length === 0) return;
+  
+  store.pushToHistory();
+  
+  const firstPath = store.paths.find(path => path.id === selectedPaths[0]);
+  const shouldLock = !firstPath?.locked;
+  
+  selectedPaths.forEach(pathId => {
+    const pathIndex = store.paths.findIndex(p => p.id === pathId);
+    if (pathIndex >= 0) {
+      const updatedPath = { ...store.paths[pathIndex], locked: shouldLock };
+      const newPaths = [...store.paths];
+      newPaths[pathIndex] = updatedPath;
+      store.replacePaths(newPaths);
+    }
+  });
+  
+  if (shouldLock) {
+    store.clearSelection();
+  }
+};
+
+// Lock/unlock selected commands
+const toggleCommandLock = () => {
+  const store = useEditorStore.getState();
+  const selectedCommands = store.selection.selectedCommands;
+  
+  if (selectedCommands.length === 0) return;
+  
+  store.pushToHistory();
+  
+  // Find first command to determine lock state
+  let firstCommand = null;
+  for (const path of store.paths) {
+    for (const subPath of path.subPaths) {
+      firstCommand = subPath.commands.find(cmd => cmd.id === selectedCommands[0]);
+      if (firstCommand) break;
+    }
+    if (firstCommand) break;
+  }
+  
+  const shouldLock = !firstCommand?.locked;
+  
+  // Apply lock to all selected commands
+  selectedCommands.forEach(commandId => {
+    for (const path of store.paths) {
+      for (const subPath of path.subPaths) {
+        const commandIndex = subPath.commands.findIndex(cmd => cmd.id === commandId);
+        if (commandIndex >= 0) {
+          const updatedCommands = [...subPath.commands];
+          updatedCommands[commandIndex] = {
+            ...updatedCommands[commandIndex],
+            locked: shouldLock
+          };
+          store.replaceSubPathCommands(subPath.id, updatedCommands);
+        }
+      }
+    }
+  });
+  
+  if (shouldLock) {
+    store.clearSelection();
+  }
+};
+
+// Check lock states for different element types
+const areElementsLocked = (elementType: 'images' | 'symbols' | 'uses' | 'paths' | 'commands'): boolean => {
+  const store = useEditorStore.getState();
+  
+  switch (elementType) {
+    case 'images':
+      return store.selection.selectedImages.some(id => 
+        store.images.find(img => img.id === id)?.locked === true
+      );
+    case 'symbols':
+      return store.selection.selectedSymbols.some(id => 
+        store.symbols.find(sym => sym.id === id)?.locked === true
+      );
+    case 'uses':
+      return store.selection.selectedUses.some(id => 
+        store.uses.find(use => use.id === id)?.locked === true
+      );
+    case 'paths':
+      return store.selection.selectedPaths.some(id => 
+        store.paths.find(path => path.id === id)?.locked === true
+      );
+    case 'commands':
+      return store.selection.selectedCommands.some(commandId => {
+        for (const path of store.paths) {
+          for (const subPath of path.subPaths) {
+            const command = subPath.commands.find(cmd => cmd.id === commandId);
+            if (command?.locked === true) return true;
+          }
+        }
+        return false;
+      });
+    default:
+      return false;
+  }
 };
 
 // Clear style for mixed selections - reset to default values
@@ -2892,19 +3180,14 @@ export const mixedSelectionActions: ToolbarAction[] = [
   {
     id: 'mixed-lock',
     icon: Lock,
-    label: 'Lock SubPaths',
+    label: 'Lock All',
     type: 'toggle',
     toggle: {
-      isActive: areMixedSubPathsLocked,
+      isActive: areMixedElementsLocked,
       onToggle: toggleMixedLock
     },
     priority: 12,
-    tooltip: 'Toggle lock state for subpaths (texts are not affected)',
-    visible: () => {
-      // Only show when there are subpaths in the selection
-      const store = useEditorStore.getState();
-      return store.selection.selectedSubPaths.length > 0;
-    }
+    tooltip: 'Toggle lock state for all selected elements'
   },
   {
     id: 'mixed-delete',
@@ -2930,4 +3213,172 @@ export const groupFloatingActionDefinition: FloatingActionDefinition = {
   selectionTypes: ['single', 'multiple'],
   actions: groupActions,
   priority: 80
+};
+
+// Image actions
+export const imageActions: ToolbarAction[] = [
+  {
+    id: 'image-lock',
+    icon: Lock,
+    label: 'Lock/Unlock',
+    type: 'toggle',
+    toggle: {
+      isActive: () => areElementsLocked('images'),
+      onToggle: toggleImageLock
+    },
+    priority: 90,
+    tooltip: 'Toggle image lock state'
+  },
+  {
+    id: 'image-delete',
+    icon: Trash2,
+    label: 'Delete',
+    type: 'button',
+    action: () => {
+      const store = useEditorStore.getState();
+      store.pushToHistory();
+      store.selection.selectedImages.forEach(imageId => {
+        store.removeImage(imageId);
+      });
+      store.clearSelection();
+    },
+    priority: 10,
+    destructive: true,
+    tooltip: 'Delete image'
+  }
+];
+
+export const imageFloatingActionDefinition: FloatingActionDefinition = {
+  elementTypes: ['image'],
+  selectionTypes: ['single', 'multiple'],
+  actions: imageActions,
+  priority: 75
+};
+
+// Symbol actions
+export const symbolActions: ToolbarAction[] = [
+  {
+    id: 'symbol-lock',
+    icon: Lock,
+    label: 'Lock/Unlock',
+    type: 'toggle',
+    toggle: {
+      isActive: () => areElementsLocked('symbols'),
+      onToggle: toggleSymbolLock
+    },
+    priority: 90,
+    tooltip: 'Toggle symbol lock state'
+  },
+  {
+    id: 'symbol-delete',
+    icon: Trash2,
+    label: 'Delete',
+    type: 'button',
+    action: () => {
+      const store = useEditorStore.getState();
+      store.pushToHistory();
+      store.selection.selectedSymbols.forEach(symbolId => {
+        store.removeSymbol(symbolId);
+      });
+      store.clearSelection();
+    },
+    priority: 10,
+    destructive: true,
+    tooltip: 'Delete symbol'
+  }
+];
+
+export const symbolFloatingActionDefinition: FloatingActionDefinition = {
+  elementTypes: ['symbol'],
+  selectionTypes: ['single', 'multiple'],
+  actions: symbolActions,
+  priority: 70
+};
+
+// Use actions
+export const useActions: ToolbarAction[] = [
+  {
+    id: 'use-lock',
+    icon: Lock,
+    label: 'Lock/Unlock',
+    type: 'toggle',
+    toggle: {
+      isActive: () => areElementsLocked('uses'),
+      onToggle: toggleUseLock
+    },
+    priority: 90,
+    tooltip: 'Toggle use element lock state'
+  },
+  {
+    id: 'use-delete',
+    icon: Trash2,
+    label: 'Delete',
+    type: 'button',
+    action: () => {
+      const store = useEditorStore.getState();
+      store.pushToHistory();
+      store.selection.selectedUses.forEach(useId => {
+        store.removeUse(useId);
+      });
+      store.clearSelection();
+    },
+    priority: 10,
+    destructive: true,
+    tooltip: 'Delete use element'
+  }
+];
+
+export const useFloatingActionDefinition: FloatingActionDefinition = {
+  elementTypes: ['use'],
+  selectionTypes: ['single', 'multiple'],
+  actions: useActions,
+  priority: 65
+};
+
+// Command actions
+export const commandActions: ToolbarAction[] = [
+  {
+    id: 'command-lock',
+    icon: Lock,
+    label: 'Lock/Unlock',
+    type: 'toggle',
+    toggle: {
+      isActive: () => areElementsLocked('commands'),
+      onToggle: toggleCommandLock
+    },
+    priority: 90,
+    tooltip: 'Toggle command lock state'
+  }
+];
+
+export const commandFloatingActionDefinition: FloatingActionDefinition = {
+  elementTypes: ['command'],
+  selectionTypes: ['single', 'multiple'],
+  actions: commandActions,
+  priority: 60
+};
+
+// Path actions (add lock to existing path actions)
+export const pathActions: ToolbarAction[] = [
+  {
+    id: 'path-lock',
+    icon: Lock,
+    label: 'Lock/Unlock',
+    type: 'toggle',
+    toggle: {
+      isActive: () => areElementsLocked('paths'),
+      onToggle: togglePathLock
+    },
+    priority: 90,
+    tooltip: 'Toggle path lock state'
+  },
+  ...singleElementActions
+];
+
+// Update the existing path floating action definition
+export const updatedPathFloatingActionDefinition: FloatingActionDefinition = {
+  elementTypes: ['path'],
+  selectionTypes: ['single', 'multiple'],
+  actions: pathActions,
+  priority: 85
 };
