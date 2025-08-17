@@ -239,6 +239,12 @@ export class FloatingToolbarManager {
     if (actionId.includes('delete')) return 'delete';
     if (actionId.includes('copy')) return 'copy';
     
+    // Clear style actions
+    if (actionId.includes('clear-style') || actionId.includes('clear-text-style') || actionId.includes('subpath-clear-style') || actionId.includes('mixed-clear-style')) return 'clear-style';
+    
+    // Lock actions
+    if (actionId.includes('lock') && (actionId.includes('subpath') || actionId.includes('mixed'))) return 'lock';
+    
     // Color and fill actions
     if (actionId.includes('fill-color') || actionId.includes('text-color')) return 'fill-color';
     if (actionId.includes('stroke-color')) return 'stroke-color';
@@ -278,6 +284,10 @@ export class FloatingToolbarManager {
       return this.createUnifiedAnimationAction(baseAction, groupActions);
     } else if (semanticType === 'arrange') {
       return this.createUnifiedArrangeAction(baseAction, groupActions);
+    } else if (semanticType === 'clear-style') {
+      return this.createUnifiedClearStyleAction(baseAction, groupActions);
+    } else if (semanticType === 'lock') {
+      return this.createUnifiedLockAction(baseAction, groupActions);
     }
 
     // Create specialized unified actions for basic operations
@@ -869,6 +879,171 @@ export class FloatingToolbarManager {
     };
   }
 
+  private createUnifiedClearStyleAction(baseAction: ToolbarAction, groupActions: ToolbarAction[]): ToolbarAction {
+    return {
+      ...baseAction,
+      id: 'unified-clear-style',
+      label: 'Clear Style',
+      tooltip: 'Reset all elements to default style',
+      type: 'button',
+      action: () => {
+        this.applyClearStyleToAllSelected();
+      }
+    };
+  }
+
+  private applyClearStyleToAllSelected(): void {
+    import('../../store/editorStore').then(({ useEditorStore }) => {
+      const store = useEditorStore.getState();
+      const { selectedTexts, selectedSubPaths } = store.selection;
+      
+      if (selectedTexts.length === 0 && selectedSubPaths.length === 0) return;
+      
+      store.pushToHistory();
+      
+      // Define default style values for texts
+      const defaultTextStyle = {
+        fill: '#000000',
+        stroke: undefined,
+        strokeWidth: undefined,
+        strokeDasharray: undefined,
+        strokeLinecap: undefined,
+        strokeLinejoin: undefined,
+        filter: undefined,
+        fontFamily: 'Arial',
+        fontSize: 16,
+        fontWeight: 'normal' as const,
+        fontStyle: 'normal' as const,
+        textAnchor: 'start' as const,
+        opacity: undefined,
+        fillOpacity: undefined,
+        strokeOpacity: undefined
+      };
+      
+      // Define default style values for subpaths
+      const defaultSubPathStyle = {
+        fill: '#000000',
+        stroke: undefined,
+        strokeWidth: undefined,
+        strokeDasharray: undefined,
+        strokeLinecap: undefined,
+        strokeLinejoin: undefined,
+        fillRule: undefined,
+        filter: undefined,
+        opacity: undefined,
+        fillOpacity: undefined,
+        strokeOpacity: undefined
+      };
+      
+      // Apply default style to all selected texts
+      selectedTexts.forEach(textId => {
+        store.updateTextStyle(textId, defaultTextStyle);
+      });
+      
+      // Apply default style to all selected subpaths (via their parent paths)
+      const pathsToUpdate = new Set<string>();
+      
+      selectedSubPaths.forEach(subPathId => {
+        const path = store.paths.find(p => 
+          p.subPaths.some(sp => sp.id === subPathId)
+        );
+        if (path) {
+          pathsToUpdate.add(path.id);
+        }
+      });
+      
+      pathsToUpdate.forEach(pathId => {
+        store.updatePathStyle(pathId, defaultSubPathStyle);
+      });
+    }).catch(error => {
+      console.warn('Error applying clear style:', error);
+    });
+  }
+
+  private createUnifiedLockAction(baseAction: ToolbarAction, groupActions: ToolbarAction[]): ToolbarAction {
+    return {
+      ...baseAction,
+      id: 'unified-lock',
+      label: 'Lock SubPaths',
+      tooltip: 'Toggle lock state for subpaths',
+      type: 'toggle',
+      toggle: {
+        isActive: () => {
+          // Check if any subpaths are locked
+          import('../../store/editorStore').then(({ useEditorStore }) => {
+            const store = useEditorStore.getState();
+            const { selectedSubPaths } = store.selection;
+            
+            if (selectedSubPaths.length === 0) return false;
+            
+            return selectedSubPaths.some(subPathId => {
+              const subPath = store.paths
+                .flatMap(path => path.subPaths)
+                .find(sp => sp.id === subPathId);
+              return subPath?.locked === true;
+            });
+          }).catch(() => false);
+          return false;
+        },
+        onToggle: () => {
+          this.applyLockToAllSelected();
+        }
+      },
+      visible: () => {
+        // Only show when there are subpaths in the selection
+        import('../../store/editorStore').then(({ useEditorStore }) => {
+          const store = useEditorStore.getState();
+          return store.selection.selectedSubPaths.length > 0;
+        }).catch(() => false);
+        return true;
+      }
+    };
+  }
+
+  private applyLockToAllSelected(): void {
+    import('../../store/editorStore').then(({ useEditorStore }) => {
+      const store = useEditorStore.getState();
+      const { selectedSubPaths } = store.selection;
+      
+      if (selectedSubPaths.length === 0) return;
+      
+      store.pushToHistory();
+      
+      // Determine if we should lock or unlock based on the first selected subpath
+      const firstSubPath = store.paths
+        .flatMap(path => path.subPaths)
+        .find(subPath => subPath.id === selectedSubPaths[0]);
+      
+      const shouldLock = !firstSubPath?.locked;
+      
+      // Apply lock/unlock to all selected subpaths
+      selectedSubPaths.forEach(subPathId => {
+        const pathWithSubPath = store.paths.find(path => 
+          path.subPaths.some(sp => sp.id === subPathId)
+        );
+        
+        if (pathWithSubPath) {
+          const subPathIndex = pathWithSubPath.subPaths.findIndex(sp => sp.id === subPathId);
+          if (subPathIndex >= 0) {
+            const updatedSubPath = {
+              ...pathWithSubPath.subPaths[subPathIndex],
+              locked: shouldLock
+            };
+            
+            store.updateSubPath(subPathId, updatedSubPath);
+          }
+        }
+      });
+      
+      // If locking, clear the entire selection as locked subpaths shouldn't be selectable
+      if (shouldLock) {
+        store.clearSelection();
+      }
+    }).catch(error => {
+      console.warn('Error applying lock:', error);
+    });
+  }
+
   private applyArrangeToAllSelected(arrangeOption: any): void {
     // Create a unified arrange application that works for all element types
     import('../../store/editorStore').then(({ useEditorStore }) => {
@@ -1130,6 +1305,8 @@ export class FloatingToolbarManager {
       case 'duplicate': return 'Duplicate';
       case 'delete': return 'Delete';
       case 'copy': return 'Copy';
+      case 'clear-style': return 'Clear Style';
+      case 'lock': return 'Lock SubPaths';
       case 'fill-color': return 'Fill Color';
       case 'stroke-color': return 'Stroke Color';
       case 'stroke-options': return 'Stroke Options';
@@ -1147,6 +1324,8 @@ export class FloatingToolbarManager {
       case 'duplicate': return 'Duplicate selected elements';
       case 'delete': return 'Delete selected elements';
       case 'copy': return 'Copy selected elements';
+      case 'clear-style': return 'Reset all elements to default style';
+      case 'lock': return 'Toggle lock state for subpaths';
       case 'fill-color': return 'Change fill color of selected elements';
       case 'stroke-color': return 'Change stroke color of selected elements';
       case 'stroke-options': return 'Configure stroke properties of selected elements';

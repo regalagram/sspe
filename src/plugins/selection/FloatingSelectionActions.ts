@@ -24,7 +24,8 @@ import {
   AlignVerticalJustifyCenter,
   AlignHorizontalJustifyCenter,
   AlignVerticalSpaceAround,
-  AlignHorizontalSpaceAround
+  AlignHorizontalSpaceAround,
+  RotateCcw
 } from 'lucide-react';
 import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { useEditorStore } from '../../store/editorStore';
@@ -295,6 +296,128 @@ const deleteSelected = () => {
   
   // Clear selection after deletion
   store.clearSelection();
+};
+
+// Lock/unlock mixed selections (only affects subpaths)
+const toggleMixedLock = () => {
+  const store = useEditorStore.getState();
+  const { selectedSubPaths } = store.selection;
+  
+  if (selectedSubPaths.length === 0) return;
+  
+  store.pushToHistory();
+  
+  // Determine if we should lock or unlock based on the first selected subpath
+  const firstSubPath = store.paths
+    .flatMap(path => path.subPaths)
+    .find(subPath => subPath.id === selectedSubPaths[0]);
+  
+  const shouldLock = !firstSubPath?.locked;
+  
+  // Apply lock/unlock to all selected subpaths
+  selectedSubPaths.forEach(subPathId => {
+    const pathWithSubPath = store.paths.find(path => 
+      path.subPaths.some(sp => sp.id === subPathId)
+    );
+    
+    if (pathWithSubPath) {
+      const subPathIndex = pathWithSubPath.subPaths.findIndex(sp => sp.id === subPathId);
+      if (subPathIndex >= 0) {
+        const updatedSubPath = {
+          ...pathWithSubPath.subPaths[subPathIndex],
+          locked: shouldLock
+        };
+        
+        store.updateSubPath(subPathId, updatedSubPath);
+      }
+    }
+  });
+  
+  // If locking, clear the entire selection as locked subpaths shouldn't be selectable
+  if (shouldLock) {
+    store.clearSelection();
+  }
+};
+
+// Check if any subpaths in mixed selection are locked
+const areMixedSubPathsLocked = (): boolean => {
+  const store = useEditorStore.getState();
+  const { selectedSubPaths } = store.selection;
+  
+  if (selectedSubPaths.length === 0) return false;
+  
+  // Check if any of the selected subpaths are locked
+  return selectedSubPaths.some(subPathId => {
+    const subPath = store.paths
+      .flatMap(path => path.subPaths)
+      .find(sp => sp.id === subPathId);
+    return subPath?.locked === true;
+  });
+};
+
+// Clear style for mixed selections - reset to default values
+const clearMixedStyle = () => {
+  const store = useEditorStore.getState();
+  const { selectedTexts, selectedSubPaths } = store.selection;
+  
+  if (selectedTexts.length === 0 && selectedSubPaths.length === 0) return;
+  
+  store.pushToHistory();
+  
+  // Define default style values for texts
+  const defaultTextStyle = {
+    fill: '#000000',
+    stroke: undefined,
+    strokeWidth: undefined,
+    strokeDasharray: undefined,
+    strokeLinecap: undefined,
+    strokeLinejoin: undefined,
+    filter: undefined,
+    fontFamily: 'Arial',
+    fontSize: 16,
+    fontWeight: 'normal' as const,
+    fontStyle: 'normal' as const,
+    textAnchor: 'start' as const,
+    opacity: undefined,
+    fillOpacity: undefined,
+    strokeOpacity: undefined
+  };
+  
+  // Define default style values for subpaths
+  const defaultSubPathStyle = {
+    fill: '#000000',
+    stroke: undefined,
+    strokeWidth: undefined,
+    strokeDasharray: undefined,
+    strokeLinecap: undefined,
+    strokeLinejoin: undefined,
+    fillRule: undefined,
+    filter: undefined,
+    opacity: undefined,
+    fillOpacity: undefined,
+    strokeOpacity: undefined
+  };
+  
+  // Apply default style to all selected texts
+  selectedTexts.forEach(textId => {
+    store.updateTextStyle(textId, defaultTextStyle);
+  });
+  
+  // Apply default style to all selected subpaths (via their parent paths)
+  const pathsToUpdate = new Set<string>();
+  
+  selectedSubPaths.forEach(subPathId => {
+    const path = store.paths.find(p => 
+      p.subPaths.some(sp => sp.id === subPathId)
+    );
+    if (path) {
+      pathsToUpdate.add(path.id);
+    }
+  });
+  
+  pathsToUpdate.forEach(pathId => {
+    store.updatePathStyle(pathId, defaultSubPathStyle);
+  });
 };
 
 // Arrange functions for subpaths
@@ -1295,6 +1418,105 @@ const deleteSubPaths = () => {
   // Selection is automatically cleared by removeSubPath
 };
 
+// Lock/unlock selected subpaths
+const toggleSubPathLock = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  if (selectedSubPaths.length === 0) return;
+  
+  store.pushToHistory();
+  
+  // Determine if we should lock or unlock based on the first selected subpath
+  const firstSubPath = store.paths
+    .flatMap(path => path.subPaths)
+    .find(subPath => subPath.id === selectedSubPaths[0]);
+  
+  const shouldLock = !firstSubPath?.locked;
+  
+  // Apply lock/unlock to all selected subpaths
+  selectedSubPaths.forEach(subPathId => {
+    const pathWithSubPath = store.paths.find(path => 
+      path.subPaths.some(sp => sp.id === subPathId)
+    );
+    
+    if (pathWithSubPath) {
+      const subPathIndex = pathWithSubPath.subPaths.findIndex(sp => sp.id === subPathId);
+      if (subPathIndex >= 0) {
+        const updatedSubPath = {
+          ...pathWithSubPath.subPaths[subPathIndex],
+          locked: shouldLock
+        };
+        
+        store.updateSubPath(subPathId, updatedSubPath);
+      }
+    }
+  });
+  
+  // If locking, clear selection as locked subpaths shouldn't be selectable
+  if (shouldLock) {
+    store.clearSelection();
+  }
+};
+
+// Check if selected subpaths are locked
+const areSubPathsLocked = (): boolean => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  if (selectedSubPaths.length === 0) return false;
+  
+  // Check if any of the selected subpaths are locked
+  return selectedSubPaths.some(subPathId => {
+    const subPath = store.paths
+      .flatMap(path => path.subPaths)
+      .find(sp => sp.id === subPathId);
+    return subPath?.locked === true;
+  });
+};
+
+// Clear style for selected subpaths - reset to default values
+const clearSubPathStyle = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  if (selectedSubPaths.length === 0) return;
+  
+  store.pushToHistory();
+  
+  // Define default subpath style values
+  const defaultStyle = {
+    fill: '#000000',
+    stroke: undefined,
+    strokeWidth: undefined,
+    strokeDasharray: undefined,
+    strokeLinecap: undefined,
+    strokeLinejoin: undefined,
+    fillRule: undefined,
+    filter: undefined,
+    opacity: undefined,
+    fillOpacity: undefined,
+    strokeOpacity: undefined
+  };
+  
+  // Find the unique paths that contain the selected subpaths and update their styles
+  const pathsToUpdate = new Set<string>();
+  
+  selectedSubPaths.forEach(subPathId => {
+    const path = store.paths.find(p => 
+      p.subPaths.some(sp => sp.id === subPathId)
+    );
+    if (path) {
+      pathsToUpdate.add(path.id);
+    }
+  });
+  
+  // Apply default style to all paths containing selected subpaths
+  pathsToUpdate.forEach(pathId => {
+    store.updatePathStyle(pathId, defaultStyle);
+  });
+};
+
 // Bring subpaths to front
 const bringSubPathsToFront = () => {
   const reorderManager = new ReorderManager();
@@ -1865,6 +2087,27 @@ export const subPathActions: ToolbarAction[] = [
     action: duplicateSubPaths,
     priority: 20,
     tooltip: 'Duplicate subpath'
+  },
+  {
+    id: 'subpath-clear-style',
+    icon: RotateCcw,
+    label: 'Clear Style',
+    type: 'button',
+    action: clearSubPathStyle,
+    priority: 15,
+    tooltip: 'Reset subpath to default style'
+  },
+  {
+    id: 'subpath-lock',
+    icon: Lock,
+    label: 'Lock/Unlock',
+    type: 'toggle',
+    toggle: {
+      isActive: areSubPathsLocked,
+      onToggle: toggleSubPathLock
+    },
+    priority: 12,
+    tooltip: 'Toggle subpath lock state'
   },
   {
     id: 'subpath-delete',
@@ -2636,6 +2879,32 @@ export const mixedSelectionActions: ToolbarAction[] = [
     action: duplicateSelected,
     priority: 20,
     tooltip: 'Duplicate all selected elements'
+  },
+  {
+    id: 'mixed-clear-style',
+    icon: RotateCcw,
+    label: 'Clear Style',
+    type: 'button',
+    action: clearMixedStyle,
+    priority: 15,
+    tooltip: 'Reset all elements to default style'
+  },
+  {
+    id: 'mixed-lock',
+    icon: Lock,
+    label: 'Lock SubPaths',
+    type: 'toggle',
+    toggle: {
+      isActive: areMixedSubPathsLocked,
+      onToggle: toggleMixedLock
+    },
+    priority: 12,
+    tooltip: 'Toggle lock state for subpaths (texts are not affected)',
+    visible: () => {
+      // Only show when there are subpaths in the selection
+      const store = useEditorStore.getState();
+      return store.selection.selectedSubPaths.length > 0;
+    }
   },
   {
     id: 'mixed-delete',

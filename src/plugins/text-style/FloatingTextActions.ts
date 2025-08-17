@@ -19,7 +19,8 @@ import {
   AlignVerticalJustifyCenter,
   AlignHorizontalJustifyCenter,
   AlignVerticalSpaceAround,
-  AlignHorizontalSpaceAround
+  AlignHorizontalSpaceAround,
+  RotateCcw
 } from 'lucide-react';
 import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { useEditorStore } from '../../store/editorStore';
@@ -624,6 +625,40 @@ const deleteTexts = () => {
   store.clearSelection();
 };
 
+// Clear style for selected texts - reset to default values
+const clearTextStyle = () => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  if (selectedTexts.length === 0) return;
+  
+  store.pushToHistory();
+  
+  // Define default text style values
+  const defaultStyle = {
+    fill: '#000000',
+    stroke: undefined,
+    strokeWidth: undefined,
+    strokeDasharray: undefined,
+    strokeLinecap: undefined,
+    strokeLinejoin: undefined,
+    filter: undefined,
+    fontFamily: 'Arial',
+    fontSize: 16,
+    fontWeight: 'normal' as const,
+    fontStyle: 'normal' as const,
+    textAnchor: 'start' as const,
+    opacity: undefined,
+    fillOpacity: undefined,
+    strokeOpacity: undefined
+  };
+  
+  // Apply default style to all selected texts
+  selectedTexts.forEach(textId => {
+    store.updateTextStyle(textId, defaultStyle);
+  });
+};
+
 // Convert text to path
 const convertTextToPath = () => {
   // This would need to be implemented in the text plugin
@@ -787,6 +822,15 @@ export const textFloatingActions: ToolbarAction[] = [
     action: duplicateTexts,
     priority: 20,
     tooltip: 'Duplicate text with all styles'
+  },
+  {
+    id: 'clear-text-style',
+    icon: RotateCcw,
+    label: 'Clear Style',
+    type: 'button',
+    action: clearTextStyle,
+    priority: 15,
+    tooltip: 'Reset text to default style'
   },
   {
     id: 'delete-text',
