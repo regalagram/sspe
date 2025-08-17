@@ -36,6 +36,8 @@ import { duplicatePath } from '../../utils/duplicate-utils';
 import { calculateTextBoundsDOM } from '../../utils/text-utils';
 import { calculateGlobalViewBox } from '../../utils/viewbox-utils';
 import { subPathToString } from '../../utils/path-utils';
+import { getTextBoundingBox, getImageBoundingBox, getPathBoundingBox, getGroupBoundingBox } from '../../utils/bbox-utils';
+import { BoundingBox } from '../../types';
 import { 
   generateSmoothPath, 
   areCommandsInSameSubPath,
@@ -216,6 +218,101 @@ const ungroupSelected = () => {
   });
 };
 
+// Calculate bounding box of all selected elements
+const getSelectedElementsBounds = (): BoundingBox | null => {
+  const store = useEditorStore.getState();
+  const { selection, paths, texts, images, uses, groups } = store;
+  
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  let hasElements = false;
+
+  // Include selected paths
+  selection.selectedPaths.forEach(pathId => {
+    const path = paths.find(p => p.id === pathId);
+    if (path) {
+      const bbox = getPathBoundingBox(path);
+      if (bbox) {
+        minX = Math.min(minX, bbox.x);
+        maxX = Math.max(maxX, bbox.x + bbox.width);
+        minY = Math.min(minY, bbox.y);
+        maxY = Math.max(maxY, bbox.y + bbox.height);
+        hasElements = true;
+      }
+    }
+  });
+
+  // Include selected texts
+  selection.selectedTexts.forEach(textId => {
+    const text = texts.find(t => t.id === textId);
+    if (text) {
+      const bbox = getTextBoundingBox(text);
+      minX = Math.min(minX, bbox.x);
+      maxX = Math.max(maxX, bbox.x + bbox.width);
+      minY = Math.min(minY, bbox.y);
+      maxY = Math.max(maxY, bbox.y + bbox.height);
+      hasElements = true;
+    }
+  });
+
+  // Include selected images
+  selection.selectedImages.forEach(imageId => {
+    const image = images.find(img => img.id === imageId);
+    if (image) {
+      const bbox = getImageBoundingBox(image);
+      minX = Math.min(minX, bbox.x);
+      maxX = Math.max(maxX, bbox.x + bbox.width);
+      minY = Math.min(minY, bbox.y);
+      maxY = Math.max(maxY, bbox.y + bbox.height);
+      hasElements = true;
+    }
+  });
+
+  // Include selected use elements
+  selection.selectedUses.forEach(useId => {
+    const use = uses.find(u => u.id === useId);
+    if (use) {
+      const bbox = {
+        x: use.x || 0,
+        y: use.y || 0,
+        width: use.width || 50,
+        height: use.height || 50
+      };
+      minX = Math.min(minX, bbox.x);
+      maxX = Math.max(maxX, bbox.x + bbox.width);
+      minY = Math.min(minY, bbox.y);
+      maxY = Math.max(maxY, bbox.y + bbox.height);
+      hasElements = true;
+    }
+  });
+
+  // Include selected groups
+  selection.selectedGroups.forEach(groupId => {
+    const group = groups.find(g => g.id === groupId);
+    if (group) {
+      const bbox = getGroupBoundingBox(group, paths, texts, images, groups);
+      minX = Math.min(minX, bbox.x);
+      maxX = Math.max(maxX, bbox.x + bbox.width);
+      minY = Math.min(minY, bbox.y);
+      maxY = Math.max(maxY, bbox.y + bbox.height);
+      hasElements = true;
+    }
+  });
+
+  if (!hasElements) {
+    return null;
+  }
+
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY
+  };
+};
+
 // Duplicate selected elements
 const duplicateSelected = () => {
   const store = useEditorStore.getState();
@@ -223,21 +320,52 @@ const duplicateSelected = () => {
   // Push to history before making changes
   store.pushToHistory();
   
-  // Duplicate texts
+  // Calculate dynamic offset based on all selected elements
+  const bounds = getSelectedElementsBounds();
+  const OFFSET = 32;
+  const dx = bounds ? (bounds.width > 0 ? bounds.width + OFFSET : OFFSET) : OFFSET;
+  const dy = bounds ? (bounds.height > 0 ? bounds.height + OFFSET : OFFSET) : OFFSET;
+  
+  // Duplicate texts with dynamic offset
   const newTextIds: string[] = [];
   store.selection.selectedTexts.forEach(textId => {
     const newTextId = store.duplicateText(textId);
-    if (newTextId) newTextIds.push(newTextId);
+    if (newTextId) {
+      newTextIds.push(newTextId);
+      // Update position with dynamic offset instead of the default 20px
+      const newText = store.texts.find(t => t.id === newTextId);
+      if (newText) {
+        store.updateText(newTextId, {
+          x: newText.x - 20 + dx, // Remove default 20px offset and apply dynamic offset
+          y: newText.y - 20 + dy
+        });
+      }
+    }
   });
 
-  // Use existing duplicateSelection for paths/subpaths/commands
+  // Duplicate images with dynamic offset
+  store.selection.selectedImages.forEach(imageId => {
+    store.duplicateImage(imageId, { x: dx, y: dy });
+  });
+
+  // Duplicate use elements with dynamic offset
+  store.selection.selectedUses.forEach(useId => {
+    store.duplicateUse(useId, { x: dx, y: dy });
+  });
+
+  // Use existing duplicateSelection for paths/subpaths/commands (it already uses dynamic offset)
   if (store.selection.selectedPaths.length > 0 || store.selection.selectedSubPaths.length > 0 || store.selection.selectedCommands.length > 0) {
     store.duplicateSelection();
   }
 
-  // If we only duplicated texts, select them
-  if (newTextIds.length > 0 && store.selection.selectedPaths.length === 0 && store.selection.selectedSubPaths.length === 0) {
+  // Select newly duplicated texts if we only duplicated individual elements (not path selections)
+  if (newTextIds.length > 0 && 
+      store.selection.selectedPaths.length === 0 && 
+      store.selection.selectedSubPaths.length === 0 && 
+      store.selection.selectedCommands.length === 0) {
     store.clearSelection();
+    
+    // Select new texts
     newTextIds.forEach((textId, index) => {
       store.selectText(textId, index > 0);
     });
@@ -3658,6 +3786,28 @@ export const groupFloatingActionDefinition: FloatingActionDefinition = {
 // Image actions
 export const imageActions: ToolbarAction[] = [
   {
+    id: 'image-duplicate',
+    icon: Copy,
+    label: 'Duplicate',
+    type: 'button',
+    action: () => {
+      const store = useEditorStore.getState();
+      store.pushToHistory();
+      
+      // Calculate dynamic offset for images
+      const bounds = getSelectedElementsBounds();
+      const OFFSET = 32;
+      const dx = bounds ? (bounds.width > 0 ? bounds.width + OFFSET : OFFSET) : OFFSET;
+      const dy = bounds ? (bounds.height > 0 ? bounds.height + OFFSET : OFFSET) : OFFSET;
+      
+      store.selection.selectedImages.forEach(imageId => {
+        store.duplicateImage(imageId, { x: dx, y: dy });
+      });
+    },
+    priority: 80,
+    tooltip: 'Duplicate image'
+  },
+  {
     id: 'image-lock',
     icon: Lock,
     label: 'Lock/Unlock',
@@ -3737,6 +3887,28 @@ export const symbolFloatingActionDefinition: FloatingActionDefinition = {
 
 // Use actions
 export const useActions: ToolbarAction[] = [
+  {
+    id: 'use-duplicate',
+    icon: Copy,
+    label: 'Duplicate',
+    type: 'button',
+    action: () => {
+      const store = useEditorStore.getState();
+      store.pushToHistory();
+      
+      // Calculate dynamic offset for use elements
+      const bounds = getSelectedElementsBounds();
+      const OFFSET = 32;
+      const dx = bounds ? (bounds.width > 0 ? bounds.width + OFFSET : OFFSET) : OFFSET;
+      const dy = bounds ? (bounds.height > 0 ? bounds.height + OFFSET : OFFSET) : OFFSET;
+      
+      store.selection.selectedUses.forEach(useId => {
+        store.duplicateUse(useId, { x: dx, y: dy });
+      });
+    },
+    priority: 80,
+    tooltip: 'Duplicate use element'
+  },
   {
     id: 'use-lock',
     icon: Lock,

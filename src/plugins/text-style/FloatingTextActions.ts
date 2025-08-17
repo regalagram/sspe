@@ -26,6 +26,8 @@ import {
 import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { useEditorStore } from '../../store/editorStore';
 import { textEditManager } from '../../managers/TextEditManager';
+import { getTextBoundingBox, getImageBoundingBox, getPathBoundingBox, getGroupBoundingBox } from '../../utils/bbox-utils';
+import { BoundingBox } from '../../types';
 import {
   createDropShadowFilter,
   createBlurFilter,
@@ -594,9 +596,112 @@ const textFilterOptions = [
   { id: 'text-neon-glow', label: 'Neon Glow', action: applyNeonGlowFilterToText }
 ];
 
-// Duplicate selected texts using the built-in duplicateText method
+// Calculate bounding box of all selected elements
+const getSelectedElementsBounds = (): BoundingBox | null => {
+  const store = useEditorStore.getState();
+  const { selection, paths, texts, images, uses, groups } = store;
+  
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  let hasElements = false;
+
+  // Include selected paths
+  selection.selectedPaths.forEach(pathId => {
+    const path = paths.find(p => p.id === pathId);
+    if (path) {
+      const bbox = getPathBoundingBox(path);
+      if (bbox) {
+        minX = Math.min(minX, bbox.x);
+        maxX = Math.max(maxX, bbox.x + bbox.width);
+        minY = Math.min(minY, bbox.y);
+        maxY = Math.max(maxY, bbox.y + bbox.height);
+        hasElements = true;
+      }
+    }
+  });
+
+  // Include selected texts
+  selection.selectedTexts.forEach(textId => {
+    const text = texts.find(t => t.id === textId);
+    if (text) {
+      const bbox = getTextBoundingBox(text);
+      minX = Math.min(minX, bbox.x);
+      maxX = Math.max(maxX, bbox.x + bbox.width);
+      minY = Math.min(minY, bbox.y);
+      maxY = Math.max(maxY, bbox.y + bbox.height);
+      hasElements = true;
+    }
+  });
+
+  // Include selected images
+  selection.selectedImages.forEach(imageId => {
+    const image = images.find(img => img.id === imageId);
+    if (image) {
+      const bbox = getImageBoundingBox(image);
+      minX = Math.min(minX, bbox.x);
+      maxX = Math.max(maxX, bbox.x + bbox.width);
+      minY = Math.min(minY, bbox.y);
+      maxY = Math.max(maxY, bbox.y + bbox.height);
+      hasElements = true;
+    }
+  });
+
+  // Include selected use elements
+  selection.selectedUses.forEach(useId => {
+    const use = uses.find(u => u.id === useId);
+    if (use) {
+      const bbox = {
+        x: use.x || 0,
+        y: use.y || 0,
+        width: use.width || 50,
+        height: use.height || 50
+      };
+      minX = Math.min(minX, bbox.x);
+      maxX = Math.max(maxX, bbox.x + bbox.width);
+      minY = Math.min(minY, bbox.y);
+      maxY = Math.max(maxY, bbox.y + bbox.height);
+      hasElements = true;
+    }
+  });
+
+  // Include selected groups
+  selection.selectedGroups.forEach(groupId => {
+    const group = groups.find(g => g.id === groupId);
+    if (group) {
+      const bbox = getGroupBoundingBox(group, paths, texts, images, groups);
+      minX = Math.min(minX, bbox.x);
+      maxX = Math.max(maxX, bbox.x + bbox.width);
+      minY = Math.min(minY, bbox.y);
+      maxY = Math.max(maxY, bbox.y + bbox.height);
+      hasElements = true;
+    }
+  });
+
+  if (!hasElements) {
+    return null;
+  }
+
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY
+  };
+};
+
+// Duplicate selected texts using the built-in duplicateText method with dynamic offset
 const duplicateTexts = () => {
   const store = useEditorStore.getState();
+  store.pushToHistory();
+  
+  // Calculate dynamic offset based on all selected elements
+  const bounds = getSelectedElementsBounds();
+  const OFFSET = 32;
+  const dx = bounds ? (bounds.width > 0 ? bounds.width + OFFSET : OFFSET) : OFFSET;
+  const dy = bounds ? (bounds.height > 0 ? bounds.height + OFFSET : OFFSET) : OFFSET;
+  
   const selectedTexts = store.selection.selectedTexts;
   const newTextIds: string[] = [];
   
@@ -604,6 +709,14 @@ const duplicateTexts = () => {
     const newTextId = store.duplicateText(textId);
     if (newTextId) {
       newTextIds.push(newTextId);
+      // Update position with dynamic offset instead of the default 20px
+      const newText = store.texts.find(t => t.id === newTextId);
+      if (newText) {
+        store.updateText(newTextId, {
+          x: newText.x - 20 + dx, // Remove default 20px offset and apply dynamic offset
+          y: newText.y - 20 + dy
+        });
+      }
     }
   });
   

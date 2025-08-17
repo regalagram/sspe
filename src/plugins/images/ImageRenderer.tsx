@@ -58,15 +58,6 @@ const ImageElementComponent: React.FC<{ image: any }> = ({ image }) => {
 
 export const ImageRenderer: React.FC = () => {
   const { images } = useEditorStore();
-  
-  // Only log once when images change
-  const imageCount = images.length;
-  React.useEffect(() => {
-    if (imageCount > 0) {
-      console.log(`🎨 ImageRenderer: Found ${imageCount} images in store`);
-    }
-  }, [imageCount]);
-  
   if (images.length === 0) return null;
 
   return (

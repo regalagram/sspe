@@ -62,17 +62,6 @@ export class FloatingToolbarManager {
     const elementTypes = this.detectElementTypes(selection);
     const selectionType = this.getSelectionType(selection);
     
-    // Debug para subpaths
-    if (selection.selectedSubPaths.length > 0) {
-      console.log('🔍 SUBPATH Debug:', {
-        selectedSubPaths: selection.selectedSubPaths,
-        elementTypes,
-        selectionType,
-        availableDefinitions: this.actionDefinitions.length
-      });
-    }
-    
-        
     let actions: ToolbarAction[] = [];
     
     for (const definition of this.actionDefinitions) {
@@ -244,7 +233,7 @@ export class FloatingToolbarManager {
     if (actionId.includes('clear-style') || actionId.includes('clear-text-style') || actionId.includes('subpath-clear-style') || actionId.includes('mixed-clear-style')) return 'clear-style';
     
     // Lock actions
-    if (actionId.includes('lock') && (actionId.includes('subpath') || actionId.includes('mixed') || actionId.includes('text') || actionId.includes('image') || actionId.includes('symbol') || actionId.includes('use') || actionId.includes('command') || actionId.includes('path'))) return 'lock';
+    if (actionId.includes('lock') && (actionId.includes('subpath') || actionId.includes('mixed') || actionId.includes('text') || actionId.includes('image') || actionId.includes('symbol') || actionId.includes('use') || actionId.includes('command') || actionId.includes('path') || actionId.includes('group'))) return 'lock';
     
     // Color and fill actions
     if (actionId.includes('fill-color') || actionId.includes('text-color')) return 'fill-color';
@@ -1098,9 +1087,16 @@ export class FloatingToolbarManager {
         recursivelyLockGroup(groupId, shouldLock);
       });
       
-      // Lock texts
+      // Lock texts (handle both single and multiline texts)
       selection.selectedTexts.forEach(textId => {
-        store.updateText(textId, { locked: shouldLock });
+        const textElement = store.texts.find(t => t.id === textId);
+        if (textElement) {
+          if (textElement.type === 'text') {
+            store.updateText(textId, { locked: shouldLock });
+          } else if (textElement.type === 'multiline-text') {
+            store.updateMultilineText(textId, { locked: shouldLock });
+          }
+        }
       });
       
       // Lock subpaths recursively (will lock all commands)
@@ -1333,7 +1329,6 @@ export class FloatingToolbarManager {
           // Copy to clipboard as JSON
           try {
             navigator.clipboard.writeText(JSON.stringify(copyData, null, 2));
-            console.log('Copied selected elements to clipboard');
           } catch (error) {
             console.warn('Failed to copy to clipboard:', error);
           }
