@@ -1,7 +1,7 @@
 import { 
   Palette, 
   Brush,
-  Minus, 
+  LineSquiggle, 
   Copy, 
   Trash2,
   Group,
@@ -20,11 +20,16 @@ import {
   Eye,
   EyeOff,
   Waves,
-  Minimize2
+  Minimize2,
+  AlignVerticalJustifyCenter,
+  AlignHorizontalJustifyCenter,
+  AlignVerticalSpaceAround,
+  AlignHorizontalSpaceAround
 } from 'lucide-react';
 import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { useEditorStore } from '../../store/editorStore';
 import { ReorderManager } from '../reorder/ReorderManager';
+import { SVGCommand } from '../../types';
 import { 
   generateSmoothPath, 
   areCommandsInSameSubPath,
@@ -178,11 +183,22 @@ const applyStrokeColor = (color: string | any) => {
 const groupSelected = () => {
   const store = useEditorStore.getState();
   const hasSelection = store.selection.selectedPaths.length > 0 || 
-                      store.selection.selectedTexts.length > 0;
+                      store.selection.selectedTexts.length > 0 ||
+                      store.selection.selectedSubPaths.length > 0;
   
   if (hasSelection) {
-    // TODO: Implement groupSelection method in store
-      }
+    // Push to history before making changes
+    store.pushToHistory();
+    
+    // Use the built-in createGroupFromSelection method
+    const groupId = store.createGroupFromSelection();
+    
+    if (groupId) {
+      console.log(`✅ Created group with ID: ${groupId}`);
+    } else {
+      console.log('❌ Failed to create group');
+    }
+  }
 };
 
 // Ungroup selected groups
@@ -198,64 +214,426 @@ const ungroupSelected = () => {
 const duplicateSelected = () => {
   const store = useEditorStore.getState();
   
-  // Duplicate paths
-  store.selection.selectedPaths.forEach(pathId => {
-    const path = store.paths.find(p => p.id === pathId);
-    if (path) {
-      // Create a new path with offset position
-      const newPath = {
-        ...path,
-        subPaths: path.subPaths.map(subPath => ({
-          ...subPath,
-          commands: subPath.commands.map(cmd => ({
-            ...cmd,
-            x: cmd.x ? cmd.x + 20 : cmd.x,
-            y: cmd.y ? cmd.y + 20 : cmd.y,
-            x1: cmd.x1 ? cmd.x1 + 20 : cmd.x1,
-            y1: cmd.y1 ? cmd.y1 + 20 : cmd.y1,
-            x2: cmd.x2 ? cmd.x2 + 20 : cmd.x2,
-            y2: cmd.y2 ? cmd.y2 + 20 : cmd.y2
-          }))
-        }))
-      };
-      // TODO: This needs proper implementation to handle complex paths
-          }
-  });
+  // Push to history before making changes
+  store.pushToHistory();
   
   // Duplicate texts
+  const newTextIds: string[] = [];
   store.selection.selectedTexts.forEach(textId => {
-    const text = store.texts.find(t => t.id === textId);
-    if (text) {
-      const content = 'content' in text ? (text as any).content : 'Text';
-      store.addText(text.x + 20, text.y + 20, content);
-    }
+    const newTextId = store.duplicateText(textId);
+    if (newTextId) newTextIds.push(newTextId);
   });
+
+  // Use existing duplicateSelection for paths/subpaths/commands
+  if (store.selection.selectedPaths.length > 0 || store.selection.selectedSubPaths.length > 0 || store.selection.selectedCommands.length > 0) {
+    store.duplicateSelection();
+  }
+
+  // If we only duplicated texts, select them
+  if (newTextIds.length > 0 && store.selection.selectedPaths.length === 0 && store.selection.selectedSubPaths.length === 0) {
+    store.clearSelection();
+    newTextIds.forEach((textId, index) => {
+      store.selectText(textId, index > 0);
+    });
+  }
 };
 
 // Delete selected elements
 const deleteSelected = () => {
   const store = useEditorStore.getState();
   
-  // Delete paths
-  store.selection.selectedPaths.forEach(pathId => {
-    // TODO: Implement deletePath method in store
-      });
-  
+  // Push to history before making changes
+  store.pushToHistory();
+
   // Delete texts
   store.selection.selectedTexts.forEach(textId => {
     store.deleteText(textId);
   });
-  
+
+  // Delete paths using removePath
+  store.selection.selectedPaths.forEach(pathId => {
+    store.removePath(pathId);
+  });
+
+  // Delete subpaths using removeSubPath
+  store.selection.selectedSubPaths.forEach(subPathId => {
+    store.removeSubPath(subPathId);
+  });
+
+  // For commands, we need to remove them from their subpaths
+  store.selection.selectedCommands.forEach(commandId => {
+    const pathWithCommand = store.paths.find(path => 
+      path.subPaths.some(subPath => 
+        subPath.commands.some(cmd => cmd.id === commandId)
+      )
+    );
+    
+    if (pathWithCommand) {
+      const subPathWithCommand = pathWithCommand.subPaths.find(subPath => 
+        subPath.commands.some(cmd => cmd.id === commandId)
+      );
+      
+      if (subPathWithCommand) {
+        const updatedCommands = subPathWithCommand.commands.filter(cmd => cmd.id !== commandId);
+        store.replaceSubPathCommands(subPathWithCommand.id, updatedCommands.map(cmd => ({
+          command: cmd.command,
+          x: cmd.x,
+          y: cmd.y,
+          x1: cmd.x1,
+          y1: cmd.y1,
+          x2: cmd.x2,
+          y2: cmd.y2
+        })));
+      }
+    }
+  });
+
   // Delete groups
   store.selection.selectedGroups.forEach(groupId => {
-    // TODO: Implement deleteGroup method in store
-      });
+    store.deleteGroup(groupId, true); // Delete with children
+  });
   
-  // Clear selection
+  // Clear selection after deletion
   store.clearSelection();
 };
 
-// Arrange functions
+// Arrange functions for subpaths
+const alignSubPathsLeft = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  if (selectedSubPaths.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get all subpath bounds and find leftmost position
+  const subPathBounds = selectedSubPaths.map(({ subPath }) => {
+    const commands = subPath.commands;
+    const xs = commands.filter((cmd: SVGCommand) => cmd.x !== undefined).map((cmd: SVGCommand) => cmd.x!);
+    return {
+      subPath,
+      leftX: Math.min(...xs),
+      rightX: Math.max(...xs)
+    };
+  });
+  
+  const leftmostX = Math.min(...subPathBounds.map(b => b.leftX));
+  
+  // Calculate offset for each subpath and apply transform
+  subPathBounds.forEach(({ subPath, leftX }) => {
+    if (leftX !== leftmostX) {
+      const deltaX = leftmostX - leftX;
+      
+      // Update all commands in the subpath
+      const updatedCommands = subPath.commands.map((cmd: SVGCommand) => ({
+        ...cmd,
+        x: cmd.x !== undefined ? cmd.x + deltaX : cmd.x,
+        x1: cmd.x1 !== undefined ? cmd.x1 + deltaX : cmd.x1,
+        x2: cmd.x2 !== undefined ? cmd.x2 + deltaX : cmd.x2
+      }));
+      
+      store.replaceSubPathCommands(subPath.id, updatedCommands);
+    }
+  });
+};
+
+const alignSubPathsCenter = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  if (selectedSubPaths.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get all subpath bounds and find center position
+  const subPathBounds = selectedSubPaths.map(({ subPath }) => {
+    const commands = subPath.commands;
+    const xs = commands.filter((cmd: SVGCommand) => cmd.x !== undefined).map((cmd: SVGCommand) => cmd.x!);
+    return {
+      subPath,
+      leftX: Math.min(...xs),
+      rightX: Math.max(...xs),
+      centerX: (Math.min(...xs) + Math.max(...xs)) / 2
+    };
+  });
+  
+  const leftmostX = Math.min(...subPathBounds.map(b => b.leftX));
+  const rightmostX = Math.max(...subPathBounds.map(b => b.rightX));
+  const targetCenterX = (leftmostX + rightmostX) / 2;
+  
+  // Calculate offset for each subpath and apply transform
+  subPathBounds.forEach(({ subPath, centerX }) => {
+    const deltaX = targetCenterX - centerX;
+    
+    if (Math.abs(deltaX) > 0.001) {
+      // Update all commands in the subpath
+      const updatedCommands = subPath.commands.map((cmd: SVGCommand) => ({
+        ...cmd,
+        x: cmd.x !== undefined ? cmd.x + deltaX : cmd.x,
+        x1: cmd.x1 !== undefined ? cmd.x1 + deltaX : cmd.x1,
+        x2: cmd.x2 !== undefined ? cmd.x2 + deltaX : cmd.x2
+      }));
+      
+      store.replaceSubPathCommands(subPath.id, updatedCommands);
+    }
+  });
+};
+
+const alignSubPathsRight = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  if (selectedSubPaths.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get all subpath bounds and find rightmost position
+  const subPathBounds = selectedSubPaths.map(({ subPath }) => {
+    const commands = subPath.commands;
+    const xs = commands.filter((cmd: SVGCommand) => cmd.x !== undefined).map((cmd: SVGCommand) => cmd.x!);
+    return {
+      subPath,
+      leftX: Math.min(...xs),
+      rightX: Math.max(...xs)
+    };
+  });
+  
+  const rightmostX = Math.max(...subPathBounds.map(b => b.rightX));
+  
+  // Calculate offset for each subpath and apply transform
+  subPathBounds.forEach(({ subPath, rightX }) => {
+    if (rightX !== rightmostX) {
+      const deltaX = rightmostX - rightX;
+      
+      // Update all commands in the subpath
+      const updatedCommands = subPath.commands.map((cmd: SVGCommand) => ({
+        ...cmd,
+        x: cmd.x !== undefined ? cmd.x + deltaX : cmd.x,
+        x1: cmd.x1 !== undefined ? cmd.x1 + deltaX : cmd.x1,
+        x2: cmd.x2 !== undefined ? cmd.x2 + deltaX : cmd.x2
+      }));
+      
+      store.replaceSubPathCommands(subPath.id, updatedCommands);
+    }
+  });
+};
+
+const alignSubPathsTop = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  if (selectedSubPaths.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get all subpath bounds and find topmost position
+  const subPathBounds = selectedSubPaths.map(({ subPath }) => {
+    const commands = subPath.commands;
+    const ys = commands.filter((cmd: SVGCommand) => cmd.y !== undefined).map((cmd: SVGCommand) => cmd.y!);
+    return {
+      subPath,
+      topY: Math.min(...ys),
+      bottomY: Math.max(...ys)
+    };
+  });
+  
+  const topmostY = Math.min(...subPathBounds.map(b => b.topY));
+  
+  // Calculate offset for each subpath and apply transform
+  subPathBounds.forEach(({ subPath, topY }) => {
+    if (topY !== topmostY) {
+      const deltaY = topmostY - topY;
+      
+      // Update all commands in the subpath
+      const updatedCommands = subPath.commands.map((cmd: SVGCommand) => ({
+        ...cmd,
+        y: cmd.y !== undefined ? cmd.y + deltaY : cmd.y,
+        y1: cmd.y1 !== undefined ? cmd.y1 + deltaY : cmd.y1,
+        y2: cmd.y2 !== undefined ? cmd.y2 + deltaY : cmd.y2
+      }));
+      
+      store.replaceSubPathCommands(subPath.id, updatedCommands);
+    }
+  });
+};
+
+const alignSubPathsMiddle = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  if (selectedSubPaths.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get all subpath bounds and find middle position
+  const subPathBounds = selectedSubPaths.map(({ subPath }) => {
+    const commands = subPath.commands;
+    const ys = commands.filter((cmd: SVGCommand) => cmd.y !== undefined).map((cmd: SVGCommand) => cmd.y!);
+    return {
+      subPath,
+      topY: Math.min(...ys),
+      bottomY: Math.max(...ys),
+      centerY: (Math.min(...ys) + Math.max(...ys)) / 2
+    };
+  });
+  
+  const topmostY = Math.min(...subPathBounds.map(b => b.topY));
+  const bottommostY = Math.max(...subPathBounds.map(b => b.bottomY));
+  const targetCenterY = (topmostY + bottommostY) / 2;
+  
+  // Calculate offset for each subpath and apply transform
+  subPathBounds.forEach(({ subPath, centerY }) => {
+    const deltaY = targetCenterY - centerY;
+    
+    if (Math.abs(deltaY) > 0.001) {
+      // Update all commands in the subpath
+      const updatedCommands = subPath.commands.map((cmd: SVGCommand) => ({
+        ...cmd,
+        y: cmd.y !== undefined ? cmd.y + deltaY : cmd.y,
+        y1: cmd.y1 !== undefined ? cmd.y1 + deltaY : cmd.y1,
+        y2: cmd.y2 !== undefined ? cmd.y2 + deltaY : cmd.y2
+      }));
+      
+      store.replaceSubPathCommands(subPath.id, updatedCommands);
+    }
+  });
+};
+
+const alignSubPathsBottom = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  if (selectedSubPaths.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get all subpath bounds and find bottommost position
+  const subPathBounds = selectedSubPaths.map(({ subPath }) => {
+    const commands = subPath.commands;
+    const ys = commands.filter((cmd: SVGCommand) => cmd.y !== undefined).map((cmd: SVGCommand) => cmd.y!);
+    return {
+      subPath,
+      topY: Math.min(...ys),
+      bottomY: Math.max(...ys)
+    };
+  });
+  
+  const bottommostY = Math.max(...subPathBounds.map(b => b.bottomY));
+  
+  // Calculate offset for each subpath and apply transform
+  subPathBounds.forEach(({ subPath, bottomY }) => {
+    if (bottomY !== bottommostY) {
+      const deltaY = bottommostY - bottomY;
+      
+      // Update all commands in the subpath
+      const updatedCommands = subPath.commands.map((cmd: SVGCommand) => ({
+        ...cmd,
+        y: cmd.y !== undefined ? cmd.y + deltaY : cmd.y,
+        y1: cmd.y1 !== undefined ? cmd.y1 + deltaY : cmd.y1,
+        y2: cmd.y2 !== undefined ? cmd.y2 + deltaY : cmd.y2
+      }));
+      
+      store.replaceSubPathCommands(subPath.id, updatedCommands);
+    }
+  });
+};
+
+const distributeSubPathsHorizontally = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  if (selectedSubPaths.length < 3) return;
+  
+  store.pushToHistory();
+  
+  // Get all subpath bounds and sort by center position
+  const subPathBounds = selectedSubPaths.map(({ subPath }) => {
+    const commands = subPath.commands;
+    const xs = commands.filter((cmd: SVGCommand) => cmd.x !== undefined).map((cmd: SVGCommand) => cmd.x!);
+    return {
+      subPath,
+      leftX: Math.min(...xs),
+      rightX: Math.max(...xs),
+      centerX: (Math.min(...xs) + Math.max(...xs)) / 2
+    };
+  });
+  
+  // Sort by center position
+  const sortedBounds = subPathBounds.sort((a, b) => a.centerX - b.centerX);
+  
+  const leftmostCenter = sortedBounds[0].centerX;
+  const rightmostCenter = sortedBounds[sortedBounds.length - 1].centerX;
+  const spacing = (rightmostCenter - leftmostCenter) / (sortedBounds.length - 1);
+  
+  // Distribute subpaths evenly (skip first and last)
+  sortedBounds.forEach((bound, index) => {
+    if (index > 0 && index < sortedBounds.length - 1) {
+      const targetCenterX = leftmostCenter + spacing * index;
+      const deltaX = targetCenterX - bound.centerX;
+      
+      if (Math.abs(deltaX) > 0.001) {
+        // Update all commands in the subpath
+        const updatedCommands = bound.subPath.commands.map((cmd: SVGCommand) => ({
+          ...cmd,
+          x: cmd.x !== undefined ? cmd.x + deltaX : cmd.x,
+          x1: cmd.x1 !== undefined ? cmd.x1 + deltaX : cmd.x1,
+          x2: cmd.x2 !== undefined ? cmd.x2 + deltaX : cmd.x2
+        }));
+        
+        store.replaceSubPathCommands(bound.subPath.id, updatedCommands);
+      }
+    }
+  });
+};
+
+const distributeSubPathsVertically = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  if (selectedSubPaths.length < 3) return;
+  
+  store.pushToHistory();
+  
+  // Get all subpath bounds and sort by center position
+  const subPathBounds = selectedSubPaths.map(({ subPath }) => {
+    const commands = subPath.commands;
+    const ys = commands.filter((cmd: SVGCommand) => cmd.y !== undefined).map((cmd: SVGCommand) => cmd.y!);
+    return {
+      subPath,
+      topY: Math.min(...ys),
+      bottomY: Math.max(...ys),
+      centerY: (Math.min(...ys) + Math.max(...ys)) / 2
+    };
+  });
+  
+  // Sort by center position
+  const sortedBounds = subPathBounds.sort((a, b) => a.centerY - b.centerY);
+  
+  const topmostCenter = sortedBounds[0].centerY;
+  const bottommostCenter = sortedBounds[sortedBounds.length - 1].centerY;
+  const spacing = (bottommostCenter - topmostCenter) / (sortedBounds.length - 1);
+  
+  // Distribute subpaths evenly (skip first and last)
+  sortedBounds.forEach((bound, index) => {
+    if (index > 0 && index < sortedBounds.length - 1) {
+      const targetCenterY = topmostCenter + spacing * index;
+      const deltaY = targetCenterY - bound.centerY;
+      
+      if (Math.abs(deltaY) > 0.001) {
+        // Update all commands in the subpath
+        const updatedCommands = bound.subPath.commands.map((cmd: SVGCommand) => ({
+          ...cmd,
+          y: cmd.y !== undefined ? cmd.y + deltaY : cmd.y,
+          y1: cmd.y1 !== undefined ? cmd.y1 + deltaY : cmd.y1,
+          y2: cmd.y2 !== undefined ? cmd.y2 + deltaY : cmd.y2
+        }));
+        
+        store.replaceSubPathCommands(bound.subPath.id, updatedCommands);
+      }
+    }
+  });
+};
+
 const bringToFront = () => {
   const store = useEditorStore.getState();
   
@@ -270,6 +648,39 @@ const sendToBack = () => {
   store.selection.selectedPaths.forEach(pathId => {
     // TODO: Implement send to back functionality
       });
+};
+
+// Generic function to apply filters to selected paths
+const applyFilterToPaths = (filterCreatorFn: () => any) => {
+  const store = useEditorStore.getState();
+  const selectedPaths = getSelectedPaths();
+  
+  if (selectedPaths.length === 0) return;
+  
+  // Create the filter
+  const filterData = filterCreatorFn();
+  store.addFilter(filterData);
+  
+  // Apply using a timeout to ensure the store is updated
+  setTimeout(() => {
+    // Access filters from the store directly to get the most current state
+    const storeState = useEditorStore.getState();
+    const currentFilters = storeState.filters;
+    const newFilter = currentFilters[currentFilters.length - 1]; // Get the last added filter
+    
+    if (newFilter && newFilter.id) {
+      const filterRef = formatSVGReference(newFilter.id);
+      
+      // Apply filter to each selected path
+      selectedPaths.forEach(path => {
+        if (path && path.id) {
+          storeState.updatePathStyle(path.id, { 
+            filter: filterRef
+          });
+        }
+      });
+    }
+  }, 0);
 };
 
 // Alignment options
@@ -310,17 +721,51 @@ const arrangeOptions = [
   }
 ];
 
+// Specific filter functions for paths (using the generic function)
+const applyBlurFilterToPaths = () => applyFilterToPaths(createBlurFilter);
+const applyDropShadowToPaths = () => applyFilterToPaths(createDropShadowFilter);
+const applyGlowFilterToPaths = () => applyFilterToPaths(createGlowFilter);
+const applyGrayscaleFilterToPaths = () => applyFilterToPaths(createGrayscaleFilter);
+const applySepiaFilterToPaths = () => applyFilterToPaths(createSepiaFilter);
+const applyEmbossFilterToPaths = () => applyFilterToPaths(createEmbossFilter);
+const applyNeonGlowFilterToPaths = () => applyFilterToPaths(createNeonGlowFilter);
+
 // Filter options for regular elements
 const filterOptions = [
   { 
     id: 'blur', 
     label: 'Blur', 
-    action: () => console.warn('Apply blur - needs implementation') 
+    action: applyBlurFilterToPaths 
   },
   { 
     id: 'shadow', 
     label: 'Drop Shadow', 
-    action: () => console.warn('Apply shadow - needs implementation') 
+    action: applyDropShadowToPaths 
+  },
+  { 
+    id: 'glow', 
+    label: 'Glow', 
+    action: applyGlowFilterToPaths 
+  },
+  { 
+    id: 'grayscale', 
+    label: 'Grayscale', 
+    action: applyGrayscaleFilterToPaths 
+  },
+  { 
+    id: 'sepia', 
+    label: 'Sepia', 
+    action: applySepiaFilterToPaths 
+  },
+  { 
+    id: 'emboss', 
+    label: 'Emboss', 
+    action: applyEmbossFilterToPaths 
+  },
+  { 
+    id: 'neon-glow', 
+    label: 'Neon Glow', 
+    action: applyNeonGlowFilterToPaths 
   }
 ];
 
@@ -1222,6 +1667,54 @@ const addRotateAnimation = () => {
 // SubPath-specific options (defined after functions to avoid hoisting issues)
 const subPathArrangeOptions = [
   { 
+    id: 'subpath-align-left', 
+    label: 'Align Left', 
+    icon: AlignLeft,
+    action: alignSubPathsLeft 
+  },
+  { 
+    id: 'subpath-align-center', 
+    label: 'Align Center', 
+    icon: AlignCenter,
+    action: alignSubPathsCenter 
+  },
+  { 
+    id: 'subpath-align-right', 
+    label: 'Align Right', 
+    icon: AlignRight,
+    action: alignSubPathsRight 
+  },
+  { 
+    id: 'subpath-align-top', 
+    label: 'Align Top', 
+    icon: ArrowUp,
+    action: alignSubPathsTop 
+  },
+  { 
+    id: 'subpath-align-middle', 
+    label: 'Align Middle', 
+    icon: AlignVerticalJustifyCenter,
+    action: alignSubPathsMiddle 
+  },
+  { 
+    id: 'subpath-align-bottom', 
+    label: 'Align Bottom', 
+    icon: ArrowDown,
+    action: alignSubPathsBottom 
+  },
+  { 
+    id: 'subpath-distribute-horizontal', 
+    label: 'Distribute Horizontally', 
+    icon: AlignHorizontalSpaceAround,
+    action: distributeSubPathsHorizontally 
+  },
+  { 
+    id: 'subpath-distribute-vertical', 
+    label: 'Distribute Vertically', 
+    icon: AlignVerticalSpaceAround,
+    action: distributeSubPathsVertically 
+  },
+  { 
     id: 'subpath-bring-front', 
     label: 'Bring to Front', 
     icon: ArrowUp,
@@ -1286,7 +1779,7 @@ export const subPathActions: ToolbarAction[] = [
   },
   {
     id: 'subpath-stroke-options',
-    icon: Minus,
+    icon: LineSquiggle,
     label: 'Stroke Options',
     type: 'input',
     input: {
@@ -1335,7 +1828,12 @@ export const subPathActions: ToolbarAction[] = [
       options: subPathArrangeOptions
     },
     priority: 70,
-    tooltip: 'Arrange layer order'
+    tooltip: 'Arrange and align subpaths',
+    visible: () => {
+      // Only show when multiple subpaths are selected
+      const store = useEditorStore.getState();
+      return store.selection.selectedSubPaths.length >= 2;
+    }
   },
   {
     id: 'subpath-filters',
@@ -1383,17 +1881,669 @@ export const subPathActions: ToolbarAction[] = [
 // Floating action definitions
 export const subPathFloatingActionDefinition: FloatingActionDefinition = {
   elementTypes: ['subpath'],
-  selectionTypes: ['single'],
+  selectionTypes: ['single', 'multiple'],
   actions: subPathActions,
   priority: 95  // Higher priority than paths
 };
 
 export const pathFloatingActionDefinition: FloatingActionDefinition = {
   elementTypes: ['path'],
-  selectionTypes: ['single'], 
+  selectionTypes: ['single', 'multiple'], 
   actions: singleElementActions,
   priority: 85  // Lower priority than subpaths
 };
+
+// Mixed selection arrange functions - work with texts, subpaths, and paths together
+const alignMixedLeft = () => {
+  const store = useEditorStore.getState();
+  const { selectedTexts, selectedSubPaths, selectedPaths } = store.selection;
+  
+  if (selectedTexts.length + selectedSubPaths.length + selectedPaths.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get all element positions
+  const allPositions: Array<{ type: 'text' | 'subpath' | 'path'; id: string; leftX: number }> = [];
+  
+  // Add text positions
+  selectedTexts.forEach(textId => {
+    const text = store.texts.find(t => t.id === textId);
+    if (text) {
+      allPositions.push({ type: 'text', id: textId, leftX: text.x });
+    }
+  });
+  
+  // Add subpath positions
+  selectedSubPaths.forEach(subPathId => {
+    const subPathData = getSelectedSubPaths().find(sp => sp.subPath.id === subPathId);
+    if (subPathData) {
+      const commands = subPathData.subPath.commands;
+      const xs = commands.filter((cmd: SVGCommand) => cmd.x !== undefined).map((cmd: SVGCommand) => cmd.x!);
+      if (xs.length > 0) {
+        allPositions.push({ type: 'subpath', id: subPathId, leftX: Math.min(...xs) });
+      }
+    }
+  });
+  
+  // Add path positions
+  selectedPaths.forEach(pathId => {
+    const path = store.paths.find(p => p.id === pathId);
+    if (path) {
+      const allXs: number[] = [];
+      path.subPaths.forEach(sp => {
+        sp.commands.forEach((cmd: SVGCommand) => {
+          if (cmd.x !== undefined) allXs.push(cmd.x);
+        });
+      });
+      if (allXs.length > 0) {
+        allPositions.push({ type: 'path', id: pathId, leftX: Math.min(...allXs) });
+      }
+    }
+  });
+  
+  if (allPositions.length < 2) return;
+  
+  const leftmostX = Math.min(...allPositions.map(p => p.leftX));
+  
+  // Apply alignment to each element type
+  allPositions.forEach(({ type, id, leftX }) => {
+    const deltaX = leftmostX - leftX;
+    if (Math.abs(deltaX) > 0.001) {
+      if (type === 'text') {
+        const text = store.texts.find(t => t.id === id);
+        if (text) {
+          store.updateText(id, { x: text.x + deltaX });
+        }
+      } else if (type === 'subpath') {
+        const subPathData = getSelectedSubPaths().find(sp => sp.subPath.id === id);
+        if (subPathData) {
+          const updatedCommands = subPathData.subPath.commands.map((cmd: SVGCommand) => ({
+            ...cmd,
+            x: cmd.x !== undefined ? cmd.x + deltaX : cmd.x,
+            x1: cmd.x1 !== undefined ? cmd.x1 + deltaX : cmd.x1,
+            x2: cmd.x2 !== undefined ? cmd.x2 + deltaX : cmd.x2
+          }));
+          store.replaceSubPathCommands(id, updatedCommands);
+        }
+      }
+      // For paths, we'd need to update all subpaths - not implemented for now
+    }
+  });
+};
+
+const alignMixedCenter = () => {
+  const store = useEditorStore.getState();
+  const { selectedTexts, selectedSubPaths, selectedPaths } = store.selection;
+  
+  if (selectedTexts.length + selectedSubPaths.length + selectedPaths.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get all element bounds
+  const allBounds: Array<{ type: 'text' | 'subpath' | 'path'; id: string; leftX: number; rightX: number; centerX: number }> = [];
+  
+  // Add text bounds
+  selectedTexts.forEach(textId => {
+    const text = store.texts.find(t => t.id === textId);
+    if (text) {
+      // For text, we approximate bounds (actual bounds would need DOM measurement)
+      const approxWidth = (text.type === 'text' ? text.content || '' : 'text').length * 8; // Rough estimate
+      allBounds.push({ 
+        type: 'text', 
+        id: textId, 
+        leftX: text.x, 
+        rightX: text.x + approxWidth,
+        centerX: text.x + approxWidth / 2
+      });
+    }
+  });
+  
+  // Add subpath bounds
+  selectedSubPaths.forEach(subPathId => {
+    const subPathData = getSelectedSubPaths().find(sp => sp.subPath.id === subPathId);
+    if (subPathData) {
+      const commands = subPathData.subPath.commands;
+      const xs = commands.filter((cmd: SVGCommand) => cmd.x !== undefined).map((cmd: SVGCommand) => cmd.x!);
+      if (xs.length > 0) {
+        const leftX = Math.min(...xs);
+        const rightX = Math.max(...xs);
+        allBounds.push({ 
+          type: 'subpath', 
+          id: subPathId, 
+          leftX, 
+          rightX,
+          centerX: (leftX + rightX) / 2
+        });
+      }
+    }
+  });
+  
+  if (allBounds.length < 2) return;
+  
+  const leftmostX = Math.min(...allBounds.map(b => b.leftX));
+  const rightmostX = Math.max(...allBounds.map(b => b.rightX));
+  const targetCenterX = (leftmostX + rightmostX) / 2;
+  
+  // Apply alignment to each element
+  allBounds.forEach(({ type, id, centerX }) => {
+    const deltaX = targetCenterX - centerX;
+    if (Math.abs(deltaX) > 0.001) {
+      if (type === 'text') {
+        const text = store.texts.find(t => t.id === id);
+        if (text) {
+          store.updateText(id, { x: text.x + deltaX });
+        }
+      } else if (type === 'subpath') {
+        const subPathData = getSelectedSubPaths().find(sp => sp.subPath.id === id);
+        if (subPathData) {
+          const updatedCommands = subPathData.subPath.commands.map((cmd: SVGCommand) => ({
+            ...cmd,
+            x: cmd.x !== undefined ? cmd.x + deltaX : cmd.x,
+            x1: cmd.x1 !== undefined ? cmd.x1 + deltaX : cmd.x1,
+            x2: cmd.x2 !== undefined ? cmd.x2 + deltaX : cmd.x2
+          }));
+          store.replaceSubPathCommands(id, updatedCommands);
+        }
+      }
+    }
+  });
+};
+
+const alignMixedTop = () => {
+  const store = useEditorStore.getState();
+  const { selectedTexts, selectedSubPaths, selectedPaths } = store.selection;
+  
+  if (selectedTexts.length + selectedSubPaths.length + selectedPaths.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get all element positions
+  const allPositions: Array<{ type: 'text' | 'subpath' | 'path'; id: string; topY: number }> = [];
+  
+  // Add text positions
+  selectedTexts.forEach(textId => {
+    const text = store.texts.find(t => t.id === textId);
+    if (text) {
+      allPositions.push({ type: 'text', id: textId, topY: text.y });
+    }
+  });
+  
+  // Add subpath positions
+  selectedSubPaths.forEach(subPathId => {
+    const subPathData = getSelectedSubPaths().find(sp => sp.subPath.id === subPathId);
+    if (subPathData) {
+      const commands = subPathData.subPath.commands;
+      const ys = commands.filter((cmd: SVGCommand) => cmd.y !== undefined).map((cmd: SVGCommand) => cmd.y!);
+      if (ys.length > 0) {
+        allPositions.push({ type: 'subpath', id: subPathId, topY: Math.min(...ys) });
+      }
+    }
+  });
+  
+  if (allPositions.length < 2) return;
+  
+  const topmostY = Math.min(...allPositions.map(p => p.topY));
+  
+  // Apply alignment to each element type
+  allPositions.forEach(({ type, id, topY }) => {
+    const deltaY = topmostY - topY;
+    if (Math.abs(deltaY) > 0.001) {
+      if (type === 'text') {
+        const text = store.texts.find(t => t.id === id);
+        if (text) {
+          store.updateText(id, { y: text.y + deltaY });
+        }
+      } else if (type === 'subpath') {
+        const subPathData = getSelectedSubPaths().find(sp => sp.subPath.id === id);
+        if (subPathData) {
+          const updatedCommands = subPathData.subPath.commands.map((cmd: SVGCommand) => ({
+            ...cmd,
+            y: cmd.y !== undefined ? cmd.y + deltaY : cmd.y,
+            y1: cmd.y1 !== undefined ? cmd.y1 + deltaY : cmd.y1,
+            y2: cmd.y2 !== undefined ? cmd.y2 + deltaY : cmd.y2
+          }));
+          store.replaceSubPathCommands(id, updatedCommands);
+        }
+      }
+    }
+  });
+};
+
+const alignMixedMiddle = () => {
+  const store = useEditorStore.getState();
+  const { selectedTexts, selectedSubPaths, selectedPaths } = store.selection;
+  
+  if (selectedTexts.length + selectedSubPaths.length + selectedPaths.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get all element bounds
+  const allBounds: Array<{ type: 'text' | 'subpath' | 'path'; id: string; topY: number; bottomY: number; centerY: number }> = [];
+  
+  // Add text bounds
+  selectedTexts.forEach(textId => {
+    const text = store.texts.find(t => t.id === textId);
+    if (text) {
+      // For text, we approximate bounds (actual bounds would need DOM measurement)
+      const approxHeight = 16; // Rough estimate for text height
+      allBounds.push({ 
+        type: 'text', 
+        id: textId, 
+        topY: text.y, 
+        bottomY: text.y + approxHeight,
+        centerY: text.y + approxHeight / 2
+      });
+    }
+  });
+  
+  // Add subpath bounds
+  selectedSubPaths.forEach(subPathId => {
+    const subPathData = getSelectedSubPaths().find(sp => sp.subPath.id === subPathId);
+    if (subPathData) {
+      const commands = subPathData.subPath.commands;
+      const ys = commands.filter((cmd: SVGCommand) => cmd.y !== undefined).map((cmd: SVGCommand) => cmd.y!);
+      if (ys.length > 0) {
+        const topY = Math.min(...ys);
+        const bottomY = Math.max(...ys);
+        allBounds.push({ 
+          type: 'subpath', 
+          id: subPathId, 
+          topY, 
+          bottomY,
+          centerY: (topY + bottomY) / 2
+        });
+      }
+    }
+  });
+  
+  if (allBounds.length < 2) return;
+  
+  const topmostY = Math.min(...allBounds.map(b => b.topY));
+  const bottommostY = Math.max(...allBounds.map(b => b.bottomY));
+  const targetCenterY = (topmostY + bottommostY) / 2;
+  
+  // Apply alignment to each element
+  allBounds.forEach(({ type, id, centerY }) => {
+    const deltaY = targetCenterY - centerY;
+    if (Math.abs(deltaY) > 0.001) {
+      if (type === 'text') {
+        const text = store.texts.find(t => t.id === id);
+        if (text) {
+          store.updateText(id, { y: text.y + deltaY });
+        }
+      } else if (type === 'subpath') {
+        const subPathData = getSelectedSubPaths().find(sp => sp.subPath.id === id);
+        if (subPathData) {
+          const updatedCommands = subPathData.subPath.commands.map((cmd: SVGCommand) => ({
+            ...cmd,
+            y: cmd.y !== undefined ? cmd.y + deltaY : cmd.y,
+            y1: cmd.y1 !== undefined ? cmd.y1 + deltaY : cmd.y1,
+            y2: cmd.y2 !== undefined ? cmd.y2 + deltaY : cmd.y2
+          }));
+          store.replaceSubPathCommands(id, updatedCommands);
+        }
+      }
+    }
+  });
+};
+
+const alignMixedBottom = () => {
+  const store = useEditorStore.getState();
+  const { selectedTexts, selectedSubPaths, selectedPaths } = store.selection;
+  
+  if (selectedTexts.length + selectedSubPaths.length + selectedPaths.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get all element positions
+  const allPositions: Array<{ type: 'text' | 'subpath' | 'path'; id: string; bottomY: number }> = [];
+  
+  // Add text positions
+  selectedTexts.forEach(textId => {
+    const text = store.texts.find(t => t.id === textId);
+    if (text) {
+      // For text, approximate the bottom position
+      const approxHeight = 16; // Rough estimate for text height
+      allPositions.push({ type: 'text', id: textId, bottomY: text.y + approxHeight });
+    }
+  });
+  
+  // Add subpath positions
+  selectedSubPaths.forEach(subPathId => {
+    const subPathData = getSelectedSubPaths().find(sp => sp.subPath.id === subPathId);
+    if (subPathData) {
+      const commands = subPathData.subPath.commands;
+      const ys = commands.filter((cmd: SVGCommand) => cmd.y !== undefined).map((cmd: SVGCommand) => cmd.y!);
+      if (ys.length > 0) {
+        allPositions.push({ type: 'subpath', id: subPathId, bottomY: Math.max(...ys) });
+      }
+    }
+  });
+  
+  if (allPositions.length < 2) return;
+  
+  const bottommostY = Math.max(...allPositions.map(p => p.bottomY));
+  
+  // Apply alignment to each element type
+  allPositions.forEach(({ type, id, bottomY }) => {
+    const deltaY = bottommostY - bottomY;
+    if (Math.abs(deltaY) > 0.001) {
+      if (type === 'text') {
+        const text = store.texts.find(t => t.id === id);
+        if (text) {
+          // For text, we need to adjust for the height difference
+          const approxHeight = 16;
+          store.updateText(id, { y: text.y + deltaY });
+        }
+      } else if (type === 'subpath') {
+        const subPathData = getSelectedSubPaths().find(sp => sp.subPath.id === id);
+        if (subPathData) {
+          const updatedCommands = subPathData.subPath.commands.map((cmd: SVGCommand) => ({
+            ...cmd,
+            y: cmd.y !== undefined ? cmd.y + deltaY : cmd.y,
+            y1: cmd.y1 !== undefined ? cmd.y1 + deltaY : cmd.y1,
+            y2: cmd.y2 !== undefined ? cmd.y2 + deltaY : cmd.y2
+          }));
+          store.replaceSubPathCommands(id, updatedCommands);
+        }
+      }
+    }
+  });
+};
+
+const alignMixedRight = () => {
+  const store = useEditorStore.getState();
+  const { selectedTexts, selectedSubPaths, selectedPaths } = store.selection;
+  
+  if (selectedTexts.length + selectedSubPaths.length + selectedPaths.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get all element bounds
+  const allBounds: Array<{ type: 'text' | 'subpath' | 'path'; id: string; leftX: number; rightX: number }> = [];
+  
+  // Add text bounds
+  selectedTexts.forEach(textId => {
+    const text = store.texts.find(t => t.id === textId);
+    if (text) {
+      // For text, we approximate bounds (actual bounds would need DOM measurement)
+      const approxWidth = (text.type === 'text' ? text.content || '' : 'text').length * 8; // Rough estimate
+      allBounds.push({ 
+        type: 'text', 
+        id: textId, 
+        leftX: text.x, 
+        rightX: text.x + approxWidth
+      });
+    }
+  });
+  
+  // Add subpath bounds
+  selectedSubPaths.forEach(subPathId => {
+    const subPathData = getSelectedSubPaths().find(sp => sp.subPath.id === subPathId);
+    if (subPathData) {
+      const commands = subPathData.subPath.commands;
+      const xs = commands.filter((cmd: SVGCommand) => cmd.x !== undefined).map((cmd: SVGCommand) => cmd.x!);
+      if (xs.length > 0) {
+        const leftX = Math.min(...xs);
+        const rightX = Math.max(...xs);
+        allBounds.push({ 
+          type: 'subpath', 
+          id: subPathId, 
+          leftX, 
+          rightX
+        });
+      }
+    }
+  });
+  
+  if (allBounds.length < 2) return;
+  
+  const rightmostX = Math.max(...allBounds.map(b => b.rightX));
+  
+  // Apply alignment to each element
+  allBounds.forEach(({ type, id, rightX }) => {
+    const deltaX = rightmostX - rightX;
+    if (Math.abs(deltaX) > 0.001) {
+      if (type === 'text') {
+        const text = store.texts.find(t => t.id === id);
+        if (text) {
+          store.updateText(id, { x: text.x + deltaX });
+        }
+      } else if (type === 'subpath') {
+        const subPathData = getSelectedSubPaths().find(sp => sp.subPath.id === id);
+        if (subPathData) {
+          const updatedCommands = subPathData.subPath.commands.map((cmd: SVGCommand) => ({
+            ...cmd,
+            x: cmd.x !== undefined ? cmd.x + deltaX : cmd.x,
+            x1: cmd.x1 !== undefined ? cmd.x1 + deltaX : cmd.x1,
+            x2: cmd.x2 !== undefined ? cmd.x2 + deltaX : cmd.x2
+          }));
+          store.replaceSubPathCommands(id, updatedCommands);
+        }
+      }
+    }
+  });
+};
+
+const distributeMixedHorizontally = () => {
+  const store = useEditorStore.getState();
+  const { selectedTexts, selectedSubPaths, selectedPaths } = store.selection;
+  
+  if (selectedTexts.length + selectedSubPaths.length + selectedPaths.length < 3) return;
+  
+  store.pushToHistory();
+  
+  // Get all element bounds
+  const allBounds: Array<{ type: 'text' | 'subpath' | 'path'; id: string; leftX: number; rightX: number; centerX: number }> = [];
+  
+  // Add text bounds
+  selectedTexts.forEach(textId => {
+    const text = store.texts.find(t => t.id === textId);
+    if (text) {
+      const approxWidth = (text.type === 'text' ? text.content || '' : 'text').length * 8;
+      allBounds.push({ 
+        type: 'text', 
+        id: textId, 
+        leftX: text.x, 
+        rightX: text.x + approxWidth,
+        centerX: text.x + approxWidth / 2
+      });
+    }
+  });
+  
+  // Add subpath bounds
+  selectedSubPaths.forEach(subPathId => {
+    const subPathData = getSelectedSubPaths().find(sp => sp.subPath.id === subPathId);
+    if (subPathData) {
+      const commands = subPathData.subPath.commands;
+      const xs = commands.filter((cmd: SVGCommand) => cmd.x !== undefined).map((cmd: SVGCommand) => cmd.x!);
+      if (xs.length > 0) {
+        const leftX = Math.min(...xs);
+        const rightX = Math.max(...xs);
+        allBounds.push({ 
+          type: 'subpath', 
+          id: subPathId, 
+          leftX, 
+          rightX,
+          centerX: (leftX + rightX) / 2
+        });
+      }
+    }
+  });
+  
+  if (allBounds.length < 3) return;
+  
+  // Sort by center position
+  const sortedBounds = allBounds.sort((a, b) => a.centerX - b.centerX);
+  
+  const leftmostCenter = sortedBounds[0].centerX;
+  const rightmostCenter = sortedBounds[sortedBounds.length - 1].centerX;
+  const spacing = (rightmostCenter - leftmostCenter) / (sortedBounds.length - 1);
+  
+  // Distribute elements evenly (skip first and last)
+  sortedBounds.forEach((bound, index) => {
+    if (index > 0 && index < sortedBounds.length - 1) {
+      const targetCenterX = leftmostCenter + spacing * index;
+      const deltaX = targetCenterX - bound.centerX;
+      
+      if (Math.abs(deltaX) > 0.001) {
+        if (bound.type === 'text') {
+          const text = store.texts.find(t => t.id === bound.id);
+          if (text) {
+            store.updateText(bound.id, { x: text.x + deltaX });
+          }
+        } else if (bound.type === 'subpath') {
+          const subPathData = getSelectedSubPaths().find(sp => sp.subPath.id === bound.id);
+          if (subPathData) {
+            const updatedCommands = subPathData.subPath.commands.map((cmd: SVGCommand) => ({
+              ...cmd,
+              x: cmd.x !== undefined ? cmd.x + deltaX : cmd.x,
+              x1: cmd.x1 !== undefined ? cmd.x1 + deltaX : cmd.x1,
+              x2: cmd.x2 !== undefined ? cmd.x2 + deltaX : cmd.x2
+            }));
+            store.replaceSubPathCommands(bound.id, updatedCommands);
+          }
+        }
+      }
+    }
+  });
+};
+
+const distributeMixedVertically = () => {
+  const store = useEditorStore.getState();
+  const { selectedTexts, selectedSubPaths, selectedPaths } = store.selection;
+  
+  if (selectedTexts.length + selectedSubPaths.length + selectedPaths.length < 3) return;
+  
+  store.pushToHistory();
+  
+  // Get all element bounds
+  const allBounds: Array<{ type: 'text' | 'subpath' | 'path'; id: string; topY: number; bottomY: number; centerY: number }> = [];
+  
+  // Add text bounds
+  selectedTexts.forEach(textId => {
+    const text = store.texts.find(t => t.id === textId);
+    if (text) {
+      const approxHeight = 16; // Rough estimate for text height
+      allBounds.push({ 
+        type: 'text', 
+        id: textId, 
+        topY: text.y, 
+        bottomY: text.y + approxHeight,
+        centerY: text.y + approxHeight / 2
+      });
+    }
+  });
+  
+  // Add subpath bounds
+  selectedSubPaths.forEach(subPathId => {
+    const subPathData = getSelectedSubPaths().find(sp => sp.subPath.id === subPathId);
+    if (subPathData) {
+      const commands = subPathData.subPath.commands;
+      const ys = commands.filter((cmd: SVGCommand) => cmd.y !== undefined).map((cmd: SVGCommand) => cmd.y!);
+      if (ys.length > 0) {
+        const topY = Math.min(...ys);
+        const bottomY = Math.max(...ys);
+        allBounds.push({ 
+          type: 'subpath', 
+          id: subPathId, 
+          topY, 
+          bottomY,
+          centerY: (topY + bottomY) / 2
+        });
+      }
+    }
+  });
+  
+  if (allBounds.length < 3) return;
+  
+  // Sort by center position
+  const sortedBounds = allBounds.sort((a, b) => a.centerY - b.centerY);
+  
+  const topmostCenter = sortedBounds[0].centerY;
+  const bottommostCenter = sortedBounds[sortedBounds.length - 1].centerY;
+  const spacing = (bottommostCenter - topmostCenter) / (sortedBounds.length - 1);
+  
+  // Distribute elements evenly (skip first and last)
+  sortedBounds.forEach((bound, index) => {
+    if (index > 0 && index < sortedBounds.length - 1) {
+      const targetCenterY = topmostCenter + spacing * index;
+      const deltaY = targetCenterY - bound.centerY;
+      
+      if (Math.abs(deltaY) > 0.001) {
+        if (bound.type === 'text') {
+          const text = store.texts.find(t => t.id === bound.id);
+          if (text) {
+            store.updateText(bound.id, { y: text.y + deltaY });
+          }
+        } else if (bound.type === 'subpath') {
+          const subPathData = getSelectedSubPaths().find(sp => sp.subPath.id === bound.id);
+          if (subPathData) {
+            const updatedCommands = subPathData.subPath.commands.map((cmd: SVGCommand) => ({
+              ...cmd,
+              y: cmd.y !== undefined ? cmd.y + deltaY : cmd.y,
+              y1: cmd.y1 !== undefined ? cmd.y1 + deltaY : cmd.y1,
+              y2: cmd.y2 !== undefined ? cmd.y2 + deltaY : cmd.y2
+            }));
+            store.replaceSubPathCommands(bound.id, updatedCommands);
+          }
+        }
+      }
+    }
+  });
+};
+
+// Mixed arrange options
+const mixedArrangeOptions = [
+  { 
+    id: 'mixed-align-left', 
+    label: 'Align Left', 
+    icon: AlignLeft,
+    action: alignMixedLeft 
+  },
+  { 
+    id: 'mixed-align-center', 
+    label: 'Align Center', 
+    icon: AlignCenter,
+    action: alignMixedCenter 
+  },
+  { 
+    id: 'mixed-align-right', 
+    label: 'Align Right', 
+    icon: AlignRight,
+    action: alignMixedRight 
+  },
+  { 
+    id: 'mixed-align-top', 
+    label: 'Align Top', 
+    icon: ArrowUp,
+    action: alignMixedTop 
+  },
+  { 
+    id: 'mixed-align-middle', 
+    label: 'Align Middle', 
+    icon: AlignVerticalJustifyCenter,
+    action: alignMixedMiddle 
+  },
+  { 
+    id: 'mixed-align-bottom', 
+    label: 'Align Bottom', 
+    icon: ArrowDown,
+    action: alignMixedBottom 
+  },
+  { 
+    id: 'mixed-distribute-horizontal', 
+    label: 'Distribute Horizontally', 
+    icon: AlignHorizontalSpaceAround,
+    action: distributeMixedHorizontally 
+  },
+  { 
+    id: 'mixed-distribute-vertical', 
+    label: 'Distribute Vertically', 
+    icon: AlignVerticalSpaceAround,
+    action: distributeMixedVertically 
+  }
+];
 
 // Mixed selection actions (text + subpath or other combinations)
 // Only show selection-relevant actions and universal styling options
@@ -1424,7 +2574,7 @@ export const mixedSelectionActions: ToolbarAction[] = [
   },
   {
     id: 'mixed-stroke-width',
-    icon: Minus,
+    icon: LineSquiggle,
     label: 'Stroke Width',
     type: 'input',
     input: {
@@ -1449,6 +2599,25 @@ export const mixedSelectionActions: ToolbarAction[] = [
     },
     priority: 85,
     tooltip: 'Change stroke width'
+  },
+  {
+    id: 'mixed-arrange',
+    icon: Layers,
+    label: 'Arrange',
+    type: 'dropdown',
+    dropdown: {
+      options: mixedArrangeOptions
+    },
+    priority: 75,
+    tooltip: 'Arrange and align mixed elements',
+    visible: () => {
+      // Show when 2+ elements for alignment, or 3+ for distribution
+      const store = useEditorStore.getState();
+      const totalSelected = store.selection.selectedTexts.length + 
+                           store.selection.selectedSubPaths.length + 
+                           store.selection.selectedPaths.length;
+      return totalSelected >= 2; // Most actions work with 2+, distribute needs 3+ (handled internally)
+    }
   },
   {
     id: 'mixed-group',

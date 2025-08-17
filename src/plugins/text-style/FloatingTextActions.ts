@@ -8,12 +8,18 @@ import {
   AlignRight, 
   Copy, 
   Trash2,
-  Plus,
-  Minus,
-  RotateCcw,
+  LineSquiggle,
   Edit,
   Brush,
-  Filter
+  Filter,
+  Play,
+  Layers,
+  ArrowUp,
+  ArrowDown,
+  AlignVerticalJustifyCenter,
+  AlignHorizontalJustifyCenter,
+  AlignVerticalSpaceAround,
+  AlignHorizontalSpaceAround
 } from 'lucide-react';
 import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { useEditorStore } from '../../store/editorStore';
@@ -244,39 +250,323 @@ const applyBlurFilterToText = () => applyFilterToTexts(createBlurFilter);
 const applyDropShadowToText = () => applyFilterToTexts(createDropShadowFilter);
 const applyGrayscaleFilterToText = () => applyFilterToTexts(createGrayscaleFilter);
 const applySepiaFilterToText = () => applyFilterToTexts(createSepiaFilter);
-const applyInvertFilterToText = () => applyFilterToTexts(createInvertFilter);
-const applyBrightnessFilterToText = () => applyFilterToTexts(createBrightnessFilter);
-const applyContrastFilterToText = () => applyFilterToTexts(createContrastFilter);
-const applySaturateFilterToText = () => applyFilterToTexts(createSaturateFilter);
-const applyHueRotateFilterToText = () => applyFilterToTexts(createHueRotateFilter);
 const applyEmbossFilterToText = () => applyFilterToTexts(createEmbossFilter);
-const applySharpenFilterToText = () => applyFilterToTexts(createSharpenFilter);
-const applyEdgeDetectFilterToText = () => applyFilterToTexts(createEdgeDetectFilter);
 const applyGlowFilterToText = () => applyFilterToTexts(createGlowFilter);
-const applyBevelFilterToText = () => applyFilterToTexts(createBevelFilter);
-const applyMotionBlurFilterToText = () => applyFilterToTexts(createMotionBlurFilter);
-const applyNoiseFilterToText = () => applyFilterToTexts(createNoiseFilter);
-const applyWaveDistortionFilterToText = () => applyFilterToTexts(createWaveDistortionFilter);
-const applyPosterizeFilterToText = () => applyFilterToTexts(createPosterizeFilter);
-const applyOilPaintingFilterToText = () => applyFilterToTexts(createOilPaintingFilter);
-const applyWatercolorFilterToText = () => applyFilterToTexts(createWatercolorFilter);
-const applyVintageFilterToText = () => applyFilterToTexts(createVintageFilter);
-const applyChromaticAberrationFilterToText = () => applyFilterToTexts(createChromaticAberrationFilter);
 const applyNeonGlowFilterToText = () => applyFilterToTexts(createNeonGlowFilter);
-const applyMosaicFilterToText = () => applyFilterToTexts(createMosaicFilter);
-const applyGlitchFilterToText = () => applyFilterToTexts(createGlitchFilter);
-const applyPixelateFilterToText = () => applyFilterToTexts(createPixelateFilter);
-const applyDancingStrokeFilterToText = () => applyFilterToTexts(createDancingStrokeFilter);
-const applySmokeFilterToText = () => applyFilterToTexts(createSmokeFilter);
-const applyWavesFilterToText = () => applyFilterToTexts(createWavesFilter);
-const applyPaperTextureFilterToText = () => applyFilterToTexts(createPaperTextureFilter);
-const applyZebraFilterToText = () => applyFilterToTexts(createZebraFilter);
-const applyNetFilterToText = () => applyFilterToTexts(createNetFilter);
-const applyDustFilterToText = () => applyFilterToTexts(createDustFilter);
-const applyColoredStripesFilterToText = () => applyFilterToTexts(createColoredStripesFilter);
-const applyColoredSpotsFilterToText = () => applyFilterToTexts(createColoredSpotsFilter);
-const applyColoredFlameFilterToText = () => applyFilterToTexts(createColoredFlameFilter);
-const applyAdvancedWatercolorFilterToText = () => applyFilterToTexts(createAdvancedWatercolorFilter);
+
+// Add fade animation to texts
+const addFadeAnimationToText = () => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  selectedTexts.forEach(textId => {
+    const opacityAnimation = {
+      targetElementId: textId,
+      type: 'animate' as const,
+      attributeName: 'opacity',
+      from: '1',
+      to: '0.2',
+      dur: '2s',
+      repeatCount: 'indefinite'
+    };
+    
+    store.addAnimation(opacityAnimation);
+  });
+};
+
+// Add rotation animation to texts
+const addRotateAnimationToText = () => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  selectedTexts.forEach(textId => {
+    const text = store.texts.find(t => t.id === textId);
+    if (text) {
+      const rotationAnimation = {
+        targetElementId: textId,
+        type: 'animateTransform' as const,
+        attributeName: 'transform',
+        transformType: 'rotate',
+        from: `0 ${text.x} ${text.y}`,
+        to: `360 ${text.x} ${text.y}`, 
+        dur: '3s',
+        repeatCount: 'indefinite'
+      };
+      
+      store.addAnimation(rotationAnimation);
+    }
+  });
+};
+
+// Add scale animation to texts
+const addScaleAnimationToText = () => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  selectedTexts.forEach(textId => {
+    const text = store.texts.find(t => t.id === textId);
+    if (text) {
+      const scaleAnimation = {
+        targetElementId: textId,
+        type: 'animateTransform' as const,
+        attributeName: 'transform',
+        transformType: 'scale',
+        from: '1 1',
+        to: '1.2 1.2',
+        dur: '1s',
+        repeatCount: 'indefinite'
+      };
+      
+      store.addAnimation(scaleAnimation);
+    }
+  });
+};
+
+// Text animation options
+const textAnimationOptions = [
+  { 
+    id: 'text-fade', 
+    label: 'Fade In/Out', 
+    action: addFadeAnimationToText 
+  },
+  { 
+    id: 'text-rotate', 
+    label: 'Rotate', 
+    action: addRotateAnimationToText 
+  },
+  { 
+    id: 'text-scale', 
+    label: 'Scale', 
+    action: addScaleAnimationToText 
+  }
+];
+
+// Arrange functions for texts
+const alignTextsLeft = () => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  if (selectedTexts.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get the leftmost position
+  const texts = selectedTexts.map(id => store.texts.find(t => t.id === id)).filter(Boolean);
+  const leftmostX = Math.min(...texts.map(t => t!.x));
+  
+  // Align all texts to the leftmost position
+  texts.forEach(text => {
+    if (text) {
+      store.updateText(text.id, { x: leftmostX });
+    }
+  });
+};
+
+const alignTextsCenter = () => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  if (selectedTexts.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get all texts and find center position
+  const texts = selectedTexts.map(id => store.texts.find(t => t.id === id)).filter(Boolean);
+  const leftmostX = Math.min(...texts.map(t => t!.x));
+  const rightmostX = Math.max(...texts.map(t => t!.x));
+  const centerX = (leftmostX + rightmostX) / 2;
+  
+  // Align all texts to center
+  texts.forEach(text => {
+    if (text) {
+      store.updateText(text.id, { x: centerX });
+    }
+  });
+};
+
+const alignTextsRight = () => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  if (selectedTexts.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get the rightmost position
+  const texts = selectedTexts.map(id => store.texts.find(t => t.id === id)).filter(Boolean);
+  const rightmostX = Math.max(...texts.map(t => t!.x));
+  
+  // Align all texts to the rightmost position
+  texts.forEach(text => {
+    if (text) {
+      store.updateText(text.id, { x: rightmostX });
+    }
+  });
+};
+
+const alignTextsTop = () => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  if (selectedTexts.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get the topmost position
+  const texts = selectedTexts.map(id => store.texts.find(t => t.id === id)).filter(Boolean);
+  const topmostY = Math.min(...texts.map(t => t!.y));
+  
+  // Align all texts to the topmost position
+  texts.forEach(text => {
+    if (text) {
+      store.updateText(text.id, { y: topmostY });
+    }
+  });
+};
+
+const alignTextsMiddle = () => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  if (selectedTexts.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get all texts and find middle position
+  const texts = selectedTexts.map(id => store.texts.find(t => t.id === id)).filter(Boolean);
+  const topmostY = Math.min(...texts.map(t => t!.y));
+  const bottommostY = Math.max(...texts.map(t => t!.y));
+  const middleY = (topmostY + bottommostY) / 2;
+  
+  // Align all texts to middle
+  texts.forEach(text => {
+    if (text) {
+      store.updateText(text.id, { y: middleY });
+    }
+  });
+};
+
+const alignTextsBottom = () => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  if (selectedTexts.length < 2) return;
+  
+  store.pushToHistory();
+  
+  // Get the bottommost position
+  const texts = selectedTexts.map(id => store.texts.find(t => t.id === id)).filter(Boolean);
+  const bottommostY = Math.max(...texts.map(t => t!.y));
+  
+  // Align all texts to the bottommost position
+  texts.forEach(text => {
+    if (text) {
+      store.updateText(text.id, { y: bottommostY });
+    }
+  });
+};
+
+const distributeTextsHorizontally = () => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  if (selectedTexts.length < 3) return;
+  
+  store.pushToHistory();
+  
+  // Get all texts and sort by x position
+  const texts = selectedTexts.map(id => store.texts.find(t => t.id === id)).filter(Boolean);
+  const sortedTexts = texts.sort((a, b) => a!.x - b!.x);
+  
+  const leftmostX = sortedTexts[0]!.x;
+  const rightmostX = sortedTexts[sortedTexts.length - 1]!.x;
+  const spacing = (rightmostX - leftmostX) / (sortedTexts.length - 1);
+  
+  // Distribute texts evenly
+  sortedTexts.forEach((text, index) => {
+    if (text && index > 0 && index < sortedTexts.length - 1) {
+      const newX = leftmostX + spacing * index;
+      store.updateText(text.id, { x: newX });
+    }
+  });
+};
+
+const distributeTextsVertically = () => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  if (selectedTexts.length < 3) return;
+  
+  store.pushToHistory();
+  
+  // Get all texts and sort by y position
+  const texts = selectedTexts.map(id => store.texts.find(t => t.id === id)).filter(Boolean);
+  const sortedTexts = texts.sort((a, b) => a!.y - b!.y);
+  
+  const topmostY = sortedTexts[0]!.y;
+  const bottommostY = sortedTexts[sortedTexts.length - 1]!.y;
+  const spacing = (bottommostY - topmostY) / (sortedTexts.length - 1);
+  
+  // Distribute texts evenly
+  sortedTexts.forEach((text, index) => {
+    if (text && index > 0 && index < sortedTexts.length - 1) {
+      const newY = topmostY + spacing * index;
+      store.updateText(text.id, { y: newY });
+    }
+  });
+};
+
+// Text arrange options
+const textArrangeOptions = [
+  { 
+    id: 'text-align-left', 
+    label: 'Align Left', 
+    icon: AlignLeft,
+    action: alignTextsLeft 
+  },
+  { 
+    id: 'text-align-center', 
+    label: 'Align Center', 
+    icon: AlignCenter,
+    action: alignTextsCenter 
+  },
+  { 
+    id: 'text-align-right', 
+    label: 'Align Right', 
+    icon: AlignRight,
+    action: alignTextsRight 
+  },
+  { 
+    id: 'text-align-top', 
+    label: 'Align Top', 
+    icon: ArrowUp,
+    action: alignTextsTop 
+  },
+  { 
+    id: 'text-align-middle', 
+    label: 'Align Middle', 
+    icon: AlignVerticalJustifyCenter,
+    action: alignTextsMiddle 
+  },
+  { 
+    id: 'text-align-bottom', 
+    label: 'Align Bottom', 
+    icon: ArrowDown,
+    action: alignTextsBottom 
+  },
+  { 
+    id: 'text-distribute-horizontal', 
+    label: 'Distribute Horizontally', 
+    icon: AlignHorizontalSpaceAround,
+    action: distributeTextsHorizontally 
+  },
+  { 
+    id: 'text-distribute-vertical', 
+    label: 'Distribute Vertically', 
+    icon: AlignVerticalSpaceAround,
+    action: distributeTextsVertically 
+  }
+];
 
 // Text filter options - Essential 7 filters
 const textFilterOptions = [
@@ -395,20 +685,8 @@ export const textFloatingActions: ToolbarAction[] = [
     tooltip: 'Change text color'
   },
   {
-    id: 'text-stroke-color',
-    icon: Brush,
-    label: 'Stroke Color',
-    type: 'color',
-    color: {
-      currentColor: getCurrentStrokeColor(),
-      onChange: (color: string | any) => applyTextStyle({ stroke: color })
-    },
-    priority: 65,
-    tooltip: 'Change text stroke color'
-  },
-  {
     id: 'text-stroke-options',
-    icon: Minus,
+    icon: LineSquiggle,
     label: 'Stroke Options',
     type: 'input',
     input: {
@@ -427,8 +705,20 @@ export const textFloatingActions: ToolbarAction[] = [
       onStrokeLinecapChange: applyStrokeLinecap,
       onStrokeLinejoinChange: applyStrokeLinejoin
     },
-    priority: 60,
+    priority: 65,
     tooltip: 'Configure stroke width, dash pattern, line cap, and line join'
+  },
+  {
+    id: 'text-stroke-color',
+    icon: Brush,
+    label: 'Stroke Color',
+    type: 'color',
+    color: {
+      currentColor: getCurrentStrokeColor(),
+      onChange: (color: string | any) => applyTextStyle({ stroke: color })
+    },
+    priority: 60,
+    tooltip: 'Change text stroke color'
   },
   {
     id: 'text-filters',
@@ -442,13 +732,52 @@ export const textFloatingActions: ToolbarAction[] = [
     tooltip: 'Apply filters'
   },
   {
+    id: 'text-animations',
+    icon: Play,
+    label: 'Animations',
+    type: 'dropdown',
+    dropdown: {
+      options: textAnimationOptions
+    },
+    priority: 52,
+    tooltip: 'Add animations'
+  },
+  {
+    id: 'text-arrange',
+    icon: Layers,
+    label: 'Arrange',
+    type: 'dropdown',
+    dropdown: {
+      options: textArrangeOptions
+    },
+    priority: 48,
+    tooltip: 'Arrange and align texts',
+    visible: () => {
+      // Only show when multiple texts are selected
+      const store = useEditorStore.getState();
+      return store.selection.selectedTexts.length >= 2;
+    }
+  },
+  {
     id: 'edit-text',
     icon: Edit,
     label: 'Edit Text',
     type: 'button',
     action: editText,
     priority: 50,
-    tooltip: 'Edit text content (double-click/F2)'
+    tooltip: 'Edit text content (double-click/F2)',
+    visible: () => {
+      // Only show when exactly one text is selected and nothing else
+      const store = useEditorStore.getState();
+      const selection = store.selection;
+      return selection.selectedTexts.length === 1 &&
+             selection.selectedPaths.length === 0 &&
+             selection.selectedSubPaths.length === 0 &&
+             selection.selectedCommands.length === 0 &&
+             selection.selectedGroups.length === 0 &&
+             selection.selectedImages.length === 0 &&
+             selection.selectedUses.length === 0;
+    }
   },
   {
     id: 'duplicate-text',

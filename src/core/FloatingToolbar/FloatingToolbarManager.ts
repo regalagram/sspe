@@ -61,6 +61,16 @@ export class FloatingToolbarManager {
     const elementTypes = this.detectElementTypes(selection);
     const selectionType = this.getSelectionType(selection);
     
+    // Debug para subpaths
+    if (selection.selectedSubPaths.length > 0) {
+      console.log('🔍 SUBPATH Debug:', {
+        selectedSubPaths: selection.selectedSubPaths,
+        elementTypes,
+        selectionType,
+        availableDefinitions: this.actionDefinitions.length
+      });
+    }
+    
         
     let actions: ToolbarAction[] = [];
     
@@ -81,7 +91,8 @@ export class FloatingToolbarManager {
     }
     
     const processedActions = this.processActions(actions);
-        return processedActions;
+    
+    return processedActions;
   }
 
   getConfig(): FloatingToolbarConfig {
@@ -167,10 +178,13 @@ export class FloatingToolbarManager {
   }
 
   private processActions(actions: ToolbarAction[]): ToolbarAction[] {
+    // First consolidate similar actions for mixed selections
+    const consolidatedActions = this.consolidateSimilarActions(actions);
+    
     // Remove duplicates based on action id
     const uniqueActions = new Map<string, ToolbarAction>();
     
-    for (const action of actions) {
+    for (const action of consolidatedActions) {
       if (!uniqueActions.has(action.id) || (action.priority || 0) > (uniqueActions.get(action.id)?.priority || 0)) {
         uniqueActions.set(action.id, action);
       }
@@ -187,6 +201,962 @@ export class FloatingToolbarManager {
     });
     
     return sortedActions;
+  }
+
+  private consolidateSimilarActions(actions: ToolbarAction[]): ToolbarAction[] {
+    // Group actions by their semantic function (not ID)
+    const actionGroups = new Map<string, ToolbarAction[]>();
+    const otherActions: ToolbarAction[] = [];
+
+    for (const action of actions) {
+      const semanticType = this.getSemanticActionType(action.id);
+      if (semanticType) {
+        if (!actionGroups.has(semanticType)) {
+          actionGroups.set(semanticType, []);
+        }
+        actionGroups.get(semanticType)!.push(action);
+      } else {
+        otherActions.push(action);
+      }
+    }
+
+    const consolidatedActions: ToolbarAction[] = [...otherActions];
+
+    // For each group, create a unified action or pick the best one
+    for (const [semanticType, groupActions] of actionGroups) {
+      if (groupActions.length > 1) {
+        const unifiedAction = this.createUnifiedAction(semanticType, groupActions);
+        consolidatedActions.push(unifiedAction);
+      } else {
+        consolidatedActions.push(groupActions[0]);
+      }
+    }
+    return consolidatedActions;
+  }
+
+  private getSemanticActionType(actionId: string): string | null {
+    if (actionId.includes('duplicate')) return 'duplicate';
+    if (actionId.includes('delete')) return 'delete';
+    if (actionId.includes('copy')) return 'copy';
+    
+    // Color and fill actions
+    if (actionId.includes('fill-color') || actionId.includes('text-color')) return 'fill-color';
+    if (actionId.includes('stroke-color')) return 'stroke-color';
+    
+    // Stroke properties
+    if (actionId.includes('stroke-options') || actionId.includes('stroke-width')) return 'stroke-options';
+    
+    // Filters
+    if (actionId.includes('filter')) return 'filters';
+    
+    // Animations
+    if (actionId.includes('animation')) return 'animations';
+    
+    // Arrange actions
+    if (actionId.includes('arrange') || actionId.includes('align') || actionId.includes('distribute')) return 'arrange';
+    
+    // Group actions
+    if (actionId.includes('group-selected') || actionId.includes('mixed-group')) return 'group';
+    if (actionId.includes('ungroup')) return 'ungroup';
+    
+    return null;
+  }
+
+  private createUnifiedAction(semanticType: string, groupActions: ToolbarAction[]): ToolbarAction {
+    // Sort by priority to get the highest priority action as base
+    const sortedActions = groupActions.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    const baseAction = sortedActions[0];
+
+    // Create specialized unified actions based on semantic type
+    if (semanticType === 'fill-color' || semanticType === 'stroke-color') {
+      return this.createUnifiedColorAction(semanticType, baseAction, groupActions);
+    } else if (semanticType === 'stroke-options') {
+      return this.createUnifiedStrokeAction(baseAction, groupActions);
+    } else if (semanticType === 'filters') {
+      return this.createUnifiedFilterAction(baseAction, groupActions);
+    } else if (semanticType === 'animations') {
+      return this.createUnifiedAnimationAction(baseAction, groupActions);
+    } else if (semanticType === 'arrange') {
+      return this.createUnifiedArrangeAction(baseAction, groupActions);
+    }
+
+    // Create specialized unified actions for basic operations
+    if (semanticType === 'duplicate') {
+      return this.createUnifiedDuplicateAction(baseAction);
+    } else if (semanticType === 'delete') {
+      return this.createUnifiedDeleteAction(baseAction);
+    } else if (semanticType === 'copy') {
+      return this.createUnifiedCopyAction(baseAction);
+    } else if (semanticType === 'group') {
+      return this.createUnifiedGroupAction(baseAction, groupActions);
+    } else if (semanticType === 'ungroup') {
+      return this.createUnifiedUngroupAction(baseAction, groupActions);
+    }
+
+    // Fallback for unknown semantic types
+    const unifiedAction: ToolbarAction = {
+      ...baseAction,
+      id: `unified-${semanticType}`,
+      label: this.getUnifiedLabel(semanticType),
+      tooltip: this.getUnifiedTooltip(semanticType),
+      type: 'button',
+      action: () => {
+        // Execute all individual actions as fallback
+        groupActions.forEach(action => {
+          if (action.action && typeof action.action === 'function') {
+            try {
+              action.action();
+            } catch (error) {
+              console.warn(`Error executing ${action.id}:`, error);
+            }
+          } else if (action.toggle?.onToggle && typeof action.toggle.onToggle === 'function') {
+            try {
+              action.toggle.onToggle();
+            } catch (error) {
+              console.warn(`Error executing toggle ${action.id}:`, error);
+            }
+          }
+        });
+      }
+    };
+
+    return unifiedAction;
+  }
+
+  private createUnifiedColorAction(semanticType: string, baseAction: ToolbarAction, groupActions: ToolbarAction[]): ToolbarAction {
+    return {
+      ...baseAction,
+      id: `unified-${semanticType}`,
+      label: this.getUnifiedLabel(semanticType),
+      tooltip: this.getUnifiedTooltip(semanticType),
+      type: 'color',
+      color: {
+        currentColor: baseAction.color?.currentColor || '#000000',
+        onChange: (color: string) => {
+          // Apply color to all selected elements based on selection state
+          this.applyColorToAllSelected(semanticType, color);
+        }
+      }
+    };
+  }
+
+  private createUnifiedStrokeAction(baseAction: ToolbarAction, groupActions: ToolbarAction[]): ToolbarAction {
+    // Get stroke options from the base action or provide defaults
+    const baseStrokeOptions = baseAction.strokeOptions;
+    
+    return {
+      ...baseAction,
+      id: 'unified-stroke-options',
+      label: this.getUnifiedLabel('stroke-options'),
+      tooltip: this.getUnifiedTooltip('stroke-options'),
+      type: 'input',
+      input: baseAction.input,
+      strokeOptions: {
+        getCurrentStrokeWidth: baseStrokeOptions?.getCurrentStrokeWidth || (() => 1),
+        getCurrentStrokeDash: baseStrokeOptions?.getCurrentStrokeDash || (() => 'none'),
+        getCurrentStrokeLinecap: baseStrokeOptions?.getCurrentStrokeLinecap || (() => 'butt'),
+        getCurrentStrokeLinejoin: baseStrokeOptions?.getCurrentStrokeLinejoin || (() => 'miter'),
+        onStrokeWidthChange: (width: number) => {
+          this.applyStrokeWidthToAllSelected(width);
+        },
+        onStrokeDashChange: (dash: string) => {
+          this.applyStrokeDashToAllSelected(dash);
+        },
+        onStrokeLinecapChange: (linecap: string) => {
+          this.applyStrokeLinecapToAllSelected(linecap);
+        },
+        onStrokeLinejoinChange: (linejoin: string) => {
+          this.applyStrokeLinejoinToAllSelected(linejoin);
+        }
+      }
+    };
+  }
+
+  private createUnifiedFilterAction(baseAction: ToolbarAction, groupActions: ToolbarAction[]): ToolbarAction {
+    // Combine all filter options from different actions and remove duplicates
+    const allFilterOptions: any[] = [];
+    const seenFilterIds = new Set<string>();
+    
+    groupActions.forEach(action => {
+      if (action.dropdown?.options) {
+        action.dropdown.options.forEach(option => {
+          // Use a normalized ID for deduplication (remove prefixes like 'text-' or 'subpath-')
+          const normalizedId = option.id.replace(/^(text-|subpath-)/, '');
+          
+          if (!seenFilterIds.has(normalizedId)) {
+            seenFilterIds.add(normalizedId);
+            allFilterOptions.push({
+              ...option,
+              id: normalizedId // Use the normalized ID
+            });
+          }
+        });
+      }
+    });
+
+    return {
+      ...baseAction,
+      id: 'unified-filters',
+      label: this.getUnifiedLabel('filters'),
+      tooltip: this.getUnifiedTooltip('filters'),
+      type: 'dropdown',
+      dropdown: {
+        options: allFilterOptions.map(option => ({
+          ...option,
+          action: () => {
+            this.applyFilterToAllSelected(option);
+          }
+        }))
+      }
+    };
+  }
+
+  private createUnifiedAnimationAction(baseAction: ToolbarAction, groupActions: ToolbarAction[]): ToolbarAction {
+    // Combine all animation options from different actions and remove duplicates
+    const allAnimationOptions: any[] = [];
+    const seenAnimationIds = new Set<string>();
+    
+    groupActions.forEach(action => {
+      if (action.dropdown?.options) {
+        action.dropdown.options.forEach(option => {
+          // Use a normalized ID for deduplication (remove prefixes like 'text-' or 'subpath-')
+          const normalizedId = option.id.replace(/^(text-|subpath-)/, '');
+          
+          if (!seenAnimationIds.has(normalizedId)) {
+            seenAnimationIds.add(normalizedId);
+            allAnimationOptions.push({
+              ...option,
+              id: normalizedId // Use the normalized ID
+            });
+          }
+        });
+      }
+    });
+
+    return {
+      ...baseAction,
+      id: 'unified-animations',
+      label: this.getUnifiedLabel('animations'),
+      tooltip: this.getUnifiedTooltip('animations'),
+      type: 'dropdown',
+      dropdown: {
+        options: allAnimationOptions.map(option => ({
+          ...option,
+          action: () => {
+            this.applyAnimationToAllSelected(option);
+          }
+        }))
+      }
+    };
+  }
+
+  private applyColorToAllSelected(colorType: string, color: string): void {
+    // Import dynamically to avoid circular dependencies
+    import('../../store/editorStore').then(({ useEditorStore }) => {
+      const store = useEditorStore.getState();
+      const selection = store.selection;
+
+      // Apply to texts
+      if (selection.selectedTexts.length > 0) {
+        selection.selectedTexts.forEach(textId => {
+          if (colorType === 'fill-color') {
+            store.updateTextStyle(textId, { fill: color });
+          } else if (colorType === 'stroke-color') {
+            store.updateTextStyle(textId, { stroke: color });
+          }
+        });
+      }
+
+      // Apply to paths/subpaths
+      if (selection.selectedPaths.length > 0 || selection.selectedSubPaths.length > 0) {
+        const pathIds = new Set<string>();
+        
+        // Get unique path IDs from selected paths and subpaths
+        selection.selectedPaths.forEach(pathId => pathIds.add(pathId));
+        selection.selectedSubPaths.forEach(subPathId => {
+          const path = store.paths.find(p => p.subPaths.some(sp => sp.id === subPathId));
+          if (path) pathIds.add(path.id);
+        });
+
+        pathIds.forEach(pathId => {
+          if (colorType === 'fill-color') {
+            store.updatePathStyle(pathId, { fill: color });
+          } else if (colorType === 'stroke-color') {
+            store.updatePathStyle(pathId, { stroke: color });
+          }
+        });
+      }
+    });
+  }
+
+  private applyStrokeWidthToAllSelected(width: number): void {
+    import('../../store/editorStore').then(({ useEditorStore }) => {
+      const store = useEditorStore.getState();
+      const selection = store.selection;
+      if (isNaN(width) || width < 0) return;
+
+      // Apply to texts
+      selection.selectedTexts.forEach(textId => {
+        store.updateTextStyle(textId, { strokeWidth: width });
+      });
+
+      // Apply to paths
+      const pathIds = new Set<string>();
+      selection.selectedPaths.forEach(pathId => pathIds.add(pathId));
+      selection.selectedSubPaths.forEach(subPathId => {
+        const path = store.paths.find(p => p.subPaths.some(sp => sp.id === subPathId));
+        if (path) pathIds.add(path.id);
+      });
+
+      pathIds.forEach(pathId => {
+        store.updatePathStyle(pathId, { strokeWidth: width });
+      });
+    });
+  }
+
+  private applyStrokeDashToAllSelected(dash: string): void {
+    import('../../store/editorStore').then(({ useEditorStore }) => {
+      const store = useEditorStore.getState();
+      const selection = store.selection;
+
+      // Apply to texts
+      selection.selectedTexts.forEach(textId => {
+        store.updateTextStyle(textId, { strokeDasharray: dash });
+      });
+
+      // Apply to paths
+      const pathIds = new Set<string>();
+      selection.selectedPaths.forEach(pathId => pathIds.add(pathId));
+      selection.selectedSubPaths.forEach(subPathId => {
+        const path = store.paths.find(p => p.subPaths.some(sp => sp.id === subPathId));
+        if (path) pathIds.add(path.id);
+      });
+
+      pathIds.forEach(pathId => {
+        store.updatePathStyle(pathId, { strokeDasharray: dash });
+      });
+    });
+  }
+
+  private applyStrokeLinecapToAllSelected(linecap: string): void {
+    import('../../store/editorStore').then(({ useEditorStore }) => {
+      const store = useEditorStore.getState();
+      const selection = store.selection;
+
+      // Apply to texts
+      selection.selectedTexts.forEach(textId => {
+        store.updateTextStyle(textId, { strokeLinecap: linecap as 'butt' | 'round' | 'square' });
+      });
+
+      // Apply to paths
+      const pathIds = new Set<string>();
+      selection.selectedPaths.forEach(pathId => pathIds.add(pathId));
+      selection.selectedSubPaths.forEach(subPathId => {
+        const path = store.paths.find(p => p.subPaths.some(sp => sp.id === subPathId));
+        if (path) pathIds.add(path.id);
+      });
+
+      pathIds.forEach(pathId => {
+        store.updatePathStyle(pathId, { strokeLinecap: linecap as 'butt' | 'round' | 'square' });
+      });
+    });
+  }
+
+  private applyStrokeLinejoinToAllSelected(linejoin: string): void {
+    import('../../store/editorStore').then(({ useEditorStore }) => {
+      const store = useEditorStore.getState();
+      const selection = store.selection;
+
+      // Apply to texts
+      selection.selectedTexts.forEach(textId => {
+        store.updateTextStyle(textId, { strokeLinejoin: linejoin as 'miter' | 'round' | 'bevel' });
+      });
+
+      // Apply to paths
+      const pathIds = new Set<string>();
+      selection.selectedPaths.forEach(pathId => pathIds.add(pathId));
+      selection.selectedSubPaths.forEach(subPathId => {
+        const path = store.paths.find(p => p.subPaths.some(sp => sp.id === subPathId));
+        if (path) pathIds.add(path.id);
+      });
+
+      pathIds.forEach(pathId => {
+        store.updatePathStyle(pathId, { strokeLinejoin: linejoin as 'miter' | 'round' | 'bevel' });
+      });
+    });
+  }
+
+  private applyFilterToAllSelected(filterOption: any): void {
+    // Create a unified filter application that works for all element types
+    import('../../store/editorStore').then(({ useEditorStore }) => {
+      import('../../utils/svg-elements-utils').then((filterUtils) => {
+        const store = useEditorStore.getState();
+        const selection = store.selection;
+
+        // Push to history before making changes
+        store.pushToHistory();
+
+        try {
+          // Create the filter manually based on the filterOption.id
+          let filterCreatorFn: (() => any) | null = null;
+          
+          // Map filter option IDs to their creator functions
+          // Support both prefixed and normalized IDs
+          const filterId = filterOption.id;
+          switch (filterId) {
+            // Text filters
+            case 'text-blur': 
+            case 'blur': 
+              filterCreatorFn = filterUtils.createBlurFilter; break;
+              
+            case 'text-shadow': 
+            case 'shadow': 
+              filterCreatorFn = filterUtils.createDropShadowFilter; break;
+              
+            case 'text-glow': 
+            case 'glow': 
+              filterCreatorFn = filterUtils.createGlowFilter; break;
+              
+            case 'text-grayscale': 
+            case 'grayscale': 
+              filterCreatorFn = filterUtils.createGrayscaleFilter; break;
+              
+            case 'text-sepia': 
+            case 'sepia': 
+              filterCreatorFn = filterUtils.createSepiaFilter; break;
+              
+            case 'text-emboss': 
+            case 'emboss': 
+              filterCreatorFn = filterUtils.createEmbossFilter; break;
+              
+            case 'text-neon-glow': 
+            case 'neon-glow': 
+              filterCreatorFn = filterUtils.createNeonGlowFilter; break;
+            
+            // Subpath/Path filters (same creators, different IDs)
+            case 'subpath-blur': 
+              filterCreatorFn = filterUtils.createBlurFilter; break;
+              
+            case 'subpath-shadow': 
+              filterCreatorFn = filterUtils.createDropShadowFilter; break;
+              
+            case 'subpath-glow': 
+              filterCreatorFn = filterUtils.createGlowFilter; break;
+              
+            case 'subpath-grayscale': 
+              filterCreatorFn = filterUtils.createGrayscaleFilter; break;
+              
+            case 'subpath-sepia': 
+              filterCreatorFn = filterUtils.createSepiaFilter; break;
+              
+            case 'subpath-emboss': 
+              filterCreatorFn = filterUtils.createEmbossFilter; break;
+              
+            case 'subpath-neon-glow': 
+              filterCreatorFn = filterUtils.createNeonGlowFilter; break;
+            
+            default:
+              // Fallback: try to execute the original action if we don't recognize the filter
+              if (filterOption.action && typeof filterOption.action === 'function') {
+                filterOption.action();
+                return;
+              }
+          }
+
+          if (filterCreatorFn) {
+            // Create the filter
+            const filterData = filterCreatorFn();
+            store.addFilter(filterData);
+            
+            // Get the filter that was just added (it will have the generated ID)
+            const storeState = useEditorStore.getState();
+            const addedFilter = storeState.filters[storeState.filters.length - 1];
+            
+            // Apply the filter to all selected elements
+            const filterRef = filterUtils.formatSVGReference(addedFilter.id);
+            
+            // Apply to all selected texts
+            selection.selectedTexts.forEach(textId => {
+              store.updateTextStyle(textId, { filter: filterRef });
+            });
+            
+            // Apply to all selected paths/subpaths
+            const pathIds = new Set<string>();
+            selection.selectedPaths.forEach(pathId => pathIds.add(pathId));
+            selection.selectedSubPaths.forEach(subPathId => {
+              const path = store.paths.find(p => p.subPaths.some(sp => sp.id === subPathId));
+              if (path) {
+                pathIds.add(path.id);
+              }
+            });
+            
+            pathIds.forEach(pathId => {
+              store.updatePathStyle(pathId, { filter: filterRef });
+            });
+
+            // Apply to groups (if any are selected)
+            selection.selectedGroups.forEach(groupId => {
+              const group = store.groups.find(g => g.id === groupId);
+              if (group) {
+                // Apply filter to all children in the group
+                group.children.forEach(child => {
+                  if (child.type === 'text') {
+                    store.updateTextStyle(child.id, { filter: filterRef });
+                  } else if (child.type === 'path') {
+                    store.updatePathStyle(child.id, { filter: filterRef });
+                  }
+                });
+              }
+            });
+          }
+        } catch (error) {
+          console.warn(`Error applying filter ${filterOption.id}:`, error);
+        }
+      });
+    });
+  }
+
+  private applyAnimationToAllSelected(animationOption: any): void {
+    // Create a unified animation application that works for all element types
+    import('../../store/editorStore').then(({ useEditorStore }) => {
+      const store = useEditorStore.getState();
+      const selection = store.selection;
+
+      // Push to history before making changes
+      store.pushToHistory();
+
+      try {
+        // Apply animations based on the normalized animation option ID
+        const animationId = animationOption.id;
+        
+        // Apply to all selected texts
+        selection.selectedTexts.forEach(textId => {
+          const text = store.texts.find(t => t.id === textId);
+          if (text) {
+            this.addAnimationToElement(animationId, textId, 'text', text, store);
+          }
+        });
+        
+        // Apply to all selected paths/subpaths
+        const pathIds = new Set<string>();
+        selection.selectedPaths.forEach(pathId => pathIds.add(pathId));
+        selection.selectedSubPaths.forEach(subPathId => {
+          const path = store.paths.find(p => p.subPaths.some(sp => sp.id === subPathId));
+          if (path) {
+            pathIds.add(path.id);
+          }
+        });
+        
+        pathIds.forEach(pathId => {
+          this.addAnimationToElement(animationId, pathId, 'path', null, store);
+        });
+
+        // Apply to groups (if any are selected)
+        selection.selectedGroups.forEach(groupId => {
+          const group = store.groups.find(g => g.id === groupId);
+          if (group) {
+            // Apply animation to all children in the group
+            group.children.forEach(child => {
+              if (child.type === 'text') {
+                const text = store.texts.find(t => t.id === child.id);
+                if (text) {
+                  this.addAnimationToElement(animationId, child.id, 'text', text, store);
+                }
+              } else if (child.type === 'path') {
+                this.addAnimationToElement(animationId, child.id, 'path', null, store);
+              }
+            });
+          }
+        });
+      } catch (error) {
+        console.warn(`Error applying animation ${animationOption.id}:`, error);
+      }
+    });
+  }
+
+  private addAnimationToElement(animationId: string, elementId: string, elementType: 'text' | 'path', elementData: any, store: any): void {
+    switch (animationId) {
+      case 'fade':
+        store.addAnimation({
+          targetElementId: elementId,
+          type: 'animate',
+          attributeName: 'opacity',
+          from: '1',
+          to: '0.2',
+          dur: '2s',
+          repeatCount: 'indefinite'
+        });
+        break;
+        
+      case 'rotate':
+        if (elementType === 'text' && elementData) {
+          store.addAnimation({
+            targetElementId: elementId,
+            type: 'animateTransform',
+            attributeName: 'transform',
+            transformType: 'rotate',
+            from: `0 ${elementData.x} ${elementData.y}`,
+            to: `360 ${elementData.x} ${elementData.y}`,
+            dur: '3s',
+            repeatCount: 'indefinite'
+          });
+        } else {
+          // For paths, use center of bounding box (simplified)
+          store.addAnimation({
+            targetElementId: elementId,
+            type: 'animateTransform',
+            attributeName: 'transform',
+            transformType: 'rotate',
+            from: '0 200 200',
+            to: '360 200 200',
+            dur: '3s',
+            repeatCount: 'indefinite'
+          });
+        }
+        break;
+        
+      case 'scale':
+        store.addAnimation({
+          targetElementId: elementId,
+          type: 'animateTransform',
+          attributeName: 'transform',
+          transformType: 'scale',
+          from: '1 1',
+          to: '1.2 1.2',
+          dur: '1s',
+          repeatCount: 'indefinite'
+        });
+        break;
+    }
+  }
+
+  private createUnifiedArrangeAction(baseAction: ToolbarAction, groupActions: ToolbarAction[]): ToolbarAction {
+    // Combine all arrange options from different actions and remove duplicates
+    const allArrangeOptions: any[] = [];
+    const seenArrangeIds = new Set<string>();
+    
+    groupActions.forEach(action => {
+      if (action.dropdown?.options) {
+        action.dropdown.options.forEach(option => {
+          // Use a normalized ID for deduplication (remove prefixes like 'text-', 'subpath-', 'mixed-')
+          const normalizedId = option.id.replace(/^(text-|subpath-|mixed-)/, '');
+          
+          if (!seenArrangeIds.has(normalizedId)) {
+            seenArrangeIds.add(normalizedId);
+            allArrangeOptions.push({
+              ...option,
+              id: normalizedId // Use the normalized ID
+            });
+          }
+        });
+      }
+    });
+
+    return {
+      ...baseAction,
+      id: 'unified-arrange',
+      label: this.getUnifiedLabel('arrange'),
+      tooltip: this.getUnifiedTooltip('arrange'),
+      type: 'dropdown',
+      dropdown: {
+        options: allArrangeOptions.map(option => ({
+          ...option,
+          action: () => {
+            this.applyArrangeToAllSelected(option);
+          }
+        }))
+      }
+    };
+  }
+
+  private applyArrangeToAllSelected(arrangeOption: any): void {
+    // Create a unified arrange application that works for all element types
+    import('../../store/editorStore').then(({ useEditorStore }) => {
+      const store = useEditorStore.getState();
+      const selection = store.selection;
+
+      // Push to history before making changes
+      store.pushToHistory();
+
+      try {
+        // Execute the appropriate arrange function based on the option ID
+        const arrangeId = arrangeOption.id;
+        
+        // Check if we have mixed selections to use the mixed functions
+        const hasMixed = (selection.selectedTexts.length > 0 ? 1 : 0) +
+                        (selection.selectedSubPaths.length > 0 ? 1 : 0) +
+                        (selection.selectedPaths.length > 0 ? 1 : 0) > 1;
+        
+        if (hasMixed) {
+          // Use mixed arrange functions for cross-element-type arrangements
+          switch (arrangeId) {
+            case 'align-left':
+              // Import and call the mixed align functions
+              import('../../plugins/selection/FloatingSelectionActions').then(module => {
+                // We need to access the internal functions - for now we'll execute the original action
+                if (arrangeOption.action && typeof arrangeOption.action === 'function') {
+                  arrangeOption.action();
+                }
+              });
+              break;
+            case 'align-center':
+            case 'align-top':
+              // Similar pattern for other arrangements
+              if (arrangeOption.action && typeof arrangeOption.action === 'function') {
+                arrangeOption.action();
+              }
+              break;
+            default:
+              // Fallback to original action
+              if (arrangeOption.action && typeof arrangeOption.action === 'function') {
+                arrangeOption.action();
+              }
+          }
+        } else {
+          // Single element type - execute original action
+          if (arrangeOption.action && typeof arrangeOption.action === 'function') {
+            arrangeOption.action();
+          }
+        }
+      } catch (error) {
+        console.warn(`Error applying arrange ${arrangeOption.id}:`, error);
+      }
+    });
+  }
+
+  private createUnifiedDuplicateAction(baseAction: ToolbarAction): ToolbarAction {
+    return {
+      ...baseAction,
+      id: 'unified-duplicate',
+      label: 'Duplicate',
+      tooltip: 'Duplicate all selected elements',
+      type: 'button',
+      action: () => {
+        import('../../store/editorStore').then(({ useEditorStore }) => {
+          const store = useEditorStore.getState();
+          const selection = store.selection;
+
+          // Push to history before making changes
+          store.pushToHistory();
+
+          // Duplicate texts
+          const newTextIds: string[] = [];
+          selection.selectedTexts.forEach(textId => {
+            const newTextId = store.duplicateText(textId);
+            if (newTextId) newTextIds.push(newTextId);
+          });
+
+          // Use existing duplicateSelection for paths/subpaths/commands
+          if (selection.selectedPaths.length > 0 || selection.selectedSubPaths.length > 0 || selection.selectedCommands.length > 0) {
+            store.duplicateSelection();
+          }
+
+          // If we only duplicated texts, select them
+          if (newTextIds.length > 0 && selection.selectedPaths.length === 0 && selection.selectedSubPaths.length === 0) {
+            store.clearSelection();
+            newTextIds.forEach((textId, index) => {
+              store.selectText(textId, index > 0);
+            });
+          }
+        });
+      }
+    };
+  }
+
+  private createUnifiedDeleteAction(baseAction: ToolbarAction): ToolbarAction {
+    return {
+      ...baseAction,
+      id: 'unified-delete',
+      label: 'Delete',
+      tooltip: 'Delete all selected elements',
+      type: 'button',
+      destructive: true,
+      action: () => {
+        import('../../store/editorStore').then(({ useEditorStore }) => {
+          const store = useEditorStore.getState();
+          const selection = store.selection;
+
+          // Push to history before making changes
+          store.pushToHistory();
+
+          // Delete texts
+          selection.selectedTexts.forEach(textId => {
+            store.deleteText(textId);
+          });
+
+          // Delete paths using removePath
+          selection.selectedPaths.forEach(pathId => {
+            store.removePath(pathId);
+          });
+
+          // Delete subpaths using removeSubPath
+          selection.selectedSubPaths.forEach(subPathId => {
+            store.removeSubPath(subPathId);
+          });
+
+          // For commands, we need to remove them from their subpaths
+          // This is more complex as we need to find the subpath that contains each command
+          selection.selectedCommands.forEach(commandId => {
+            const pathWithCommand = store.paths.find(path => 
+              path.subPaths.some(subPath => 
+                subPath.commands.some(cmd => cmd.id === commandId)
+              )
+            );
+            
+            if (pathWithCommand) {
+              const subPathWithCommand = pathWithCommand.subPaths.find(subPath => 
+                subPath.commands.some(cmd => cmd.id === commandId)
+              );
+              
+              if (subPathWithCommand) {
+                const updatedCommands = subPathWithCommand.commands.filter(cmd => cmd.id !== commandId);
+                store.replaceSubPathCommands(subPathWithCommand.id, updatedCommands.map(cmd => ({
+                  command: cmd.command,
+                  x: cmd.x,
+                  y: cmd.y,
+                  x1: cmd.x1,
+                  y1: cmd.y1,
+                  x2: cmd.x2,
+                  y2: cmd.y2
+                })));
+              }
+            }
+          });
+
+          // Clear selection after deletion
+          store.clearSelection();
+        });
+      }
+    };
+  }
+
+  private createUnifiedCopyAction(baseAction: ToolbarAction): ToolbarAction {
+    return {
+      ...baseAction,
+      id: 'unified-copy',
+      label: 'Copy',
+      tooltip: 'Copy all selected elements to clipboard',
+      type: 'button',
+      action: () => {
+        import('../../store/editorStore').then(({ useEditorStore }) => {
+          const store = useEditorStore.getState();
+          const selection = store.selection;
+
+          // Create a data structure with all selected elements
+          const copyData = {
+            texts: selection.selectedTexts.map(textId => 
+              store.texts.find(t => t.id === textId)
+            ).filter(Boolean),
+            paths: selection.selectedPaths.map(pathId => 
+              store.paths.find(p => p.id === pathId)
+            ).filter(Boolean),
+            subPaths: selection.selectedSubPaths.map(subPathId => {
+              const path = store.paths.find(p => p.subPaths.some(sp => sp.id === subPathId));
+              const subPath = path?.subPaths.find(sp => sp.id === subPathId);
+              return subPath ? { path, subPath } : null;
+            }).filter(Boolean)
+          };
+
+          // Copy to clipboard as JSON
+          try {
+            navigator.clipboard.writeText(JSON.stringify(copyData, null, 2));
+            console.log('Copied selected elements to clipboard');
+          } catch (error) {
+            console.warn('Failed to copy to clipboard:', error);
+          }
+        });
+      }
+    };
+  }
+
+  private createUnifiedGroupAction(baseAction: ToolbarAction, groupActions: ToolbarAction[]): ToolbarAction {
+    return {
+      ...baseAction,
+      id: 'unified-group',
+      label: 'Group',
+      tooltip: 'Group selected elements',
+      type: 'button',
+      action: () => {
+        import('../../store/editorStore').then(({ useEditorStore }) => {
+          const store = useEditorStore.getState();
+          const selection = store.selection;
+
+          // Push to history before making changes
+          store.pushToHistory();
+
+          // Check if we have elements to group
+          const hasElements = selection.selectedTexts.length > 0 || 
+                              selection.selectedPaths.length > 0 || 
+                              selection.selectedSubPaths.length > 0 ||
+                              selection.selectedGroups.length > 0;
+
+          if (!hasElements) {
+            return;
+          }
+
+          // Use the built-in createGroupFromSelection method
+          store.createGroupFromSelection();
+        });
+      }
+    };
+  }
+
+  private createUnifiedUngroupAction(baseAction: ToolbarAction, groupActions: ToolbarAction[]): ToolbarAction {
+    return {
+      ...baseAction,
+      id: 'unified-ungroup',
+      label: 'Ungroup',
+      tooltip: 'Ungroup selected groups',
+      type: 'button',
+      action: () => {
+        import('../../store/editorStore').then(({ useEditorStore }) => {
+          const store = useEditorStore.getState();
+          const selection = store.selection;
+
+          // Push to history before making changes
+          store.pushToHistory();
+
+          // Ungroup selected groups using the built-in method
+          selection.selectedGroups.forEach(groupId => {
+            store.ungroupElements(groupId);
+          });
+        });
+      }
+    };
+  }
+
+  private getUnifiedLabel(semanticType: string): string {
+    switch (semanticType) {
+      case 'duplicate': return 'Duplicate';
+      case 'delete': return 'Delete';
+      case 'copy': return 'Copy';
+      case 'fill-color': return 'Fill Color';
+      case 'stroke-color': return 'Stroke Color';
+      case 'stroke-options': return 'Stroke Options';
+      case 'filters': return 'Filters';
+      case 'animations': return 'Animations';
+      case 'arrange': return 'Arrange';
+      case 'group': return 'Group';
+      case 'ungroup': return 'Ungroup';
+      default: return 'Action';
+    }
+  }
+
+  private getUnifiedTooltip(semanticType: string): string {
+    switch (semanticType) {
+      case 'duplicate': return 'Duplicate selected elements';
+      case 'delete': return 'Delete selected elements';
+      case 'copy': return 'Copy selected elements';
+      case 'fill-color': return 'Change fill color of selected elements';
+      case 'stroke-color': return 'Change stroke color of selected elements';
+      case 'stroke-options': return 'Configure stroke properties of selected elements';
+      case 'filters': return 'Apply filters to selected elements';
+      case 'animations': return 'Add animations to selected elements';
+      case 'arrange': return 'Arrange and align selected elements';
+      case 'group': return 'Group selected elements';
+      case 'ungroup': return 'Ungroup selected elements';
+      default: return 'Perform action on selected elements';
+    }
   }
 
   private isDefinitionFromPlugin(definition: FloatingActionDefinition, pluginId: string): boolean {
