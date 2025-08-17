@@ -193,11 +193,11 @@ function buildTextNode(text: TextElementType): TreeItem {
 }
 
 function buildImageNode(image: SVGImage): TreeItem {
-  const fileName = image.href.split('/').pop() || 'image';
+  const imageName = truncateUrl(image.href);
   
   return {
     id: image.id,
-    name: `Image: ${fileName}`,
+    name: `Image: ${imageName}`,
     type: 'image',
     elementType: 'SVGImage',
     locked: image.locked,
@@ -207,6 +207,25 @@ function buildImageNode(image: SVGImage): TreeItem {
       transform: image.transform
     }
   };
+}
+
+// Helper function to truncate URLs showing start...end
+function truncateUrl(url: string, maxLength: number = 20): string {
+  if (url.length <= maxLength) return url;
+  
+  // For data URLs, show just the type
+  if (url.startsWith('data:')) {
+    const typeMatch = url.match(/data:([^;]+)/);
+    if (typeMatch) {
+      return `data:${typeMatch[1]}...`;
+    }
+    return 'data:...';
+  }
+  
+  // For regular URLs, show start...end
+  const start = url.substring(0, Math.floor(maxLength / 2) - 1);
+  const end = url.substring(url.length - Math.floor(maxLength / 2) + 2);
+  return `${start}...${end}`;
 }
 
 function buildSymbolNode(symbol: SVGSymbol, allElements: DocumentElements): TreeItem {

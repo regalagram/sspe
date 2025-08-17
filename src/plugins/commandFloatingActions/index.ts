@@ -22,7 +22,8 @@ import {
   Grid3X3,
   MousePointer2,
   Spline,
-  Minus
+  Minus,
+  LayoutGrid
 } from 'lucide-react';
 
 // Helper functions for conditional visibility
@@ -239,135 +240,130 @@ const getTransformActions = (): ToolbarAction[] => [
   }
 ];
 
-// Arrange actions for command points
+// Arrange actions for command points - now as submenu
 const getArrangeActions = (): ToolbarAction[] => [
   {
-    id: 'align-commands-left',
-    icon: AlignLeft,
-    label: 'Align Left',
-    type: 'button',
-    action: () => {
-      const store = useEditorStore.getState();
-      if (!canAlign()) return;
-      
-      store.alignCommandsLeft(store.selection.selectedCommands);
-      store.pushToHistory();
+    id: 'arrange-commands',
+    icon: LayoutGrid,
+    label: 'Arrange',
+    type: 'dropdown',
+    dropdown: {
+      options: [
+        // Alignment options
+        {
+          id: 'align-commands-left',
+          icon: AlignLeft,
+          label: 'Align Left',
+          action: () => {
+            const store = useEditorStore.getState();
+            if (!canAlign()) return;
+            store.alignCommandsLeft(store.selection.selectedCommands);
+            store.pushToHistory();
+          },
+          enabled: canAlign
+        },
+        {
+          id: 'align-commands-center',
+          icon: AlignCenter,
+          label: 'Align Center',
+          action: () => {
+            const store = useEditorStore.getState();
+            if (!canAlign()) return;
+            store.alignCommandsCenter(store.selection.selectedCommands);
+            store.pushToHistory();
+          },
+          enabled: canAlign
+        },
+        {
+          id: 'align-commands-right',
+          icon: AlignRight,
+          label: 'Align Right',
+          action: () => {
+            const store = useEditorStore.getState();
+            if (!canAlign()) return;
+            store.alignCommandsRight(store.selection.selectedCommands);
+            store.pushToHistory();
+          },
+          enabled: canAlign
+        },
+        {
+          id: 'separator-1',
+          label: '—',
+          action: () => {},
+          separator: true
+        },
+        {
+          id: 'align-commands-top',
+          icon: AlignVerticalJustifyStart,
+          label: 'Align Top',
+          action: () => {
+            const store = useEditorStore.getState();
+            if (!canAlign()) return;
+            store.alignCommandsTop(store.selection.selectedCommands);
+            store.pushToHistory();
+          },
+          enabled: canAlign
+        },
+        {
+          id: 'align-commands-middle',
+          icon: AlignVerticalJustifyCenter,
+          label: 'Align Middle',
+          action: () => {
+            const store = useEditorStore.getState();
+            if (!canAlign()) return;
+            store.alignCommandsMiddle(store.selection.selectedCommands);
+            store.pushToHistory();
+          },
+          enabled: canAlign
+        },
+        {
+          id: 'align-commands-bottom',
+          icon: AlignVerticalJustifyEnd,
+          label: 'Align Bottom',
+          action: () => {
+            const store = useEditorStore.getState();
+            if (!canAlign()) return;
+            store.alignCommandsBottom(store.selection.selectedCommands);
+            store.pushToHistory();
+          },
+          enabled: canAlign
+        },
+        {
+          id: 'separator-2',
+          label: '—',
+          action: () => {},
+          separator: true
+        },
+        // Distribution options
+        {
+          id: 'distribute-commands-horizontally',
+          icon: ArrowLeftRight,
+          label: 'Distribute Horizontally',
+          action: () => {
+            const store = useEditorStore.getState();
+            if (!canDistribute()) return;
+            store.distributeCommandsHorizontally(store.selection.selectedCommands);
+            store.pushToHistory();
+          },
+          enabled: canDistribute
+        },
+        {
+          id: 'distribute-commands-vertically',
+          icon: ArrowUpDown,
+          label: 'Distribute Vertically',
+          action: () => {
+            const store = useEditorStore.getState();
+            if (!canDistribute()) return;
+            store.distributeCommandsVertically(store.selection.selectedCommands);
+            store.pushToHistory();
+          },
+          enabled: canDistribute
+        }
+      ]
     },
     priority: 80,
-    tooltip: 'Align points to the left',
-    visible: canAlign
-  },
-  {
-    id: 'align-commands-center',
-    icon: AlignCenter,
-    label: 'Align Center',
-    type: 'button',
-    action: () => {
-      const store = useEditorStore.getState();
-      if (!canAlign()) return;
-      
-      store.alignCommandsCenter(store.selection.selectedCommands);
-      store.pushToHistory();
-    },
-    priority: 79,
-    tooltip: 'Align points to center',
-    visible: canAlign
-  },
-  {
-    id: 'align-commands-right',
-    icon: AlignRight,
-    label: 'Align Right',
-    type: 'button',
-    action: () => {
-      const store = useEditorStore.getState();
-      if (!canAlign()) return;
-      
-      store.alignCommandsRight(store.selection.selectedCommands);
-      store.pushToHistory();
-    },
-    priority: 78,
-    tooltip: 'Align points to the right',
-    visible: canAlign
-  },
-  {
-    id: 'align-commands-top',
-    icon: AlignVerticalJustifyStart,
-    label: 'Align Top',
-    type: 'button',
-    action: () => {
-      const store = useEditorStore.getState();
-      if (!canAlign()) return;
-      
-      store.alignCommandsTop(store.selection.selectedCommands);
-      store.pushToHistory();
-    },
-    priority: 77,
-    tooltip: 'Align points to top',
-    visible: canAlign
-  },
-  {
-    id: 'align-commands-middle',
-    icon: AlignVerticalJustifyCenter,
-    label: 'Align Middle',
-    type: 'button',
-    action: () => {
-      const store = useEditorStore.getState();
-      if (!canAlign()) return;
-      
-      store.alignCommandsMiddle(store.selection.selectedCommands);
-      store.pushToHistory();
-    },
-    priority: 76,
-    tooltip: 'Align points to middle',
-    visible: canAlign
-  },
-  {
-    id: 'align-commands-bottom',
-    icon: AlignVerticalJustifyEnd,
-    label: 'Align Bottom',
-    type: 'button',
-    action: () => {
-      const store = useEditorStore.getState();
-      if (!canAlign()) return;
-      
-      store.alignCommandsBottom(store.selection.selectedCommands);
-      store.pushToHistory();
-    },
-    priority: 75,
-    tooltip: 'Align points to bottom',
-    visible: canAlign
-  },
-  {
-    id: 'distribute-commands-horizontally',
-    icon: ArrowLeftRight,
-    label: 'Distribute H',
-    type: 'button',
-    action: () => {
-      const store = useEditorStore.getState();
-      if (!canDistribute()) return;
-      
-      store.distributeCommandsHorizontally(store.selection.selectedCommands);
-      store.pushToHistory();
-    },
-    priority: 60,
-    tooltip: 'Distribute points horizontally',
-    visible: canDistribute
-  },
-  {
-    id: 'distribute-commands-vertically',
-    icon: ArrowUpDown,
-    label: 'Distribute V',
-    type: 'button',
-    action: () => {
-      const store = useEditorStore.getState();
-      if (!canDistribute()) return;
-      
-      store.distributeCommandsVertically(store.selection.selectedCommands);
-      store.pushToHistory();
-    },
-    priority: 59,
-    tooltip: 'Distribute points vertically',
-    visible: canDistribute
+    tooltip: 'Align and distribute command points',
+    visible: () => canAlign() || canDistribute()
   }
 ];
 

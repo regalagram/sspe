@@ -480,8 +480,10 @@ export const createSelectionActions: StateCreator<
       let isLocked = false;
       for (const path of state.paths) {
         for (const subPath of path.subPaths) {
-          if (subPath.commands.some(cmd => cmd.id === commandId)) {
-            if (subPath.locked) {
+          const command = subPath.commands.find(cmd => cmd.id === commandId);
+          if (command) {
+            // Check if subPath is locked OR if individual command is locked
+            if (subPath.locked || command.locked) {
               isLocked = true;
             }
             break;
@@ -818,7 +820,21 @@ export const createSelectionActions: StateCreator<
           }
           break;
         case 'command':
-          if (!selection.selectedCommands.includes(id)) {
+          // Check if command is locked before adding to selection
+          let commandIsLocked = false;
+          for (const path of state.paths) {
+            for (const subPath of path.subPaths) {
+              const command = subPath.commands.find(cmd => cmd.id === id);
+              if (command) {
+                if (subPath.locked || command.locked) {
+                  commandIsLocked = true;
+                }
+                break;
+              }
+            }
+            if (commandIsLocked) break;
+          }
+          if (!commandIsLocked && !selection.selectedCommands.includes(id)) {
             selection.selectedCommands = [...selection.selectedCommands, id];
           }
           break;

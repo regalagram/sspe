@@ -14,7 +14,8 @@ import {
   Box,
   MousePointer,
   Layers,
-  Circle
+  Circle,
+  Trash2
 } from 'lucide-react';
 
 interface TreeNodeProps {
@@ -32,11 +33,11 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
   onToggleExpanded,
   searchQuery = ''
 }) => {
-  const { selection, selectText, selectPath, selectSubPath, selectCommand, selectGroup, selectImage, selectUse, clearSelection, updateText, updateMultilineText, texts } = useEditorStore();
+  const { selection, selectText, selectPath, selectSubPath, selectCommand, selectGroup, selectImage, selectUse, clearSelection, updateText, updateMultilineText, texts, deleteText, removePath, deleteGroup, removeImage, removeSymbol, removeUse, removeSubPath } = useEditorStore();
   
   const isExpanded = expandedNodes.has(item.id);
   const hasChildren = item.children.length > 0;
-  const indentLevel = level * 16;
+  const indentLevel = level * 12;
 
   // Check if this item is currently selected
   const isSelected = () => {
@@ -191,27 +192,91 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
     // Add other visibility toggles as needed
   };
 
-  // Get appropriate icon for element type
-  const getElementIcon = () => {
+  // Handle delete element
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const store = useEditorStore.getState();
+    store.pushToHistory();
+
     switch (item.type) {
       case 'text':
-        return <Type size={14} className="text-blue-600" />;
+        deleteText(item.id);
+        break;
       case 'path':
-        return <Box size={14} className="text-green-600" />;
-      case 'subpath':
-        return <Layers size={14} className="text-green-500" />;
-      case 'command':
-        return <Circle size={14} className="text-green-400" />;
+        removePath(item.id);
+        break;
       case 'group':
-        return <Group size={14} className="text-purple-600" />;
+        deleteGroup(item.id);
+        break;
       case 'image':
-        return <ImageIcon size={14} className="text-orange-600" />;
+        removeImage(item.id);
+        break;
       case 'symbol':
-        return <Layers size={14} className="text-indigo-600" />;
+        removeSymbol(item.id);
+        break;
       case 'use':
-        return <MousePointer size={14} className="text-pink-600" />;
+        removeUse(item.id);
+        break;
+      case 'subpath':
+        removeSubPath(item.id);
+        break;
+      case 'command':
+        // Find parent subpath and delete command
+        for (const path of store.paths) {
+          for (const subPath of path.subPaths) {
+            const commandIndex = subPath.commands.findIndex(cmd => cmd.id === item.id);
+            if (commandIndex >= 0) {
+              const updatedCommands = subPath.commands.filter(cmd => cmd.id !== item.id);
+              store.replaceSubPathCommands(subPath.id, updatedCommands);
+              return;
+            }
+          }
+        }
+        break;
+    }
+  };
+
+  // Get appropriate icon for element type
+  const getElementIcon = () => {
+    if (item.locked) {
+      // All locked elements get blue icons
+      const IconComponent = (() => {
+        switch (item.type) {
+          case 'text': return Type;
+          case 'path': return Box;
+          case 'subpath': return Layers;
+          case 'command': return Circle;
+          case 'group': return Group;
+          case 'image': return ImageIcon;
+          case 'symbol': return Layers;
+          case 'use': return MousePointer;
+          default: return Box;
+        }
+      })();
+      return <IconComponent size={12} className="text-blue-600" />;
+    }
+    
+    // Non-locked elements get their normal colors
+    switch (item.type) {
+      case 'text':
+        return <Type size={12} className="text-blue-600" />;
+      case 'path':
+        return <Box size={12} className="text-green-600" />;
+      case 'subpath':
+        return <Layers size={12} className="text-green-500" />;
+      case 'command':
+        return <Circle size={12} className="text-green-400" />;
+      case 'group':
+        return <Group size={12} className="text-purple-600" />;
+      case 'image':
+        return <ImageIcon size={12} className="text-orange-600" />;
+      case 'symbol':
+        return <Layers size={12} className="text-indigo-600" />;
+      case 'use':
+        return <MousePointer size={12} className="text-pink-600" />;
       default:
-        return <Box size={14} className="text-gray-500" />;
+        return <Box size={12} className="text-gray-500" />;
     }
   };
 
@@ -233,59 +298,107 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
     <div className="tree-node">
       <div 
         className={`
-          flex items-center gap-1 py-1 px-2 text-sm cursor-pointer rounded
+          text-xs cursor-pointer
           hover:bg-gray-100 transition-colors
-          ${selected ? 'bg-blue-100 text-blue-800' : ''}
-          ${item.locked ? 'opacity-60' : ''}
+          ${selected ? 'bg-blue-100' : ''}
+          ${item.locked ? 'text-blue-600 font-medium' : ''}
+          ${selected && !item.locked ? 'text-blue-800' : ''}
         `}
-        style={{ paddingLeft: `${indentLevel + 8}px` }}
+        style={{ 
+          paddingLeft: `${indentLevel + 2}px`,
+          display: 'flex',
+          flexDirection: 'row',
+          flexWrap: 'nowrap',
+          alignItems: 'center',
+          gap: '2px',
+          height: '16px',
+          lineHeight: '16px',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          minWidth: 0,
+          width: '100%'
+        }}
         onClick={handleSelect}
       >
         {/* Expand/Collapse Button */}
-        <div className="w-4 h-4 flex items-center justify-center">
+        <div style={{ 
+          width: '12px', 
+          height: '16px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          flexShrink: 0
+        }}>
           {hasChildren ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleExpanded(item.id);
               }}
-              className="hover:bg-gray-200 rounded p-0.5"
+              style={{ 
+                width: '12px', 
+                height: '12px', 
+                border: 'none', 
+                background: 'none', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                margin: 0
+              }}
             >
               {isExpanded ? (
-                <ChevronDown size={12} />
+                <ChevronDown size={8} />
               ) : (
-                <ChevronRight size={12} />
+                <ChevronRight size={8} />
               )}
             </button>
           ) : null}
         </div>
 
         {/* Element Icon */}
-        {getElementIcon()}
-
-        {/* Element Name */}
-        <span className="flex-1 truncate" title={item.name}>
-          {highlightText(item.name, searchQuery)}
-        </span>
-
-        {/* Element Type Badge */}
-        <span className="text-xs text-gray-500 bg-gray-100 px-1 rounded">
-          {item.type}
-        </span>
+        <div style={{ 
+          width: '12px', 
+          height: '16px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          flexShrink: 0
+        }}>
+          {getElementIcon()}
+        </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-1">
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '1px',
+          flexShrink: 0,
+          height: '16px'
+        }}>
           {/* Visibility Toggle (for groups) */}
           {item.type === 'group' && (
             <button
               onClick={handleToggleVisibility}
-              className="p-0.5 hover:bg-gray-200 rounded"
+              style={{ 
+                width: '10px', 
+                height: '10px', 
+                border: 'none', 
+                background: 'none', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                margin: 0
+              }}
               title={item.visible ? 'Hide' : 'Show'}
             >
               {item.visible !== false ? (
-                <Eye size={12} className="text-gray-600" />
+                <Eye size={8} className="text-gray-600" />
               ) : (
-                <EyeOff size={12} className="text-gray-400" />
+                <EyeOff size={8} className="text-gray-400" />
               )}
             </button>
           )}
@@ -294,17 +407,65 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
           {['text', 'path', 'subpath', 'command', 'group', 'image', 'symbol', 'use'].includes(item.type) && (
             <button
               onClick={handleToggleLock}
-              className="p-0.5 hover:bg-gray-200 rounded"
+              style={{ 
+                width: '10px', 
+                height: '10px', 
+                border: 'none', 
+                background: 'none', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                margin: 0
+              }}
               title={item.locked ? 'Unlock' : 'Lock'}
             >
               {item.locked ? (
-                <Lock size={12} className="text-red-500" />
+                <Lock size={8} className="text-red-500" />
               ) : (
-                <Unlock size={12} className="text-green-500" />
+                <Unlock size={8} className="text-green-500" />
               )}
             </button>
           )}
+
+          {/* Delete Button */}
+          {['text', 'path', 'subpath', 'command', 'group', 'image', 'symbol', 'use'].includes(item.type) && (
+            <button
+              onClick={handleDelete}
+              style={{ 
+                width: '10px', 
+                height: '10px', 
+                border: 'none', 
+                background: 'none', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: 0,
+                margin: 0
+              }}
+              title="Delete"
+            >
+              <Trash2 size={8} className="text-red-500" />
+            </button>
+          )}
         </div>
+
+        {/* Element Name */}
+        <span style={{
+          flex: 1,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          fontSize: '12px',
+          lineHeight: '16px',
+          marginLeft: '2px',
+          minWidth: 0,
+          color: item.locked ? '#2563eb' : 'inherit' // Force blue color for locked elements
+        }} title={item.name}>
+          {highlightText(item.name, searchQuery)}
+        </span>
       </div>
 
       {/* Children */}

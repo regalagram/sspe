@@ -267,6 +267,12 @@ class ElementSelector {
         break;
       case 'command':
         this.debugManager.logSelection('Calling selectCommand', {});
+        // Check if command is locked before allowing selection
+        const command = this.findCommandById(elementId, this.editorStore.paths);
+        if (command?.locked === true) {
+          this.debugManager.logSelection('Command is locked, skipping selection', { elementId });
+          return;
+        }
         this.editorStore.selectCommand(elementId);
         break;
       case 'subpath':
@@ -308,6 +314,11 @@ class ElementSelector {
         }
         break;
       case 'command':
+        // Check if command is locked before adding to selection
+        const commandToAdd = this.findCommandById(elementId, this.editorStore.paths);
+        if (commandToAdd?.locked === true) {
+          return; // Don't add locked commands to selection
+        }
         if (!newSelection.selectedCommands.includes(elementId)) {
           newSelection.selectedCommands = [...newSelection.selectedCommands, elementId];
         }
@@ -320,6 +331,19 @@ class ElementSelector {
     }
 
     useEditorStore.setState({ selection: newSelection });
+  }
+  
+  private findCommandById(commandId: string, paths: any[]): any {
+    for (const path of paths) {
+      for (const subPath of path.subPaths) {
+        for (const command of subPath.commands) {
+          if (command.id === commandId) {
+            return command;
+          }
+        }
+      }
+    }
+    return null;
   }
 }
 
@@ -993,6 +1017,12 @@ class DragManager {
 
       case 'command':
         this.debugManager.logMovement('Command move to', newPosition);
+        // Check if command is locked before allowing movement
+        const commandToMove = this.findCommandById(snapshot.id, this.editorStore.paths);
+        if (commandToMove?.locked === true) {
+          this.debugManager.logMovement('Command is locked, skipping movement', { commandId: snapshot.id });
+          return;
+        }
         moveCommand(snapshot.id, newPosition);
         break;
 

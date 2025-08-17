@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { AccordionToggleButton } from '../../components/AccordionPanel';
 import { TreeNode } from './TreeNode';
 import { TreeItem, buildTreeStructure } from './TreeUtils';
-import { Search, RefreshCw, ChevronDown } from 'lucide-react';
+import { RefreshCw, ChevronDown } from 'lucide-react';
 import './tree-styles.css';
 
 export const StructureTreePanel: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   
@@ -30,6 +28,13 @@ export const StructureTreePanel: React.FC = () => {
     symbols,
     uses
   });
+
+  // Calculate command count
+  const commandCount = paths.reduce((total, path) => {
+    return total + path.subPaths.reduce((subTotal, subPath) => {
+      return subTotal + subPath.commands.length;
+    }, 0);
+  }, 0);
 
   // Filter tree based on search query
   const filteredTree = searchQuery 
@@ -56,26 +61,17 @@ export const StructureTreePanel: React.FC = () => {
   };
 
   return (
-    <div className="structure-tree-panel border-b border-gray-200">
-      <AccordionToggleButton
-        title="Structure Tree"
-        isExpanded={isOpen}
-        onClick={() => setIsOpen(!isOpen)}
-      />
-      {isOpen && (
-        <div className="p-3 space-y-3">
+    <div className="structure-tree-panel">
+      <div className="p-1 space-y-1">
         {/* Search and Controls */}
-        <div className="space-y-2">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-            <input
-              type="text"
-              placeholder="Search elements..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
+        <div className="space-y-1">
+          <input
+            type="text"
+            placeholder="Search elements..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-2 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
           
           <div className="flex justify-between">
             <button
@@ -92,22 +88,22 @@ export const StructureTreePanel: React.FC = () => {
             </button>
             <button
               onClick={() => window.location.reload()}
-              className="text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded"
+              className="text-xs px-1 py-1 bg-gray-100 hover:bg-gray-200 rounded"
               title="Refresh"
             >
-              <RefreshCw size={12} />
+              <RefreshCw size={10} />
             </button>
           </div>
         </div>
 
         {/* Tree Structure */}
-        <div className="tree-container max-h-96 overflow-y-auto">
+        <div className="max-h-80 overflow-y-auto" style={{ paddingTop: '4px', paddingBottom: '4px' }}>
           {filteredTree.length === 0 ? (
-            <div className="text-sm text-gray-500 italic py-4 text-center">
+            <div className="text-xs text-gray-500 italic py-1 text-center">
               {searchQuery ? 'No elements found' : 'No elements in document'}
             </div>
           ) : (
-            <div className="space-y-1">
+            <div>
               {filteredTree.map((item) => (
                 <TreeNode
                   key={item.id}
@@ -123,18 +119,19 @@ export const StructureTreePanel: React.FC = () => {
         </div>
 
         {/* Statistics */}
-        <div className="text-xs text-gray-500 pt-2 border-t">
-          <div className="grid grid-cols-2 gap-1">
-            <div>Paths: {paths.length}</div>
-            <div>Texts: {texts.length}</div>
-            <div>Groups: {groups.length}</div>
-            <div>Images: {images.length}</div>
-            <div>Symbols: {symbols.length}</div>
-            <div>Uses: {uses.length}</div>
+        <div className="text-xs text-gray-500 pt-1 border-t">
+          <div className="whitespace-nowrap overflow-hidden" style={{ display: 'flex', gap: '4px' }}>
+            <span title="Paths (rutas)">P:{paths.length}</span>
+            <span title="SubPaths (sub-rutas)">S:{paths.reduce((total, path) => total + path.subPaths.length, 0)}</span>
+            <span title="Commands (puntos de comando)">C:{commandCount}</span>
+            <span title="Texts (textos)">T:{texts.length}</span>
+            <span title="Groups (grupos)">G:{groups.length}</span>
+            <span title="Images (imágenes)">I:{images.length}</span>
+            <span title="Symbols (símbolos)">Y:{symbols.length}</span>
+            <span title="Uses (usos)">U:{uses.length}</span>
           </div>
         </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 };
