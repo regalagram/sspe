@@ -1012,7 +1012,10 @@ export const createSelectionActions: StateCreator<
           if (command.x !== undefined && command.y !== undefined) {
             if (command.x >= box.x && command.x <= box.x + box.width &&
                 command.y >= box.y && command.y <= box.y + box.height) {
-              commandsInBox.push(command.id);
+              // Only add to selection if command is not locked
+              if (!command.locked) {
+                commandsInBox.push(command.id);
+              }
             } else {
               commandsOutOfBox.push(command.id);
             }
@@ -1042,7 +1045,19 @@ export const createSelectionActions: StateCreator<
     if (hasPartialSubPaths) {
       // Select individual commands when there are partial sub-paths
       subPathAnalysis.forEach(analysis => {
-        newSelection.selectedCommands.push(...analysis.commandsInBox);
+        // Double-check that commands are not locked before adding to selection
+        const allowedCommands = analysis.commandsInBox.filter(commandId => {
+          for (const path of state.paths) {
+            for (const subPath of path.subPaths) {
+              const command = subPath.commands.find(cmd => cmd.id === commandId);
+              if (command) {
+                return !command.locked && !subPath.locked;
+              }
+            }
+          }
+          return false;
+        });
+        newSelection.selectedCommands.push(...allowedCommands);
       });
     } else {
       // Select whole sub-paths when all are fully contained

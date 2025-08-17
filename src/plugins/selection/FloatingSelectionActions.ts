@@ -31,6 +31,11 @@ import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToo
 import { useEditorStore } from '../../store/editorStore';
 import { ReorderManager } from '../reorder/ReorderManager';
 import { SVGCommand } from '../../types';
+import { generateId } from '../../utils/id-utils';
+import { duplicatePath } from '../../utils/duplicate-utils';
+import { calculateTextBoundsDOM } from '../../utils/text-utils';
+import { calculateGlobalViewBox } from '../../utils/viewbox-utils';
+import { subPathToString } from '../../utils/path-utils';
 import { 
   generateSmoothPath, 
   areCommandsInSameSubPath,
@@ -1400,27 +1405,219 @@ const toggleGroupLock = () => {
   });
 };
 
+// Helper function to calculate group bounds (similar to GroupRenderer)
+const calculateGroupBounds = (group: any) => {
+  if (typeof document === 'undefined') return null;
+
+  const store = useEditorStore.getState();
+  const { paths, texts, images } = store;
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const tempSvg = document.createElementNS(svgNS, 'svg') as SVGSVGElement;
+  let hasContent = false;
+
+  // Add all children of the group to the temp SVG
+  for (const child of group.children) {
+    switch (child.type) {
+      case 'path': {
+        const path = paths.find((p: any) => p.id === child.id);
+        if (path) {
+          for (const subPath of path.subPaths) {
+            const pathElement = document.createElementNS(svgNS, 'path');
+            const pathData = subPathToString(subPath);
+            if (pathData) {
+              pathElement.setAttribute('d', pathData);
+              tempSvg.appendChild(pathElement);
+              hasContent = true;
+            }
+          }
+        }
+        break;
+      }
+      case 'text': {
+        const text = texts.find((t: any) => t.id === child.id);
+        if (text) {
+          const bounds = calculateTextBoundsDOM(text);
+          if (bounds) {
+            const pathElement = document.createElementNS(svgNS, 'path');
+            const pathData = `M ${bounds.x},${bounds.y} L ${bounds.x + bounds.width},${bounds.y} L ${bounds.x + bounds.width},${bounds.y + bounds.height} L ${bounds.x},${bounds.y + bounds.height} Z`;
+            pathElement.setAttribute('d', pathData);
+            pathElement.setAttribute('fill', 'none');
+            pathElement.setAttribute('stroke', 'none');
+            tempSvg.appendChild(pathElement);
+            hasContent = true;
+          }
+        }
+        break;
+      }
+      case 'image': {
+        const image = images.find((img: any) => img.id === child.id);
+        if (image) {
+          const imageElement = document.createElementNS(svgNS, 'image');
+          imageElement.setAttribute('x', image.x.toString());
+          imageElement.setAttribute('y', image.y.toString());
+          imageElement.setAttribute('width', image.width.toString());
+          imageElement.setAttribute('height', image.height.toString());
+          if (image.transform) {
+            imageElement.setAttribute('transform', image.transform);
+          }
+          tempSvg.appendChild(imageElement);
+          hasContent = true;
+        }
+        break;
+      }
+    }
+  }
+
+  if (!hasContent) {
+    return null;
+  }
+
+  const viewBoxResult = calculateGlobalViewBox(tempSvg);
+  
+  // Clean up
+  if (tempSvg.parentNode) {
+    tempSvg.parentNode.removeChild(tempSvg);
+  }
+
+  if (!viewBoxResult || viewBoxResult.width <= 0 || viewBoxResult.height <= 0) {
+    return null;
+  }
+
+  const viewBoxParts = viewBoxResult.viewBox.split(' ').map(Number);
+  const [x, y, width, height] = viewBoxParts;
+
+  const padding = Math.max(2, Math.max(width, height) * 0.05);
+  const actualX = x + padding;
+  const actualY = y + padding;
+  const actualWidth = width - padding * 2;
+  const actualHeight = height - padding * 2;
+
+  return {
+    x: actualX,
+    y: actualY,
+    width: actualWidth,
+    height: actualHeight
+  };
+};
+
 const duplicateGroups = () => {
   const store = useEditorStore.getState();
   const selectedGroupIds = [...store.selection.selectedGroups];
   const newGroupIds: string[] = [];
   
+  // Save history state before making changes
+  store.pushToHistory();
+  
   selectedGroupIds.forEach(groupId => {
     const group = store.getGroupById(groupId);
-    if (group) {
-      // Get all child IDs and types
-      const childIds = group.children.map(child => child.id);
-      const childTypes = group.children.map(child => child.type);
+    if (!group) return;
+    
+    // Calculate group bounds for intelligent offset
+    const groupBounds = calculateGroupBounds(group);
+    const offsetX = groupBounds ? Math.max(groupBounds.width + 20, 40) : 40;
+    const offsetY = groupBounds ? Math.max(groupBounds.height + 20, 40) : 40;
+    
+    // Duplicate all child elements first
+    const newChildIds: string[] = [];
+    const newChildTypes: string[] = [];
+    
+    group.children.forEach(child => {
+      let newChildId: string | null = null;
       
-      // Create new group with offset position
+      switch (child.type) {
+        case 'path':
+          // Duplicate path with offset using existing path duplication
+          const pathIndex = store.paths.findIndex(p => p.id === child.id);
+          if (pathIndex !== -1) {
+            const path = store.paths[pathIndex];
+            const newPath = duplicatePath(path);
+            // Apply offset to all commands in the path
+            newPath.subPaths.forEach(subPath => {
+              subPath.commands.forEach(command => {
+                if (command.x !== undefined) command.x += offsetX;
+                if (command.y !== undefined) command.y += offsetY;
+                if (command.x1 !== undefined) command.x1 += offsetX;
+                if (command.y1 !== undefined) command.y1 += offsetY;
+                if (command.x2 !== undefined) command.x2 += offsetX;
+                if (command.y2 !== undefined) command.y2 += offsetY;
+              });
+            });
+            
+            // Add path using set function
+            useEditorStore.setState(state => ({
+              paths: [...state.paths, newPath]
+            }));
+            newChildId = newPath.id;
+          }
+          break;
+          
+        case 'text':
+          // Duplicate text with offset
+          const originalTextId = child.id;
+          newChildId = store.duplicateText(originalTextId);
+          if (newChildId) {
+            store.moveText(newChildId, { x: offsetX, y: offsetY });
+          }
+          break;
+          
+        case 'image':
+          // Duplicate image with offset using state update
+          const imageIndex = store.images.findIndex(img => img.id === child.id);
+          if (imageIndex !== -1) {
+            const image = store.images[imageIndex];
+            const newImage = {
+              ...image,
+              id: generateId(),
+              x: image.x + offsetX,
+              y: image.y + offsetY
+            };
+            
+            useEditorStore.setState(state => ({
+              images: [...state.images, newImage]
+            }));
+            newChildId = newImage.id;
+          }
+          break;
+          
+        case 'use':
+          // Duplicate use element with offset using state update
+          const useIndex = store.uses.findIndex(u => u.id === child.id);
+          if (useIndex !== -1) {
+            const use = store.uses[useIndex];
+            const newUse = {
+              ...use,
+              id: generateId(),
+              x: (use.x || 0) + offsetX,
+              y: (use.y || 0) + offsetY
+            };
+            
+            useEditorStore.setState(state => ({
+              uses: [...state.uses, newUse]
+            }));
+            newChildId = newUse.id;
+          }
+          break;
+          
+        default:
+          console.warn(`Unsupported child type for group duplication: ${child.type}`);
+          break;
+      }
+      
+      if (newChildId) {
+        newChildIds.push(newChildId);
+        newChildTypes.push(child.type);
+      }
+    });
+    
+    // Create new group with duplicated children
+    if (newChildIds.length > 0) {
       const newGroupId = store.createGroup(
-        `${group.name} Copy`, 
-        childIds, 
-        childTypes as ('path' | 'text' | 'group')[]
+        `${group.name} Copy`,
+        newChildIds,
+        newChildTypes as ('path' | 'text' | 'group')[]
       );
       
-      // Move the duplicated group
-      store.moveGroup(newGroupId, { x: 20, y: 20 });
       newGroupIds.push(newGroupId);
     }
   });
@@ -1429,7 +1626,7 @@ const duplicateGroups = () => {
   if (newGroupIds.length > 0) {
     store.clearSelection();
     newGroupIds.forEach((groupId, index) => {
-      store.selectGroup(groupId, index > 0); // Add to selection for subsequent groups
+      store.selectGroup(groupId, index > 0);
     });
   }
 };
@@ -1538,8 +1735,271 @@ const groupLockOptions = [
   }
 ];
 
+// Recursive lock function for groups
+const toggleGroupRecursiveLock = () => {
+  const store = useEditorStore.getState();
+  const selectedGroupIds = [...store.selection.selectedGroups];
+  
+  if (selectedGroupIds.length === 0) return;
+  
+  // Save history state before making changes
+  store.pushToHistory();
+  
+  // Check if any group is currently locked to determine action
+  const isAnyGroupLocked = selectedGroupIds.some(groupId => {
+    const group = store.getGroupById(groupId);
+    return group?.locked || group?.lockLevel !== 'none';
+  });
+  
+  const shouldLock = !isAnyGroupLocked;
+  
+  selectedGroupIds.forEach(groupId => {
+    recursivelyLockGroup(groupId, shouldLock);
+  });
+};
+
+// Helper function to recursively lock/unlock a group and all its children
+export const recursivelyLockGroup = (groupId: string, shouldLock: boolean) => {
+  const store = useEditorStore.getState();
+  const group = store.getGroupById(groupId);
+  
+  if (!group) return;
+  
+  // Lock/unlock the group itself
+  store.setGroupLockLevel(groupId, shouldLock ? 'full' : 'none');
+  
+  // Recursively lock/unlock all children
+  group.children.forEach(child => {
+    switch (child.type) {
+      case 'path':
+        // Lock the path and all its subpaths and commands
+        const pathIndex = store.paths.findIndex(p => p.id === child.id);
+        if (pathIndex !== -1) {
+          const path = store.paths[pathIndex];
+          const updatedPath = {
+            ...path,
+            locked: shouldLock,
+            subPaths: path.subPaths.map(subPath => ({
+              ...subPath,
+              locked: shouldLock,
+              commands: subPath.commands.map(command => ({
+                ...command,
+                locked: shouldLock
+              }))
+            }))
+          };
+          
+          // Update the path in the store
+          useEditorStore.setState(state => ({
+            paths: state.paths.map((p, index) => 
+              index === pathIndex ? updatedPath : p
+            )
+          }));
+        }
+        break;
+        
+      case 'text':
+        // Lock/unlock text element
+        store.updateText(child.id, { locked: shouldLock });
+        break;
+        
+      case 'image':
+        // Lock/unlock image element
+        const imageIndex = store.images.findIndex(img => img.id === child.id);
+        if (imageIndex !== -1) {
+          useEditorStore.setState(state => ({
+            images: state.images.map((img, index) => 
+              index === imageIndex ? { ...img, locked: shouldLock } : img
+            )
+          }));
+        }
+        break;
+        
+      case 'use':
+        // Lock/unlock use element
+        const useIndex = store.uses.findIndex(u => u.id === child.id);
+        if (useIndex !== -1) {
+          useEditorStore.setState(state => ({
+            uses: state.uses.map((use, index) => 
+              index === useIndex ? { ...use, locked: shouldLock } : use
+            )
+          }));
+        }
+        break;
+        
+      case 'group':
+        // Recursively lock/unlock nested groups
+        recursivelyLockGroup(child.id, shouldLock);
+        break;
+        
+      case 'textPath':
+        // Lock/unlock textPath element
+        const textPathIndex = store.textPaths.findIndex(tp => tp.id === child.id);
+        if (textPathIndex !== -1) {
+          useEditorStore.setState(state => ({
+            textPaths: state.textPaths.map((tp, index) => 
+              index === textPathIndex ? { ...tp, locked: shouldLock } : tp
+            )
+          }));
+        }
+        break;
+        
+        
+      default:
+        console.warn(`Unsupported child type for recursive lock: ${child.type}`);
+        break;
+    }
+  });
+};
+
+// Helper function to recursively lock/unlock a path and all its subpaths and commands
+export const recursivelyLockPath = (pathId: string, shouldLock: boolean) => {
+  const store = useEditorStore.getState();
+  const pathIndex = store.paths.findIndex(p => p.id === pathId);
+  
+  if (pathIndex === -1) return;
+  
+  const path = store.paths[pathIndex];
+  const updatedPath = {
+    ...path,
+    locked: shouldLock,
+    subPaths: path.subPaths.map(subPath => ({
+      ...subPath,
+      locked: shouldLock,
+      commands: subPath.commands.map(command => ({
+        ...command,
+        locked: shouldLock
+      }))
+    }))
+  };
+  
+  // Update the path in the store
+  useEditorStore.setState(state => ({
+    paths: state.paths.map((p, index) => 
+      index === pathIndex ? updatedPath : p
+    )
+  }));
+};
+
+// Helper function to recursively lock/unlock a subpath and all its commands
+export const recursivelyLockSubPath = (subPathId: string, shouldLock: boolean) => {
+  const store = useEditorStore.getState();
+  
+  // Find the path that contains this subpath
+  for (let pathIndex = 0; pathIndex < store.paths.length; pathIndex++) {
+    const path = store.paths[pathIndex];
+    const subPathIndex = path.subPaths.findIndex(sp => sp.id === subPathId);
+    
+    if (subPathIndex !== -1) {
+      const updatedSubPath = {
+        ...path.subPaths[subPathIndex],
+        locked: shouldLock,
+        commands: path.subPaths[subPathIndex].commands.map(command => ({
+          ...command,
+          locked: shouldLock
+        }))
+      };
+      
+      const updatedPath = {
+        ...path,
+        subPaths: path.subPaths.map((sp, index) => 
+          index === subPathIndex ? updatedSubPath : sp
+        )
+      };
+      
+      // Update the path in the store
+      useEditorStore.setState(state => ({
+        paths: state.paths.map((p, index) => 
+          index === pathIndex ? updatedPath : p
+        )
+      }));
+      return;
+    }
+  }
+};
+
+// Check if groups are recursively locked
+const areGroupsRecursivelyLocked = (): boolean => {
+  const store = useEditorStore.getState();
+  const selectedGroupIds = store.selection.selectedGroups;
+  
+  if (selectedGroupIds.length === 0) return false;
+  
+  return selectedGroupIds.every(groupId => {
+    return isGroupRecursivelyLocked(groupId);
+  });
+};
+
+// Helper function to check if a group and all its children are locked
+const isGroupRecursivelyLocked = (groupId: string): boolean => {
+  const store = useEditorStore.getState();
+  const group = store.getGroupById(groupId);
+  
+  if (!group) return false;
+  
+  // Check if group itself is locked
+  const isGroupLocked = group.locked || group.lockLevel === 'full';
+  if (!isGroupLocked) return false;
+  
+  // Check if all children are locked
+  return group.children.every(child => {
+    switch (child.type) {
+      case 'path':
+        const path = store.paths.find(p => p.id === child.id);
+        if (!path || !path.locked) return false;
+        
+        // Check if all subpaths and commands are locked
+        return path.subPaths.every(subPath => {
+          if (!subPath.locked) return false;
+          return subPath.commands.every(command => command.locked);
+        });
+        
+      case 'text':
+        const text = store.texts.find(t => t.id === child.id);
+        return text?.locked === true;
+        
+      case 'image':
+        const image = store.images.find(img => img.id === child.id);
+        return image?.locked === true;
+        
+      case 'use':
+        const use = store.uses.find(u => u.id === child.id);
+        return use?.locked === true;
+        
+      case 'group':
+        // Recursively check nested groups
+        return isGroupRecursivelyLocked(child.id);
+        
+      case 'textPath':
+        const textPath = store.textPaths.find(tp => tp.id === child.id);
+        return textPath?.locked === true;
+        
+        
+      default:
+        return true; // Unknown types are considered "locked"
+    }
+  });
+};
+
 // Enhanced Group actions
 export const groupActions: ToolbarAction[] = [
+  {
+    id: 'group-recursive-lock',
+    get icon() {
+      return areGroupsRecursivelyLocked() ? Lock : Unlock;
+    },
+    get label() {
+      return areGroupsRecursivelyLocked() ? 'Unlock All' : 'Lock All';
+    },
+    type: 'button',
+    action: toggleGroupRecursiveLock,
+    priority: 105,
+    get tooltip() {
+      return areGroupsRecursivelyLocked() 
+        ? 'Unlock group and all its elements recursively' 
+        : 'Lock group and all its elements recursively';
+    }
+  },
   {
     id: 'ungroup',
     icon: Ungroup,
@@ -1548,26 +2008,6 @@ export const groupActions: ToolbarAction[] = [
     action: ungroupSelected,
     priority: 100,
     tooltip: 'Ungroup elements'
-  },
-  {
-    id: 'group-visibility',
-    icon: getCommonGroupVisibility() ? Eye : EyeOff,
-    label: getCommonGroupVisibility() ? 'Hide' : 'Show',
-    type: 'button',
-    action: toggleGroupVisibility,
-    priority: 95,
-    tooltip: 'Toggle group visibility'
-  },
-  {
-    id: 'group-lock',
-    icon: getCommonGroupLockLevel() === 'none' ? Unlock : Lock,
-    label: getCommonGroupLockLevel() === 'none' ? 'Lock' : 'Unlock',
-    type: 'dropdown',
-    dropdown: {
-      options: groupLockOptions
-    },
-    priority: 90,
-    tooltip: 'Group lock settings'
   },
   {
     id: 'group-arrange',

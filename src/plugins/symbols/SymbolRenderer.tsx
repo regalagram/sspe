@@ -249,7 +249,6 @@ export const SymbolRenderer: React.FC = () => {
       {uses.length > 0 && (
         <g data-layer="symbol-instances">
           {uses.map((use) => {
-            if (use.locked) return null;
             return <UseElementComponent key={use.id} use={use} />;
           })}
         </g>

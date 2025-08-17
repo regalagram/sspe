@@ -92,8 +92,101 @@ const loadInitialState = (): EditorState => {
           }
         ],
         style: {
-          fill: '#4f46e5',
-          stroke: 'none'
+          fill: '#4f46e5'
+        }
+      },
+      {
+        id: '1755464720882-1',
+        subPaths: [
+          {
+            id: 'rect-subpath-1',
+            commands: [
+              { id: 'rect-cmd-1', command: 'M', x: 130, y: 330 },
+              { id: 'rect-cmd-2', command: 'L', x: 208, y: 330 },
+              { id: 'rect-cmd-3', command: 'L', x: 208, y: 385 },
+              { id: 'rect-cmd-4', command: 'L', x: 130, y: 385 },
+              { id: 'rect-cmd-5', command: 'Z' }
+            ]
+          }
+        ],
+        style: {
+          fill: '#94a3b8',
+          stroke: '#000000',
+          strokeWidth: 2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round'
+        }
+      },
+      {
+        id: '1755464724932-9',
+        subPaths: [
+          {
+            id: 'triangle-subpath-1',
+            commands: [
+              { id: 'triangle-cmd-1', command: 'M', x: 350, y: 315 },
+              { id: 'triangle-cmd-2', command: 'L', x: 390, y: 380 },
+              { id: 'triangle-cmd-3', command: 'L', x: 310, y: 380 },
+              { id: 'triangle-cmd-4', command: 'Z' }
+            ]
+          }
+        ],
+        style: {
+          fill: 'url(#gradient-1755464778642-nv8m10iby)',
+          stroke: '#000000',
+          strokeWidth: 2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round'
+        }
+      },
+      {
+        id: '1755464728680-16',
+        subPaths: [
+          {
+            id: 'star-subpath-1',
+            commands: [
+              { id: 'star-cmd-1', command: 'M', x: 165, y: 427 },
+              { id: 'star-cmd-2', command: 'L', x: 174, y: 453 },
+              { id: 'star-cmd-3', command: 'L', x: 202, y: 454 },
+              { id: 'star-cmd-4', command: 'L', x: 179, y: 471 },
+              { id: 'star-cmd-5', command: 'L', x: 188, y: 498 },
+              { id: 'star-cmd-6', command: 'L', x: 165, y: 482 },
+              { id: 'star-cmd-7', command: 'L', x: 142, y: 498 },
+              { id: 'star-cmd-8', command: 'L', x: 150, y: 471 },
+              { id: 'star-cmd-9', command: 'L', x: 127, y: 454 },
+              { id: 'star-cmd-10', command: 'L', x: 155, y: 453 },
+              { id: 'star-cmd-11', command: 'Z' }
+            ]
+          }
+        ],
+        style: {
+          fill: 'url(#gradient-1755464783148-cnj6g98uk)',
+          stroke: '#000000',
+          strokeWidth: 2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round'
+        }
+      },
+      {
+        id: '1755464732383-30',
+        subPaths: [
+          {
+            id: 'circle-subpath-1',
+            commands: [
+              { id: 'circle-cmd-1', command: 'M', x: 313.25875, y: 467.96921875 },
+              { id: 'circle-cmd-2', command: 'C', x1: 313.25875, y1: 446.29921875, x2: 330.82875, y2: 428.73921874999996, x: 352.48875, y: 428.73921874999996 },
+              { id: 'circle-cmd-3', command: 'C', x1: 374.15875000000005, y1: 428.73921874999996, x2: 391.71875, y2: 446.29921875, x: 391.71875, y: 467.96921875 },
+              { id: 'circle-cmd-4', command: 'C', x1: 391.71875, y1: 489.61921874999996, x2: 374.15875000000005, y2: 507.19921875, x: 352.48875, y: 507.19921875 },
+              { id: 'circle-cmd-5', command: 'C', x1: 330.82875, y1: 507.19921875, x2: 313.25875, y2: 489.61921874999996, x: 313.25875, y: 467.96921875 },
+              { id: 'circle-cmd-6', command: 'Z' }
+            ]
+          }
+        ],
+        style: {
+          fill: 'url(#pattern-diagonal)',
+          stroke: '#000000',
+          strokeWidth: 2,
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round'
         }
       }
     ],
@@ -126,29 +219,82 @@ const loadInitialState = (): EditorState => {
           fill: '#ff0000',
           lineHeight: 1.2
         }
+      },
+      {
+        id: '1755464812549-39',
+        type: 'text',
+        x: 202,
+        y: 434,
+        content: 'Text',
+        style: {
+          fontSize: 42,
+          fontFamily: 'Verdana',
+          fontWeight: 'bold',
+          fill: '#000000'
+        }
       }
     ],
     textPaths: [],
     groups: [
       {
-        id: 'test-group-1',
-        name: 'Sample Group',
+        id: 'shapes-group-1',
+        name: 'Shapes Group',
         children: [
-          { type: 'path', id: 'test-path-1' }
+          { type: 'path', id: '1755464720882-1' },
+          { type: 'path', id: '1755464724932-9' },
+          { type: 'path', id: '1755464728680-16' },
+          { type: 'path', id: '1755464732383-30' },
+          { type: 'text', id: '1755464812549-39' }
         ],
-        transform: 'translate(50, 50)',
+        transform: '',
         style: {},
         locked: false,
         visible: true
       }
     ],
-    gradients: [],
+    gradients: [
+      {
+        id: 'gradient-1755464778642-nv8m10iby',
+        type: 'radial',
+        cx: 0.5,
+        cy: 0.5,
+        r: 0.5,
+        gradientUnits: 'objectBoundingBox',
+        stops: [
+          { id: 'stop-1755464778642-cokxq2pva', offset: 0, color: '#ffeaa7' },
+          { id: 'stop-1755464778642-ps5kh2tjp', offset: 100, color: '#fab1a0' }
+        ]
+      },
+      {
+        id: 'gradient-1755464783148-cnj6g98uk',
+        type: 'linear',
+        x1: 1,
+        y1: 0.5,
+        x2: 0,
+        y2: 0.5,
+        gradientUnits: 'objectBoundingBox',
+        stops: [
+          { id: 'stop-1755464783148-gk2t8b5lh', offset: 0, color: '#c471ed' },
+          { id: 'stop-1755464783148-ref46psi9', offset: 100, color: '#f64f59' }
+        ]
+      },
+      {
+        id: 'pattern-diagonal',
+        type: 'pattern',
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+        patternUnits: 'userSpaceOnUse',
+        content: '<path d="M0,10 L10,0" stroke="#374151" stroke-width="2"/>'
+      }
+    ],
     images: [
       {
         id: 'test-image-1',
         type: 'image',
-        x: 500,
-        y: 50,
+        x: 300,
+        y: 30,
         width: 100,
         height: 100,
         href: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzRmNDZlNSIvPgogIDx0ZXh0IHg9IjUwIiB5PSI1NSIgZmlsbD0id2hpdGUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgdGV4dC1hbmNob3I9Im1pZGRsZSI+SW1hZ2U8L3RleHQ+Cjwvc3ZnPgo=',
@@ -176,11 +322,15 @@ const loadInitialState = (): EditorState => {
       {
         id: 'test-use-1',
         type: 'use',
-        x: 600,
-        y: 200,
+        x: 220,
+        y: 120,
+        width: 50,
+        height: 50,
         href: '#test-symbol-1',
-        style: {},
-        transform: 'scale(2)',
+        style: {
+          fill: '#4f46e5'
+        },
+        transform: '',
         locked: false
       }
     ],

@@ -188,10 +188,21 @@ const GroupElement: React.FC<GroupRendererProps> = ({ group, isSelected = false,
 
     // Convert to bounds (remove padding that calculateGlobalViewBox adds)
     const padding = Math.max(2, Math.max(width, height) * 0.05);
-    const actualX = x + padding;
-    const actualY = y + padding;
+    let actualX = x + padding;
+    let actualY = y + padding;
     const actualWidth = width - padding * 2;
     const actualHeight = height - padding * 2;
+
+    // Apply group transform to the bounds
+    if (group.transform) {
+      const transformMatch = group.transform.match(/translate\(([^,]+),\s*([^)]+)\)/);
+      if (transformMatch) {
+        const translateX = parseFloat(transformMatch[1]) || 0;
+        const translateY = parseFloat(transformMatch[2]) || 0;
+        actualX += translateX;
+        actualY += translateY;
+      }
+    }
 
     return {
       x: actualX,

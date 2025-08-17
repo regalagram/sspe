@@ -7,6 +7,7 @@ import {
 } from '../../types/floatingToolbar';
 import { SelectionState } from '../../types';
 import { Plugin } from '../PluginSystem';
+import { useEditorStore } from '../../store/editorStore';
 
 export class FloatingToolbarManager {
   private static instance: FloatingToolbarManager;
@@ -960,88 +961,185 @@ export class FloatingToolbarManager {
     });
   }
 
-  private createUnifiedLockAction(baseAction: ToolbarAction, groupActions: ToolbarAction[]): ToolbarAction {
+  private createUnifiedLockAction(baseAction: ToolbarAction, groupActions: ToolbarAction[]): ToolbarAction {    
     return {
       ...baseAction,
       id: 'unified-lock',
-      label: 'Lock SubPaths',
-      tooltip: 'Toggle lock state for subpaths',
+      label: 'Lock All',
+      tooltip: 'Toggle lock state for all selected elements',
       type: 'toggle',
       toggle: {
         isActive: () => {
-          // Check if any subpaths are locked
-          import('../../store/editorStore').then(({ useEditorStore }) => {
-            const store = useEditorStore.getState();
-            const { selectedSubPaths } = store.selection;
-            
-            if (selectedSubPaths.length === 0) return false;
-            
-            return selectedSubPaths.some(subPathId => {
-              const subPath = store.paths
-                .flatMap(path => path.subPaths)
-                .find(sp => sp.id === subPathId);
-              return subPath?.locked === true;
-            });
-          }).catch(() => false);
-          return false;
+          try {
+            // Use dynamic import in a way that works synchronously for the current state
+            return this.checkAnyElementsLocked();
+          } catch (error) {
+            console.warn('Error checking lock state:', error);
+            return false;
+          }
         },
         onToggle: () => {
-          this.applyLockToAllSelected();
+          this.applyUnifiedLockToAllSelected();
         }
-      },
-      visible: () => {
-        // Only show when there are subpaths in the selection
-        import('../../store/editorStore').then(({ useEditorStore }) => {
-          const store = useEditorStore.getState();
-          return store.selection.selectedSubPaths.length > 0;
-        }).catch(() => false);
-        return true;
       }
     };
   }
 
-  private applyLockToAllSelected(): void {
-    import('../../store/editorStore').then(({ useEditorStore }) => {
+  private checkAnyElementsLocked(): boolean {
+    try {
       const store = useEditorStore.getState();
-      const { selectedSubPaths } = store.selection;
+      const selection = store.selection;
       
-      if (selectedSubPaths.length === 0) return;
+      let hasAnyLocked = false;
+      
+      // Check locked state across all selected element types
+      selection.selectedTexts.forEach(textId => {
+        const text = store.texts.find(t => t.id === textId);
+        if (text?.locked) hasAnyLocked = true;
+      });
+      
+      selection.selectedSubPaths.forEach(subPathId => {
+        const subPath = store.paths
+          .flatMap(path => path.subPaths)
+          .find(sp => sp.id === subPathId);
+        if (subPath?.locked) hasAnyLocked = true;
+      });
+      
+      selection.selectedCommands.forEach(commandId => {
+        const command = store.paths
+          .flatMap(path => path.subPaths)
+          .flatMap(subPath => subPath.commands)
+          .find(cmd => cmd.id === commandId);
+        if (command?.locked) hasAnyLocked = true;
+      });
+      
+      selection.selectedGroups.forEach(groupId => {
+        const group = store.groups.find(g => g.id === groupId);
+        if (group?.locked) hasAnyLocked = true;
+      });
+      
+      selection.selectedImages.forEach(imageId => {
+        const image = store.images.find(i => i.id === imageId);
+        if (image?.locked) hasAnyLocked = true;
+      });
+      
+      selection.selectedUses.forEach(useId => {
+        const use = store.uses.find(u => u.id === useId);
+        if (use?.locked) hasAnyLocked = true;
+      });
+      
+      selection.selectedSymbols.forEach(symbolId => {
+        const symbol = store.symbols.find(s => s.id === symbolId);
+        if (symbol?.locked) hasAnyLocked = true;
+      });
+      
+      return hasAnyLocked;
+    } catch (error) {
+      console.warn('Error checking lock state:', error);
+      return false;
+    }
+  }
+
+  private applyUnifiedLockToAllSelected(): void {
+    // Import the recursive lock functions
+    import('../../plugins/selection/FloatingSelectionActions').then(({ recursivelyLockGroup, recursivelyLockPath, recursivelyLockSubPath }) => {
+      const store = useEditorStore.getState();
+      const selection = store.selection;
+      
+      // Check if any selection exists
+      const totalSelected = selection.selectedTexts.length + 
+                           selection.selectedSubPaths.length + 
+                           selection.selectedCommands.length +
+                           selection.selectedGroups.length +
+                           selection.selectedImages.length +
+                           selection.selectedUses.length +
+                           selection.selectedSymbols.length;
+      
+      if (totalSelected === 0) return;
       
       store.pushToHistory();
       
-      // Determine if we should lock or unlock based on the first selected subpath
-      const firstSubPath = store.paths
-        .flatMap(path => path.subPaths)
-        .find(subPath => subPath.id === selectedSubPaths[0]);
+      // Determine lock state based on the first available element
+      let shouldLock = true;
       
-      const shouldLock = !firstSubPath?.locked;
+      // Check first available element to determine toggle direction
+      if (selection.selectedTexts.length > 0) {
+        const firstText = store.texts.find(t => t.id === selection.selectedTexts[0]);
+        shouldLock = !firstText?.locked;
+      } else if (selection.selectedSubPaths.length > 0) {
+        const firstSubPath = store.paths
+          .flatMap(path => path.subPaths)
+          .find(sp => sp.id === selection.selectedSubPaths[0]);
+        shouldLock = !firstSubPath?.locked;
+      } else if (selection.selectedCommands.length > 0) {
+        const firstCommand = store.paths
+          .flatMap(path => path.subPaths)
+          .flatMap(subPath => subPath.commands)
+          .find(cmd => cmd.id === selection.selectedCommands[0]);
+        shouldLock = !firstCommand?.locked;
+      } else if (selection.selectedGroups.length > 0) {
+        const firstGroup = store.groups.find(g => g.id === selection.selectedGroups[0]);
+        shouldLock = !firstGroup?.locked;
+      } else if (selection.selectedImages.length > 0) {
+        const firstImage = store.images.find(i => i.id === selection.selectedImages[0]);
+        shouldLock = !firstImage?.locked;
+      } else if (selection.selectedUses.length > 0) {
+        const firstUse = store.uses.find(u => u.id === selection.selectedUses[0]);
+        shouldLock = !firstUse?.locked;
+      } else if (selection.selectedSymbols.length > 0) {
+        const firstSymbol = store.symbols.find(s => s.id === selection.selectedSymbols[0]);
+        shouldLock = !firstSymbol?.locked;
+      }
       
-      // Apply lock/unlock to all selected subpaths
-      selectedSubPaths.forEach(subPathId => {
-        const pathWithSubPath = store.paths.find(path => 
-          path.subPaths.some(sp => sp.id === subPathId)
-        );
-        
-        if (pathWithSubPath) {
-          const subPathIndex = pathWithSubPath.subPaths.findIndex(sp => sp.id === subPathId);
-          if (subPathIndex >= 0) {
-            const updatedSubPath = {
-              ...pathWithSubPath.subPaths[subPathIndex],
-              locked: shouldLock
-            };
-            
-            store.updateSubPath(subPathId, updatedSubPath);
-          }
-        }
+      // Apply lock/unlock to all selected elements using recursive methods where appropriate
+      
+      // Lock groups recursively
+      selection.selectedGroups.forEach(groupId => {
+        recursivelyLockGroup(groupId, shouldLock);
       });
       
-      // If locking, clear the entire selection as locked subpaths shouldn't be selectable
+      // Lock texts
+      selection.selectedTexts.forEach(textId => {
+        store.updateText(textId, { locked: shouldLock });
+      });
+      
+      // Lock subpaths recursively (will lock all commands)
+      selection.selectedSubPaths.forEach(subPathId => {
+        recursivelyLockSubPath(subPathId, shouldLock);
+      });
+      
+      // Lock individual commands
+      selection.selectedCommands.forEach(commandId => {
+        store.updateCommand(commandId, { locked: shouldLock });
+      });
+      
+      // Lock images
+      selection.selectedImages.forEach(imageId => {
+        store.updateImage(imageId, { locked: shouldLock });
+      });
+      
+      // Lock uses
+      selection.selectedUses.forEach(useId => {
+        store.updateUse(useId, { locked: shouldLock });
+      });
+      
+      // Lock symbols
+      selection.selectedSymbols.forEach(symbolId => {
+        store.updateSymbol(symbolId, { locked: shouldLock });
+      });
+      
+      // If locking, clear the entire selection as locked elements shouldn't be selectable
       if (shouldLock) {
         store.clearSelection();
       }
     }).catch(error => {
-      console.warn('Error applying lock:', error);
+      console.warn('Error importing lock functions:', error);
     });
+  }
+  
+  // Keep the old method for backwards compatibility
+  private applyLockToAllSelected(): void {
+    this.applyUnifiedLockToAllSelected();
   }
 
   private applyArrangeToAllSelected(arrangeOption: any): void {

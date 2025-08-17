@@ -1,6 +1,7 @@
 import React from 'react';
 import { TreeItem } from './TreeUtils';
 import { useEditorStore } from '../../store/editorStore';
+import { recursivelyLockGroup, recursivelyLockPath, recursivelyLockSubPath } from '../selection/FloatingSelectionActions';
 import { 
   ChevronRight, 
   ChevronDown,
@@ -123,29 +124,12 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
         }
         break;
       case 'path':
-        const path = store.paths.find(p => p.id === item.id);
-        if (path) {
-          const pathIndex = store.paths.findIndex(p => p.id === item.id);
-          const updatedPath = { ...path, locked: !item.locked };
-          const newPaths = [...store.paths];
-          newPaths[pathIndex] = updatedPath;
-          store.replacePaths(newPaths);
-        }
+        // Use recursive lock for paths - locks path, all subpaths, and all commands
+        recursivelyLockPath(item.id, !item.locked);
         break;
       case 'subpath':
-        const pathWithSubPath = store.paths.find(path => 
-          path.subPaths.some(sp => sp.id === item.id)
-        );
-        if (pathWithSubPath) {
-          const subPathIndex = pathWithSubPath.subPaths.findIndex(sp => sp.id === item.id);
-          if (subPathIndex >= 0) {
-            const updatedSubPath = {
-              ...pathWithSubPath.subPaths[subPathIndex],
-              locked: !item.locked
-            };
-            store.updateSubPath(item.id, updatedSubPath);
-          }
-        }
+        // Use recursive lock for subpaths - locks subpath and all its commands
+        recursivelyLockSubPath(item.id, !item.locked);
         break;
       case 'command':
         for (const path of store.paths) {
@@ -164,8 +148,8 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
         }
         break;
       case 'group':
-        // Groups have more complex lock levels, just toggle basic lock
-        store.updateGroup(item.id, { locked: !item.locked });
+        // Use recursive lock for groups - locks group and all its children recursively
+        recursivelyLockGroup(item.id, !item.locked);
         break;
       case 'image':
         store.updateImage(item.id, { locked: !item.locked });
