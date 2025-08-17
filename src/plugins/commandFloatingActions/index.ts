@@ -214,6 +214,8 @@ const getTransformActions = (): ToolbarAction[] => [
         return;
       }
 
+      store.pushToHistory();
+      
       // Snap each selected command to grid
       selection.selectedCommands.forEach(commandId => {
         // Find the command
@@ -232,8 +234,6 @@ const getTransformActions = (): ToolbarAction[] => [
           }
         }
       });
-      
-      store.pushToHistory();
     },
     priority: 90,
     tooltip: 'Snap selected points to grid'
@@ -257,10 +257,10 @@ const getArrangeActions = (): ToolbarAction[] => [
           action: () => {
             const store = useEditorStore.getState();
             if (!canAlign()) return;
-            store.alignCommandsLeft(store.selection.selectedCommands);
             store.pushToHistory();
+            store.alignCommandsLeft(store.selection.selectedCommands);
           },
-          enabled: canAlign
+          disabled: !canAlign()
         },
         {
           id: 'align-commands-center',
@@ -269,10 +269,10 @@ const getArrangeActions = (): ToolbarAction[] => [
           action: () => {
             const store = useEditorStore.getState();
             if (!canAlign()) return;
-            store.alignCommandsCenter(store.selection.selectedCommands);
             store.pushToHistory();
+            store.alignCommandsCenter(store.selection.selectedCommands);
           },
-          enabled: canAlign
+          disabled: !canAlign()
         },
         {
           id: 'align-commands-right',
@@ -281,16 +281,10 @@ const getArrangeActions = (): ToolbarAction[] => [
           action: () => {
             const store = useEditorStore.getState();
             if (!canAlign()) return;
-            store.alignCommandsRight(store.selection.selectedCommands);
             store.pushToHistory();
+            store.alignCommandsRight(store.selection.selectedCommands);
           },
-          enabled: canAlign
-        },
-        {
-          id: 'separator-1',
-          label: '—',
-          action: () => {},
-          separator: true
+          disabled: !canAlign()
         },
         {
           id: 'align-commands-top',
@@ -299,10 +293,10 @@ const getArrangeActions = (): ToolbarAction[] => [
           action: () => {
             const store = useEditorStore.getState();
             if (!canAlign()) return;
-            store.alignCommandsTop(store.selection.selectedCommands);
             store.pushToHistory();
+            store.alignCommandsTop(store.selection.selectedCommands);
           },
-          enabled: canAlign
+          disabled: !canAlign()
         },
         {
           id: 'align-commands-middle',
@@ -311,10 +305,10 @@ const getArrangeActions = (): ToolbarAction[] => [
           action: () => {
             const store = useEditorStore.getState();
             if (!canAlign()) return;
-            store.alignCommandsMiddle(store.selection.selectedCommands);
             store.pushToHistory();
+            store.alignCommandsMiddle(store.selection.selectedCommands);
           },
-          enabled: canAlign
+          disabled: !canAlign()
         },
         {
           id: 'align-commands-bottom',
@@ -323,16 +317,10 @@ const getArrangeActions = (): ToolbarAction[] => [
           action: () => {
             const store = useEditorStore.getState();
             if (!canAlign()) return;
-            store.alignCommandsBottom(store.selection.selectedCommands);
             store.pushToHistory();
+            store.alignCommandsBottom(store.selection.selectedCommands);
           },
-          enabled: canAlign
-        },
-        {
-          id: 'separator-2',
-          label: '—',
-          action: () => {},
-          separator: true
+          disabled: !canAlign()
         },
         // Distribution options
         {
@@ -342,10 +330,10 @@ const getArrangeActions = (): ToolbarAction[] => [
           action: () => {
             const store = useEditorStore.getState();
             if (!canDistribute()) return;
-            store.distributeCommandsHorizontally(store.selection.selectedCommands);
             store.pushToHistory();
+            store.distributeCommandsHorizontally(store.selection.selectedCommands);
           },
-          enabled: canDistribute
+          disabled: !canDistribute()
         },
         {
           id: 'distribute-commands-vertically',
@@ -354,10 +342,10 @@ const getArrangeActions = (): ToolbarAction[] => [
           action: () => {
             const store = useEditorStore.getState();
             if (!canDistribute()) return;
-            store.distributeCommandsVertically(store.selection.selectedCommands);
             store.pushToHistory();
+            store.distributeCommandsVertically(store.selection.selectedCommands);
           },
-          enabled: canDistribute
+          disabled: !canDistribute()
         }
       ]
     },
@@ -380,12 +368,12 @@ const getDeleteActions = (): ToolbarAction[] => [
       
       if (selectedCommands.length === 0) return;
       
+      store.pushToHistory();
+      
       // Delete each selected command
       selectedCommands.forEach(commandId => {
         store.removeCommand(commandId);
       });
-      
-      store.pushToHistory();
     },
     priority: 10,
     destructive: true,
