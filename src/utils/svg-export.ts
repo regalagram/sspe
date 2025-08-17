@@ -1,5 +1,102 @@
 import { subPathToString } from './path-utils';
-import { FilterPrimitiveType } from '../types';
+import { FilterPrimitiveType, BoundingBox } from '../types';
+import { getPathBoundingBox, getTextBoundingBox, getImageBoundingBox, getGroupBoundingBox } from './bbox-utils';
+
+/**
+ * Calculate the overall viewport that encompasses all visible elements
+ */
+const calculateOverallViewport = (editorState: any): BoundingBox => {
+  const { paths, texts, images, groups, uses, symbols } = editorState;
+  
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  let hasElements = false;
+
+  // Calculate bounding boxes for all paths
+  paths.forEach((path: any) => {
+    const bbox = getPathBoundingBox(path);
+    if (bbox) {
+      minX = Math.min(minX, bbox.x);
+      maxX = Math.max(maxX, bbox.x + bbox.width);
+      minY = Math.min(minY, bbox.y);
+      maxY = Math.max(maxY, bbox.y + bbox.height);
+      hasElements = true;
+    }
+  });
+
+  // Calculate bounding boxes for all texts
+  texts.forEach((text: any) => {
+    const bbox = getTextBoundingBox(text);
+    if (bbox) {
+      minX = Math.min(minX, bbox.x);
+      maxX = Math.max(maxX, bbox.x + bbox.width);
+      minY = Math.min(minY, bbox.y);
+      maxY = Math.max(maxY, bbox.y + bbox.height);
+      hasElements = true;
+    }
+  });
+
+  // Calculate bounding boxes for all images
+  images.forEach((image: any) => {
+    const bbox = getImageBoundingBox(image);
+    if (bbox) {
+      minX = Math.min(minX, bbox.x);
+      maxX = Math.max(maxX, bbox.x + bbox.width);
+      minY = Math.min(minY, bbox.y);
+      maxY = Math.max(maxY, bbox.y + bbox.height);
+      hasElements = true;
+    }
+  });
+
+  // Calculate bounding boxes for all groups
+  groups.forEach((group: any) => {
+    const bbox = getGroupBoundingBox(group, paths, texts, images, groups);
+    if (bbox) {
+      minX = Math.min(minX, bbox.x);
+      maxX = Math.max(maxX, bbox.x + bbox.width);
+      minY = Math.min(minY, bbox.y);
+      maxY = Math.max(maxY, bbox.y + bbox.height);
+      hasElements = true;
+    }
+  });
+
+  // Calculate bounding boxes for all use elements (symbol instances)
+  uses.forEach((use: any) => {
+    // For use elements, we need to consider their position and size
+    const bbox = {
+      x: use.x || 0,
+      y: use.y || 0,
+      width: use.width || 50, // Default symbol size
+      height: use.height || 50
+    };
+    
+    minX = Math.min(minX, bbox.x);
+    maxX = Math.max(maxX, bbox.x + bbox.width);
+    minY = Math.min(minY, bbox.y);
+    maxY = Math.max(maxY, bbox.y + bbox.height);
+    hasElements = true;
+  });
+
+  // If no elements found, return default viewport
+  if (!hasElements) {
+    return { x: 0, y: 0, width: 800, height: 600 };
+  }
+
+  // Add some padding around the content (10% of the size)
+  const width = maxX - minX;
+  const height = maxY - minY;
+  const paddingX = Math.max(width * 0.1, 20);
+  const paddingY = Math.max(height * 0.1, 20);
+
+  return {
+    x: minX - paddingX,
+    y: minY - paddingY,
+    width: width + (paddingX * 2),
+    height: height + (paddingY * 2)
+  };
+};
 
 /**
  * Converts a filter primitive to its SVG string representation
@@ -638,12 +735,19 @@ export const generateSVGCode = (editorState: any): string => {
   [...paths, ...texts, ...textPaths, ...images, ...uses].forEach((element: any) => {
     const style = element.style || {};
     
-    // Check for gradient/pattern references
+    // Check for gradient/pattern references (both object and string formats)
     if (typeof style.fill === 'object' && style.fill?.id) {
       usedGradientIds.add(style.fill.id);
+    } else if (typeof style.fill === 'string' && style.fill.includes('url(#')) {
+      const gradientId = style.fill.replace('url(#', '').replace(')', '');
+      usedGradientIds.add(gradientId);
     }
+    
     if (typeof style.stroke === 'object' && style.stroke?.id) {
       usedGradientIds.add(style.stroke.id);
+    } else if (typeof style.stroke === 'string' && style.stroke.includes('url(#')) {
+      const gradientId = style.stroke.replace('url(#', '').replace(')', '');
+      usedGradientIds.add(gradientId);
     }
     
     // Check for marker references
@@ -729,10 +833,10 @@ export const generateSVGCode = (editorState: any): string => {
           
           const gradientProps = [
             `id="${gradient.id}"`,
-            `x1="${gradient.x1}%"`,
-            `y1="${gradient.y1}%"`,
-            `x2="${gradient.x2}%"`,
-            `y2="${gradient.y2}%"`,
+            `x1="${gradient.x1 * 100}%"`,
+            `y1="${gradient.y1 * 100}%"`,
+            `x2="${gradient.x2 * 100}%"`,
+            `y2="${gradient.y2 * 100}%"`,
             gradient.gradientUnits ? `gradientUnits="${gradient.gradientUnits}"` : '',
             gradient.gradientTransform ? `gradientTransform="${gradient.gradientTransform}"` : '',
             gradient.spreadMethod ? `spreadMethod="${gradient.spreadMethod}"` : ''
@@ -757,11 +861,11 @@ export const generateSVGCode = (editorState: any): string => {
           
           const gradientProps = [
             `id="${gradient.id}"`,
-            `cx="${gradient.cx}%"`,
-            `cy="${gradient.cy}%"`,
-            `r="${gradient.r}%"`,
-            gradient.fx !== undefined ? `fx="${gradient.fx}%"` : '',
-            gradient.fy !== undefined ? `fy="${gradient.fy}%"` : '',
+            `cx="${gradient.cx * 100}%"`,
+            `cy="${gradient.cy * 100}%"`,
+            `r="${gradient.r * 100}%"`,
+            gradient.fx !== undefined ? `fx="${gradient.fx * 100}%"` : '',
+            gradient.fy !== undefined ? `fy="${gradient.fy * 100}%"` : '',
             gradient.gradientUnits ? `gradientUnits="${gradient.gradientUnits}"` : '',
             gradient.gradientTransform ? `gradientTransform="${gradient.gradientTransform}"` : '',
             gradient.spreadMethod ? `spreadMethod="${gradient.spreadMethod}"` : ''
@@ -841,6 +945,42 @@ export const generateSVGCode = (editorState: any): string => {
               ].filter(Boolean).join(' ');
 
               return `      <path ${pathAttrs} />`;
+            } else if (child.id) {
+              // Handle reference-based children - find the actual path data
+              const referencedPath = paths.find((path: any) => path.id === child.id);
+              if (referencedPath) {
+                const pathData = referencedPath.subPaths.map((subPath: any) => {
+                  if (!subPath.commands || !Array.isArray(subPath.commands)) {
+                    return '';
+                  }
+                  return subPath.commands.map((cmd: any) => {
+                    switch (cmd.command) {
+                      case 'M':
+                        return `M ${cmd.x || 0} ${cmd.y || 0}`;
+                      case 'L':
+                        return `L ${cmd.x || 0} ${cmd.y || 0}`;
+                      case 'C':
+                        return `C ${cmd.x1 || 0} ${cmd.y1 || 0} ${cmd.x2 || 0} ${cmd.y2 || 0} ${cmd.x || 0} ${cmd.y || 0}`;
+                      case 'Z':
+                        return 'Z';
+                      default:
+                        return '';
+                    }
+                  }).join(' ');
+                }).join(' ');
+
+                if (!pathData || pathData.trim() === '') {
+                  return '';
+                }
+
+                // For symbol paths, omit fill/stroke attributes to allow inheritance from <use>
+                const pathAttrs = [
+                  `d="${pathData}"`,
+                  // Don't include fill or stroke - let them inherit from <use> element
+                ].filter(Boolean).join(' ');
+
+                return `      <path ${pathAttrs} />`;
+              }
             }
           }
           // Handle reference-based children (could be expanded for other types)
@@ -952,10 +1092,13 @@ export const generateSVGCode = (editorState: any): string => {
     useElements
   ].filter(Boolean).join('\n');
 
+  // Calculate dynamic viewport based on all elements
+  const viewport = calculateOverallViewport(editorState);
+  
   // Generate final SVG
   const definitionsSection = generateDefinitions();
   
-  const finalSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  const finalSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}">
 ${definitionsSection}${allElements}
 </svg>`;
 
