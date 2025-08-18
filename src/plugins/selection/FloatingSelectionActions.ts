@@ -353,6 +353,113 @@ const duplicateSelected = () => {
     store.duplicateUse(useId, { x: dx, y: dy });
   });
 
+  // Duplicate groups with dynamic offset (avoiding duplicate history call)
+  if (store.selection.selectedGroups.length > 0) {
+    const selectedGroupIds = [...store.selection.selectedGroups];
+    
+    selectedGroupIds.forEach(groupId => {
+      const group = store.getGroupById(groupId);
+      if (!group) return;
+      
+      // Duplicate all child elements first
+      const newChildIds: string[] = [];
+      const newChildTypes: string[] = [];
+      
+      group.children.forEach(child => {
+        let newChildId: string | null = null;
+        
+        switch (child.type) {
+          case 'path':
+            // Duplicate path with offset using existing path duplication
+            const pathIndex = store.paths.findIndex(p => p.id === child.id);
+            if (pathIndex !== -1) {
+              const path = store.paths[pathIndex];
+              const newPath = duplicatePath(path);
+              // Apply offset to all commands in the path
+              newPath.subPaths.forEach(subPath => {
+                subPath.commands.forEach(command => {
+                  if (command.x !== undefined) command.x += dx;
+                  if (command.y !== undefined) command.y += dy;
+                  if (command.x1 !== undefined) command.x1 += dx;
+                  if (command.y1 !== undefined) command.y1 += dy;
+                  if (command.x2 !== undefined) command.x2 += dx;
+                  if (command.y2 !== undefined) command.y2 += dy;
+                });
+              });
+              
+              // Add path using set function
+              useEditorStore.setState(state => ({
+                paths: [...state.paths, newPath]
+              }));
+              newChildId = newPath.id;
+            }
+            break;
+            
+          case 'text':
+            // Duplicate text with offset
+            const originalTextId = child.id;
+            newChildId = store.duplicateText(originalTextId);
+            if (newChildId) {
+              store.moveText(newChildId, { x: dx, y: dy });
+            }
+            break;
+            
+          case 'image':
+            // Duplicate image with offset using state update
+            const imageIndex = store.images.findIndex(img => img.id === child.id);
+            if (imageIndex !== -1) {
+              const image = store.images[imageIndex];
+              const newImage = {
+                ...image,
+                id: generateId(),
+                x: image.x + dx,
+                y: image.y + dy
+              };
+              
+              useEditorStore.setState(state => ({
+                images: [...state.images, newImage]
+              }));
+              newChildId = newImage.id;
+            }
+            break;
+            
+          case 'use':
+            // Duplicate use element with offset using state update
+            const useIndex = store.uses.findIndex(u => u.id === child.id);
+            if (useIndex !== -1) {
+              const use = store.uses[useIndex];
+              const newUse = {
+                ...use,
+                id: generateId(),
+                x: (use.x || 0) + dx,
+                y: (use.y || 0) + dy
+              };
+              
+              useEditorStore.setState(state => ({
+                uses: [...state.uses, newUse]
+              }));
+              newChildId = newUse.id;
+            }
+            break;
+        }
+        
+        if (newChildId) {
+          newChildIds.push(newChildId);
+          newChildTypes.push(child.type);
+        }
+      });
+      
+      // Create new group with duplicated children
+      if (newChildIds.length > 0) {
+        const newGroupId = store.createGroup(
+          `${group.name} Copy`,
+          newChildIds,
+          newChildTypes as ('path' | 'text' | 'group')[]
+        );
+      }
+    });
+  }
+
   // Use existing duplicateSelection for paths/subpaths/commands (it already uses dynamic offset)
   if (store.selection.selectedPaths.length > 0 || store.selection.selectedSubPaths.length > 0 || store.selection.selectedCommands.length > 0) {
     store.duplicateSelection();
