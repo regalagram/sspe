@@ -1,7 +1,7 @@
-import { Copy, Trash2, Lock } from 'lucide-react';
+import { Copy, Trash2, Lock, Group } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
-import { duplicateSelected, deleteSelected } from './commonActions';
+import { duplicateSelected, deleteSelected, getSelectedElementsBounds } from './commonActions';
 
 // Check if selected use elements are locked
 const areUsesLocked = (): boolean => {
@@ -80,7 +80,41 @@ const duplicateUses = () => {
   });
 };
 
+// Group selected use elements
+const groupSelectedUses = () => {
+  const store = useEditorStore.getState();
+  const hasSelection = store.selection.selectedUses.length >= 2;
+  
+  if (hasSelection) {
+    // Push to history before making changes
+    store.pushToHistory();
+    
+    // Use the built-in createGroupFromSelection method
+    const groupId = store.createGroupFromSelection();
+    
+    if (groupId) {
+      console.log(`✅ Created group with ID: ${groupId}`);
+    } else {
+      console.log('❌ Failed to create group');
+    }
+  }
+};
+
 export const useActions: ToolbarAction[] = [
+  {
+    id: 'group-uses',
+    icon: Group,
+    label: 'Group',
+    type: 'button',
+    action: groupSelectedUses,
+    priority: 100,
+    tooltip: 'Group selected use elements',
+    visible: () => {
+      // Only show when multiple use elements are selected
+      const store = useEditorStore.getState();
+      return store.selection.selectedUses.length >= 2;
+    }
+  },
   {
     id: 'duplicate-use',
     icon: Copy,

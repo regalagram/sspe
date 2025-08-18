@@ -10,7 +10,8 @@ import {
   Copy, 
   Trash2,
   Lock,
-  RotateCcw
+  RotateCcw,
+  Group
 } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
@@ -434,7 +435,41 @@ const subPathAnimationOptions = [
   }
 ];
 
+// Group selected subpaths
+const groupSelectedSubPaths = () => {
+  const store = useEditorStore.getState();
+  const hasSelection = store.selection.selectedSubPaths.length >= 2;
+  
+  if (hasSelection) {
+    // Push to history before making changes
+    store.pushToHistory();
+    
+    // Use the built-in createGroupFromSelection method
+    const groupId = store.createGroupFromSelection();
+    
+    if (groupId) {
+      console.log(`✅ Created group with ID: ${groupId}`);
+    } else {
+      console.log('❌ Failed to create group');
+    }
+  }
+};
+
 export const subPathActions: ToolbarAction[] = [
+  {
+    id: 'group-subpaths',
+    icon: Group,
+    label: 'Group',
+    type: 'button',
+    action: groupSelectedSubPaths,
+    priority: 105,
+    tooltip: 'Group selected subpaths',
+    visible: () => {
+      // Only show when multiple subpaths are selected
+      const store = useEditorStore.getState();
+      return store.selection.selectedSubPaths.length >= 2;
+    }
+  },
   {
     id: 'subpath-fill-color',
     icon: Palette,

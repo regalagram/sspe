@@ -1,7 +1,7 @@
-import { Copy, Trash2, Lock, Filter, Move } from 'lucide-react';
+import { Copy, Trash2, Lock, Filter, Move, Group } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
-import { duplicateSelected, deleteSelected } from './commonActions';
+import { duplicateSelected, deleteSelected, getSelectedElementsBounds } from './commonActions';
 
 // Check if selected images are locked
 const areImagesLocked = (): boolean => {
@@ -80,7 +80,41 @@ const duplicateImages = () => {
   });
 };
 
+// Group selected images
+const groupSelectedImages = () => {
+  const store = useEditorStore.getState();
+  const hasSelection = store.selection.selectedImages.length >= 2;
+  
+  if (hasSelection) {
+    // Push to history before making changes
+    store.pushToHistory();
+    
+    // Use the built-in createGroupFromSelection method
+    const groupId = store.createGroupFromSelection();
+    
+    if (groupId) {
+      console.log(`✅ Created group with ID: ${groupId}`);
+    } else {
+      console.log('❌ Failed to create group');
+    }
+  }
+};
+
 export const imageActions: ToolbarAction[] = [
+  {
+    id: 'group-images',
+    icon: Group,
+    label: 'Group',
+    type: 'button',
+    action: groupSelectedImages,
+    priority: 100,
+    tooltip: 'Group selected images',
+    visible: () => {
+      // Only show when multiple images are selected
+      const store = useEditorStore.getState();
+      return store.selection.selectedImages.length >= 2;
+    }
+  },
   {
     id: 'duplicate-image',
     icon: Copy,
