@@ -5,6 +5,7 @@ import { groupActions } from './groupActions';
 import { subPathActions } from './subPathActions';
 import { imageActions } from './imageActions';
 import { useActions, symbolActions } from './useActions';
+import { textActions } from './textActions';
 import { mixedSelectionActions } from './mixedSelectionActions';
 
 // Single element selection
@@ -63,6 +64,14 @@ export const symbolFloatingActionDefinition: FloatingActionDefinition = {
   priority: 80
 };
 
+// Text selection
+export const textFloatingActionDefinition: FloatingActionDefinition = {
+  elementTypes: ['text'],
+  selectionTypes: ['single', 'multiple'],
+  actions: textActions,
+  priority: 80
+};
+
 // Mixed selection (different element types)
 export const mixedSelectionFloatingActionDefinition: FloatingActionDefinition = {
   elementTypes: ['mixed'],
@@ -78,6 +87,7 @@ export const allFloatingActionDefinitions: FloatingActionDefinition[] = [
   pathFloatingActionDefinition,
   imageFloatingActionDefinition,
   symbolFloatingActionDefinition,
+  textFloatingActionDefinition,
   singleElementFloatingActionDefinition,
   multipleSelectionFloatingActionDefinition,
   mixedSelectionFloatingActionDefinition

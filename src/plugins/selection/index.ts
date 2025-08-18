@@ -6,7 +6,8 @@ import {
   groupFloatingActionDefinition,
   mixedSelectionFloatingActionDefinition,
   imageFloatingActionDefinition,
-  symbolFloatingActionDefinition
+  symbolFloatingActionDefinition,
+  textFloatingActionDefinition
 } from './ModularFloatingActions';
 
 // Extend the base selection plugin with floating actions
@@ -18,6 +19,7 @@ export const SelectionPlugin: Plugin = {
     mixedSelectionFloatingActionDefinition,
     groupFloatingActionDefinition,
     imageFloatingActionDefinition,
-    symbolFloatingActionDefinition
+    symbolFloatingActionDefinition,
+    textFloatingActionDefinition
   ]
 };

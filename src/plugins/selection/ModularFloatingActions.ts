@@ -12,6 +12,7 @@ export { groupActions } from './actions/groupActions';
 export { subPathActions } from './actions/subPathActions';
 export { imageActions } from './actions/imageActions';
 export { useActions, symbolActions } from './actions/useActions';
+export { textActions } from './actions/textActions';
 export { mixedSelectionActions } from './actions/mixedSelectionActions';
 
 // Export all floating action definitions
@@ -23,6 +24,7 @@ export {
   pathFloatingActionDefinition,
   imageFloatingActionDefinition,
   symbolFloatingActionDefinition,
+  textFloatingActionDefinition,
   mixedSelectionFloatingActionDefinition,
   allFloatingActionDefinitions
 } from './actions/floatingActionDefinitions';
