@@ -1,7 +1,7 @@
 import React from 'react';
 import { TreeItem } from './TreeUtils';
 import { useEditorStore } from '../../store/editorStore';
-import { recursivelyLockGroup, recursivelyLockPath, recursivelyLockSubPath } from '../selection/FloatingSelectionActions';
+import { recursivelyLockGroup, recursivelyLockPath, recursivelyLockSubPath } from '../selection/ModularFloatingActions';
 import { 
   ChevronRight, 
   ChevronDown,

@@ -4,6 +4,7 @@ import { generateId } from '../utils/id-utils';
 import { TextActions } from './textActions';
 import { SVGElementActions } from './svgElementActions';
 import { generateGroupSVG, downloadGroupSVG } from '../utils/group-svg-utils';
+import { duplicatePath } from '../utils/duplicate-utils';
 
 export interface GroupActions {
   // Group creation and management
@@ -40,6 +41,9 @@ export interface GroupActions {
   setGroupLockLevel: (groupId: string, lockLevel: GroupLockLevel) => void;
   getGroupLockLevel: (groupId: string) => GroupLockLevel;
   isGroupLocked: (groupId: string, action: 'selection' | 'editing' | 'movement') => boolean;
+  
+  // Group duplication
+  duplicateGroup: (groupId: string, customOffset?: { x: number; y: number }) => string | null;
   
   // Bulk operations
   clearAllGroups: () => void;
@@ -653,6 +657,126 @@ export const createGroupActions: StateCreator<
       default:
         return false;
     }
+  },
+
+  duplicateGroup: (groupId: string, customOffset?: { x: number; y: number }) => {
+    const state = get();
+    const group = state.groups.find(g => g.id === groupId);
+    if (!group) return null;
+
+    // Check if group is locked
+    const lockLevel = state.getGroupLockLevel(groupId);
+    if (lockLevel === 'editing' || lockLevel === 'full') {
+      return null;
+    }
+
+    // Use custom offset if provided, otherwise use default
+    const offset = customOffset || { x: 20, y: 20 };
+    const newGroupId = generateId();
+    
+    // Duplicate all child elements and collect their new IDs
+    const newChildren: SVGGroupChild[] = [];
+    
+    // Helper function to apply offset to path
+    const offsetPath = (path: any, dx: number, dy: number) => {
+      return {
+        ...path,
+        subPaths: path.subPaths.map((subPath: any) => ({
+          ...subPath,
+          commands: subPath.commands.map((cmd: any) => ({
+            ...cmd,
+            x: cmd.x !== undefined ? cmd.x + dx : cmd.x,
+            y: cmd.y !== undefined ? cmd.y + dy : cmd.y,
+            x1: cmd.x1 !== undefined ? cmd.x1 + dx : cmd.x1,
+            y1: cmd.y1 !== undefined ? cmd.y1 + dy : cmd.y1,
+            x2: cmd.x2 !== undefined ? cmd.x2 + dx : cmd.x2,
+            y2: cmd.y2 !== undefined ? cmd.y2 + dy : cmd.y2,
+          }))
+        }))
+      };
+    };
+    
+    group.children.forEach(child => {
+      switch (child.type) {
+        case 'path':
+          const path = state.paths.find(p => p.id === child.id);
+          if (path) {
+            const duplicatedPath = offsetPath(duplicatePath(path), offset.x, offset.y);
+            set(prevState => ({
+              paths: [...prevState.paths, duplicatedPath]
+            }));
+            newChildren.push({ type: 'path', id: duplicatedPath.id });
+          }
+          break;
+        case 'text':
+          const newTextId = state.duplicateText(child.id);
+          if (newTextId) {
+            newChildren.push({ type: 'text', id: newTextId });
+            // Move the duplicated text  
+            state.moveText(newTextId, offset, true);
+          }
+          break;
+        case 'image':
+          // Manually duplicate image to get the new ID
+          const image = state.images.find(img => img.id === child.id);
+          if (image) {
+            const newImageId = generateId();
+            const newImage = {
+              ...image,
+              id: newImageId,
+              x: (image.x || 0) + offset.x,
+              y: (image.y || 0) + offset.y
+            };
+            set(prevState => ({
+              images: [...prevState.images, newImage]
+            }));
+            newChildren.push({ type: 'image', id: newImageId });
+          }
+          break;
+        case 'use':
+          // Manually duplicate use element to get the new ID
+          const use = state.uses.find(u => u.id === child.id);
+          if (use) {
+            const newUseId = generateId();
+            const newUse = {
+              ...use,
+              id: newUseId,
+              x: (use.x || 0) + offset.x,
+              y: (use.y || 0) + offset.y
+            };
+            set(prevState => ({
+              uses: [...prevState.uses, newUse]
+            }));
+            newChildren.push({ type: 'use', id: newUseId });
+          }
+          break;
+        case 'group':
+          // Recursively duplicate nested groups
+          const newNestedGroupId = state.duplicateGroup(child.id);
+          if (newNestedGroupId) {
+            newChildren.push({ type: 'group', id: newNestedGroupId });
+          }
+          break;
+      }
+    });
+
+    // Create the new group
+    const newGroup: SVGGroup = {
+      id: newGroupId,
+      name: `${group.name} Copy`,
+      children: newChildren,
+      visible: group.visible,
+      locked: false, // New groups are unlocked by default
+      lockLevel: 'movement-sync',
+      transform: group.transform,
+      style: { ...group.style }
+    };
+
+    set(state => ({
+      groups: [...state.groups, newGroup]
+    }));
+
+    return newGroupId;
   },
 
   clearAllGroups: () => {

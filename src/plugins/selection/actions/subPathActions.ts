@@ -1,0 +1,566 @@
+import { 
+  Palette, 
+  Brush, 
+  LineSquiggle, 
+  Waves, 
+  Minimize2, 
+  Layers, 
+  Filter, 
+  Play, 
+  Copy, 
+  Trash2,
+  Lock,
+  RotateCcw
+} from 'lucide-react';
+import { ToolbarAction } from '../../../types/floatingToolbar';
+import { useEditorStore } from '../../../store/editorStore';
+import {
+  createDropShadowFilter,
+  createBlurFilter,
+  createGrayscaleFilter,
+  createSepiaFilter,
+  createEmbossFilter,
+  createGlowFilter,
+  createNeonGlowFilter,
+  formatSVGReference
+} from '../../../utils/svg-elements-utils';
+
+// Get common fill color for selected subpaths
+const getCommonSubPathFillColor = (): string => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  if (selectedSubPaths.length === 0) return '#000000';
+  
+  // Get the parent path of the first subpath
+  const firstSubPath = selectedSubPaths[0];
+  const parentPath = store.paths.find(path => 
+    path.subPaths.some(sp => sp.id === firstSubPath)
+  );
+  
+  const fill = parentPath?.style?.fill;
+  if (typeof fill === 'string') {
+    return fill;
+  }
+  return '#000000';
+};
+
+// Apply fill color to selected subpaths
+const applySubPathFillColor = (color: string) => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  selectedSubPaths.forEach(subPathId => {
+    const parentPath = store.paths.find(path => 
+      path.subPaths.some(sp => sp.id === subPathId)
+    );
+    
+    if (parentPath) {
+      store.updatePathStyle(parentPath.id, { fill: color });
+    }
+  });
+};
+
+// Get common stroke color for selected subpaths
+const getCommonSubPathStrokeColor = (): string => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  if (selectedSubPaths.length === 0) return '#000000';
+  
+  const firstSubPath = selectedSubPaths[0];
+  const parentPath = store.paths.find(path => 
+    path.subPaths.some(sp => sp.id === firstSubPath)
+  );
+  
+  const stroke = parentPath?.style?.stroke;
+  if (typeof stroke === 'string') {
+    return stroke;
+  }
+  return '#000000';
+};
+
+// Apply stroke color to selected subpaths
+const applySubPathStrokeColor = (color: string) => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  selectedSubPaths.forEach(subPathId => {
+    const parentPath = store.paths.find(path => 
+      path.subPaths.some(sp => sp.id === subPathId)
+    );
+    
+    if (parentPath) {
+      store.updatePathStyle(parentPath.id, { stroke: color });
+    }
+  });
+};
+
+// Get common stroke width for selected subpaths
+const getCommonSubPathStrokeWidth = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  if (selectedSubPaths.length === 0) return 1;
+  
+  const firstSubPath = selectedSubPaths[0];
+  const parentPath = store.paths.find(path => 
+    path.subPaths.some(sp => sp.id === firstSubPath)
+  );
+  
+  return parentPath?.style?.strokeWidth || 1;
+};
+
+// Apply stroke width to selected subpaths
+const applySubPathStrokeWidth = (width: string | number) => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  const strokeWidth = typeof width === 'number' ? width : parseFloat(width);
+  
+  if (!isNaN(strokeWidth) && strokeWidth >= 0) {
+    selectedSubPaths.forEach(subPathId => {
+      const parentPath = store.paths.find(path => 
+        path.subPaths.some(sp => sp.id === subPathId)
+      );
+      
+      if (parentPath) {
+        store.updatePathStyle(parentPath.id, { strokeWidth });
+      }
+    });
+  }
+};
+
+// Simplified stroke dash functions
+const getCommonSubPathStrokeDash = () => 'none';
+const getCommonSubPathStrokeLinecap = () => 'butt';
+const getCommonSubPathStrokeLinejoin = () => 'miter';
+
+const applySubPathStrokeDash = (dash: string) => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  selectedSubPaths.forEach(subPathId => {
+    const parentPath = store.paths.find(path => 
+      path.subPaths.some(sp => sp.id === subPathId)
+    );
+    
+    if (parentPath) {
+      store.updatePathStyle(parentPath.id, { strokeDasharray: dash });
+    }
+  });
+};
+
+const applySubPathStrokeLinecap = (linecap: string) => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  selectedSubPaths.forEach(subPathId => {
+    const parentPath = store.paths.find(path => 
+      path.subPaths.some(sp => sp.id === subPathId)
+    );
+    
+    if (parentPath) {
+      store.updatePathStyle(parentPath.id, { strokeLinecap: linecap as any });
+    }
+  });
+};
+
+const applySubPathStrokeLinejoin = (linejoin: string) => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  selectedSubPaths.forEach(subPathId => {
+    const parentPath = store.paths.find(path => 
+      path.subPaths.some(sp => sp.id === subPathId)
+    );
+    
+    if (parentPath) {
+      store.updatePathStyle(parentPath.id, { strokeLinejoin: linejoin as any });
+    }
+  });
+};
+
+// Basic functions
+const smoothSubPaths = () => {
+  console.log('Smooth subpaths - to be implemented');
+};
+
+const simplifySubPaths = () => {
+  console.log('Simplify subpaths - to be implemented');
+};
+
+const duplicateSubPaths = () => {
+  const store = useEditorStore.getState();
+  store.duplicateSelection();
+};
+
+const deleteSubPaths = () => {
+  const store = useEditorStore.getState();
+  
+  store.selection.selectedSubPaths.forEach(subPathId => {
+    store.removeSubPath(subPathId);
+  });
+  
+  store.clearSelection();
+};
+
+const toggleSubPathLock = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  if (selectedSubPaths.length === 0) return;
+  
+  store.pushToHistory();
+  
+  // Determine if we should lock or unlock based on the first selected subpath
+  const firstSubPath = selectedSubPaths[0];
+  const parentPath = store.paths.find(path => 
+    path.subPaths.some(sp => sp.id === firstSubPath)
+  );
+  const subPath = parentPath?.subPaths.find(sp => sp.id === firstSubPath);
+  const shouldLock = !subPath?.locked;
+  
+  // Apply lock/unlock to all selected subpaths
+  selectedSubPaths.forEach(subPathId => {
+    // Find parent path and update the subpath
+    const pathIndex = store.paths.findIndex(path => 
+      path.subPaths.some(sp => sp.id === subPathId)
+    );
+    
+    if (pathIndex !== -1) {
+      const path = store.paths[pathIndex];
+      const updatedSubPaths = path.subPaths.map(sp => 
+        sp.id === subPathId ? { ...sp, locked: shouldLock } : sp
+      );
+      
+      useEditorStore.setState(state => ({
+        paths: state.paths.map((p, index) => 
+          index === pathIndex ? { ...p, subPaths: updatedSubPaths } : p
+        )
+      }));
+    }
+  });
+  
+  // If locking, clear selection as locked subpaths shouldn't be selectable
+  if (shouldLock) {
+    store.clearSelection();
+  }
+};
+
+// Check if selected subpaths are locked
+const areSubPathsLocked = (): boolean => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  if (selectedSubPaths.length === 0) return false;
+  
+  // Check if any of the selected subpaths are locked
+  return selectedSubPaths.some(subPathId => {
+    const subPath = store.paths
+      .flatMap(path => path.subPaths)
+      .find(sp => sp.id === subPathId);
+    return subPath?.locked === true;
+  });
+};
+
+// Clear style for selected subpaths - reset to default values
+const clearSubPathStyle = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  if (selectedSubPaths.length === 0) return;
+  
+  store.pushToHistory();
+  
+  // Define default subpath style values
+  const defaultStyle = {
+    fill: '#000000',
+    stroke: undefined,
+    strokeWidth: undefined,
+    strokeDasharray: undefined,
+    strokeLinecap: undefined,
+    strokeLinejoin: undefined,
+    fillRule: undefined,
+    filter: undefined,
+    opacity: undefined,
+    fillOpacity: undefined,
+    strokeOpacity: undefined
+  };
+  
+  // Find the unique paths that contain the selected subpaths and update their styles
+  const pathsToUpdate = new Set<string>();
+  
+  selectedSubPaths.forEach(subPathId => {
+    const path = store.paths.find(p => 
+      p.subPaths.some(sp => sp.id === subPathId)
+    );
+    if (path) {
+      pathsToUpdate.add(path.id);
+    }
+  });
+  
+  // Apply default style to all paths containing selected subpaths
+  pathsToUpdate.forEach(pathId => {
+    store.updatePathStyle(pathId, defaultStyle);
+  });
+};
+
+// Get selected subpaths utility function
+const getSelectedSubPaths = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths: any[] = [];
+  
+  store.selection.selectedSubPaths.forEach(subPathId => {
+    store.paths.forEach(path => {
+      const subPath = path.subPaths.find(sp => sp.id === subPathId);
+      if (subPath) {
+        selectedSubPaths.push({ path, subPath });
+      }
+    });
+  });
+  
+  return selectedSubPaths;
+};
+
+// Generic function to apply filters to subpaths
+const applyFilterToSubPaths = (filterCreatorFn: () => any) => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  if (selectedSubPaths.length === 0) return;
+  
+  // Create the filter
+  const filterData = filterCreatorFn();
+  store.addFilter(filterData);
+  
+  // Apply using a timeout to ensure the store is updated
+  setTimeout(() => {
+    // Access filters from the store directly to get the most current state
+    const storeState = useEditorStore.getState();
+    const currentFilters = storeState.filters;
+    const newFilter = currentFilters[currentFilters.length - 1]; // Get the last added filter
+    
+    if (newFilter && newFilter.id) {
+      const filterRef = formatSVGReference(newFilter.id);
+      
+      // Apply filter to each selected subpath's parent path
+      selectedSubPaths.forEach(({ path }) => {
+        if (path && path.id) {
+          storeState.updatePathStyle(path.id, { 
+            filter: filterRef
+          });
+        }
+      });
+    }
+  }, 0);
+};
+
+// Specific filter functions
+const applyBlurFilter = () => applyFilterToSubPaths(createBlurFilter);
+const applyDropShadow = () => applyFilterToSubPaths(createDropShadowFilter);
+const applyGlowFilter = () => applyFilterToSubPaths(createGlowFilter);
+const applyGrayscaleFilter = () => applyFilterToSubPaths(createGrayscaleFilter);
+const applySepiaFilter = () => applyFilterToSubPaths(createSepiaFilter);
+const applyEmbossFilter = () => applyFilterToSubPaths(createEmbossFilter);
+const applyNeonGlowFilter = () => applyFilterToSubPaths(createNeonGlowFilter);
+
+// Add fade animation to subpaths
+const addFadeAnimation = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  selectedSubPaths.forEach(({ path }) => {
+    if (path && path.id) {
+      const opacityAnimation = {
+        targetElementId: path.id,
+        type: 'animate' as const,
+        attributeName: 'opacity',
+        from: '1',
+        to: '0.2',
+        dur: '2s',
+        repeatCount: 'indefinite'
+      };
+      
+      store.addAnimation(opacityAnimation);
+    }
+  });
+};
+
+// Add rotation animation to subpaths
+const addRotateAnimation = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  selectedSubPaths.forEach(({ path }) => {
+    if (path && path.id) {
+      const rotationAnimation = {
+        targetElementId: path.id,
+        type: 'animateTransform' as const,
+        attributeName: 'transform',
+        transformType: 'rotate',
+        from: '0 200 200',
+        to: '360 200 200', 
+        dur: '3s',
+        repeatCount: 'indefinite'
+      };
+      
+      store.addAnimation(rotationAnimation);
+    }
+  });
+};
+
+// SubPath filter options
+const subPathFilterOptions = [
+  { id: 'subpath-blur', label: 'Blur', action: applyBlurFilter },
+  { id: 'subpath-shadow', label: 'Drop Shadow', action: applyDropShadow },
+  { id: 'subpath-glow', label: 'Glow', action: applyGlowFilter },
+  { id: 'subpath-grayscale', label: 'Grayscale', action: applyGrayscaleFilter },
+  { id: 'subpath-sepia', label: 'Sepia', action: applySepiaFilter },
+  { id: 'subpath-emboss', label: 'Emboss', action: applyEmbossFilter },
+  { id: 'subpath-neon-glow', label: 'Neon Glow', action: applyNeonGlowFilter }
+];
+
+// SubPath animation options
+const subPathAnimationOptions = [
+  { 
+    id: 'subpath-fade', 
+    label: 'Fade In/Out', 
+    action: addFadeAnimation 
+  },
+  { 
+    id: 'subpath-rotate', 
+    label: 'Rotate', 
+    action: addRotateAnimation 
+  }
+];
+
+export const subPathActions: ToolbarAction[] = [
+  {
+    id: 'subpath-fill-color',
+    icon: Palette,
+    label: 'Fill Color',
+    type: 'color',
+    color: {
+      currentColor: getCommonSubPathFillColor(),
+      onChange: applySubPathFillColor
+    },
+    priority: 100,
+    tooltip: 'Change subpath fill color'
+  },
+  {
+    id: 'subpath-stroke-color',
+    icon: Brush,
+    label: 'Stroke Color',
+    type: 'color',
+    color: {
+      currentColor: getCommonSubPathStrokeColor(),
+      onChange: applySubPathStrokeColor
+    },
+    priority: 95,
+    tooltip: 'Change subpath stroke color'
+  },
+  {
+    id: 'subpath-stroke-options',
+    icon: LineSquiggle,
+    label: 'Stroke Options',
+    type: 'input',
+    input: {
+      currentValue: getCommonSubPathStrokeWidth(),
+      onChange: applySubPathStrokeWidth,
+      type: 'number',
+      placeholder: '1'
+    },
+    strokeOptions: {
+      getCurrentStrokeWidth: getCommonSubPathStrokeWidth,
+      getCurrentStrokeDash: getCommonSubPathStrokeDash,
+      getCurrentStrokeLinecap: getCommonSubPathStrokeLinecap,
+      getCurrentStrokeLinejoin: getCommonSubPathStrokeLinejoin,
+      onStrokeWidthChange: applySubPathStrokeWidth,
+      onStrokeDashChange: applySubPathStrokeDash,
+      onStrokeLinecapChange: applySubPathStrokeLinecap,
+      onStrokeLinejoinChange: applySubPathStrokeLinejoin
+    },
+    priority: 90,
+    tooltip: 'Configure stroke width, dash pattern, line cap, and line join'
+  },
+  {
+    id: 'subpath-smooth',
+    icon: Waves,
+    label: 'Smooth',
+    type: 'button',
+    action: smoothSubPaths,
+    priority: 85,
+    tooltip: 'Apply smoothing to subpath curves'
+  },
+  {
+    id: 'subpath-simplify',
+    icon: Minimize2,
+    label: 'Simplify',
+    type: 'button',
+    action: simplifySubPaths,
+    priority: 80,
+    tooltip: 'Simplify subpath by reducing points'
+  },
+  {
+    id: 'subpath-filters',
+    icon: Filter,
+    label: 'Filters',
+    type: 'dropdown',
+    dropdown: {
+      options: subPathFilterOptions
+    },
+    priority: 60,
+    tooltip: 'Apply filters'
+  },
+  {
+    id: 'subpath-animations',
+    icon: Play,
+    label: 'Animations',
+    type: 'dropdown',
+    dropdown: {
+      options: subPathAnimationOptions
+    },
+    priority: 50,
+    tooltip: 'Add animations'
+  },
+  {
+    id: 'subpath-duplicate',
+    icon: Copy,
+    label: 'Duplicate',
+    type: 'button',
+    action: duplicateSubPaths,
+    priority: 20,
+    tooltip: 'Duplicate subpath'
+  },
+  {
+    id: 'subpath-clear-style',
+    icon: RotateCcw,
+    label: 'Clear Style',
+    type: 'button',
+    action: clearSubPathStyle,
+    priority: 15,
+    tooltip: 'Reset subpath to default style'
+  },
+  {
+    id: 'subpath-lock',
+    icon: Lock,
+    label: 'Lock/Unlock',
+    type: 'toggle',
+    toggle: {
+      isActive: areSubPathsLocked,
+      onToggle: toggleSubPathLock
+    },
+    priority: 12,
+    tooltip: 'Toggle subpath lock state'
+  },
+  {
+    id: 'subpath-delete',
+    icon: Trash2,
+    label: 'Delete',
+    type: 'button',
+    action: deleteSubPaths,
+    priority: 10,
+    destructive: true,
+    tooltip: 'Delete subpath'
+  }
+];

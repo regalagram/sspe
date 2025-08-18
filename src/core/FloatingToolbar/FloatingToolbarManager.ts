@@ -163,7 +163,18 @@ export class FloatingToolbarManager {
       return false;
     }
     
-    // Check if any element type matches
+    // If this is a mixed selection and the definition is for 'mixed', it should match
+    if (elementTypes.includes('mixed') && definition.elementTypes.includes('mixed')) {
+      return true;
+    }
+    
+    // If this is a mixed selection but the definition is NOT for 'mixed', it should NOT match
+    // This ensures that mixed selection actions take precedence over individual element type actions
+    if (elementTypes.includes('mixed') && !definition.elementTypes.includes('mixed')) {
+      return false;
+    }
+    
+    // For non-mixed selections, check if any element type matches
     return definition.elementTypes.some(defType => elementTypes.includes(defType));
   }
 
@@ -1031,7 +1042,7 @@ export class FloatingToolbarManager {
 
   private applyUnifiedLockToAllSelected(): void {
     // Import the recursive lock functions
-    import('../../plugins/selection/FloatingSelectionActions').then(({ recursivelyLockGroup, recursivelyLockPath, recursivelyLockSubPath }) => {
+    import('../../plugins/selection/ModularFloatingActions').then(({ recursivelyLockGroup, recursivelyLockPath, recursivelyLockSubPath }) => {
       const store = useEditorStore.getState();
       const selection = store.selection;
       
@@ -1161,7 +1172,7 @@ export class FloatingToolbarManager {
           switch (arrangeId) {
             case 'align-left':
               // Import and call the mixed align functions
-              import('../../plugins/selection/FloatingSelectionActions').then(module => {
+              import('../../plugins/selection/ModularFloatingActions').then(module => {
                 // We need to access the internal functions - for now we'll execute the original action
                 if (arrangeOption.action && typeof arrangeOption.action === 'function') {
                   arrangeOption.action();
