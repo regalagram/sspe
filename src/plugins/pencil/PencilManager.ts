@@ -47,7 +47,15 @@ class PencilManager {
   private readonly updateThrottle = 1; // Very responsive for debugging
 
   constructor() {
-    this.loadFromStorage();
+    // Force fixed pencil style (don't load from storage)
+    this.state.strokeStyle = {
+      stroke: '#000000',
+      strokeWidth: 2,
+      fill: 'none',
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+    };
+    this.loadFromStorage(); // Load only smoothing settings, not stroke style
     // Registrar con ToolModeManager
     toolModeManager.setPencilManager(this);
   }
@@ -58,8 +66,8 @@ class PencilManager {
   private loadFromStorage() {
     const savedData = PencilStorage.load();
     if (savedData) {
-      // Apply stroke style
-      this.state.strokeStyle = { ...savedData.strokeStyle };
+      // DON'T load stroke style - always use fixed defaults
+      // this.state.strokeStyle = { ...savedData.strokeStyle };
 
       // Apply raw drawing mode
       this.state.rawDrawingMode = savedData.rawDrawingMode;
@@ -431,10 +439,17 @@ class PencilManager {
     this.state.lastPoint = null;
   }
 
-  // Method to change pencil stroke style
+  // Method to change pencil stroke style (DISABLED - uses fixed defaults)
   setStrokeStyle(style: Partial<PencilState['strokeStyle']>) {
-    this.state.strokeStyle = { ...this.state.strokeStyle, ...style };
-    this.saveToStorage(); // Auto-save when style changes
+    // Fixed pencil style - ignore any style changes
+    this.state.strokeStyle = {
+      stroke: '#000000',
+      strokeWidth: 2,
+      fill: 'none',
+      strokeLinecap: 'round',
+      strokeLinejoin: 'round',
+    };
+    // Don't save custom styles anymore
   }
 
   getStrokeStyle() {

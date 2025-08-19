@@ -41,8 +41,8 @@ export const WritingShapeTools: React.FC = () => {
     const iconSize = size || (isMobile ? 12 : 13);
     const iconMap: Record<string, React.ReactElement> = {
       'debug-dot': <Dot size={iconSize} />,
-      'rectangle': <Square size={iconSize} />,
-      'square': <Square size={iconSize} />,
+      'rectangle': <Square size={iconSize} strokeWidth={2.5} />,
+      'square': <Square size={iconSize} strokeWidth={2.5} />,
       'circle': <Circle size={iconSize} />,
       'ellipse': <Circle size={iconSize} />,
       'triangle': <Triangle size={iconSize} />,
@@ -94,8 +94,8 @@ export const WritingShapeTools: React.FC = () => {
             touchAction: 'manipulation'
           }}>
             {React.cloneElement(
-              isShapeActive && activeTemplate ? getShapeIcon(activeTemplate.id) : <Square />, 
-              { size: iconSize }
+              isShapeActive && activeTemplate ? getShapeIcon(activeTemplate.id) : <Square strokeWidth={2.5} />, 
+              { size: iconSize, strokeWidth: 2.5 }
             )}
           </div>
         }

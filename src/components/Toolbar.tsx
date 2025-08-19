@@ -1,13 +1,11 @@
 import React from 'react';
 import { UIComponentDefinition } from '../core/PluginSystem';
 import { MobileUndoRedoControls } from '../plugins/undo-redo/ToolbarUndoRedo';
-import { MobileZoomControls } from '../plugins/zoom/ToolbarZoom';
+import { ConsolidatedZoomControls } from './ConsolidatedZoomControls';
 import { AnimationPlayButton } from './AnimationPlayButton';
 import { SandwichButton } from './SandwichButton';
-import { WritingCreationTools } from './WritingCreationTools';
-import { WritingPencilTools } from './WritingPencilTools';
+import { WritingConsolidatedTools } from './WritingConsolidatedTools';
 import { WritingShapeTools } from './WritingShapeTools';
-import { WritingCurveTools } from './WritingCurveTools';
 import { WritingTextTools } from './WritingTextTools';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 
@@ -83,14 +81,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <MobileUndoRedoControls />
 
         {/* Section 2: Writing Tools */}
-        <WritingCreationTools />
-        <WritingPencilTools />
+        <WritingConsolidatedTools />
         <WritingShapeTools />
-        <WritingCurveTools />
         <WritingTextTools />
 
         {/* Section 3: Zoom Controls */}
-        <MobileZoomControls />
+        <ConsolidatedZoomControls />
 
         {/* Section 4: Animation Controls */}
         <AnimationPlayButton />

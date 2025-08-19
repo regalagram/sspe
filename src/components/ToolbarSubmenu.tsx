@@ -35,11 +35,12 @@ export const ToolbarSubmenu: React.FC<ToolbarSubmenuProps> = ({
         if (submenuRef.current) {
           submenuHeight = submenuRef.current.offsetHeight;
         } else {
-          // Count only rendered children (those that aren't null/false)
+          // More accurate height estimation accounting for different item types
           const visibleChildren = React.Children.toArray(children).filter(child => 
             child != null && Boolean(child)
           );
-          submenuHeight = visibleChildren.length * 32 + 20;
+          // Estimate: 34px per item + extra padding for headers/dividers
+          submenuHeight = Math.min(400, visibleChildren.length * 34 + 40);
         }
         
         // Position relative to the trigger button based on position prop
@@ -95,11 +96,12 @@ export const ToolbarSubmenu: React.FC<ToolbarSubmenuProps> = ({
         if (submenuRef.current) {
           submenuHeight = submenuRef.current.offsetHeight;
         } else {
-          // Count only rendered children (those that aren't null/false)
+          // More accurate height estimation accounting for different item types
           const visibleChildren = React.Children.toArray(children).filter(child => 
             child != null && Boolean(child)
           );
-          submenuHeight = visibleChildren.length * 32 + 20;
+          // Estimate: 34px per item + extra padding for headers/dividers
+          submenuHeight = Math.min(400, visibleChildren.length * 34 + 40);
         }
         
         const top = position === 'top' 
@@ -143,7 +145,7 @@ export const ToolbarSubmenu: React.FC<ToolbarSubmenuProps> = ({
     if (isOpen && submenuRef.current && triggerRef.current) {
       const triggerRect = triggerRef.current.getBoundingClientRect();
       const submenuWidth = 180;
-      const submenuHeight = submenuRef.current.offsetHeight; // Actual DOM height
+      const submenuHeight = submenuRef.current.offsetHeight || 350; // Actual DOM height with fallback
       
       const top = position === 'top' 
         ? triggerRect.top - 4 - submenuHeight
@@ -205,7 +207,7 @@ export const ToolbarSubmenu: React.FC<ToolbarSubmenuProps> = ({
     maxWidth: '220px',
     padding: '0px',
     display: isOpen ? 'block' : 'none',
-    maxHeight: '300px',
+    maxHeight: '400px',
     overflowY: 'auto',
     WebkitOverflowScrolling: 'touch',
     opacity: 1,

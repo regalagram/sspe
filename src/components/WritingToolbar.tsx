@@ -1,9 +1,7 @@
 import React from 'react';
 import { UIComponentDefinition } from '../core/PluginSystem';
-import { WritingCreationTools } from './WritingCreationTools';
-import { WritingPencilTools } from './WritingPencilTools';
+import { WritingConsolidatedTools } from './WritingConsolidatedTools';
 import { WritingShapeTools } from './WritingShapeTools';
-import { WritingCurveTools } from './WritingCurveTools';
 import { WritingTextTools } from './WritingTextTools';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 
@@ -70,19 +68,13 @@ export const WritingToolbar: React.FC<WritingToolbarProps> = ({
         className="top-toolbar-content"
         style={toolbarContentStyle}
       >
-        {/* Section 1: Creation Tools (M, L, C, Z, New Path) */}
-        <WritingCreationTools />
+        {/* Section 1: Consolidated Drawing Tools (Creation, Pencil, Curves) */}
+        <WritingConsolidatedTools />
 
-        {/* Section 2: Pencil Drawing */}
-        <WritingPencilTools />
-
-        {/* Section 3: Shapes */}
+        {/* Section 2: Shapes */}
         <WritingShapeTools />
 
-        {/* Section 4: Curve Tools */}
-        <WritingCurveTools />
-
-        {/* Section 5: Text Tools */}
+        {/* Section 3: Text Tools */}
         <WritingTextTools />
       </div>
     </div>
