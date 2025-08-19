@@ -533,6 +533,32 @@ const addRotateAnimation = () => {
   });
 };
 
+// Function to open filter panel
+const openFilterPanel = () => {
+  // Import useMobileDetection hook
+  import('../../../hooks/useMobileDetection').then(({ useMobileDetection }) => {
+    // Import panel mode store
+    import('../../panelmode/PanelManager').then(({ usePanelModeStore }) => {
+      // Check if it's mobile or desktop (we'll use a simple check here)
+      const isMobile = window.innerWidth < 768;
+      
+      if (isMobile) {
+        // Mobile: We need to trigger the mobile bottom sheet
+        // For now, we'll show an alert - the mobile implementation would need 
+        // access to the mobile container's functions
+        console.log('Mobile filter panel opening not fully implemented yet');
+      } else {
+        // Desktop: Open accordion sidebar and expand filter panel
+        const { setAccordionVisible, setAccordionExpanded, accordionVisible } = usePanelModeStore.getState();
+        if (!accordionVisible) {
+          setAccordionVisible(true);
+        }
+        setAccordionExpanded('filter-controls');
+      }
+    });
+  });
+};
+
 // SubPath filter options
 const subPathFilterOptions = [
   { id: 'subpath-blur', label: 'Blur', action: applyBlurFilter },
@@ -541,8 +567,32 @@ const subPathFilterOptions = [
   { id: 'subpath-grayscale', label: 'Grayscale', action: applyGrayscaleFilter },
   { id: 'subpath-sepia', label: 'Sepia', action: applySepiaFilter },
   { id: 'subpath-emboss', label: 'Emboss', action: applyEmbossFilter },
-  { id: 'subpath-neon-glow', label: 'Neon Glow', action: applyNeonGlowFilter }
+  { id: 'subpath-neon-glow', label: 'Neon Glow', action: applyNeonGlowFilter },
+  { id: 'subpath-more-filters', label: 'More ...', action: openFilterPanel }
 ];
+
+// Function to open animation panel
+const openAnimationPanel = () => {
+  // Import panel mode store
+  import('../../panelmode/PanelManager').then(({ usePanelModeStore }) => {
+    // Check if it's mobile or desktop (we'll use a simple check here)
+    const isMobile = window.innerWidth < 768;
+    
+    if (isMobile) {
+      // Mobile: We need to trigger the mobile bottom sheet
+      // For now, we'll show an alert - the mobile implementation would need 
+      // access to the mobile container's functions
+      console.log('Mobile animation panel opening not fully implemented yet');
+    } else {
+      // Desktop: Open accordion sidebar and expand animation panel
+      const { setAccordionVisible, setAccordionExpanded, accordionVisible } = usePanelModeStore.getState();
+      if (!accordionVisible) {
+        setAccordionVisible(true);
+      }
+      setAccordionExpanded('animation-controls');
+    }
+  });
+};
 
 // SubPath animation options
 const subPathAnimationOptions = [
@@ -555,7 +605,8 @@ const subPathAnimationOptions = [
     id: 'subpath-rotate', 
     label: 'Rotate', 
     action: addRotateAnimation 
-  }
+  },
+  { id: 'subpath-more-animations', label: 'More ...', action: openAnimationPanel }
 ];
 
 // Group selected subpaths

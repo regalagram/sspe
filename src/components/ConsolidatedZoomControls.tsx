@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Target, Grid3X3, Expand, Minimize } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Target, Grid3X3, Expand, Minimize, Navigation } from 'lucide-react';
 import { ToolbarSection } from './ToolbarButton';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useEditorStore } from '../store/editorStore';
@@ -14,6 +14,7 @@ export const ConsolidatedZoomControls: React.FC = () => {
     selection, 
     grid,
     isFullscreen,
+    enabledFeatures,
     zoomIn, 
     zoomOut, 
     zoomToFit, 
@@ -23,7 +24,8 @@ export const ConsolidatedZoomControls: React.FC = () => {
     toggleGrid,
     toggleSnapToGrid,
     toggleGridLabels,
-    toggleFullscreen
+    toggleFullscreen,
+    toggleFeature
   } = useEditorStore();
 
   // Match floating toolbar button sizing
@@ -172,12 +174,6 @@ export const ConsolidatedZoomControls: React.FC = () => {
             setIsSubmenuOpen(false);
           }}
         />
-        
-        <div style={{ 
-          height: '1px', 
-          background: '#e5e7eb', 
-          margin: '4px 0' 
-        }} />
         {hasSelection && (
           <SubmenuItem
             icon={<Target size={isMobile ? 12 : 13} />}
@@ -198,6 +194,12 @@ export const ConsolidatedZoomControls: React.FC = () => {
             }}
           />
         )}
+        
+        <div style={{ 
+          height: '1px', 
+          background: '#e5e7eb', 
+          margin: '4px 0' 
+        }} />
         
         {/* Grid Controls */}
         <div style={{ padding: '8px 12px', fontSize: '12px', color: '#6b7280', fontWeight: 600 }}>
@@ -229,6 +231,22 @@ export const ConsolidatedZoomControls: React.FC = () => {
             setIsSubmenuOpen(false);
           }}
           active={!grid.showLabels}
+        />
+        
+        <div style={{ 
+          height: '1px', 
+          background: '#e5e7eb', 
+          margin: '4px 0' 
+        }} />
+        
+        <SubmenuItem
+          icon={<Navigation size={isMobile ? 12 : 13} />}
+          label={enabledFeatures.stickyGuidelinesEnabled ? "Disable Sticky Guidelines" : "Enable Sticky Guidelines"}
+          onClick={() => {
+            toggleFeature('stickyGuidelinesEnabled');
+            setIsSubmenuOpen(false);
+          }}
+          active={enabledFeatures.stickyGuidelinesEnabled}
         />
         
         <div style={{ 

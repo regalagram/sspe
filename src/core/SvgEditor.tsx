@@ -38,6 +38,7 @@ export const SvgEditor: React.FC = () => {
   // State for mobile bottom sheet
   const [mobileBottomSheetOpen, setMobileBottomSheetOpen] = React.useState(false);
   const [mobileToggleFunction, setMobileToggleFunction] = React.useState<(() => void) | null>(null);
+  const [mobilePluginSelectFunction, setMobilePluginSelectFunction] = React.useState<((pluginId: string) => void) | null>(null);
 
   // Callbacks for mobile bottom sheet
   const handleBottomSheetStateChange = React.useCallback((isOpen: boolean) => {
@@ -47,6 +48,34 @@ export const SvgEditor: React.FC = () => {
   const handleToggleBottomSheetRef = React.useCallback((toggleFn: () => void) => {
     setMobileToggleFunction(() => toggleFn);
   }, []);
+
+  const handlePluginSelectRef = React.useCallback((selectFn: (pluginId: string) => void) => {
+    setMobilePluginSelectFunction(() => selectFn);
+  }, []);
+
+  // Function to open Visual Debug panel
+  const handleOpenVisualDebugPanel = React.useCallback(() => {
+    if (isMobileDevice) {
+      // Mobile: Open bottom sheet and select Visual Debug plugin
+      if (mobileToggleFunction && !mobileBottomSheetOpen) {
+        mobileToggleFunction();
+      }
+      if (mobilePluginSelectFunction) {
+        // Use timeout to ensure bottom sheet is open first
+        setTimeout(() => {
+          mobilePluginSelectFunction('visual-debug-controls');
+        }, 100);
+      }
+    } else {
+      // Desktop: Open accordion sidebar and expand Visual Debug panel
+      if (!accordionVisible) {
+        toggleAccordionVisible();
+      }
+      // Expand the Visual Debug panel specifically
+      const { setAccordionExpanded } = usePanelModeStore.getState();
+      setAccordionExpanded('visual-debug-controls');
+    }
+  }, [isMobileDevice, mobileToggleFunction, mobileBottomSheetOpen, mobilePluginSelectFunction, accordionVisible, toggleAccordionVisible]);
 
   
   // Use custom hooks for cleaner separation of concerns
@@ -161,6 +190,8 @@ export const SvgEditor: React.FC = () => {
           toolbarPlugins={toolbarPanels}
           onBottomSheetStateChange={handleBottomSheetStateChange}
           onToggleBottomSheet={handleToggleBottomSheetRef}
+          onPluginSelect={handlePluginSelectRef}
+          onOpenVisualDebugPanel={handleOpenVisualDebugPanel}
         >
           {svgCanvas}
         </MobileContainer>
@@ -176,7 +207,10 @@ export const SvgEditor: React.FC = () => {
     <div className="svg-editor" style={editorStyle}>
       
       {/* Controls toolbar at bottom */}
-      <Toolbar toolbarPlugins={toolbarPanels} />
+      <Toolbar 
+        toolbarPlugins={toolbarPanels} 
+        onOpenVisualDebugPanel={handleOpenVisualDebugPanel}
+      />
       
       {svgCanvas}
       

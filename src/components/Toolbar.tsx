@@ -3,6 +3,7 @@ import { UIComponentDefinition } from '../core/PluginSystem';
 import { MobileUndoRedoControls } from '../plugins/undo-redo/ToolbarUndoRedo';
 import { ConsolidatedZoomControls } from './ConsolidatedZoomControls';
 import { AnimationPlayButton } from './AnimationPlayButton';
+import { DebugButton } from './DebugButton';
 import { SandwichButton } from './SandwichButton';
 import { WritingConsolidatedTools } from './WritingConsolidatedTools';
 import { WritingShapeTools } from './WritingShapeTools';
@@ -14,12 +15,15 @@ interface ToolbarProps {
   // For mobile bottom sheet control
   onMobileToggle?: () => void;
   isMobileBottomSheetOpen?: boolean;
+  // For debug panel access
+  onOpenVisualDebugPanel?: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ 
   toolbarPlugins,
   onMobileToggle,
-  isMobileBottomSheetOpen
+  isMobileBottomSheetOpen,
+  onOpenVisualDebugPanel
 }) => {
   const { isMobile, isTablet } = useMobileDetection();
   const isMobileDevice = isMobile || isTablet;
@@ -91,7 +95,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         {/* Section 4: Animation Controls */}
         <AnimationPlayButton />
 
-        {/* Section 5: Sandwich button for panels/sidebar */}
+        {/* Section 5: Debug Tools */}
+        <DebugButton onOpenVisualDebugPanel={onOpenVisualDebugPanel} />
+
+        {/* Section 6: Sandwich button for panels/sidebar */}
         <SandwichButton 
           onMobileToggle={onMobileToggle}
           isMobileBottomSheetOpen={isMobileBottomSheetOpen}

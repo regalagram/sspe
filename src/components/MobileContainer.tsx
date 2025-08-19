@@ -11,6 +11,8 @@ interface MobileContainerProps {
   children: React.ReactNode; // SVG canvas content
   onBottomSheetStateChange?: (isOpen: boolean) => void;
   onToggleBottomSheet?: (toggle: () => void) => void;
+  onPluginSelect?: (selectFn: (pluginId: string) => void) => void;
+  onOpenVisualDebugPanel?: () => void;
 }
 
 // Load saved bottom sheet state from localStorage
@@ -39,7 +41,9 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({
   toolbarPlugins,
   children,
   onBottomSheetStateChange,
-  onToggleBottomSheet
+  onToggleBottomSheet,
+  onPluginSelect,
+  onOpenVisualDebugPanel
 }) => {
   const { isMobile, isTablet } = useMobileDetection();
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(() => loadSavedBottomSheetState());
@@ -76,6 +80,17 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({
     setSelectedPlugin(plugin);
   };
 
+  // Programmatic plugin selection by ID
+  const handlePluginSelectById = React.useCallback((pluginId: string) => {
+    const plugin = sidebarPlugins.find(p => p.id === pluginId);
+    if (plugin) {
+      setSelectedPlugin(plugin);
+      if (!isBottomSheetOpen) {
+        setIsBottomSheetOpen(true);
+      }
+    }
+  }, [sidebarPlugins, isBottomSheetOpen]);
+
   const handleBackToMenu = () => {
     setSelectedPlugin(null);
   };
@@ -99,6 +114,13 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({
     }
   }, [onToggleBottomSheet, handleToggleBottomSheet]);
 
+  // Provide plugin selection function to parent
+  useEffect(() => {
+    if (onPluginSelect) {
+      onPluginSelect(handlePluginSelectById);
+    }
+  }, [onPluginSelect, handlePluginSelectById]);
+
   const isMobileDevice = isMobile || isTablet;
 
   return (
@@ -114,6 +136,7 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({
         toolbarPlugins={toolbarPlugins}
         onMobileToggle={handleToggleBottomSheet}
         isMobileBottomSheetOpen={isBottomSheetOpen}
+        onOpenVisualDebugPanel={onOpenVisualDebugPanel}
       />
       
       {/* Main Content Area - Full background canvas */}

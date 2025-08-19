@@ -339,6 +339,29 @@ const addScaleAnimationToText = () => {
   });
 };
 
+// Function to open animation panel for text
+const openAnimationPanelForText = () => {
+  // Import panel mode store
+  import('../panelmode/PanelManager').then(({ usePanelModeStore }) => {
+    // Check if it's mobile or desktop (we'll use a simple check here)
+    const isMobile = window.innerWidth < 768;
+    
+    if (isMobile) {
+      // Mobile: We need to trigger the mobile bottom sheet
+      // For now, we'll show an alert - the mobile implementation would need 
+      // access to the mobile container's functions
+      console.log('Mobile animation panel opening not fully implemented yet');
+    } else {
+      // Desktop: Open accordion sidebar and expand animation panel
+      const { setAccordionVisible, setAccordionExpanded, accordionVisible } = usePanelModeStore.getState();
+      if (!accordionVisible) {
+        setAccordionVisible(true);
+      }
+      setAccordionExpanded('animation-controls');
+    }
+  });
+};
+
 // Text animation options
 const textAnimationOptions = [
   { 
@@ -355,7 +378,8 @@ const textAnimationOptions = [
     id: 'text-scale', 
     label: 'Scale', 
     action: addScaleAnimationToText 
-  }
+  },
+  { id: 'text-more-animations', label: 'More ...', action: openAnimationPanelForText }
 ];
 
 // Arrange functions for texts
@@ -585,6 +609,29 @@ const textArrangeOptions = [
   }
 ];
 
+// Function to open filter panel for text
+const openFilterPanelForText = () => {
+  // Import panel mode store
+  import('../panelmode/PanelManager').then(({ usePanelModeStore }) => {
+    // Check if it's mobile or desktop (we'll use a simple check here)
+    const isMobile = window.innerWidth < 768;
+    
+    if (isMobile) {
+      // Mobile: We need to trigger the mobile bottom sheet
+      // For now, we'll show an alert - the mobile implementation would need 
+      // access to the mobile container's functions
+      console.log('Mobile filter panel opening not fully implemented yet');
+    } else {
+      // Desktop: Open accordion sidebar and expand filter panel
+      const { setAccordionVisible, setAccordionExpanded, accordionVisible } = usePanelModeStore.getState();
+      if (!accordionVisible) {
+        setAccordionVisible(true);
+      }
+      setAccordionExpanded('filter-controls');
+    }
+  });
+};
+
 // Text filter options - Essential 7 filters
 const textFilterOptions = [
   { id: 'text-blur', label: 'Blur', action: applyBlurFilterToText },
@@ -593,7 +640,8 @@ const textFilterOptions = [
   { id: 'text-grayscale', label: 'Grayscale', action: applyGrayscaleFilterToText },
   { id: 'text-sepia', label: 'Sepia', action: applySepiaFilterToText },
   { id: 'text-emboss', label: 'Emboss', action: applyEmbossFilterToText },
-  { id: 'text-neon-glow', label: 'Neon Glow', action: applyNeonGlowFilterToText }
+  { id: 'text-neon-glow', label: 'Neon Glow', action: applyNeonGlowFilterToText },
+  { id: 'text-more-filters', label: 'More ...', action: openFilterPanelForText }
 ];
 
 // Calculate bounding box of all selected elements

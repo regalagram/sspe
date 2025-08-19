@@ -78,7 +78,7 @@ export class StickyManager {
     enableEdgeSnapping: true,
     enableCenterSnapping: true,
     enableMidpointSnapping: true,
-    debugMode: true // Debug mode ENABLED by default for debugging
+    debugMode: false // Debug mode DISABLED by default
   };
   private activeGuidelines: AlignmentGuide[] = [];
   private activeDebugProjections: DebugProjection[] = [];
