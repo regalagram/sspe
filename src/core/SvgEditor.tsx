@@ -40,16 +40,22 @@ export const SvgEditor: React.FC = () => {
   const [mobileToggleFunction, setMobileToggleFunction] = React.useState<(() => void) | null>(null);
   const [mobilePluginSelectFunction, setMobilePluginSelectFunction] = React.useState<((pluginId: string) => void) | null>(null);
 
-  // Callbacks for mobile bottom sheet
+  // Use refs to prevent callback recreation causing infinite loops
+  const mobileToggleFunctionRef = React.useRef<(() => void) | null>(null);
+  const mobilePluginSelectFunctionRef = React.useRef<((pluginId: string) => void) | null>(null);
+
+  // Callbacks for mobile bottom sheet - stabilized with refs
   const handleBottomSheetStateChange = React.useCallback((isOpen: boolean) => {
     setMobileBottomSheetOpen(isOpen);
   }, []);
 
   const handleToggleBottomSheetRef = React.useCallback((toggleFn: () => void) => {
+    mobileToggleFunctionRef.current = toggleFn;
     setMobileToggleFunction(() => toggleFn);
   }, []);
 
   const handlePluginSelectRef = React.useCallback((selectFn: (pluginId: string) => void) => {
+    mobilePluginSelectFunctionRef.current = selectFn;
     setMobilePluginSelectFunction(() => selectFn);
   }, []);
 
@@ -57,13 +63,13 @@ export const SvgEditor: React.FC = () => {
   const handleOpenVisualDebugPanel = React.useCallback(() => {
     if (isMobileDevice) {
       // Mobile: Open bottom sheet and select Visual Debug plugin
-      if (mobileToggleFunction && !mobileBottomSheetOpen) {
-        mobileToggleFunction();
+      if (mobileToggleFunctionRef.current && !mobileBottomSheetOpen) {
+        mobileToggleFunctionRef.current();
       }
-      if (mobilePluginSelectFunction) {
+      if (mobilePluginSelectFunctionRef.current) {
         // Use timeout to ensure bottom sheet is open first
         setTimeout(() => {
-          mobilePluginSelectFunction('visual-debug-controls');
+          mobilePluginSelectFunctionRef.current?.('visual-debug-controls');
         }, 100);
       }
     } else {
@@ -75,33 +81,96 @@ export const SvgEditor: React.FC = () => {
       const { setAccordionExpanded } = usePanelModeStore.getState();
       setAccordionExpanded('visual-debug-controls');
     }
-  }, [isMobileDevice, mobileToggleFunction, mobileBottomSheetOpen, mobilePluginSelectFunction, accordionVisible, toggleAccordionVisible]);
+  }, [isMobileDevice, mobileBottomSheetOpen, accordionVisible, toggleAccordionVisible]);
+
+  // Function to open Filter panel
+  const handleOpenFilterPanel = React.useCallback(() => {
+    if (isMobileDevice) {
+      // Mobile: Open bottom sheet and select Filter plugin
+      if (mobileToggleFunctionRef.current && !mobileBottomSheetOpen) {
+        mobileToggleFunctionRef.current();
+      }
+      if (mobilePluginSelectFunctionRef.current) {
+        // Use timeout to ensure bottom sheet is open first
+        setTimeout(() => {
+          mobilePluginSelectFunctionRef.current?.('filter-controls');
+        }, 100);
+      }
+    } else {
+      // Desktop: Open accordion sidebar and expand Filter panel
+      if (!accordionVisible) {
+        toggleAccordionVisible();
+      }
+      // Expand the Filter panel specifically
+      const { setAccordionExpanded } = usePanelModeStore.getState();
+      setAccordionExpanded('filter-controls');
+    }
+  }, [isMobileDevice, mobileBottomSheetOpen, accordionVisible, toggleAccordionVisible]);
+
+  // Function to open Animation panel
+  const handleOpenAnimationPanel = React.useCallback(() => {
+    if (isMobileDevice) {
+      // Mobile: Open bottom sheet and select Animation plugin
+      if (mobileToggleFunctionRef.current && !mobileBottomSheetOpen) {
+        mobileToggleFunctionRef.current();
+      }
+      if (mobilePluginSelectFunctionRef.current) {
+        // Use timeout to ensure bottom sheet is open first
+        setTimeout(() => {
+          mobilePluginSelectFunctionRef.current?.('animation-controls');
+        }, 100);
+      }
+    } else {
+      // Desktop: Open accordion sidebar and expand Animation panel
+      if (!accordionVisible) {
+        toggleAccordionVisible();
+      }
+      // Expand the Animation panel specifically
+      const { setAccordionExpanded } = usePanelModeStore.getState();
+      setAccordionExpanded('animation-controls');
+    }
+  }, [isMobileDevice, mobileBottomSheetOpen, accordionVisible, toggleAccordionVisible]);
+
+  // Register panel openers with pluginManager
+  React.useEffect(() => {
+    pluginManager.setPanelOpeners({
+      openVisualDebugPanel: handleOpenVisualDebugPanel,
+      openFilterPanel: handleOpenFilterPanel,
+      openAnimationPanel: handleOpenAnimationPanel,
+    });
+  }, [handleOpenVisualDebugPanel, handleOpenFilterPanel, handleOpenAnimationPanel]);
 
   
   // Use custom hooks for cleaner separation of concerns
   const { getCursor } = useCombinedCursor();
   const { editorStyle, svgStyle } = useEditorStyles({ isFullscreen, accordionVisible });
 
-  // Get svg-content plugins
-  const svgContentPlugins = pluginManager.getEnabledPlugins()
-    .flatMap(plugin => plugin.ui || [])
-    .filter(ui => ui.position === 'svg-content')
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
+  // Get svg-content plugins - memoize to prevent unnecessary re-renders
+  const svgContentPlugins = React.useMemo(() => 
+    pluginManager.getEnabledPlugins()
+      .flatMap(plugin => plugin.ui || [])
+      .filter(ui => ui.position === 'svg-content')
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+  , []);
 
-  // Get sidebar panels for mobile/accordion
-  const sidebarPanels = pluginManager.getEnabledPlugins()
-    .flatMap(plugin => plugin.ui || [])
-    .filter(ui => ui.position === 'sidebar')
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
+  // Get sidebar panels for mobile/accordion - memoize to prevent unnecessary re-renders
+  const sidebarPanels = React.useMemo(() => 
+    pluginManager.getEnabledPlugins()
+      .flatMap(plugin => plugin.ui || [])
+      .filter(ui => ui.position === 'sidebar')
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+  , []);
 
-  // Get toolbar panels  
-  const toolbarPanels = pluginManager.getEnabledPlugins()
-    .flatMap(plugin => plugin.ui || [])
-    .filter(ui => ui.position === 'toolbar')
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
+  // Get toolbar panels - memoize to prevent unnecessary re-renders
+  const toolbarPanels = React.useMemo(() => 
+    pluginManager.getEnabledPlugins()
+      .flatMap(plugin => plugin.ui || [])
+      .filter(ui => ui.position === 'toolbar')
+      .sort((a, b) => (a.order || 0) - (b.order || 0))
+  , []);
 
   // Get all panels for accordion (sidebar + toolbar) - for desktop
-  const allPanels = [...sidebarPanels, ...toolbarPanels];
+  const allPanels = React.useMemo(() => [...sidebarPanels, ...toolbarPanels], [sidebarPanels, toolbarPanels]);
   
   // Initialize global event handlers
   useGlobalKeyboard();

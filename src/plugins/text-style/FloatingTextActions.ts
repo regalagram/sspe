@@ -340,26 +340,10 @@ const addScaleAnimationToText = () => {
 };
 
 // Function to open animation panel for text
-const openAnimationPanelForText = () => {
-  // Import panel mode store
-  import('../panelmode/PanelManager').then(({ usePanelModeStore }) => {
-    // Check if it's mobile or desktop (we'll use a simple check here)
-    const isMobile = window.innerWidth < 768;
-    
-    if (isMobile) {
-      // Mobile: We need to trigger the mobile bottom sheet
-      // For now, we'll show an alert - the mobile implementation would need 
-      // access to the mobile container's functions
-      console.log('Mobile animation panel opening not fully implemented yet');
-    } else {
-      // Desktop: Open accordion sidebar and expand animation panel
-      const { setAccordionVisible, setAccordionExpanded, accordionVisible } = usePanelModeStore.getState();
-      if (!accordionVisible) {
-        setAccordionVisible(true);
-      }
-      setAccordionExpanded('animation-controls');
-    }
-  });
+const openAnimationPanel = async () => {
+  // Use pluginManager to open animation panel (handles both mobile and desktop)
+  const { pluginManager } = await import('../../core/PluginSystem');
+  pluginManager.openAnimationPanel();
 };
 
 // Text animation options
@@ -379,7 +363,7 @@ const textAnimationOptions = [
     label: 'Scale', 
     action: addScaleAnimationToText 
   },
-  { id: 'text-more-animations', label: 'More ...', action: openAnimationPanelForText }
+  { id: 'text-more-animations', label: 'More ...', action: openAnimationPanel }
 ];
 
 // Arrange functions for texts
@@ -610,26 +594,10 @@ const textArrangeOptions = [
 ];
 
 // Function to open filter panel for text
-const openFilterPanelForText = () => {
-  // Import panel mode store
-  import('../panelmode/PanelManager').then(({ usePanelModeStore }) => {
-    // Check if it's mobile or desktop (we'll use a simple check here)
-    const isMobile = window.innerWidth < 768;
-    
-    if (isMobile) {
-      // Mobile: We need to trigger the mobile bottom sheet
-      // For now, we'll show an alert - the mobile implementation would need 
-      // access to the mobile container's functions
-      console.log('Mobile filter panel opening not fully implemented yet');
-    } else {
-      // Desktop: Open accordion sidebar and expand filter panel
-      const { setAccordionVisible, setAccordionExpanded, accordionVisible } = usePanelModeStore.getState();
-      if (!accordionVisible) {
-        setAccordionVisible(true);
-      }
-      setAccordionExpanded('filter-controls');
-    }
-  });
+const openFilterPanelForText = async () => {
+  // Use pluginManager to open filter panel (handles both mobile and desktop)
+  const { pluginManager } = await import('../../core/PluginSystem');
+  pluginManager.openFilterPanel();
 };
 
 // Text filter options - Essential 7 filters

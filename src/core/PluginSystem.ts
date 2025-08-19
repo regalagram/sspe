@@ -81,6 +81,13 @@ export class PluginManager {
   public isShapeCreationMode: boolean = false;
   public isTextCreationMode: boolean = false;
   
+  // Panel opening callbacks - set by SvgEditor
+  private panelOpeners: {
+    openVisualDebugPanel?: () => void;
+    openFilterPanel?: () => void;
+    openAnimationPanel?: () => void;
+  } = {};
+  
   // Double-click detection state
   private lastClickTime: number = 0;
   private lastClickTarget: EventTarget | null = null;
@@ -97,6 +104,28 @@ export class PluginManager {
 
   getEditorStore(): ReturnType<typeof useEditorStore> | null {
     return this.editorStore;
+  }
+
+  // Methods to register panel opening functions
+  setPanelOpeners(openers: {
+    openVisualDebugPanel?: () => void;
+    openFilterPanel?: () => void;
+    openAnimationPanel?: () => void;
+  }): void {
+    this.panelOpeners = { ...this.panelOpeners, ...openers };
+  }
+
+  // Methods for plugins to open panels
+  openVisualDebugPanel(): void {
+    this.panelOpeners.openVisualDebugPanel?.();
+  }
+
+  openFilterPanel(): void {
+    this.panelOpeners.openFilterPanel?.();
+  }
+
+  openAnimationPanel(): void {
+    this.panelOpeners.openAnimationPanel?.();
   }
 
   setShapeCreationMode(isCreating: boolean): void {

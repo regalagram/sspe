@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { UIComponentDefinition } from '../core/PluginSystem';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { BottomSheet } from './BottomSheet';
@@ -51,6 +51,24 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({
     loadSavedSelectedPlugin(sidebarPlugins)
   );
 
+  // Use refs to store latest callback functions to prevent unnecessary re-renders
+  const onBottomSheetStateChangeRef = useRef(onBottomSheetStateChange);
+  const onToggleBottomSheetRef = useRef(onToggleBottomSheet);
+  const onPluginSelectRef = useRef(onPluginSelect);
+
+  // Update refs when props change
+  useEffect(() => {
+    onBottomSheetStateChangeRef.current = onBottomSheetStateChange;
+  }, [onBottomSheetStateChange]);
+
+  useEffect(() => {
+    onToggleBottomSheetRef.current = onToggleBottomSheet;
+  }, [onToggleBottomSheet]);
+
+  useEffect(() => {
+    onPluginSelectRef.current = onPluginSelect;
+  }, [onPluginSelect]);
+
   // Persist bottom sheet state to localStorage
   useEffect(() => {
     try {
@@ -66,30 +84,26 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({
   }, [selectedPlugin]);
 
   const handleToggleBottomSheet = React.useCallback(() => {
-    if (isBottomSheetOpen) {
-      // If bottom sheet is open, close it (preserve plugin selection)
-      setIsBottomSheetOpen(false);
-    } else {
-      // If bottom sheet is closed, open it (restore any saved plugin)
-      setIsBottomSheetOpen(true);
-      // selectedPlugin will maintain its localStorage state
-    }
-  }, [isBottomSheetOpen]);
+    setIsBottomSheetOpen(prev => !prev);
+  }, []); // Remove dependency on isBottomSheetOpen, use functional update instead
 
   const handlePluginSelect = (plugin: UIComponentDefinition) => {
     setSelectedPlugin(plugin);
   };
 
-  // Programmatic plugin selection by ID
+  // Programmatic plugin selection by ID - stabilize with useRef
   const handlePluginSelectById = React.useCallback((pluginId: string) => {
     const plugin = sidebarPlugins.find(p => p.id === pluginId);
     if (plugin) {
       setSelectedPlugin(plugin);
-      if (!isBottomSheetOpen) {
-        setIsBottomSheetOpen(true);
-      }
+      setIsBottomSheetOpen(prev => {
+        if (!prev) {
+          return true; // Open if closed
+        }
+        return prev; // Keep current state if already open
+      });
     }
-  }, [sidebarPlugins, isBottomSheetOpen]);
+  }, [sidebarPlugins]); // Only depend on sidebarPlugins
 
   const handleBackToMenu = () => {
     setSelectedPlugin(null);
@@ -102,24 +116,24 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({
 
   // Notify parent of bottom sheet state changes
   useEffect(() => {
-    if (onBottomSheetStateChange) {
-      onBottomSheetStateChange(isBottomSheetOpen);
+    if (onBottomSheetStateChangeRef.current) {
+      onBottomSheetStateChangeRef.current(isBottomSheetOpen);
     }
-  }, [isBottomSheetOpen, onBottomSheetStateChange]);
+  }, [isBottomSheetOpen]); // Only depend on the actual state, not the callback
 
-  // Provide toggle function to parent
+  // Provide toggle function to parent - only call when mounted or when callback changes
   useEffect(() => {
-    if (onToggleBottomSheet) {
-      onToggleBottomSheet(handleToggleBottomSheet);
+    if (onToggleBottomSheetRef.current) {
+      onToggleBottomSheetRef.current(handleToggleBottomSheet);
     }
-  }, [onToggleBottomSheet, handleToggleBottomSheet]);
+  }, [onToggleBottomSheet]); // Only when the prop function changes
 
-  // Provide plugin selection function to parent
+  // Provide plugin selection function to parent - only call when mounted or when callback changes
   useEffect(() => {
-    if (onPluginSelect) {
-      onPluginSelect(handlePluginSelectById);
+    if (onPluginSelectRef.current) {
+      onPluginSelectRef.current(handlePluginSelectById);
     }
-  }, [onPluginSelect, handlePluginSelectById]);
+  }, [onPluginSelect]); // Only when the prop function changes
 
   const isMobileDevice = isMobile || isTablet;
 

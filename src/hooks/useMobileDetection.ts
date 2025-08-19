@@ -25,18 +25,33 @@ export const useMobileDetection = (): MobileDetectionState => {
   useEffect(() => {
     const checkDeviceType = () => {
       const detection = detectDeviceType();
-      setState({
-        ...detection,
-        screenWidth: window.innerWidth,
-        screenHeight: window.innerHeight,
-        orientation: window.innerWidth < window.innerHeight ? 'portrait' : 'landscape',
-        devicePixelRatio: window.devicePixelRatio || 1,
+      const newOrientation: 'portrait' | 'landscape' = window.innerWidth < window.innerHeight ? 'portrait' : 'landscape';
+      
+      setState(prev => {
+        const newState = {
+          ...detection,
+          screenWidth: window.innerWidth,
+          screenHeight: window.innerHeight,
+          orientation: newOrientation,
+          devicePixelRatio: window.devicePixelRatio || 1,
+        };
+        
+        // Only update if something actually changed
+        if (prev.isMobile !== newState.isMobile ||
+            prev.isTablet !== newState.isTablet ||
+            prev.isTouchDevice !== newState.isTouchDevice ||
+            prev.screenWidth !== newState.screenWidth ||
+            prev.screenHeight !== newState.screenHeight ||
+            prev.orientation !== newState.orientation ||
+            prev.devicePixelRatio !== newState.devicePixelRatio) {
+          return newState;
+        }
+        return prev;
       });
     };
 
-    // Initial check
-    checkDeviceType();
-
+    // Don't call checkDeviceType() here since we already have initial state
+    // Only set up event listeners
     window.addEventListener('resize', checkDeviceType);
     window.addEventListener('orientationchange', checkDeviceType);
 
