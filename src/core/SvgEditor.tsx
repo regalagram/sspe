@@ -25,7 +25,7 @@ initializePlugins();
 
 export const SvgEditor: React.FC = () => {
   const editorStore = useEditorStore();
-  const { isFullscreen, paths, gradients: storeGradients } = editorStore;
+  const { isFullscreen, paths, gradients: storeGradients, enabledFeatures } = editorStore;
   const svgRef = useRef<SVGSVGElement>(null);
   
   // Get panel mode from store
@@ -225,6 +225,7 @@ export const SvgEditor: React.FC = () => {
   // SVG Canvas component
   const svgCanvas = (
     <svg
+      key={enabledFeatures?.stickyGuidelinesEnabled ? 'sticky-on' : 'sticky-off'}
       ref={svgRef}
       width="100%"
       height="100%"
