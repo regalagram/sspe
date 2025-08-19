@@ -316,8 +316,8 @@ export interface SelectionActions {
   selectImage: (imageId: string, addToSelection?: boolean) => void;
   selectUse: (useId: string, addToSelection?: boolean) => void;
   selectMultiple: (ids: string[], type: 'paths' | 'subpaths' | 'commands' | 'texts' | 'textspans' | 'groups' | 'images' | 'uses' | 'animations') => void;
-  addToSelection: (id: string, type: 'path' | 'subpath' | 'command' | 'text' | 'textspan' | 'textPath' | 'group' | 'image' | 'use' | 'animation') => void;
-  removeFromSelection: (id: string, type: 'path' | 'subpath' | 'command' | 'text' | 'textspan' | 'textPath' | 'group' | 'image' | 'use' | 'animation') => void;
+  addToSelection: (id: string, type: 'path' | 'subpath' | 'command' | 'text' | 'multiline-text' | 'textspan' | 'textPath' | 'group' | 'image' | 'use' | 'animation') => void;
+  removeFromSelection: (id: string, type: 'path' | 'subpath' | 'command' | 'text' | 'multiline-text' | 'textspan' | 'textPath' | 'group' | 'image' | 'use' | 'animation') => void;
   selectAnimation: (animationId: string, addToSelection?: boolean) => void;
   selectAnimationMultiple: (animationId: string, isShiftPressed?: boolean) => void;
   clearSelection: () => void;
@@ -868,6 +868,11 @@ export const createSelectionActions: StateCreator<
             selection.selectedTexts = [...selection.selectedTexts, id];
           }
           break;
+        case 'multiline-text':
+          if (!selection.selectedTexts.includes(id)) {
+            selection.selectedTexts = [...selection.selectedTexts, id];
+          }
+          break;
         case 'textspan':
           if (!selection.selectedTextSpans.includes(id)) {
             selection.selectedTextSpans = [...selection.selectedTextSpans, id];
@@ -922,6 +927,9 @@ export const createSelectionActions: StateCreator<
           selection.selectedCommands = selection.selectedCommands.filter(commandId => commandId !== id);
           break;
         case 'text':
+          selection.selectedTexts = selection.selectedTexts.filter(textId => textId !== id);
+          break;
+        case 'multiline-text':
           selection.selectedTexts = selection.selectedTexts.filter(textId => textId !== id);
           break;
         case 'textspan':
