@@ -24,6 +24,29 @@ const clearMixedStyle = () => {
     });
   });
   
+  // Clear styles for subpaths (reset to parent path style)
+  store.selection.selectedSubPaths.forEach(subPathId => {
+    // Find the parent path to get its default style
+    const parentPath = store.paths.find(path => 
+      path.subPaths.some(sp => sp.id === subPathId)
+    );
+    if (parentPath) {
+      // For subpaths, we reset the parent path style since subpaths inherit from parent
+      store.updatePathStyle(parentPath.id, {
+        fill: '#000000',
+        stroke: undefined,
+        strokeWidth: undefined,
+        strokeDasharray: undefined,
+        strokeLinecap: undefined,
+        strokeLinejoin: undefined,
+        filter: undefined,
+        opacity: undefined,
+        fillOpacity: undefined,
+        strokeOpacity: undefined
+      });
+    }
+  });
+  
   // Clear styles for texts
   store.selection.selectedTexts.forEach(textId => {
     store.updateTextStyle(textId, {
@@ -45,8 +68,101 @@ const clearMixedStyle = () => {
     });
   });
   
-  // Images and use elements don't have complex styles to clear
-  // Groups inherit styles from their children
+  // Clear styles for images (reset opacity and filters)
+  store.selection.selectedImages.forEach(imageId => {
+    store.updateImage(imageId, {
+      style: {
+        opacity: undefined,
+        filter: undefined,
+        clipPath: undefined,
+        mask: undefined
+      }
+    });
+  });
+  
+  // Clear styles for use elements
+  store.selection.selectedUses.forEach(useId => {
+    store.updateUseStyle(useId, {
+      fill: '#000000',
+      stroke: undefined,
+      strokeWidth: undefined,
+      strokeDasharray: undefined,
+      strokeLinecap: undefined,
+      strokeLinejoin: undefined,
+      filter: undefined,
+      opacity: undefined,
+      fillOpacity: undefined,
+      strokeOpacity: undefined
+    });
+  });
+  
+  // Groups inherit styles from their children, so we apply recursively to all children
+  store.selection.selectedGroups.forEach(groupId => {
+    const group = store.groups.find(g => g.id === groupId);
+    if (group) {
+      group.children.forEach(child => {
+        switch (child.type) {
+          case 'path':
+            store.updatePathStyle(child.id, {
+              fill: '#000000',
+              stroke: undefined,
+              strokeWidth: undefined,
+              strokeDasharray: undefined,
+              strokeLinecap: undefined,
+              strokeLinejoin: undefined,
+              filter: undefined,
+              opacity: undefined,
+              fillOpacity: undefined,
+              strokeOpacity: undefined
+            });
+            break;
+          case 'text':
+            store.updateTextStyle(child.id, {
+              fill: '#000000',
+              stroke: undefined,
+              strokeWidth: undefined,
+              strokeDasharray: undefined,
+              strokeLinecap: undefined,
+              strokeLinejoin: undefined,
+              filter: undefined,
+              fontFamily: 'Arial',
+              fontSize: 16,
+              fontWeight: 'normal' as const,
+              fontStyle: 'normal' as const,
+              textAnchor: 'start' as const,
+              opacity: undefined,
+              fillOpacity: undefined,
+              strokeOpacity: undefined
+            });
+            break;
+          case 'image':
+            store.updateImage(child.id, {
+              style: {
+                opacity: undefined,
+                filter: undefined,
+                clipPath: undefined,
+                mask: undefined
+              }
+            });
+            break;
+          case 'use':
+            store.updateUseStyle(child.id, {
+              fill: '#000000',
+              stroke: undefined,
+              strokeWidth: undefined,
+              strokeDasharray: undefined,
+              strokeLinecap: undefined,
+              strokeLinejoin: undefined,
+              filter: undefined,
+              opacity: undefined,
+              fillOpacity: undefined,
+              strokeOpacity: undefined
+            });
+            break;
+        }
+      });
+    }
+  });
 };
 
 // Check if any element in mixed selection is locked
@@ -58,6 +174,14 @@ const isMixedSelectionLocked = (): boolean => {
   const pathsLocked = selection.selectedPaths.some(pathId => {
     const path = store.paths.find(p => p.id === pathId);
     return path?.locked === true;
+  });
+  
+  // Check subpaths
+  const subPathsLocked = selection.selectedSubPaths.some(subPathId => {
+    const subPath = store.paths
+      .flatMap(path => path.subPaths)
+      .find(sp => sp.id === subPathId);
+    return subPath?.locked === true;
   });
   
   // Check texts
@@ -84,7 +208,7 @@ const isMixedSelectionLocked = (): boolean => {
     return group?.locked === true || group?.lockLevel !== 'none';
   });
   
-  return pathsLocked || textsLocked || imagesLocked || usesLocked || groupsLocked;
+  return pathsLocked || subPathsLocked || textsLocked || imagesLocked || usesLocked || groupsLocked;
 };
 
 // Toggle lock for mixed selection
@@ -93,6 +217,7 @@ const toggleMixedLock = () => {
   const { selection } = store;
   
   if (selection.selectedPaths.length === 0 && 
+      selection.selectedSubPaths.length === 0 &&
       selection.selectedTexts.length === 0 && 
       selection.selectedImages.length === 0 && 
       selection.selectedUses.length === 0 && 
@@ -126,6 +251,27 @@ const toggleMixedLock = () => {
       useEditorStore.setState(state => ({
         paths: state.paths.map((p, index) => 
           index === pathIndex ? updatedPath : p
+        )
+      }));
+    }
+  });
+  
+  // Lock/unlock subpaths
+  selection.selectedSubPaths.forEach(subPathId => {
+    // Find parent path and update the subpath
+    const pathIndex = store.paths.findIndex(path => 
+      path.subPaths.some(sp => sp.id === subPathId)
+    );
+    
+    if (pathIndex !== -1) {
+      const path = store.paths[pathIndex];
+      const updatedSubPaths = path.subPaths.map(sp => 
+        sp.id === subPathId ? { ...sp, locked: shouldLock } : sp
+      );
+      
+      useEditorStore.setState(state => ({
+        paths: state.paths.map((p, index) => 
+          index === pathIndex ? { ...p, subPaths: updatedSubPaths } : p
         )
       }));
     }

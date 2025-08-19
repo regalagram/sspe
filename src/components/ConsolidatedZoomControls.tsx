@@ -138,62 +138,26 @@ export const ConsolidatedZoomControls: React.FC = () => {
         isOpen={isSubmenuOpen}
         onToggle={() => setIsSubmenuOpen(!isSubmenuOpen)}
       >
-        {/* Zoom Controls */}
-        <div style={{ padding: '8px 12px', fontSize: '12px', color: '#6b7280', fontWeight: 600 }}>
-          Zoom Options
-        </div>
+        {/* Fullscreen Control - First for mobile accessibility */}
         <SubmenuItem
-          icon={<ZoomIn size={isMobile ? 12 : 13} />}
-          label="Zoom In"
+          icon={isFullscreen ? <Minimize size={isMobile ? 12 : 13} /> : <Expand size={isMobile ? 12 : 13} />}
+          label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
           onClick={() => {
-            handleZoomIn();
+            handleFullscreenToggle();
             setIsSubmenuOpen(false);
           }}
+          active={isFullscreen}
         />
+        
         <SubmenuItem
-          icon={<ZoomOut size={isMobile ? 12 : 13} />}
-          label="Zoom Out"
+          icon={<Navigation size={isMobile ? 12 : 13} />}
+          label={enabledFeatures.stickyGuidelinesEnabled ? "Disable Sticky Guidelines" : "Enable Sticky Guidelines"}
           onClick={() => {
-            handleZoomOut();
+            toggleFeature('stickyGuidelinesEnabled');
             setIsSubmenuOpen(false);
           }}
+          active={enabledFeatures.stickyGuidelinesEnabled}
         />
-        <SubmenuItem
-          icon={<Maximize2 size={isMobile ? 12 : 13} />}
-          label="Fit to Screen"
-          onClick={() => {
-            zoomToFit();
-            setIsSubmenuOpen(false);
-          }}
-        />
-        <SubmenuItem
-          icon={<RotateCcw size={isMobile ? 12 : 13} />}
-          label="Reset View"
-          onClick={() => {
-            resetView();
-            setIsSubmenuOpen(false);
-          }}
-        />
-        {hasSelection && (
-          <SubmenuItem
-            icon={<Target size={isMobile ? 12 : 13} />}
-            label="Fit Selection"
-            onClick={() => {
-              zoomToSelection();
-              setIsSubmenuOpen(false);
-            }}
-          />
-        )}
-        {hasSubPathSelection && (
-          <SubmenuItem
-            icon={<Target size={isMobile ? 12 : 13} />}
-            label="Fit SubPath"
-            onClick={() => {
-              zoomToSubPath();
-              setIsSubmenuOpen(false);
-            }}
-          />
-        )}
         
         <div style={{ 
           height: '1px', 
@@ -239,31 +203,61 @@ export const ConsolidatedZoomControls: React.FC = () => {
           margin: '4px 0' 
         }} />
         
+        {/* Zoom Controls - Reordered for better mobile UX */}
+        <div style={{ padding: '8px 12px', fontSize: '12px', color: '#6b7280', fontWeight: 600 }}>
+          Zoom Options
+        </div>
+        {hasSelection && (
+          <SubmenuItem
+            icon={<Target size={isMobile ? 12 : 13} />}
+            label="Fit Selection"
+            onClick={() => {
+              zoomToSelection();
+              setIsSubmenuOpen(false);
+            }}
+          />
+        )}
+        {hasSubPathSelection && (
+          <SubmenuItem
+            icon={<Target size={isMobile ? 12 : 13} />}
+            label="Fit SubPath"
+            onClick={() => {
+              zoomToSubPath();
+              setIsSubmenuOpen(false);
+            }}
+          />
+        )}
         <SubmenuItem
-          icon={<Navigation size={isMobile ? 12 : 13} />}
-          label={enabledFeatures.stickyGuidelinesEnabled ? "Disable Sticky Guidelines" : "Enable Sticky Guidelines"}
+          icon={<Maximize2 size={isMobile ? 12 : 13} />}
+          label="Fit to Screen"
           onClick={() => {
-            toggleFeature('stickyGuidelinesEnabled');
+            zoomToFit();
             setIsSubmenuOpen(false);
           }}
-          active={enabledFeatures.stickyGuidelinesEnabled}
         />
-        
-        <div style={{ 
-          height: '1px', 
-          background: '#e5e7eb', 
-          margin: '4px 0' 
-        }} />
-        
-        {/* Fullscreen Control */}
         <SubmenuItem
-          icon={isFullscreen ? <Minimize size={isMobile ? 12 : 13} /> : <Expand size={isMobile ? 12 : 13} />}
-          label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+          icon={<RotateCcw size={isMobile ? 12 : 13} />}
+          label="Reset View"
           onClick={() => {
-            handleFullscreenToggle();
+            resetView();
             setIsSubmenuOpen(false);
           }}
-          active={isFullscreen}
+        />
+        <SubmenuItem
+          icon={<ZoomIn size={isMobile ? 12 : 13} />}
+          label="Zoom In"
+          onClick={() => {
+            handleZoomIn();
+            setIsSubmenuOpen(false);
+          }}
+        />
+        <SubmenuItem
+          icon={<ZoomOut size={isMobile ? 12 : 13} />}
+          label="Zoom Out"
+          onClick={() => {
+            handleZoomOut();
+            setIsSubmenuOpen(false);
+          }}
         />
       </ToolbarSubmenu>
     </ToolbarSection>

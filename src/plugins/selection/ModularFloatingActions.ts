@@ -49,7 +49,24 @@ export const recursivelyLockPath = (pathId: string, shouldLock: boolean) => {
 };
 
 export const recursivelyLockSubPath = (subPathId: string, shouldLock: boolean) => {
-  // This function was originally in FloatingSelectionActions  
-  // Implementation would go here if needed by other parts of the system
-  console.warn('recursivelyLockSubPath not implemented in modular system yet');
+  const { useEditorStore } = require('../../store/editorStore');
+  const store = useEditorStore.getState();
+  
+  // Find parent path and update the subpath
+  const pathIndex = store.paths.findIndex((path: any) => 
+    path.subPaths.some((sp: any) => sp.id === subPathId)
+  );
+  
+  if (pathIndex !== -1) {
+    const path = store.paths[pathIndex];
+    const updatedSubPaths = path.subPaths.map((sp: any) => 
+      sp.id === subPathId ? { ...sp, locked: shouldLock } : sp
+    );
+    
+    useEditorStore.setState((state: any) => ({
+      paths: state.paths.map((p: any, index: number) => 
+        index === pathIndex ? { ...p, subPaths: updatedSubPaths } : p
+      )
+    }));
+  }
 };
