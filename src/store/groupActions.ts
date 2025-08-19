@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { EditorState, SVGGroup, SVGGroupChild, Point, GroupLockLevel } from '../types';
 import { generateId } from '../utils/id-utils';
+import { transformManager } from '../plugins/transform/TransformManager';
 import { TextActions } from './textActions';
 import { SVGElementActions } from './svgElementActions';
 import { generateGroupSVG, downloadGroupSVG } from '../utils/group-svg-utils';
@@ -401,10 +402,14 @@ export const createGroupActions: StateCreator<
   },
 
   moveGroup: (groupId: string, delta: Point) => {
-    // Group movement applies to all children
+  // Group movement applies to all children
     const state = get();
     const group = state.groups.find(g => g.id === groupId);
     if (!group) return;
+
+  // Debug log: entering moveGroup
+  // eslint-disable-next-line no-console
+  // moveGroup start
 
     // Move paths directly, but use moveText for text elements to handle all edge cases
     const storeState = get();
@@ -495,6 +500,17 @@ export const createGroupActions: StateCreator<
         }
       }
     });
+
+  // Debug log: finished moveGroup
+  // eslint-disable-next-line no-console
+  // moveGroup end
+    // Force transform update so UI handlers follow the moved group immediately
+    try {
+      transformManager.updateTransformState();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+  // failed to update transform state after moveGroup
+    }
   },
 
   transformGroup: (groupId: string, transform: string) => {

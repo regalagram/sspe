@@ -587,6 +587,9 @@ export class TransformManager {
     
     this.state.bounds = this.calculateBounds();
     this.state.handles = this.generateHandles();
+  // Debug
+  // eslint-disable-next-line no-console
+  // updateTransformState called
     
     
 

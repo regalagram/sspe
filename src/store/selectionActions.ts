@@ -2,6 +2,7 @@ import { StateCreator } from 'zustand';
 import { EditorState, Point } from '../types';
 import { findSubPathAtPoint } from '../utils/path-utils';
 import { calculateTextBounds, calculateTextBoundsDOM } from '../utils/text-utils';
+import { transformManager } from '../plugins/transform/TransformManager';
 
 // Utility function to check if all elements of a group are selected
 const areAllGroupElementsSelected = (state: EditorState, groupId: string): boolean => {
@@ -291,6 +292,18 @@ const checkAndPromoteToGroup = (state: EditorState): EditorState['selection'] =>
   return finalSelection;
 };
 
+// Helper to avoid mutating selection while a transform/move is active
+const shouldBlockSelectionChange = (caller?: string, details?: any): boolean => {
+  try {
+    if (transformManager && typeof transformManager.isMoving === 'function' && transformManager.isMoving()) {
+      return true;
+    }
+  } catch (e) {
+    // If transformManager is not available or throws, do not block
+  }
+  return false;
+};
+
 export interface SelectionActions {
   selectPath: (pathId: string, addToSelection?: boolean) => void;
   selectSubPath: (subPathId: string, addToSelection?: boolean) => void;
@@ -325,6 +338,7 @@ export const createSelectionActions: StateCreator<
 > = (set, get) => ({
   selectPath: (pathId, addToSelection = false) =>
     set((state) => {
+      if (shouldBlockSelectionChange('selectPath', { pathId, addToSelection })) return { selection: { ...state.selection } };
       const newSelection = addToSelection ? {
         ...state.selection,
         selectedPaths: state.selection.selectedPaths.includes(pathId) 
@@ -356,6 +370,7 @@ export const createSelectionActions: StateCreator<
 
   selectSubPath: (subPathId) =>
     set((state) => {
+      if (shouldBlockSelectionChange('selectSubPath', { subPathId })) return { selection: { ...state.selection } };
       const isLocked = state.paths.some(path =>
         path.subPaths.some(subPath => subPath.id === subPathId && subPath.locked)
       );
@@ -405,6 +420,7 @@ export const createSelectionActions: StateCreator<
 
   selectSubPathMultiple: (subPathId, isShiftPressed = false) =>
     set((state) => {
+      if (shouldBlockSelectionChange('selectSubPathMultiple', { subPathId, isShiftPressed })) return { selection: { ...state.selection } };
       const isLocked = state.paths.some(path =>
         path.subPaths.some(subPath => subPath.id === subPathId && subPath.locked)
       );
@@ -477,6 +493,7 @@ export const createSelectionActions: StateCreator<
 
   selectCommand: (commandId) =>
     set((state) => {
+      if (shouldBlockSelectionChange('selectCommand', { commandId })) return { selection: { ...state.selection } };
       let isLocked = false;
       for (const path of state.paths) {
         for (const subPath of path.subPaths) {
@@ -537,6 +554,7 @@ export const createSelectionActions: StateCreator<
 
   selectMultiple: (ids, type) =>
     set((state) => {
+      if (shouldBlockSelectionChange('selectMultiple', { ids, type })) return { selection: { ...state.selection } };
       const newSelection = { ...state.selection };
       if (type === 'paths') {
         newSelection.selectedPaths = ids;
@@ -624,26 +642,29 @@ export const createSelectionActions: StateCreator<
     }),
 
   clearSelection: () =>
-    set((state) => ({
-      selection: {
-        ...state.selection,
-        selectedPaths: [],
-        selectedSubPaths: [],
-        selectedCommands: [],
-        selectedControlPoints: [],
-        selectedTexts: [],
-        selectedTextSpans: [],
-        selectedGroups: [],
-        selectedImages: [],
-        selectedClipPaths: [],
-        selectedMasks: [],
-        selectedFilters: [],
-        selectedMarkers: [],
-        selectedSymbols: [],
-        selectedUses: [],
-        selectedAnimations: [],
-      },
-    })),
+    set((state) => {
+      if (shouldBlockSelectionChange('clearSelection')) return { selection: { ...state.selection } } as any;
+      return {
+        selection: {
+          ...state.selection,
+          selectedPaths: [],
+          selectedSubPaths: [],
+          selectedCommands: [],
+          selectedControlPoints: [],
+          selectedTexts: [],
+          selectedTextSpans: [],
+          selectedGroups: [],
+          selectedImages: [],
+          selectedClipPaths: [],
+          selectedMasks: [],
+          selectedFilters: [],
+          selectedMarkers: [],
+          selectedSymbols: [],
+          selectedUses: [],
+          selectedAnimations: [],
+        },
+      };
+    }),
 
   selectSubPathByPoint: (pathId, point, isShiftPressed = false) => {
     const state = get();
@@ -657,6 +678,7 @@ export const createSelectionActions: StateCreator<
 
   selectText: (textId, addToSelection = false) =>
     set((state) => {
+      if (shouldBlockSelectionChange('selectText', { textId, addToSelection })) return { selection: { ...state.selection } };
       const text = state.texts.find(t => t.id === textId);
       if (!text || text.locked) {
         return state;
@@ -692,6 +714,7 @@ export const createSelectionActions: StateCreator<
 
   selectTextMultiple: (textId, isShiftPressed = false) =>
     set((state) => {
+      if (shouldBlockSelectionChange('selectTextMultiple', { textId, isShiftPressed })) return { selection: { ...state.selection } };
       const text = state.texts.find(t => t.id === textId);
       if (!text || text.locked) return state;
 
@@ -748,6 +771,7 @@ export const createSelectionActions: StateCreator<
 
   selectTextSpan: (textId, spanId) =>
     set((state) => {
+      if (shouldBlockSelectionChange('selectTextSpan', { textId, spanId })) return { selection: { ...state.selection } };
       const text = state.texts.find(t => t.id === textId);
       if (!text || text.locked || text.type !== 'multiline-text') {
         return state;
@@ -806,6 +830,7 @@ export const createSelectionActions: StateCreator<
 
   addToSelection: (id, type) =>
     set((state) => {
+      if (shouldBlockSelectionChange('addToSelection', { id, type })) return { selection: { ...state.selection } };
       const selection = { ...state.selection };
       
       switch (type) {
@@ -883,6 +908,7 @@ export const createSelectionActions: StateCreator<
 
   removeFromSelection: (id, type) =>
     set((state) => {
+      if (shouldBlockSelectionChange('removeFromSelection', { id, type })) return { selection: { ...state.selection } };
       const selection = { ...state.selection };
       
       switch (type) {
@@ -925,7 +951,8 @@ export const createSelectionActions: StateCreator<
     }),
 
   selectInBox: (box) => {
-    const state = get();
+  if (shouldBlockSelectionChange('selectInBox', { box })) return;
+  const state = get();
     const newSelection = {
       selectedPaths: [] as string[],
       selectedSubPaths: [] as string[],
@@ -1115,6 +1142,7 @@ export const createSelectionActions: StateCreator<
   // New selection functions for SVG elements
   selectGroup: (groupId, addToSelection = false) =>
     set((state) => {
+      if (shouldBlockSelectionChange('selectGroup', { groupId, addToSelection })) return { selection: { ...state.selection } };
       const newSelection = addToSelection ? {
         ...state.selection,
         selectedGroups: state.selection.selectedGroups.includes(groupId) 
@@ -1146,6 +1174,7 @@ export const createSelectionActions: StateCreator<
 
   selectImage: (imageId, addToSelection = false) =>
     set((state) => {
+      if (shouldBlockSelectionChange('selectImage', { imageId, addToSelection })) return { selection: { ...state.selection } };
       const image = state.images.find(img => img.id === imageId);
       if (image?.locked) return state;
 
@@ -1179,6 +1208,7 @@ export const createSelectionActions: StateCreator<
 
   selectUse: (useId, addToSelection = false) =>
     set((state) => {
+      if (shouldBlockSelectionChange('selectUse', { useId, addToSelection })) return { selection: { ...state.selection } };
       const use = state.uses.find(u => u.id === useId);
       if (use?.locked) return state;
 
@@ -1224,7 +1254,9 @@ export const createSelectionActions: StateCreator<
     });
     
     if (imageAtPoint) {
-      state.selectImage(imageAtPoint.id, isShiftPressed);
+      if (!shouldBlockSelectionChange('selectImageByPoint', { imageId: imageAtPoint.id })) {
+        state.selectImage(imageAtPoint.id, isShiftPressed);
+      }
     }
   },
 
@@ -1247,7 +1279,9 @@ export const createSelectionActions: StateCreator<
     });
     
     if (useAtPoint) {
-      state.selectUse(useAtPoint.id, isShiftPressed);
+      if (!shouldBlockSelectionChange('selectUseByPoint', { useId: useAtPoint.id })) {
+        state.selectUse(useAtPoint.id, isShiftPressed);
+      }
     }
   },
 
@@ -1255,10 +1289,14 @@ export const createSelectionActions: StateCreator<
     const state = get();
     
     // Try to select in order of priority: images, use elements, then existing logic
-    state.selectImageByPoint(point, isShiftPressed);
+    if (!shouldBlockSelectionChange('selectElementByPoint')) {
+      state.selectImageByPoint(point, isShiftPressed);
+    }
     if (state.selection.selectedImages.length > 0) return;
     
-    state.selectUseByPoint(point, isShiftPressed);
+    if (!shouldBlockSelectionChange('selectElementByPoint')) {
+      state.selectUseByPoint(point, isShiftPressed);
+    }
     if (state.selection.selectedUses.length > 0) return;
     
     // Fall back to existing selection logic

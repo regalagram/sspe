@@ -481,6 +481,8 @@ if (typeof window !== 'undefined') {
       (selection) => {
         // Only notify if selection actually changed
         if (previousSelection !== selection) {
+          // Debug: log previous vs new selection (stringified)
+          // selection changed; notify handle manager (logs removed)
           previousSelection = selection;
           handleManager.onSelectionChanged();
         }

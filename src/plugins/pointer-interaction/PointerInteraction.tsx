@@ -373,8 +373,11 @@ class DragManager {
   }
 
   startDrag(elements: SelectedElements, origin: Point, draggingCommandId?: string): void {
-    this.debugManager.logDragOperation('Starting drag with elements', elements);
-    this.debugManager.logDragManager('instanceId in startDrag', this.instanceId);
+  this.debugManager.logDragOperation('Starting drag with elements', elements);
+  this.debugManager.logDragManager('instanceId in startDrag', this.instanceId);
+  // Debug
+  // eslint-disable-next-line no-console
+  // DragManager startDrag
 
     // Store which command is being dragged
     this.draggingCommandId = draggingCommandId;
@@ -408,9 +411,12 @@ class DragManager {
   }
 
   updateDrag(delta: Point): void {
-    this.debugManager.logDragOperation('Updating drag with delta', delta);
-    this.debugManager.logDragManager('instanceId in updateDrag', this.instanceId);
-    this.debugManager.logDragOperation('Element snapshots count', this.elementSnapshots.size);
+  this.debugManager.logDragOperation('Updating drag with delta', delta);
+  this.debugManager.logDragManager('instanceId in updateDrag', this.instanceId);
+  this.debugManager.logDragOperation('Element snapshots count', this.elementSnapshots.size);
+  // Debug
+  // eslint-disable-next-line no-console
+  // DragManager updateDrag
 
 
     // Apply sticky guidelines if enabled
@@ -686,8 +692,9 @@ class DragManager {
   }
 
   endDrag(): void {
-    this.debugManager.logDragOperation('endDrag called, clearing snapshots', this.elementSnapshots.size);
-    this.debugManager.logDragManager('instanceId in endDrag', this.instanceId);
+  this.debugManager.logDragOperation('endDrag called, clearing snapshots', this.elementSnapshots.size);
+  this.debugManager.logDragManager('instanceId in endDrag', this.instanceId);
+  // endDrag
 
     // Reset dual point drag state
     this.elementSnapshots.clear();
@@ -699,6 +706,12 @@ class DragManager {
     transformManager.setMoving(false);
     stickyManager.clearGuidelines();
     stickyPointsManager.clearSticky(); // Clear sticky points state
+    // Force transform manager to update after movement so handles reflect new positions
+    try {
+      transformManager.updateTransformState();
+    } catch (err) {
+      // failed to update transform state after endDrag
+    }
   }
 
   private captureElementSnapshots(elements: SelectedElements): void {

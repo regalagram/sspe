@@ -42,6 +42,8 @@ export interface DraggedElementsData {
 export function captureAllSelectedElementsPositions(): DraggedElementsData {
   const store = useEditorStore.getState();
   const { selection, images, uses, groups, texts, paths } = store;
+  // Debug - log specific selection arrays as JSON to avoid collapsed objects in some consoles
+  // captureAllSelectedElementsPositions called
   
   // Capture image positions
   const imagePositions: { [id: string]: { x: number; y: number; width: number; height: number } } = {};
@@ -73,12 +75,48 @@ export function captureAllSelectedElementsPositions(): DraggedElementsData {
 
   // Capture group positions (transform)
   const groupPositions: { [id: string]: { transform: string } } = {};
+  // Avoid capturing children of selected groups individually to prevent double-moves.
+  // We'll capture only the group transform for selected groups and skip any
+  // selected subpaths/commands that belong to those group children.
+  const selectedGroupIds = new Set(selection.selectedGroups || []);
+  // Sets that track which child element ids belong to the selected groups
+  const groupChildPathIds = new Set<string>();
+  const groupChildTextIds = new Set<string>();
+  const groupChildImageIds = new Set<string>();
+  const groupChildUseIds = new Set<string>();
+
+  const collectGroupChildren = (groupId: string) => {
+    const group = groups.find((g: any) => g.id === groupId);
+    if (!group || !group.children) return;
+    for (const child of group.children) {
+      switch (child.type) {
+        case 'path':
+          groupChildPathIds.add(child.id);
+          break;
+        case 'text':
+          groupChildTextIds.add(child.id);
+          break;
+        case 'image':
+          groupChildImageIds.add(child.id);
+          break;
+        case 'use':
+          groupChildUseIds.add(child.id);
+          break;
+        case 'group':
+          // recurse into nested groups
+          collectGroupChildren(child.id);
+          break;
+        default:
+          break;
+      }
+    }
+  };
+
   selection.selectedGroups?.forEach((groupId: string) => {
     const group = groups.find((g: any) => g.id === groupId);
     if (group) {
-      groupPositions[groupId] = { 
-        transform: group.transform || ''
-      };
+      groupPositions[groupId] = { transform: group.transform || '' };
+      collectGroupChildren(groupId);
     }
   });
 
@@ -103,27 +141,42 @@ export function captureAllSelectedElementsPositions(): DraggedElementsData {
   
   // First, capture explicitly selected commands
   selection.selectedCommands?.forEach((commandId: string) => {
-    paths.forEach(path => {
-      path.subPaths.forEach(subPath => {
+    // Skip commands that belong to paths which are children of selected groups
+    let found = false;
+    for (const path of paths) {
+      for (const subPath of path.subPaths) {
         const command = subPath.commands.find(cmd => cmd.id === commandId);
         if (command) {
+          // if this path is part of a selected group, skip capturing this command
+          if (groupChildPathIds.has(path.id)) {
+            found = true;
+            break;
+          }
           const pos = getCommandPosition(command);
           if (pos) {
             commandPositions[commandId] = { x: pos.x, y: pos.y };
           }
+          found = true;
+          break;
         }
-      });
-    });
+      }
+      if (found) break;
+    }
   });
   
   // Then, capture commands from selected sub-paths
   selection.selectedSubPaths?.forEach((subPathId: string) => {
-    paths.forEach(path => {
+    for (const path of paths) {
       const subPath = path.subPaths.find(sp => sp.id === subPathId);
       if (subPath) {
+        // If the path containing this subPath is part of a selected group, skip it
+        if (groupChildPathIds.has(path.id)) {
+          // Skip capturing this subpath because its parent path is inside a selected group
+          break;
+        }
+
         const commandIds: string[] = [];
-        subPath.commands.forEach(command => {
-          // Only add if not already captured from selectedCommands
+        for (const command of subPath.commands) {
           if (!commandPositions[command.id]) {
             const pos = getCommandPosition(command);
             if (pos) {
@@ -131,13 +184,13 @@ export function captureAllSelectedElementsPositions(): DraggedElementsData {
               commandIds.push(command.id);
             }
           } else {
-            // Still track the command ID for this subpath even if position already captured
             commandIds.push(command.id);
           }
-        });
+        }
         subPathCommands[subPathId] = commandIds;
+        break;
       }
-    });
+    }
   });
 
   return {
