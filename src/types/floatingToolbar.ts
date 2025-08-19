@@ -54,7 +54,7 @@ export interface DropdownOption {
   label: string;
   icon?: React.ComponentType<{ size?: number }>;
   action: () => void;
-  disabled?: boolean;
+  disabled?: boolean | (() => boolean);
 }
 
 export interface FloatingActionDefinition {

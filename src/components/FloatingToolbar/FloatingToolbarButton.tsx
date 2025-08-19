@@ -247,8 +247,12 @@ interface DropdownItemProps {
 const DropdownItem: React.FC<DropdownItemProps> = ({ option, onSelect }) => {
   const { isMobile, isTablet } = useMobileDetection();
   const isMobileDevice = isMobile || isTablet;
+  
+  // Evaluate disabled state - could be boolean or function
+  const isDisabled = typeof option.disabled === 'function' ? option.disabled() : !!option.disabled;
+  
   const handlePointerEnter = (e: React.PointerEvent) => {
-    if (!option.disabled) {
+    if (!isDisabled) {
       (e.currentTarget as HTMLDivElement).style.background = '#f3f4f6';
     }
   };
@@ -263,13 +267,13 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ option, onSelect }) => {
         display: 'flex',
         alignItems: 'center',
         padding: '6px 12px',
-        cursor: option.disabled ? 'not-allowed' : 'pointer',
-        opacity: option.disabled ? 0.5 : 1,
+        cursor: isDisabled ? 'not-allowed' : 'pointer',
+        opacity: isDisabled ? 0.5 : 1,
         fontSize: '14px',
         color: '#374151',
         transition: 'background 0.15s ease'
       }}
-      onPointerDown={option.disabled ? undefined : onSelect}
+      onPointerDown={isDisabled ? undefined : onSelect}
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
     >

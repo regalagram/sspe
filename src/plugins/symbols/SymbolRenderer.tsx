@@ -20,10 +20,11 @@ const styleValueToCSS = (value: any): string | undefined => {
 
 // Individual Use Element Component that can use hooks
 const UseElementComponent: React.FC<{ use: any }> = ({ use }) => {
-  const { symbols, selection, viewport } = useEditorStore();
+  const { symbols, selection, viewport, enabledFeatures } = useEditorStore();
   const animations = useAnimationsForElement(use.id);
   
   const isSelected = selection.selectedUses.includes(use.id);
+  const isWireframeMode = enabledFeatures.wireframeEnabled;
   const strokeWidth = 1 / viewport.zoom;
 
   // Calculate effective position considering transform
@@ -57,33 +58,98 @@ const UseElementComponent: React.FC<{ use: any }> = ({ use }) => {
         style={{ cursor: 'pointer' }}
       />
       
-      {/* Use element */}
-      <use
-        id={use.id}
-        href={use.href}
-        x={effectiveX}
-        y={effectiveY}
-        width={use.width}
-        height={use.height}
-        transform={use.transform}
-        style={{
-          opacity: use.style?.opacity ?? 1,
-          clipPath: styleValueToCSS(use.style?.clipPath),
-          mask: styleValueToCSS(use.style?.mask),
-          filter: styleValueToCSS(use.style?.filter),
-          fill: styleValueToCSS(use.style?.fill) || '#000000',
-          stroke: styleValueToCSS(use.style?.stroke) || 'none',
-          strokeWidth: use.style?.strokeWidth ?? 1,
-          strokeOpacity: use.style?.strokeOpacity ?? 1,
-          fillOpacity: use.style?.fillOpacity ?? 1,
-          strokeDasharray: use.style?.strokeDasharray || 'none',
-          strokeLinecap: use.style?.strokeLinecap || 'butt',
-          strokeLinejoin: use.style?.strokeLinejoin || 'miter',
-        }}
-        pointerEvents="none"
-        data-element-type="use-visual"
-        data-element-id={use.id}
-      />
+      {/* Render as wireframe or normal use element depending on mode */}
+      {isWireframeMode ? (
+        // Wireframe mode: render as outlined rectangle with symbol label
+        <g>
+          <rect
+            x={effectiveX}
+            y={effectiveY}
+            width={use.width || 100}
+            height={use.height || 100}
+            fill="none"
+            stroke="#000000"
+            strokeWidth={strokeWidth * 2}
+            transform={use.transform}
+            pointerEvents="none"
+            data-element-type="use-visual"
+            data-element-id={use.id}
+            style={{
+              opacity: use.style?.opacity ?? 1,
+            }}
+          />
+          {/* Diagonal lines to indicate it's a symbol instance */}
+          <line
+            x1={effectiveX}
+            y1={effectiveY}
+            x2={effectiveX + (use.width || 100)}
+            y2={effectiveY + (use.height || 100)}
+            stroke="#000000"
+            strokeWidth={strokeWidth}
+            transform={use.transform}
+            style={{
+              opacity: 0.3,
+              pointerEvents: 'none'
+            }}
+          />
+          <line
+            x1={effectiveX + (use.width || 100)}
+            y1={effectiveY}
+            x2={effectiveX}
+            y2={effectiveY + (use.height || 100)}
+            stroke="#000000"
+            strokeWidth={strokeWidth}
+            transform={use.transform}
+            style={{
+              opacity: 0.3,
+              pointerEvents: 'none'
+            }}
+          />
+          {/* Symbol reference label */}
+          <text
+            x={effectiveX + 4}
+            y={effectiveY + 12}
+            fontSize={10 / viewport.zoom}
+            fill="#000000"
+            style={{
+              opacity: 0.7,
+              pointerEvents: 'none',
+              fontFamily: 'monospace'
+            }}
+            transform={use.transform}
+          >
+            {use.href?.replace('#', '') || 'SYM'}
+          </text>
+        </g>
+      ) : (
+        // Normal mode: render actual use element
+        <use
+          id={use.id}
+          href={use.href}
+          x={effectiveX}
+          y={effectiveY}
+          width={use.width}
+          height={use.height}
+          transform={use.transform}
+          style={{
+            opacity: use.style?.opacity ?? 1,
+            clipPath: styleValueToCSS(use.style?.clipPath),
+            mask: styleValueToCSS(use.style?.mask),
+            filter: styleValueToCSS(use.style?.filter),
+            fill: styleValueToCSS(use.style?.fill) || '#000000',
+            stroke: styleValueToCSS(use.style?.stroke) || 'none',
+            strokeWidth: use.style?.strokeWidth ?? 1,
+            strokeOpacity: use.style?.strokeOpacity ?? 1,
+            fillOpacity: use.style?.fillOpacity ?? 1,
+            strokeDasharray: use.style?.strokeDasharray || 'none',
+            strokeLinecap: use.style?.strokeLinecap || 'butt',
+            strokeLinejoin: use.style?.strokeLinejoin || 'miter',
+          }}
+          pointerEvents="none"
+          data-element-type="use-visual"
+          data-element-id={use.id}
+        />
+      )}
       {/* Include animations as siblings that target the use element */}
       {animations}
       

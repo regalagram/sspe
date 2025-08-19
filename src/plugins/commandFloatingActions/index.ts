@@ -260,7 +260,7 @@ const getArrangeActions = (): ToolbarAction[] => [
             store.pushToHistory();
             store.alignCommandsLeft(store.selection.selectedCommands);
           },
-          disabled: !canAlign()
+          disabled: () => !canAlign()
         },
         {
           id: 'align-commands-center',
@@ -272,7 +272,7 @@ const getArrangeActions = (): ToolbarAction[] => [
             store.pushToHistory();
             store.alignCommandsCenter(store.selection.selectedCommands);
           },
-          disabled: !canAlign()
+          disabled: () => !canAlign()
         },
         {
           id: 'align-commands-right',
@@ -284,7 +284,7 @@ const getArrangeActions = (): ToolbarAction[] => [
             store.pushToHistory();
             store.alignCommandsRight(store.selection.selectedCommands);
           },
-          disabled: !canAlign()
+          disabled: () => !canAlign()
         },
         {
           id: 'align-commands-top',
@@ -296,7 +296,7 @@ const getArrangeActions = (): ToolbarAction[] => [
             store.pushToHistory();
             store.alignCommandsTop(store.selection.selectedCommands);
           },
-          disabled: !canAlign()
+          disabled: () => !canAlign()
         },
         {
           id: 'align-commands-middle',
@@ -308,7 +308,7 @@ const getArrangeActions = (): ToolbarAction[] => [
             store.pushToHistory();
             store.alignCommandsMiddle(store.selection.selectedCommands);
           },
-          disabled: !canAlign()
+          disabled: () => !canAlign()
         },
         {
           id: 'align-commands-bottom',
@@ -320,7 +320,7 @@ const getArrangeActions = (): ToolbarAction[] => [
             store.pushToHistory();
             store.alignCommandsBottom(store.selection.selectedCommands);
           },
-          disabled: !canAlign()
+          disabled: () => !canAlign()
         },
         // Distribution options
         {
@@ -333,7 +333,7 @@ const getArrangeActions = (): ToolbarAction[] => [
             store.pushToHistory();
             store.distributeCommandsHorizontally(store.selection.selectedCommands);
           },
-          disabled: !canDistribute()
+          disabled: () => !canDistribute()
         },
         {
           id: 'distribute-commands-vertically',
@@ -345,7 +345,7 @@ const getArrangeActions = (): ToolbarAction[] => [
             store.pushToHistory();
             store.distributeCommandsVertically(store.selection.selectedCommands);
           },
-          disabled: !canDistribute()
+          disabled: () => !canDistribute()
         }
       ]
     },

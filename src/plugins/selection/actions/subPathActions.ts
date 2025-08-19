@@ -136,9 +136,50 @@ const applySubPathStrokeWidth = (width: string | number) => {
 };
 
 // Simplified stroke dash functions
-const getCommonSubPathStrokeDash = () => 'none';
-const getCommonSubPathStrokeLinecap = () => 'butt';
-const getCommonSubPathStrokeLinejoin = () => 'miter';
+const getCommonSubPathStrokeDash = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  if (selectedSubPaths.length === 0) return 'none';
+  
+  const firstSubPath = selectedSubPaths[0];
+  const parentPath = store.paths.find(path => 
+    path.subPaths.some(sp => sp.id === firstSubPath)
+  );
+  
+  const strokeDash = parentPath?.style?.strokeDasharray;
+  return typeof strokeDash === 'string' ? strokeDash : 'none';
+};
+
+const getCommonSubPathStrokeLinecap = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  if (selectedSubPaths.length === 0) return 'butt';
+  
+  const firstSubPath = selectedSubPaths[0];
+  const parentPath = store.paths.find(path => 
+    path.subPaths.some(sp => sp.id === firstSubPath)
+  );
+  
+  const strokeLinecap = parentPath?.style?.strokeLinecap;
+  return typeof strokeLinecap === 'string' ? strokeLinecap : 'butt';
+};
+
+const getCommonSubPathStrokeLinejoin = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  if (selectedSubPaths.length === 0) return 'miter';
+  
+  const firstSubPath = selectedSubPaths[0];
+  const parentPath = store.paths.find(path => 
+    path.subPaths.some(sp => sp.id === firstSubPath)
+  );
+  
+  const strokeLinejoin = parentPath?.style?.strokeLinejoin;
+  return typeof strokeLinejoin === 'string' ? strokeLinejoin : 'miter';
+};
 
 const applySubPathStrokeDash = (dash: string) => {
   const store = useEditorStore.getState();
