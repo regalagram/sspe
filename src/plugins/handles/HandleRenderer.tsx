@@ -201,6 +201,9 @@ export const HandleRenderer: React.FC = () => {
                               vectorEffect="non-scaling-stroke"
                               className="control-point"
                               data-command-id={command.id}
+                              // For x1y1 the visual line comes from the previous command's anchor;
+                              // expose the previous command id so pointer handlers can select it.
+                              data-prev-command-id={prevCommand ? prevCommand.id : undefined}
                               data-control-point="x1y1"
                               opacity={1.0}
                               style={{ cursor: 'default' }}

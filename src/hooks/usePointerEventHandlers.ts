@@ -1,5 +1,6 @@
 import React from 'react';
 import { pluginManager } from '../core/PluginSystem';
+import { useEditorStore } from '../store/editorStore';
 
 export const usePointerEventHandlers = () => {
   const handlePointerDown = (e: React.PointerEvent<SVGElement>) => {
@@ -13,6 +14,28 @@ export const usePointerEventHandlers = () => {
     
     // For text elements, use elementId as commandId to enable plugin prioritization
     const effectiveCommandId = commandId || (elementType && elementId ? elementId : undefined);
+
+    // If this pointerdown is on a command element (anchor or control point), automatically select it.
+    // For x1y1 handles, prefer selecting the previous command (the anchor at the start of the line)
+    // if a data-prev-command-id attribute is provided.
+    // Respect modifier keys for multi-select/toggle behavior.
+    try {
+      const store = useEditorStore.getState();
+      const addToSelection = Boolean(e.shiftKey || e.ctrlKey || e.metaKey);
+      let commandToSelect: string | undefined = undefined;
+      if (controlPoint === 'x1y1') {
+        const prevId = target.getAttribute('data-prev-command-id') || undefined;
+        commandToSelect = prevId || effectiveCommandId;
+      } else {
+        commandToSelect = effectiveCommandId;
+      }
+
+      if (commandToSelect) {
+        store.selectCommand(commandToSelect, addToSelection);
+      }
+    } catch (err) {
+      // ignore errors selecting
+    }
     
     pluginManager.handlePointerEvent('pointerDown', e, effectiveCommandId, controlPoint);
   };
