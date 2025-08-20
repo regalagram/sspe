@@ -1303,6 +1303,39 @@ export class FloatingToolbarManager {
             }
           });
 
+          // Delete selected images
+          if (selection.selectedImages && selection.selectedImages.length > 0) {
+            selection.selectedImages.forEach(imageId => {
+              try {
+                store.removeImage(imageId);
+              } catch (e) {
+                console.warn('Error removing image', imageId, e);
+              }
+            });
+          }
+
+          // Delete selected use elements
+          if (selection.selectedUses && selection.selectedUses.length > 0) {
+            selection.selectedUses.forEach(useId => {
+              try {
+                store.removeUse(useId);
+              } catch (e) {
+                console.warn('Error removing use', useId, e);
+              }
+            });
+          }
+
+          // Delete selected groups (delete children as well)
+          if (selection.selectedGroups && selection.selectedGroups.length > 0) {
+            selection.selectedGroups.forEach(groupId => {
+              try {
+                store.deleteGroup(groupId, true);
+              } catch (e) {
+                console.warn('Error deleting group', groupId, e);
+              }
+            });
+          }
+
           // Clear selection after deletion
           store.clearSelection();
         });
