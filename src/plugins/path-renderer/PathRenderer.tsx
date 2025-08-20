@@ -145,7 +145,8 @@ export const PathRenderer: React.FC = () => {
     moveUse,
     renderVersion, 
     enabledFeatures,
-    grid
+    grid,
+    mode
   } = useEditorStore();
   const svgRef = useRef<SVGSVGElement>(null);
   
@@ -614,7 +615,7 @@ export const PathRenderer: React.FC = () => {
               if (subPath.locked) return null;
               const dSub = subPathToStringInContext(subPath, path.subPaths);
               return (
-                <SubPathWithAnimations
+        <SubPathWithAnimations
                   key={`subpath-interact-${subPath.id}`}
                   subPathId={subPath.id}
                   d={dSub}
@@ -627,7 +628,7 @@ export const PathRenderer: React.FC = () => {
                   data-element-type="subpath"
                   data-element-id={subPath.id}
                   style={{
-                    cursor: 'pointer',
+          cursor: mode?.current === 'subpath-edit' ? 'default' : 'pointer',
                     pointerEvents: 'all',
                   }}
                   onPointerDown={(e) => {
@@ -735,9 +736,7 @@ export const PathRenderer: React.FC = () => {
                 data-element-id={subPath.id}
                 style={{
                   pointerEvents: 'all',
-                  cursor: dragState.isDragging && dragState.subPathId === subPath.id && dragState.dragStarted 
-                    ? 'pointer' 
-                    : 'pointer',
+                  cursor: mode?.current === 'subpath-edit' ? 'default' : 'pointer',
                   filter: `drop-shadow(0 0 ${3 / viewport.zoom}px ${contrastColor})`,
                 }}
                 onPointerDown={(e) => {
