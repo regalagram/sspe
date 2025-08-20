@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit3, Spline, Move, Minus, X, CornerUpRight, LogOut } from 'lucide-react';
+import { Plus, Edit3, Spline, Move, Minus, X, CornerUpRight, LogOut, MousePointerClick } from 'lucide-react';
 import { ToolbarButton, ToolbarSection } from './ToolbarButton';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useToolbarStore } from '../store/toolbarStore';
@@ -35,6 +35,8 @@ export const WritingConsolidatedTools: React.FC = () => {
 
   // Dynamic icon based on active tool
   const getCurrentIcon = () => {
+  // If subpath-edit mode is active, show the mouse-pointer icon to indicate mode
+  if (isSubpathEditMode) return <MousePointerClick size={iconSize} />;
     if (isPencilActive) return <Edit3 size={iconSize} />;
     if (isCurveActive) return <Spline size={iconSize} />;
     if (isCreateMode) {
@@ -279,8 +281,8 @@ export const WritingConsolidatedTools: React.FC = () => {
         <div style={{ height: '1px', background: '#e5e7eb', margin: '6px 0' }} />
         {!isSubpathEditMode ? (
           <SubmenuItem
-            icon={<Move size={isMobile ? 12 : 13} />}
-            label="Enable Subpath Edit"
+            icon={<MousePointerClick size={isMobile ? 12 : 13} />}
+            label="Subpath Edit"
             onClick={() => {
               toggleSubpathEditMode();
               setIsSubmenuOpen(false);
@@ -290,7 +292,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         ) : (
           <>
             <SubmenuItem
-              icon={<X size={isMobile ? 12 : 13} />}
+              icon={<MousePointerClick size={isMobile ? 12 : 13} />}
               label="Exit Subpath Edit"
               onClick={() => {
                 toggleSubpathEditMode();
