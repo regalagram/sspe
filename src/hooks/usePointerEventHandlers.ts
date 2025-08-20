@@ -19,23 +19,9 @@ export const usePointerEventHandlers = () => {
     // For x1y1 handles, prefer selecting the previous command (the anchor at the start of the line)
     // if a data-prev-command-id attribute is provided.
     // Respect modifier keys for multi-select/toggle behavior.
-    try {
-      const store = useEditorStore.getState();
-      const addToSelection = Boolean(e.shiftKey || e.ctrlKey || e.metaKey);
-      let commandToSelect: string | undefined = undefined;
-      if (controlPoint === 'x1y1') {
-        const prevId = target.getAttribute('data-prev-command-id') || undefined;
-        commandToSelect = prevId || effectiveCommandId;
-      } else {
-        commandToSelect = effectiveCommandId;
-      }
-
-      if (commandToSelect) {
-        store.selectCommand(commandToSelect, addToSelection);
-      }
-    } catch (err) {
-      // ignore errors selecting
-    }
+  // NOTE: selection is handled centrally by the pointer-interaction plugin.
+  // Avoid selecting here to prevent prematurely replacing multi-selection
+  // when the user intends to drag multiple selected elements.
     
     pluginManager.handlePointerEvent('pointerDown', e, effectiveCommandId, controlPoint);
   };
