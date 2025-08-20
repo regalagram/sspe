@@ -73,7 +73,10 @@ export const WritingConsolidatedTools: React.FC = () => {
       // exit to select
       useEditorStore.getState().setMode('select');
     } else {
-      useEditorStore.getState().setMode('subpath-edit' as any);
+      // Clear existing selections before entering subpath-edit mode
+      const store = useEditorStore.getState();
+      store.clearSelection();
+      store.setMode('subpath-edit' as any);
     }
   };
 

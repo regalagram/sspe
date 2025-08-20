@@ -60,6 +60,11 @@ export const HandleRenderer: React.FC = () => {
     return unsubscribe;
   }, []);
 
+  // Force re-render when visual debug sizes change
+  React.useEffect(() => {
+    setRenderKey(prev => prev + 1);
+  }, [visualDebugSizes.globalFactor, visualDebugSizes.controlPointsFactor]);
+
   // Memoize drag state to prevent unnecessary re-renders during drag
   const dragStateInfo = React.useMemo(() => {
     const isDragging = handleState.dragState.isDragging;
@@ -101,8 +106,14 @@ export const HandleRenderer: React.FC = () => {
   // Use memoized drag state info
   const { isDragging, dragCommandId, dragHandleType, pairedHandle } = dragStateInfo;
 
+  // Calcular radio responsivo basado en el dispositivo con factores de tamaño - una vez por render
+  const baseRadius = getControlPointSize(isMobile, isTablet);
+  const controlPointRadius = baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.controlPointsFactor;
+
   // Use stable key during drag to prevent React from dismounting elements
-  const stableKey = isDragging ? `handle-renderer-stable` : `handle-renderer-${renderKey}`;
+  // Include visualDebugSizes factors to force re-render when they change
+  const debugKey = `${visualDebugSizes.globalFactor}-${visualDebugSizes.controlPointsFactor}`;
+  const stableKey = isDragging ? `handle-renderer-stable-${debugKey}` : `handle-renderer-${renderKey}-${debugKey}`;
 
   return (
     <g key={stableKey}>
@@ -153,9 +164,8 @@ export const HandleRenderer: React.FC = () => {
             const isNextCommandDisplay = controlPointInfo?.isNextCommandDisplay || false;
             const colors = getHandleColors(handleType, handleState.isOptionPressed, isNextCommandDisplay);
             
-            // Calcular radio responsivo basado en el dispositivo con factores de tamaño
-            const baseRadius = getControlPointSize(isMobile, isTablet);
-            const radius = (baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.controlPointsFactor) / viewport.zoom;
+            // Usar el radio calculado globalmente
+            const radius = controlPointRadius;
             
             // Find previous command position for connecting control points
             const prevCommand = commandIndex > 0 ? subPath.commands[commandIndex - 1] : null;
@@ -200,25 +210,27 @@ export const HandleRenderer: React.FC = () => {
                               pointerEvents="none"
                               opacity={1.0}
                             />
-                            <circle
-                              cx={controlPoints[0].x}
-                              cy={controlPoints[0].y}
-                              r={radius * 0.7}
-                              fill={colors.fill}
-                              stroke={colors.stroke}
-                              strokeWidth={1.5}
-                              vectorEffect="non-scaling-stroke"
-                              className="control-point"
-                              data-command-id={command.id}
-                              // For x1y1 the visual line comes from the previous command's anchor;
-                              // expose the previous command id so pointer handlers can select it.
-                              data-prev-command-id={prevCommand ? prevCommand.id : undefined}
-                              data-control-point="x1y1"
-                              opacity={1.0}
-                              style={{ cursor: 'default' }}
-                              // Durante el drag, hacer el punto más visible
-                              filter={isDragging && command.id === dragCommandId && dragHandleType === 'outgoing' ? 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' : undefined}
-                            />
+                            <g transform={`translate(${controlPoints[0].x},${controlPoints[0].y}) scale(${1 / viewport.zoom}) translate(${-controlPoints[0].x},${-controlPoints[0].y})`}>
+                              <circle
+                                cx={controlPoints[0].x}
+                                cy={controlPoints[0].y}
+                                r={radius * 0.7}
+                                fill={colors.fill}
+                                stroke={colors.stroke}
+                                strokeWidth={1.5}
+                                vectorEffect="non-scaling-stroke"
+                                className="control-point"
+                                data-command-id={command.id}
+                                // For x1y1 the visual line comes from the previous command's anchor;
+                                // expose the previous command id so pointer handlers can select it.
+                                data-prev-command-id={prevCommand ? prevCommand.id : undefined}
+                                data-control-point="x1y1"
+                                opacity={1.0}
+                                style={{ cursor: 'default' }}
+                                // Durante el drag, hacer el punto más visible
+                                filter={isDragging && command.id === dragCommandId && dragHandleType === 'outgoing' ? 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' : undefined}
+                              />
+                            </g>
                           </>
                         )}
                       </>
@@ -250,22 +262,24 @@ export const HandleRenderer: React.FC = () => {
                               pointerEvents="none"
                               opacity={1.0}
                             />
-                            <circle
-                              cx={controlPoints[1].x}
-                              cy={controlPoints[1].y}
-                              r={radius * 0.7}
-                              fill={colors.fill}
-                              stroke={colors.stroke}
-                              strokeWidth={1.5}
-                              vectorEffect="non-scaling-stroke"
-                              className="control-point"
-                              data-command-id={command.id}
-                              data-control-point="x2y2"
-                              opacity={1.0}
-                              style={{ cursor: 'default' }}
-                              // Durante el drag, hacer el punto más visible
-                              filter={isDragging && command.id === dragCommandId && dragHandleType === 'incoming' ? 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' : undefined}
-                            />
+                            <g transform={`translate(${controlPoints[1].x},${controlPoints[1].y}) scale(${1 / viewport.zoom}) translate(${-controlPoints[1].x},${-controlPoints[1].y})`}>
+                              <circle
+                                cx={controlPoints[1].x}
+                                cy={controlPoints[1].y}
+                                r={radius * 0.7}
+                                fill={colors.fill}
+                                stroke={colors.stroke}
+                                strokeWidth={1.5}
+                                vectorEffect="non-scaling-stroke"
+                                className="control-point"
+                                data-command-id={command.id}
+                                data-control-point="x2y2"
+                                opacity={1.0}
+                                style={{ cursor: 'default' }}
+                                // Durante el drag, hacer el punto más visible
+                                filter={isDragging && command.id === dragCommandId && dragHandleType === 'incoming' ? 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' : undefined}
+                              />
+                            </g>
                           </>
                         )}
                       </>

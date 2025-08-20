@@ -499,7 +499,7 @@ export const CommandPointsRenderer: React.FC = () => {
             }
             
             const baseRadius = getControlPointSize(isMobile, isTablet);
-            let radius = (baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.commandPointsFactor) / viewport.zoom;
+            let radius = baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.commandPointsFactor;
             
             // Make initial point 30% larger
             if (isFirstCommand) {
@@ -578,6 +578,7 @@ export const CommandPointsRenderer: React.FC = () => {
               
               return (
                 <g key={`command-split-${firstCommand.id}-${lastCommand.id}-v${renderVersion}`}>
+                  <g transform={`translate(${position.x},${position.y}) scale(${1 / viewport.zoom}) translate(${-position.x},${-position.y})`}>
                   {/* First half (red) - initial point */}
                   <path
                     d={`M ${position.x} ${position.y} L ${splitX1} ${splitY1} A ${radius} ${radius} 0 0 1 ${splitX2} ${splitY2} Z`}
@@ -636,6 +637,7 @@ export const CommandPointsRenderer: React.FC = () => {
                       }}
                     />
                   )}
+                  </g>
                 </g>
               );
             }
@@ -645,36 +647,38 @@ export const CommandPointsRenderer: React.FC = () => {
             
             return (
               <g key={`command-${command.id}-v${renderVersion}`}>
-                <circle
-                  cx={position.x}
-                  cy={position.y}
-                  r={radius}
-                  fill={fill}
-                  stroke={stroke}
-                  strokeWidth={1}
-        vectorEffect="non-scaling-stroke"
-                  style={{ 
-                    pointerEvents: 'all',
-                    opacity: 0.9,
-                    cursor: 'default'
-                  }}
-                  className="command-point"
-                  data-command-id={command.id}
-                />
-                {/* Inner circle for selected initial/final points */}
-                {isCommandSelected && (isFirstCommand || isLastCommand) && (
+                <g transform={`translate(${position.x},${position.y}) scale(${1 / viewport.zoom}) translate(${-position.x},${-position.y})`}>
                   <circle
                     cx={position.x}
                     cy={position.y}
-                    r={radius * 0.4}
-                    fill="#ffffff"
-                    stroke="none"
+                    r={radius}
+                    fill={fill}
+                    stroke={stroke}
+                    strokeWidth={1}
+                    vectorEffect="non-scaling-stroke"
                     style={{ 
-                      pointerEvents: 'none',
-                      opacity: 0.8
+                      pointerEvents: 'all',
+                      opacity: 0.9,
+                      cursor: 'default'
                     }}
+                    className="command-point"
+                    data-command-id={command.id}
                   />
-                )}
+                  {/* Inner circle for selected initial/final points */}
+                  {isCommandSelected && (isFirstCommand || isLastCommand) && (
+                    <circle
+                      cx={position.x}
+                      cy={position.y}
+                      r={radius * 0.4}
+                      fill="#ffffff"
+                      stroke="none"
+                      style={{ 
+                        pointerEvents: 'none',
+                        opacity: 0.8
+                      }}
+                    />
+                  )}
+                </g>
               </g>
             );
           });

@@ -38,7 +38,8 @@ export const GroupControls: React.FC = () => {
     exportGroupSVG,
     setGroupLockLevel,
     getGroupLockLevel,
-    isGroupLocked
+    isGroupLocked,
+    viewport
   } = useEditorStore();
 
   // State variables
@@ -642,7 +643,7 @@ export const GroupControls: React.FC = () => {
                                 }
                                 return null;
                               })}
-                              <circle cx={centerX} cy={centerY} r={2.5} fill="#1976d2" />
+                              <circle cx={centerX} cy={centerY} r={2.5 / viewport.zoom} fill="#1976d2" strokeWidth={1} vectorEffect="non-scaling-stroke" stroke="#1976d2" />
                               {validElements === 0 && (
                                 <text x={centerX} y={centerY} fontSize={8} fill="#d32f2f" textAnchor="middle" alignmentBaseline="middle">
                                   Sin elementos válidos

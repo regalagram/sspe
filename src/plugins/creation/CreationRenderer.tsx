@@ -13,7 +13,8 @@ export const CreationRenderer: React.FC = () => {
       r={2 / viewport.zoom}
       fill="rgba(0, 122, 204, 0.5)"
       stroke="#007acc"
-      strokeWidth={1 / viewport.zoom}
+      strokeWidth={1}
+      vectorEffect="non-scaling-stroke"
       style={{ pointerEvents: 'none' }}
     />
   );

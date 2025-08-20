@@ -461,10 +461,9 @@ html,body {
     touch-action: pan-x pan-y;
   }
   
-  /* Control points larger on mobile */
+  /* Control points stroke width on mobile */
   .command-point,
   .control-point {
-    r: 8 !important;
     stroke-width: 2 !important;
   }
   
@@ -478,9 +477,6 @@ html,body {
 
 @media (min-width: 769px) and (max-width: 1024px) {
   /* Tablet-specific optimizations */
-  .control-point {
-    r: 7 !important;
-  }
   
   .mobile-toolbar-item button {
     min-width: 40px !important;
