@@ -298,7 +298,11 @@ export const CommandPointsRenderer: React.FC = () => {
   const hasSelectedCommand = selection.selectedCommands.length > 0;
 
   // Show if feature is enabled OR if any sub-path is selected OR if any command is selected
-  const shouldShow = enabledFeatures.commandPointsEnabled || hasSelectedSubPath || hasSelectedCommand;
+  const { mode, enabledFeatures: storeEnabledFeatures } = useEditorStore();
+  const isSubpathEditMode = mode?.current === 'subpath-edit';
+  const subpathShowCommandPoints = storeEnabledFeatures.subpathShowCommandPoints ?? true;
+
+  const shouldShow = (isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || hasSelectedSubPath || hasSelectedCommand;
 
   if (!shouldShow) {
     return null;
@@ -318,7 +322,7 @@ export const CommandPointsRenderer: React.FC = () => {
           const hasSelectedCommandInSubPath = subPath.commands.some(cmd => 
             selection.selectedCommands.includes(cmd.id)
           );
-          const shouldShowSubPath = enabledFeatures.commandPointsEnabled || isSubPathSelected || hasSelectedCommandInSubPath;
+          const shouldShowSubPath = (isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || isSubPathSelected || hasSelectedCommandInSubPath;
           // Check if first and last commands coincide
           const firstCommand = subPath.commands[0];
           const lastCommand = subPath.commands[subPath.commands.length - 1];
@@ -339,7 +343,7 @@ export const CommandPointsRenderer: React.FC = () => {
             if (isZCommand) {
               // Show Z commands if feature is enabled OR if subpath is selected OR if Z command is selected
               const isZCommandSelected = selection.selectedCommands.includes(command.id);
-              const shouldShowZCommand = enabledFeatures.commandPointsEnabled || shouldShowSubPath || isZCommandSelected;
+              const shouldShowZCommand = (isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || shouldShowSubPath || isZCommandSelected;
               if (!shouldShowZCommand) return null;
               // Z commands don't have position, skip position-based checks
             } else {

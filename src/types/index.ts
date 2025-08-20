@@ -234,7 +234,9 @@ export interface GridState {
 }
 
 export interface EditorMode {
-  current: 'select' | 'create' | 'edit' | 'pan' | 'zoom' | 'curves';
+  // Added 'subpath-edit' for the new specialized editing mode where subpaths are
+  // editable but should not be selected by pointer taps.
+  current: 'select' | 'create' | 'edit' | 'pan' | 'zoom' | 'curves' | 'subpath-edit';
   createMode?: {
     commandType: EditorCommandType;
     isDrawing: boolean;
@@ -271,6 +273,9 @@ export interface EditorState {
     commandPointsEnabled: boolean;
     controlPointsEnabled: boolean;
     wireframeEnabled: boolean;
+  // Subpath-edit specific visibility flags
+  subpathShowCommandPoints?: boolean;
+  subpathShowControlPoints?: boolean;
     hidePointsInSelect: boolean;
     showGroupsFrame: boolean;
     stickyGuidelinesEnabled: boolean;

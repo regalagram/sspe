@@ -406,6 +406,9 @@ const loadInitialState = (): EditorState => {
       commandPointsEnabled: false, 
       controlPointsEnabled: false, 
       wireframeEnabled: false,
+  // Subpath-edit specific visibility flags
+  subpathShowCommandPoints: true,
+  subpathShowControlPoints: true,
       hidePointsInSelect: false,
       showGroupsFrame: false,
       stickyGuidelinesEnabled: false

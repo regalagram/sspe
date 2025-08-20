@@ -229,7 +229,9 @@ export const PathRenderer: React.FC = () => {
       
       // Only select if not already selected and shouldn't preserve selection
       const isSubPathSelected = currentState.selection.selectedSubPaths.includes(subPathId);
-      if (!isSubPathSelected) {
+      // If we're in subpath-edit mode, do NOT change selection on pointer down
+      const isSubpathEditMode = currentState.mode?.current === 'subpath-edit';
+      if (!isSubPathSelected && !isSubpathEditMode) {
         if (shouldPreserveSelection(subPathId, 'subpath', selectionContext)) {
           // Preserve current selection - don't call selectSubPathMultiple
         } else {
@@ -645,10 +647,10 @@ export const PathRenderer: React.FC = () => {
                       );
                     }
                     
-                    // If subpath belongs to a group, don't stopPropagation - let PointerInteraction handle it
-                    if (!belongsToGroup) {
-                      e.stopPropagation();
-                    }
+                      // If subpath belongs to a group, don't stopPropagation - let PointerInteraction handle it
+                      if (!belongsToGroup) {
+                        e.stopPropagation();
+                      }
                     
                     // Get the SVG element from the path's parent
                     const svgElement = (e.target as SVGPathElement).closest('svg');
@@ -657,10 +659,20 @@ export const PathRenderer: React.FC = () => {
                       // Si hay otro subpath debajo, seleccionarlo
                       const foundSubPath = findSubPathAtPoint(path, point, 15);
                       if (foundSubPath && foundSubPath.id !== subPath.id) {
+                        // If we're in subpath-edit mode, don't change selection on tap
+                        const currentState = useEditorStore.getState();
+                        if (currentState.mode?.current === 'subpath-edit') {
+                          return; // swallow selection change
+                        }
                         selectSubPathByPoint(path.id, point, e.shiftKey);
                         return;
                       }
                     }
+                    // In subpath-edit mode we still want to start drag/edit operations
+                    // but we must avoid changing selection on simple taps. handleSubPathPointerDown
+                    // may call selectSubPathMultiple internally — PathRenderer's handler will
+                    // check the mode and avoid selection (we'll let handleSubPathPointerDown always run
+                    // to keep dragging behavior).
                     handleSubPathPointerDown(e, subPath.id);
                   }}
                 />

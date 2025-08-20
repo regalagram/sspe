@@ -61,6 +61,20 @@ export const WritingConsolidatedTools: React.FC = () => {
 
   const isAnyToolActive = isPencilActive || isCurveActive || isCreateMode;
 
+  // Subpath-edit mode state
+  const isSubpathEditMode = mode.current === 'subpath-edit';
+
+  const { enabledFeatures, toggleFeature } = useEditorStore();
+
+  const toggleSubpathEditMode = () => {
+    if (isSubpathEditMode) {
+      // exit to select
+      useEditorStore.getState().setMode('select');
+    } else {
+      useEditorStore.getState().setMode('subpath-edit' as any);
+    }
+  };
+
   // Creation tools definition with letters
   const creationTools = [
     { 
@@ -258,6 +272,47 @@ export const WritingConsolidatedTools: React.FC = () => {
                 handleFinishPath();
                 setIsSubmenuOpen(false);
               }}
+            />
+          </>
+        )}
+        {/* Subpath-edit option inside the Drawing Tools submenu */}
+        <div style={{ height: '1px', background: '#e5e7eb', margin: '6px 0' }} />
+        {!isSubpathEditMode ? (
+          <SubmenuItem
+            icon={<Move size={isMobile ? 12 : 13} />}
+            label="Enable Subpath Edit"
+            onClick={() => {
+              toggleSubpathEditMode();
+              setIsSubmenuOpen(false);
+            }}
+            active={false}
+          />
+        ) : (
+          <>
+            <SubmenuItem
+              icon={<X size={isMobile ? 12 : 13} />}
+              label="Exit Subpath Edit"
+              onClick={() => {
+                toggleSubpathEditMode();
+                setIsSubmenuOpen(false);
+              }}
+              active={true}
+            />
+
+            <div style={{ height: '1px', background: '#e5e7eb', margin: '4px 0' }} />
+
+            <SubmenuItem
+              icon={<Minus size={isMobile ? 12 : 13} />}
+              label={enabledFeatures.subpathShowCommandPoints ? 'Hide Command Points' : 'Show Command Points'}
+              onClick={() => toggleFeature('subpathShowCommandPoints')}
+              active={!!enabledFeatures.subpathShowCommandPoints}
+            />
+
+            <SubmenuItem
+              icon={<Plus size={isMobile ? 12 : 13} />}
+              label={enabledFeatures.subpathShowControlPoints ? 'Hide Control Points' : 'Show Control Points'}
+              onClick={() => toggleFeature('subpathShowControlPoints')}
+              active={!!enabledFeatures.subpathShowControlPoints}
             />
           </>
         )}

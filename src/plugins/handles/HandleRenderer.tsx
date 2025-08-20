@@ -39,7 +39,7 @@ const getHandleColors = (type: ControlPointType, isOptionPressed: boolean, isNex
 };
 
 export const HandleRenderer: React.FC = () => {
-  const { paths, enabledFeatures, viewport, selection, visualDebugSizes } = useEditorStore();
+  const { paths, enabledFeatures, viewport, selection, visualDebugSizes, mode } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   const [handleState, setHandleState] = React.useState(handleManager.getState());
   const [renderKey, setRenderKey] = React.useState(0);
@@ -82,13 +82,17 @@ export const HandleRenderer: React.FC = () => {
 
   // Check if control points feature is enabled
   const controlPointsEnabled = enabledFeatures.controlPointsEnabled;
+  const isSubpathEditMode = mode?.current === 'subpath-edit';
+  const subpathShowCommandPoints = enabledFeatures.subpathShowCommandPoints ?? true;
+  const subpathShowControlPoints = enabledFeatures.subpathShowControlPoints ?? true;
   
   // Check if any sub-path is selected or any command is selected
   const hasSelectedSubPath = selection.selectedSubPaths.length > 0;
   const hasSelectedCommand = selection.selectedCommands.length > 0;
   
   // Show if feature is enabled OR if any sub-path is selected OR if any command is selected
-  const shouldShow = controlPointsEnabled || hasSelectedSubPath || hasSelectedCommand ;
+  // For subpath-edit mode we additionally respect per-class flags
+  const shouldShow = (isSubpathEditMode && (subpathShowCommandPoints || subpathShowControlPoints)) || controlPointsEnabled || hasSelectedSubPath || hasSelectedCommand ;
 
   if (!shouldShow) {
     return null;
@@ -122,11 +126,11 @@ export const HandleRenderer: React.FC = () => {
             const hasControlPoints = handleState.controlPoints.has(command.id);
             const controlPointInfoForCheck = handleState.controlPoints.get(command.id);
             // Show control points if:
-            // 1. Feature is enabled, OR
-            // 2. Sub-path is selected, OR 
+            // 1. We're in subpath-edit mode (show everything), OR
+            // 2. Feature is enabled / subpath is selected, OR 
             // 3. This specific command is selected, OR
             // 4. This command has control points to show (from HandleManager)
-            const shouldShowCommand = shouldShowSubPath || isCommandSelected || hasControlPoints;
+            const shouldShowCommand = isSubpathEditMode || shouldShowSubPath || isCommandSelected || hasControlPoints;
             if (!shouldShowCommand) return null;
             
             // Durante el drag, solo mostrar el comando que se arrastra y su pareja
@@ -159,6 +163,11 @@ export const HandleRenderer: React.FC = () => {
             
             // Get absolute control points for this command with path context
             const controlPoints = getAbsoluteControlPoints(command, subPath, path.subPaths);
+
+            // If we're in subpath-edit mode, optionally hide control points based on feature flag
+            if (isSubpathEditMode && !subpathShowControlPoints) {
+              return null;
+            }
             
             return (
               <g key={`handle-control-${command.id}`}>
