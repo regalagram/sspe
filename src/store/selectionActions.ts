@@ -1096,11 +1096,37 @@ export const createSelectionActions: StateCreator<
       });
     } else {
       // Select whole sub-paths when all are fully contained
-      subPathAnalysis.forEach(analysis => {
-        if (analysis.isFullyInBox) {
-          newSelection.selectedSubPaths.push(analysis.subPath.id);
-        }
-      });
+      // BUT: if we're in subpath-edit mode, selecting the box should select
+      // the individual commands (points) of those subpaths instead of the
+      // subpath entity itself.
+      const isSubpathEditMode = state.mode?.current === 'subpath-edit';
+
+      if (isSubpathEditMode) {
+        // Select individual commands (points) for fully-contained subpaths
+        subPathAnalysis.forEach(analysis => {
+          if (analysis.isFullyInBox) {
+            // Double-check that commands and their parent subpath are not locked
+            const allowedCommands = analysis.commandsInBox.filter(commandId => {
+              for (const path of state.paths) {
+                for (const subPath of path.subPaths) {
+                  const command = subPath.commands.find(cmd => cmd.id === commandId);
+                  if (command) {
+                    return !command.locked && !subPath.locked;
+                  }
+                }
+              }
+              return false;
+            });
+            newSelection.selectedCommands.push(...allowedCommands);
+          }
+        });
+      } else {
+        subPathAnalysis.forEach(analysis => {
+          if (analysis.isFullyInBox) {
+            newSelection.selectedSubPaths.push(analysis.subPath.id);
+          }
+        });
+      }
     }
 
     // Check images in box
