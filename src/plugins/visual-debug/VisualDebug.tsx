@@ -1,7 +1,7 @@
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { getAbsoluteCommandPosition } from '../../utils/path-utils';
-import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';
+import { useMobileDetection, getControlPointSize, getInteractionRadius } from '../../hooks/useMobileDetection';
 import { stickyPointsManager } from '../pointer-interaction/StickyPointsManager';
 
 interface VisualDebugControlsProps {
@@ -585,14 +585,12 @@ export const CommandPointsRenderer: React.FC = () => {
                     fill="#ef4444"
                     stroke="#dc2626"
                     strokeWidth={1}
-        vectorEffect="non-scaling-stroke"
+                    vectorEffect="non-scaling-stroke"
                     style={{ 
-                      cursor: 'default',
-                      pointerEvents: 'all',
+                      pointerEvents: 'none',
                       opacity: 0.9
                     }}
                     className="command-point"
-                    data-command-id={lastCommand.id}
                   />
                   {/* Second half (green) - final point */}
                   <path
@@ -600,14 +598,24 @@ export const CommandPointsRenderer: React.FC = () => {
                     fill="#22c55e"
                     stroke="#16a34a"
                     strokeWidth={1}
-        vectorEffect="non-scaling-stroke"
+                    vectorEffect="non-scaling-stroke"
                     style={{ 
-                      cursor: 'default',
-                      pointerEvents: 'all',
+                      pointerEvents: 'none',
                       opacity: 0.9
                     }}
                     className="command-point"
+                  />
+                  {/* Interaction overlay for coinciding points */}
+                  <circle
+                    cx={position.x}
+                    cy={position.y}
+                    r={getInteractionRadius(radius, isMobile, isTablet)}
+                    fill="transparent"
+                    stroke="none"
+                    className="command-point-interaction-overlay"
                     data-command-id={firstCommand.id}
+                    data-secondary-command-id={lastCommand.id}
+                    style={{ cursor: 'default' }}
                   />
                   {/* Inner circle for selected initial point */}
                   {firstCommandSelected && (
@@ -648,6 +656,7 @@ export const CommandPointsRenderer: React.FC = () => {
             return (
               <g key={`command-${command.id}-v${renderVersion}`}>
                 <g transform={`translate(${position.x},${position.y}) scale(${1 / viewport.zoom}) translate(${-position.x},${-position.y})`}>
+                  {/* Visual command point */}
                   <circle
                     cx={position.x}
                     cy={position.y}
@@ -657,12 +666,21 @@ export const CommandPointsRenderer: React.FC = () => {
                     strokeWidth={1}
                     vectorEffect="non-scaling-stroke"
                     style={{ 
-                      pointerEvents: 'all',
-                      opacity: 0.9,
-                      cursor: 'default'
+                      pointerEvents: 'none',
+                      opacity: 0.9
                     }}
                     className="command-point"
+                  />
+                  {/* Interaction overlay */}
+                  <circle
+                    cx={position.x}
+                    cy={position.y}
+                    r={getInteractionRadius(radius, isMobile, isTablet)}
+                    fill="transparent"
+                    stroke="none"
+                    className="command-point-interaction-overlay"
                     data-command-id={command.id}
+                    style={{ cursor: 'default' }}
                   />
                   {/* Inner circle for selected initial/final points */}
                   {isCommandSelected && (isFirstCommand || isLastCommand) && (

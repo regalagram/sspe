@@ -1,7 +1,7 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { getAbsoluteCommandPosition, getAbsoluteControlPoints } from '../../utils/path-utils';
-import { useMobileDetection } from '../../hooks/useMobileDetection';
+import { useMobileDetection, getInteractionRadius } from '../../hooks/useMobileDetection';
 import { handleManager } from './HandleManager';
 import { ControlPointType } from '../../types';
 
@@ -211,6 +211,7 @@ export const HandleRenderer: React.FC = () => {
                               opacity={1.0}
                             />
                             <g transform={`translate(${controlPoints[0].x},${controlPoints[0].y}) scale(${1 / viewport.zoom}) translate(${-controlPoints[0].x},${-controlPoints[0].y})`}>
+                              {/* Visual control point */}
                               <circle
                                 cx={controlPoints[0].x}
                                 cy={controlPoints[0].y}
@@ -220,15 +221,23 @@ export const HandleRenderer: React.FC = () => {
                                 strokeWidth={1.5}
                                 vectorEffect="non-scaling-stroke"
                                 className="control-point"
-                                data-command-id={command.id}
-                                // For x1y1 the visual line comes from the previous command's anchor;
-                                // expose the previous command id so pointer handlers can select it.
-                                data-prev-command-id={prevCommand ? prevCommand.id : undefined}
-                                data-control-point="x1y1"
                                 opacity={1.0}
-                                style={{ cursor: 'default' }}
+                                style={{ pointerEvents: 'none' }}
                                 // Durante el drag, hacer el punto más visible
                                 filter={isDragging && command.id === dragCommandId && dragHandleType === 'outgoing' ? 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' : undefined}
+                              />
+                              {/* Interaction overlay */}
+                              <circle
+                                cx={controlPoints[0].x}
+                                cy={controlPoints[0].y}
+                                r={getInteractionRadius(radius * 0.7, isMobile, isTablet)}
+                                fill="transparent"
+                                stroke="none"
+                                className="control-point-interaction-overlay"
+                                data-command-id={command.id}
+                                data-prev-command-id={prevCommand ? prevCommand.id : undefined}
+                                data-control-point="x1y1"
+                                style={{ cursor: 'default' }}
                               />
                             </g>
                           </>
@@ -263,6 +272,7 @@ export const HandleRenderer: React.FC = () => {
                               opacity={1.0}
                             />
                             <g transform={`translate(${controlPoints[1].x},${controlPoints[1].y}) scale(${1 / viewport.zoom}) translate(${-controlPoints[1].x},${-controlPoints[1].y})`}>
+                              {/* Visual control point */}
                               <circle
                                 cx={controlPoints[1].x}
                                 cy={controlPoints[1].y}
@@ -272,12 +282,22 @@ export const HandleRenderer: React.FC = () => {
                                 strokeWidth={1.5}
                                 vectorEffect="non-scaling-stroke"
                                 className="control-point"
-                                data-command-id={command.id}
-                                data-control-point="x2y2"
                                 opacity={1.0}
-                                style={{ cursor: 'default' }}
+                                style={{ pointerEvents: 'none' }}
                                 // Durante el drag, hacer el punto más visible
                                 filter={isDragging && command.id === dragCommandId && dragHandleType === 'incoming' ? 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' : undefined}
+                              />
+                              {/* Interaction overlay */}
+                              <circle
+                                cx={controlPoints[1].x}
+                                cy={controlPoints[1].y}
+                                r={getInteractionRadius(radius * 0.7, isMobile, isTablet)}
+                                fill="transparent"
+                                stroke="none"
+                                className="control-point-interaction-overlay"
+                                data-command-id={command.id}
+                                data-control-point="x2y2"
+                                style={{ cursor: 'default' }}
                               />
                             </g>
                           </>

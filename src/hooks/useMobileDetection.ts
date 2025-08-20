@@ -130,6 +130,12 @@ export const getButtonSize = (isMobile: boolean, isTablet: boolean): number => {
   return 32; // Default for desktop
 };
 
+export const getInteractionRadius = (visualRadius: number, isMobile: boolean, isTablet: boolean): number => {
+  // Minimum touch targets based on UX standards
+  const minRadius = isMobile ? 14 : isTablet ? 10 : 6; // 28px, 20px, 12px diameter
+  return Math.max(visualRadius, minRadius);
+};
+
 export const getTouchMargin = (isMobile: boolean, isTablet: boolean): number => {
   if (isMobile) return 8; // Extra margin for easier touch
   if (isTablet) return 6;
