@@ -635,8 +635,13 @@ export const PathRenderer: React.FC = () => {
                     // Only handle left pointer button
                     if (e.button !== 0) return;
                     
-                    // Check if this subpath belongs to a group
+                    // Check if format copy mode is active - if so, let plugin system handle it
                     const currentState = useEditorStore.getState();
+                    if (currentState.isFormatCopyActive && currentState.isFormatCopyActive()) {
+                      return; // Don't consume the event, let it bubble up to plugin system
+                    }
+                    
+                    // Check if this subpath belongs to a group
                     const parentPath = currentState.paths.find(p => 
                       p.subPaths.some(sp => sp.id === subPath.id)
                     );
@@ -740,8 +745,13 @@ export const PathRenderer: React.FC = () => {
                   filter: `drop-shadow(0 0 ${3 / viewport.zoom}px ${contrastColor})`,
                 }}
                 onPointerDown={(e) => {
-                  // Check if this subpath belongs to a group
+                  // Check if format copy mode is active - if so, let plugin system handle it
                   const currentState = useEditorStore.getState();
+                  if (currentState.isFormatCopyActive && currentState.isFormatCopyActive()) {
+                    return; // Don't consume the event, let it bubble up to plugin system
+                  }
+                  
+                  // Check if this subpath belongs to a group
                   const parentPath = currentState.paths.find(p => 
                     p.subPaths.some(sp => sp.id === subPath.id)
                   );

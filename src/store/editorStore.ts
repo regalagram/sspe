@@ -17,6 +17,7 @@ import { GradientActions, createGradientActions } from './gradientActions';
 import { GroupActions, createGroupActions } from './groupActions';
 import { SVGElementActions, createSVGElementActions } from './svgElementActions';
 import { AnimationActions, createAnimationActions } from './animationActions';
+import { FormatCopyActions, createFormatCopyActions } from './formatCopyActions';
 import { handleManager } from '../plugins/handles/HandleManager';
 // Combined actions interface
 interface EditorActions extends 
@@ -32,7 +33,8 @@ interface EditorActions extends
   GradientActions,
   GroupActions,
   SVGElementActions,
-  AnimationActions {}
+  AnimationActions,
+  FormatCopyActions {}
 
 const loadInitialState = (): EditorState => {
   const savedState = loadEditorState();
@@ -430,6 +432,12 @@ const loadInitialState = (): EditorState => {
     },
     // Floating toolbar state
     isFloatingToolbarHidden: false,
+    // Format copy state
+    formatCopyState: {
+      isActive: false,
+      copiedStyle: null,
+      sourcePathId: null,
+    },
   };
   
   if (savedState && typeof savedState === 'object') {
@@ -461,6 +469,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     ...createGroupActions(set, get, api),
     ...createSVGElementActions(set, get, api),
     ...createAnimationActions(set, get),
+    ...createFormatCopyActions(set, get, api),
   }))
 );
 

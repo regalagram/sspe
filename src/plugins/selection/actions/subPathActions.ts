@@ -11,7 +11,8 @@ import {
   Trash2,
   Lock,
   RotateCcw,
-  Group
+  Group,
+  PaintBucket
 } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
@@ -635,7 +636,66 @@ const groupSelectedSubPaths = () => {
   }
 };
 
+// Format copy functions
+const startFormatCopy = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  if (selectedSubPaths.length === 0) return;
+  
+  // Get the parent path of the first selected subpath
+  const firstSubPath = selectedSubPaths[0];
+  const parentPath = store.paths.find(path => 
+    path.subPaths.some(sp => sp.id === firstSubPath)
+  );
+  
+  if (parentPath) {
+    store.startFormatCopy(parentPath.id);
+  }
+};
+
+const isFormatCopyActive = (): boolean => {
+  const store = useEditorStore.getState();
+  return store.isFormatCopyActive();
+};
+
+// Check if selected subpaths belong to the same path
+const areSubPathsFromSamePath = (): boolean => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  if (selectedSubPaths.length === 0) return false;
+  
+  // Get parent path IDs for all selected subpaths
+  const parentPathIds = new Set<string>();
+  
+  selectedSubPaths.forEach(subPathId => {
+    const parentPath = store.paths.find(path => 
+      path.subPaths.some(sp => sp.id === subPathId)
+    );
+    if (parentPath) {
+      parentPathIds.add(parentPath.id);
+    }
+  });
+  
+  // All subpaths should belong to the same path
+  return parentPathIds.size === 1;
+};
+
 export const subPathActions: ToolbarAction[] = [
+  {
+    id: 'copy-format',
+    icon: PaintBucket,
+    label: 'Copy Format',
+    type: 'toggle',
+    toggle: {
+      isActive: isFormatCopyActive,
+      onToggle: startFormatCopy
+    },
+    priority: 1000,
+    tooltip: 'Copy format (styles, filters, effects)',
+    visible: areSubPathsFromSamePath
+  },
   {
     id: 'group-subpaths',
     icon: Group,

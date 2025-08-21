@@ -1452,6 +1452,18 @@ class PointerInteractionManager {
   // ================== EVENT HANDLERS ==================
 
   handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => { 
+    // Check if format copy mode is active - if so, let SelectionPlugin handle it
+    let isFormatCopyActive = false;
+    try {
+      isFormatCopyActive = this.editorStore && this.editorStore.isFormatCopyActive && this.editorStore.isFormatCopyActive();
+    } catch (error) {
+      console.error('Error checking format copy state:', error);
+    }
+    
+    if (isFormatCopyActive) {
+      return false; // Don't consume the event, let it reach SelectionPlugin
+    }
+
     const { commandId, controlPoint } = context;
     const target = e.target as SVGElement;
     const modifiers = this.getKeyModifiers(e);

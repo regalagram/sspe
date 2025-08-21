@@ -299,6 +299,12 @@ export interface EditorState {
   floatingToolbarUpdateTimestamp?: number;
   // Special point separation animation state
   isSpecialPointSeparationAnimating?: boolean;
+  // Format copy state
+  formatCopyState?: {
+    isActive: boolean;
+    copiedStyle: PathStyle | null;
+    sourcePathId: string | null;
+  };
 }
 
 // Animation synchronization types
