@@ -8,6 +8,7 @@ import { SandwichButton } from './SandwichButton';
 import { WritingConsolidatedTools } from './WritingConsolidatedTools';
 import { WritingShapeTools } from './WritingShapeTools';
 import { WritingTextTools } from './WritingTextTools';
+import { FileActionsButton } from './FileActionsButton';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 
 interface ToolbarProps {
@@ -95,10 +96,13 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         {/* Section 4: Animation Controls */}
         <AnimationPlayButton />
 
-        {/* Section 5: Debug Tools */}
+        {/* Section 5: File Actions */}
+        <FileActionsButton />
+
+        {/* Section 6: Debug Tools */}
         <DebugButton onOpenVisualDebugPanel={onOpenVisualDebugPanel} />
 
-        {/* Section 6: Sandwich button for panels/sidebar */}
+        {/* Section 7: Sandwich button for panels/sidebar */}
         <SandwichButton 
           onMobileToggle={onMobileToggle}
           isMobileBottomSheetOpen={isMobileBottomSheetOpen}

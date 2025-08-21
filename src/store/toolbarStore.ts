@@ -10,6 +10,9 @@ interface ToolbarState {
   // Zoom states
   isZoomSubmenuOpen: boolean;
   
+  // File actions states
+  isFileActionsSubmenuOpen: boolean;
+  
   // General toolbar states
   lastActiveTools: Record<string, any>;
 }
@@ -21,6 +24,9 @@ interface ToolbarActions {
   
   // Zoom actions
   setZoomSubmenuOpen: (isOpen: boolean) => void;
+  
+  // File actions
+  setFileActionsSubmenuOpen: (isOpen: boolean) => void;
   
   // General actions
   setLastActiveTool: (toolType: string, state: any) => void;
@@ -67,6 +73,7 @@ export const useToolbarStore = create<ToolbarStore>()(
       activeCreationTool: savedState.activeCreationTool || null,
       isCreationSubmenuOpen: false, // Don't persist open menus
       isZoomSubmenuOpen: false, // Don't persist open menus
+      isFileActionsSubmenuOpen: false, // Don't persist open menus
       lastActiveTools: savedState.lastActiveTools || {},
       
       // Creation tool actions
@@ -83,6 +90,12 @@ export const useToolbarStore = create<ToolbarStore>()(
       // Zoom actions
       setZoomSubmenuOpen: (isOpen) => {
         set({ isZoomSubmenuOpen: isOpen });
+        // Don't persist submenu open states
+      },
+      
+      // File actions
+      setFileActionsSubmenuOpen: (isOpen) => {
+        set({ isFileActionsSubmenuOpen: isOpen });
         // Don't persist submenu open states
       },
       

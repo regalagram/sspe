@@ -176,7 +176,8 @@ export const ToolbarSubmenu: React.FC<ToolbarSubmenuProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      if (submenuRef.current && !submenuRef.current.contains(event.target as Node)) {
+      if (submenuRef.current && !submenuRef.current.contains(event.target as Node) && 
+          triggerRef.current && !triggerRef.current.contains(event.target as Node)) {
         if (isOpen) {
           onToggle();
         }
