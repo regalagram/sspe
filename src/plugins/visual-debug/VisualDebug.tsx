@@ -421,35 +421,51 @@ export const CommandPointsRenderer: React.FC = () => {
               
               return (
                 <g key={`command-z-${command.id}-v${renderVersion}`}>
-                  {/* First half (red) for Z command */}
-                  <path
-                    d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX1} ${zSplitY1} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX2} ${zSplitY2} Z`}
-                    fill="#ef4444"
-                    stroke="#dc2626"
-                    strokeWidth={1}
-        vectorEffect="non-scaling-stroke"
-                    style={{ 
-                      cursor: 'default',
-                      pointerEvents: 'all',
-                      opacity: 0.9
-                    }}
-                    data-command-id={command.id}
-                  />
-                  {/* Second half (green) for initial M command */}
-                  <path
-                    d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX2} ${zSplitY2} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX1} ${zSplitY1} Z`}
-                    fill="#22c55e"
-                    stroke="#16a34a"
-                    strokeWidth={1}
-        vectorEffect="non-scaling-stroke"
-                    style={{ 
-                      cursor: 'default',
-                      pointerEvents: 'all',
-                      opacity: 0.9
-                    }}
-                    className="command-point"
-                    data-command-id={firstCommand.id}
-                  />
+                  <g transform={`translate(${firstCommandPosition.x},${firstCommandPosition.y}) scale(${1 / viewport.zoom}) translate(${-firstCommandPosition.x},${-firstCommandPosition.y})`}>
+                    {/* Visual first half (red) for Z command */}
+                    <path
+                      d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX1} ${zSplitY1} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX2} ${zSplitY2} Z`}
+                      fill="#ef4444"
+                      stroke="#dc2626"
+                      strokeWidth={1}
+                      vectorEffect="non-scaling-stroke"
+                      style={{ 
+                        pointerEvents: 'none',
+                        opacity: 0.9
+                      }}
+                    />
+                    {/* Visual second half (green) for initial M command */}
+                    <path
+                      d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX2} ${zSplitY2} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX1} ${zSplitY1} Z`}
+                      fill="#22c55e"
+                      stroke="#16a34a"
+                      strokeWidth={1}
+                      vectorEffect="non-scaling-stroke"
+                      style={{ 
+                        pointerEvents: 'none',
+                        opacity: 0.9
+                      }}
+                      className="command-point"
+                    />
+                    {/* Interaction overlay first half (red) for Z command */}
+                    <path
+                      d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${firstCommandPosition.x + Math.cos(zSplitAngle) * getInteractionRadius(zRadius, isMobile, isTablet)} ${firstCommandPosition.y + Math.sin(zSplitAngle) * getInteractionRadius(zRadius, isMobile, isTablet)} A ${getInteractionRadius(zRadius, isMobile, isTablet)} ${getInteractionRadius(zRadius, isMobile, isTablet)} 0 0 1 ${firstCommandPosition.x - Math.cos(zSplitAngle) * getInteractionRadius(zRadius, isMobile, isTablet)} ${firstCommandPosition.y - Math.sin(zSplitAngle) * getInteractionRadius(zRadius, isMobile, isTablet)} Z`}
+                      fill="transparent"
+                      stroke="none"
+                      className="command-point-interaction-overlay"
+                      data-command-id={command.id}
+                      style={{ cursor: 'default' }}
+                    />
+                    {/* Interaction overlay second half (green) for initial M command */}
+                    <path
+                      d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${firstCommandPosition.x - Math.cos(zSplitAngle) * getInteractionRadius(zRadius, isMobile, isTablet)} ${firstCommandPosition.y - Math.sin(zSplitAngle) * getInteractionRadius(zRadius, isMobile, isTablet)} A ${getInteractionRadius(zRadius, isMobile, isTablet)} ${getInteractionRadius(zRadius, isMobile, isTablet)} 0 0 1 ${firstCommandPosition.x + Math.cos(zSplitAngle) * getInteractionRadius(zRadius, isMobile, isTablet)} ${firstCommandPosition.y + Math.sin(zSplitAngle) * getInteractionRadius(zRadius, isMobile, isTablet)} Z`}
+                      fill="transparent"
+                      stroke="none"
+                      className="command-point-interaction-overlay"
+                      data-command-id={firstCommand.id}
+                      style={{ cursor: 'default' }}
+                    />
+                  </g>
                   {/* Inner circle for selected Z command */}
                   {zCommandSelected && (
                     <circle
@@ -605,16 +621,22 @@ export const CommandPointsRenderer: React.FC = () => {
                     }}
                     className="command-point"
                   />
-                  {/* Interaction overlay for coinciding points */}
-                  <circle
-                    cx={position.x}
-                    cy={position.y}
-                    r={getInteractionRadius(radius, isMobile, isTablet)}
+                  {/* Interaction overlay first half (red) for last command */}
+                  <path
+                    d={`M ${position.x} ${position.y} L ${position.x + Math.cos(splitAngle) * getInteractionRadius(radius, isMobile, isTablet)} ${position.y + Math.sin(splitAngle) * getInteractionRadius(radius, isMobile, isTablet)} A ${getInteractionRadius(radius, isMobile, isTablet)} ${getInteractionRadius(radius, isMobile, isTablet)} 0 0 1 ${position.x - Math.cos(splitAngle) * getInteractionRadius(radius, isMobile, isTablet)} ${position.y - Math.sin(splitAngle) * getInteractionRadius(radius, isMobile, isTablet)} Z`}
+                    fill="transparent"
+                    stroke="none"
+                    className="command-point-interaction-overlay"
+                    data-command-id={lastCommand.id}
+                    style={{ cursor: 'default' }}
+                  />
+                  {/* Interaction overlay second half (green) for first command */}
+                  <path
+                    d={`M ${position.x} ${position.y} L ${position.x - Math.cos(splitAngle) * getInteractionRadius(radius, isMobile, isTablet)} ${position.y - Math.sin(splitAngle) * getInteractionRadius(radius, isMobile, isTablet)} A ${getInteractionRadius(radius, isMobile, isTablet)} ${getInteractionRadius(radius, isMobile, isTablet)} 0 0 1 ${position.x + Math.cos(splitAngle) * getInteractionRadius(radius, isMobile, isTablet)} ${position.y + Math.sin(splitAngle) * getInteractionRadius(radius, isMobile, isTablet)} Z`}
                     fill="transparent"
                     stroke="none"
                     className="command-point-interaction-overlay"
                     data-command-id={firstCommand.id}
-                    data-secondary-command-id={lastCommand.id}
                     style={{ cursor: 'default' }}
                   />
                   {/* Inner circle for selected initial point */}
