@@ -10,6 +10,10 @@ interface ShapeCreationState {
   shapeId: string | null;
   startPoint: { x: number; y: number } | null;
   currentSize: number;
+  isDragging: boolean;
+  dragStartPoint: { x: number; y: number } | null;
+  dragCurrentPoint: { x: number; y: number } | null;
+  previewSize: number;
 }
 
 export class ShapeManager {
@@ -17,7 +21,11 @@ export class ShapeManager {
     isCreating: false,
     shapeId: null,
     startPoint: null,
-    currentSize: 50 // Default size
+    currentSize: 50, // Default size
+    isDragging: false,
+    dragStartPoint: null,
+    dragCurrentPoint: null,
+    previewSize: 50
   };
 
   private editorStore: any = null;
@@ -49,14 +57,16 @@ export class ShapeManager {
       }
 
   stopShapeCreation() {
-        this.state.isCreating = false;
+    this.state.isCreating = false;
     this.state.shapeId = null;
     this.state.startPoint = null;
+    this.state.isDragging = false;
+    this.state.dragStartPoint = null;
+    this.state.dragCurrentPoint = null;
     
     // Notify the plugin manager that shape creation mode is off
     pluginManager.setShapeCreationMode(false);
-    
-      }
+  }
 
   isInShapeCreationMode(): boolean {
     return this.state.isCreating && this.state.shapeId !== null;
@@ -74,6 +84,22 @@ export class ShapeManager {
     this.state.currentSize = Math.max(10, Math.min(300, size));
   }
 
+  isDragInProgress(): boolean {
+    return this.state.isDragging;
+  }
+
+  getDragStartPoint(): { x: number; y: number } | null {
+    return this.state.dragStartPoint;
+  }
+
+  getDragCurrentPoint(): { x: number; y: number } | null {
+    return this.state.dragCurrentPoint;
+  }
+
+  getPreviewSize(): number {
+    return this.state.previewSize;
+  }
+
   getCursor(): string {
     if (this.isInShapeCreationMode()) {
       return 'crosshair';
@@ -86,26 +112,26 @@ export class ShapeManager {
    * No notifica de vuelta para evitar loops
    */
   deactivateExternally = () => {
-        this.state.isCreating = false;
+    this.state.isCreating = false;
     this.state.shapeId = null;
     this.state.startPoint = null;
+    this.state.isDragging = false;
+    this.state.dragStartPoint = null;
+    this.state.dragCurrentPoint = null;
     
     // Notify the plugin manager that shape creation mode is off
     pluginManager.setShapeCreationMode(false);
-    
-    // No notificar a ToolModeManager para evitar loop
-      };
+  };
 
   // Pointer event handlers
   handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
-    
     if (!this.isInShapeCreationMode() || !this.state.shapeId) {
-            return false;
+      return false;
     }
 
     // Don't handle if clicking on an existing command
     if (context.commandId) {
-            return false;
+      return false;
     }
 
     const point = context.svgPoint;
@@ -118,49 +144,108 @@ export class ShapeManager {
       finalPoint = snapToGrid(point, grid.size);
     }
 
-        this.insertShape(finalPoint);
-    
-    // Don't stop shape creation automatically - let the user decide
-    // this.stopShapeCreation();
-    
+    // Start drag operation
+    this.state.isDragging = true;
+    this.state.dragStartPoint = finalPoint;
+    this.state.dragCurrentPoint = finalPoint;
+    this.state.previewSize = this.state.currentSize; // Initialize with current size
+
     return true;
   };
 
   handlePointerMove = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
-    if (!this.isInShapeCreationMode()) {
+    if (!this.isInShapeCreationMode() || !this.state.isDragging || !this.state.dragStartPoint) {
       return false;
     }
-    // Update preview or cursor behavior if needed
-    return false; // Don't consume the event
+
+    const point = context.svgPoint;
+    const store = this.editorStore || useEditorStore.getState();
+    const { grid } = store;
+
+    // Apply grid snapping if enabled
+    let finalPoint = point;
+    if (grid.snapToGrid) {
+      finalPoint = snapToGrid(point, grid.size);
+    }
+
+    // Update current drag point
+    this.state.dragCurrentPoint = finalPoint;
+
+    // Calculate size based on drag distance
+    const deltaX = finalPoint.x - this.state.dragStartPoint.x;
+    const deltaY = finalPoint.y - this.state.dragStartPoint.y;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    
+    // Use drag distance as size, with minimum of 10
+    this.state.previewSize = Math.max(10, distance);
+
+    return true;
   };
 
   handlePointerUp = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
-    // Shape insertion is handled in pointerDown for single-click shapes
-    return false;
+    if (!this.isInShapeCreationMode() || !this.state.isDragging || !this.state.dragStartPoint) {
+      return false;
+    }
+
+    const point = context.svgPoint;
+    const store = this.editorStore || useEditorStore.getState();
+    const { grid } = store;
+
+    // Apply grid snapping if enabled
+    let finalPoint = point;
+    if (grid.snapToGrid) {
+      finalPoint = snapToGrid(point, grid.size);
+    }
+
+    // Calculate final distance
+    const deltaX = finalPoint.x - this.state.dragStartPoint.x;
+    const deltaY = finalPoint.y - this.state.dragStartPoint.y;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+    // Determine size to use: drag distance or fallback to parameter size
+    let finalSize: number;
+    if (distance < 10) {
+      // Use parameter size as fallback for very small drags
+      finalSize = this.state.currentSize;
+    } else {
+      // Use drag distance as size
+      finalSize = distance;
+    }
+
+    // Insert shape at drag start point with calculated size
+    this.insertShape(this.state.dragStartPoint, finalSize);
+
+    // Reset drag state
+    this.state.isDragging = false;
+    this.state.dragStartPoint = null;
+    this.state.dragCurrentPoint = null;
+    this.state.previewSize = this.state.currentSize;
+
+    return true;
   };
 
-  private insertShape(point: { x: number; y: number }) {
-            
+  private insertShape(point: { x: number; y: number }, size?: number) {
     if (!this.state.shapeId) {
-            return;
+      return;
     }
 
     const shapeTemplate = getShapeById(this.state.shapeId);
     if (!shapeTemplate) {
-            return;
+      return;
     }
 
-        
     const store = this.editorStore || useEditorStore.getState();
     const { addPath, replaceSubPathCommands, pushToHistory } = store;
 
-    
     // Save current state to history before making changes
     pushToHistory();
 
     try {
+      // Use provided size or fallback to current size
+      const finalSize = size !== undefined ? size : this.state.currentSize;
+      
       // Generate the shape commands
-      const commands = shapeTemplate.generateCommands(point, this.state.currentSize);
+      const commands = shapeTemplate.generateCommands(point, finalSize);
       
       // Create a new path for the shape
       // addPath automatically creates a path with one subpath containing M 100,100

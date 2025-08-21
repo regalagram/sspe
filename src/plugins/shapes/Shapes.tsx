@@ -1,6 +1,7 @@
 import { Plugin } from '../../core/PluginSystem';
 import { shapeManager, shapePointerHandlers } from './ShapeManager';
 import { ShapesUI } from './ShapesUI';
+import { ShapePreview } from '../../components/ShapePreview';
 export const ShapesPlugin: Plugin = {
   id: 'shapes',
   name: 'Shapes',
@@ -29,5 +30,11 @@ export const ShapesPlugin: Plugin = {
       position: 'sidebar',
       order: 3
     },
+    {
+      id: 'shapes-preview',
+      component: ShapePreview,
+      position: 'svg-content',
+      order: 100
+    }
   ]
 };
