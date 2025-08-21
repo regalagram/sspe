@@ -43,6 +43,7 @@ import { KeyboardMovementPlugin } from '../plugins/keyboard-movement';
 import { TextPlacementPlugin } from '../plugins/text-placement';
 import { TextEditPlugin } from '../plugins/text-edit';
 import { CommandFloatingActionsPlugin } from '../plugins/commandFloatingActions';
+import { SpecialPointFloatingActionsPlugin } from '../plugins/specialPointFloatingActions';
 import { StructureTreePlugin } from '../plugins/structure-tree';
 
 /**
@@ -101,6 +102,7 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(PanelModePlugin);
   pluginManager.registerPlugin(KeyboardMovementPlugin); // Keyboard movement for selected elements
   pluginManager.registerPlugin(CommandFloatingActionsPlugin); // Floating actions for command points
+  pluginManager.registerPlugin(SpecialPointFloatingActionsPlugin); // Floating actions for special command points (M+Z union)
   pluginManager.registerPlugin(ShortcutsPlugin);
   
   // Register sandbox plugins (experimental features)

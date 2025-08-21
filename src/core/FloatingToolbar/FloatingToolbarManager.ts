@@ -1274,33 +1274,10 @@ export class FloatingToolbarManager {
             store.removeSubPath(subPathId);
           });
 
-          // For commands, we need to remove them from their subpaths
-          // This is more complex as we need to find the subpath that contains each command
+          // Delete commands using the proper removeCommand method
+          // This ensures M->next transformation and M-Z edge case handling
           selection.selectedCommands.forEach(commandId => {
-            const pathWithCommand = store.paths.find(path => 
-              path.subPaths.some(subPath => 
-                subPath.commands.some(cmd => cmd.id === commandId)
-              )
-            );
-            
-            if (pathWithCommand) {
-              const subPathWithCommand = pathWithCommand.subPaths.find(subPath => 
-                subPath.commands.some(cmd => cmd.id === commandId)
-              );
-              
-              if (subPathWithCommand) {
-                const updatedCommands = subPathWithCommand.commands.filter(cmd => cmd.id !== commandId);
-                store.replaceSubPathCommands(subPathWithCommand.id, updatedCommands.map(cmd => ({
-                  command: cmd.command,
-                  x: cmd.x,
-                  y: cmd.y,
-                  x1: cmd.x1,
-                  y1: cmd.y1,
-                  x2: cmd.x2,
-                  y2: cmd.y2
-                })));
-              }
-            }
+            store.removeCommand(commandId);
           });
 
           // Delete selected images
