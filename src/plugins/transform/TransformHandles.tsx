@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { transformManager, TransformHandle, TransformBounds } from './TransformManager';
-import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';
+import { useMobileDetection, getControlPointSize, getInteractionRadius } from '../../hooks/useMobileDetection';
 
 interface TransformHandlesProps {
   bounds: TransformBounds;
@@ -84,7 +84,7 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
         const sizeFactor = handle.type === 'corner' || handle.type === 'edge'
           ? visualDebugSizes.transformResizeFactor 
           : visualDebugSizes.transformRotateFactor;
-        const handleSize = (baseHandleSize * visualDebugSizes.globalFactor * sizeFactor) / viewport.zoom;
+        const handleSize = baseHandleSize * visualDebugSizes.globalFactor * sizeFactor;
         const hoverSize = handleSize * hoverMultiplier;
         const currentSize = isHovered ? hoverSize : handleSize;
         let offset = { dx: 0, dy: 0 };
@@ -97,8 +97,6 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
           <g
             key={handle.id}
             style={{ 
-              pointerEvents: 'all', 
-              cursor: handle.cursor,
               opacity: handleOpacity,
               transition: 'opacity 0.2s ease'
             }}
@@ -107,45 +105,76 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
             data-transform-handle={handle.id}
           >
             {handle.type === 'corner' ? (
-              <rect
-                x={handle.position.x + offset.dx - currentSize / 2}
-                y={handle.position.y + offset.dy - currentSize / 2}
-                width={currentSize}
-                height={currentSize}
-                fill="#007acc"
-                fillOpacity={0.3}
-                stroke="#007acc"
-                strokeWidth={strokeWidth}
-        vectorEffect="non-scaling-stroke"
-                data-handle-id={handle.id}
-                data-handle-type="transform"
-                style={{
-                  pointerEvents: 'all',
-                  cursor: handle.cursor,
-                  transition: 'all 0.1s ease'
-                }}
-              />
+              <g transform={`translate(${handle.position.x + offset.dx},${handle.position.y + offset.dy}) scale(${1 / viewport.zoom}) translate(${-(handle.position.x + offset.dx)},${-(handle.position.y + offset.dy)})`}>
+                {/* Visual resize handle */}
+                <rect
+                  x={handle.position.x + offset.dx - currentSize / 2}
+                  y={handle.position.y + offset.dy - currentSize / 2}
+                  width={currentSize}
+                  height={currentSize}
+                  fill="#007acc"
+                  fillOpacity={0.3}
+                  stroke="#007acc"
+                  strokeWidth={strokeWidth}
+                  vectorEffect="non-scaling-stroke"
+                  style={{
+                    pointerEvents: 'none',
+                    transition: 'all 0.1s ease'
+                  }}
+                />
+                {/* Interaction overlay */}
+                <rect
+                  x={handle.position.x + offset.dx - getInteractionRadius(currentSize / 2, isMobile, isTablet)}
+                  y={handle.position.y + offset.dy - getInteractionRadius(currentSize / 2, isMobile, isTablet)}
+                  width={getInteractionRadius(currentSize / 2, isMobile, isTablet) * 2}
+                  height={getInteractionRadius(currentSize / 2, isMobile, isTablet) * 2}
+                  fill="transparent"
+                  stroke="none"
+                  className="transform-resize-interaction-overlay"
+                  data-handle-id={handle.id}
+                  data-handle-type="transform"
+                  style={{
+                    cursor: handle.cursor
+                  }}
+                />
+              </g>
             ) : handle.type === 'edge' ? (
-              <rect
-                x={handle.position.x + offset.dx - currentSize / 2}
-                y={handle.position.y + offset.dy - currentSize / 2}
-                width={currentSize}
-                height={currentSize}
-                fill="#28a745"
-                fillOpacity={0.4}
-                stroke="#28a745"
-                strokeWidth={strokeWidth}
-        vectorEffect="non-scaling-stroke"
-                data-handle-id={handle.id}
-                data-handle-type="transform"
-                style={{
-                  pointerEvents: 'all',
-                  cursor: handle.cursor,
-                  transition: 'all 0.1s ease'
-                }}
-              />
+              <g transform={`translate(${handle.position.x + offset.dx},${handle.position.y + offset.dy}) scale(${1 / viewport.zoom}) translate(${-(handle.position.x + offset.dx)},${-(handle.position.y + offset.dy)})`}>
+                {/* Visual edge handle */}
+                <rect
+                  x={handle.position.x + offset.dx - currentSize / 2}
+                  y={handle.position.y + offset.dy - currentSize / 2}
+                  width={currentSize}
+                  height={currentSize}
+                  fill="#28a745"
+                  fillOpacity={0.4}
+                  stroke="#28a745"
+                  strokeWidth={strokeWidth}
+                  vectorEffect="non-scaling-stroke"
+                  style={{
+                    pointerEvents: 'none',
+                    transition: 'all 0.1s ease'
+                  }}
+                />
+                {/* Interaction overlay */}
+                <rect
+                  x={handle.position.x + offset.dx - getInteractionRadius(currentSize / 2, isMobile, isTablet)}
+                  y={handle.position.y + offset.dy - getInteractionRadius(currentSize / 2, isMobile, isTablet)}
+                  width={getInteractionRadius(currentSize / 2, isMobile, isTablet) * 2}
+                  height={getInteractionRadius(currentSize / 2, isMobile, isTablet) * 2}
+                  fill="transparent"
+                  stroke="none"
+                  className="transform-resize-interaction-overlay"
+                  data-handle-id={handle.id}
+                  data-handle-type="transform"
+                  style={{
+                    cursor: handle.cursor
+                  }}
+                />
+              </g>
             ) : (
-              <g>
+              <g transform={`translate(${handle.position.x + currentSize / 2},${handle.position.y + currentSize / 2}) scale(${1 / viewport.zoom}) translate(${-(handle.position.x + currentSize / 2)},${-(handle.position.y + currentSize / 2)})`}>
+                {/* Visual rotation handle */}
                 <circle
                   cx={handle.position.x + currentSize / 2}
                   cy={handle.position.y + currentSize / 2}
@@ -154,13 +183,24 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
                   fillOpacity={0.3}
                   stroke="#007acc"
                   strokeWidth={strokeWidth}
-        vectorEffect="non-scaling-stroke"
+                  vectorEffect="non-scaling-stroke"
+                  style={{
+                    pointerEvents: 'none',
+                    transition: 'all 0.1s ease'
+                  }}
+                />
+                {/* Interaction overlay */}
+                <circle
+                  cx={handle.position.x + currentSize / 2}
+                  cy={handle.position.y + currentSize / 2}
+                  r={getInteractionRadius(currentSize / 2, isMobile, isTablet)}
+                  fill="transparent"
+                  stroke="none"
+                  className="transform-rotate-interaction-overlay"
                   data-handle-id={handle.id}
                   data-handle-type="rotation"
                   style={{
-                    pointerEvents: 'all',
-                    cursor: handle.cursor,
-                    transition: 'all 0.1s ease'
+                    cursor: handle.cursor
                   }}
                 />
               </g>

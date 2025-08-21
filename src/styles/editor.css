@@ -204,7 +204,9 @@ button.active:hover {
 
 /* Interaction overlays for improved touch targets */
 .control-point-interaction-overlay,
-.command-point-interaction-overlay {
+.command-point-interaction-overlay,
+.transform-resize-interaction-overlay,
+.transform-rotate-interaction-overlay {
   fill: transparent;
   stroke: none;
   pointer-events: all;
@@ -214,7 +216,9 @@ button.active:hover {
 /* Optional: Debug overlay visibility (uncomment to see overlay areas) */
 /*
 .control-point-interaction-overlay,
-.command-point-interaction-overlay {
+.command-point-interaction-overlay,
+.transform-resize-interaction-overlay,
+.transform-rotate-interaction-overlay {
   fill: rgba(255, 0, 0, 0.1);
   stroke: rgba(255, 0, 0, 0.3);
   stroke-width: 1px;
