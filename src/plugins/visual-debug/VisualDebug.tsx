@@ -286,9 +286,11 @@ export const StickyVisualFeedback: React.FC = () => {
 
 // Command Points Renderer Component
 export const CommandPointsRenderer: React.FC = () => {
-  const { paths, selection, viewport, enabledFeatures, renderVersion, visualDebugSizes } = useEditorStore();
+  // All hooks must be called before any early returns
+  const { paths, selection, viewport, enabledFeatures, renderVersion, visualDebugSizes, mode, enabledFeatures: storeEnabledFeatures } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
 
+  // Early returns after all hooks are called
   if (!paths || paths.length === 0) {
     return null;
   }
@@ -298,7 +300,6 @@ export const CommandPointsRenderer: React.FC = () => {
   const hasSelectedCommand = selection.selectedCommands.length > 0;
 
   // Show if feature is enabled OR if any sub-path is selected OR if any command is selected
-  const { mode, enabledFeatures: storeEnabledFeatures } = useEditorStore();
   const isSubpathEditMode = mode?.current === 'subpath-edit';
   const subpathShowCommandPoints = storeEnabledFeatures.subpathShowCommandPoints ?? true;
 
@@ -323,11 +324,11 @@ export const CommandPointsRenderer: React.FC = () => {
             selection.selectedCommands.includes(cmd.id)
           );
           const shouldShowSubPath = (isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || isSubPathSelected || hasSelectedCommandInSubPath;
-          // Check if first and last commands coincide
-          const firstCommand = subPath.commands[0];
-          const lastCommand = subPath.commands[subPath.commands.length - 1];
-          const firstPosition = getAbsoluteCommandPosition(firstCommand, subPath, path.subPaths);
-          const lastPosition = getAbsoluteCommandPosition(lastCommand, subPath, path.subPaths);
+          // Check if first and last commands coincide (guard against empty commands array)
+          const firstCommand = subPath.commands.length > 0 ? subPath.commands[0] : null;
+          const lastCommand = subPath.commands.length > 0 ? subPath.commands[subPath.commands.length - 1] : null;
+          const firstPosition = firstCommand ? getAbsoluteCommandPosition(firstCommand, subPath, path.subPaths) : null;
+          const lastPosition = lastCommand ? getAbsoluteCommandPosition(lastCommand, subPath, path.subPaths) : null;
           const pointsCoincide = firstPosition && lastPosition && 
             Math.abs(firstPosition.x - lastPosition.x) < 0.1 && 
             Math.abs(firstPosition.y - lastPosition.y) < 0.1;
@@ -403,7 +404,7 @@ export const CommandPointsRenderer: React.FC = () => {
               
               // Use same radius calculation as coincidence case (with 30% larger for initial)
               const baseRadius = getControlPointSize(isMobile, isTablet);
-              let zRadius = (baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.commandPointsFactor) / viewport.zoom;
+              let zRadius = baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.commandPointsFactor;
               zRadius *= 1.3; // Same 30% larger as initial points
               
               // Calculate perpendicular angle for the split line

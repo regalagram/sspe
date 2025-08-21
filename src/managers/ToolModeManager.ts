@@ -94,10 +94,28 @@ export class ToolModeManager {
   }
 
   /**
+   * Sync internal state with editor store state to prevent desync
+   */
+  private syncWithEditorState(): void {
+    const editorState = useEditorStore.getState();
+    
+    // Sync creation mode state
+    if (editorState.mode.current === 'create' && editorState.mode.createMode?.commandType) {
+      if (this.state.activeMode === 'creation' && 
+          this.state.createSubMode !== editorState.mode.createMode.commandType) {
+        this.state.createSubMode = editorState.mode.createMode.commandType;
+      }
+    }
+  }
+
+  /**
    * Cambiar modo con desactivación automática del anterior
    */
   setMode(mode: ToolMode, options?: ToolModeOptions): void {
     const previousMode = this.state.activeMode;
+
+    // Sync with editor state before making any decisions
+    this.syncWithEditorState();
 
     // Si ya estamos en el modo solicitado, no hacer nada
     if (previousMode === mode && this.isModeConfigurationSame(options)) {
@@ -119,7 +137,14 @@ export class ToolModeManager {
    * Verificar si la configuración del modo es la misma
    */
   private isModeConfigurationSame(options?: ToolModeOptions): boolean {
-    if (!options) return true;
+    if (!options) {
+      return false; // If no options provided, assume configuration is different
+    }
+
+    // Always allow changes within creation mode when commandType differs
+    if (options.commandType && this.state.createSubMode !== options.commandType) {
+      return false;
+    }
 
     return this.state.createSubMode === options.commandType &&
       this.state.shapeId === options.shapeId &&
@@ -236,6 +261,7 @@ export class ToolModeManager {
       case 'creation':
         if (options?.commandType) {
           this.state.createSubMode = options.commandType;
+          
           if (this.creationManager) {
             this.creationManager.activateExternally(options.commandType);
           } else {

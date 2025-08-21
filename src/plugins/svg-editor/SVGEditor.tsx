@@ -1849,7 +1849,10 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
     const pathCount = paths.length;
     const textCount = texts.length;
     const groupCount = groups.length;
-    const totalElements = pathCount + textCount + groupCount;
+    const imageCount = images.length;
+    const useCount = uses.length;
+    const symbolCount = symbols.length;
+    const totalElements = pathCount + textCount + groupCount + imageCount + useCount + symbolCount;
     
     if (totalElements === 0) {
       alert('No content to clear.');
@@ -1861,6 +1864,7 @@ ${svgRootAnimationsHtml ? svgRootAnimationsHtml + '\n' : ''}${definitions}${allE
     clearAllTexts();
     clearGradients();
     replaceGroups([]);
+    clearAllSVGElements(); // This clears images, uses, symbols, etc.
     
     // Reset viewport completely to default state (zoom 1, pan 0,0, and default viewBox)
     resetViewportCompletely();

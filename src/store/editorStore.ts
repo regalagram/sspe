@@ -417,7 +417,7 @@ const loadInitialState = (): EditorState => {
     precision: 2,
     shapeSize: 50,
     visualDebugSizes: {
-      globalFactor: 1.0,
+      globalFactor: 0.5,
       commandPointsFactor: 1.0,
       controlPointsFactor: 1.0,
       transformResizeFactor: 1.0,

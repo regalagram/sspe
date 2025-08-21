@@ -573,6 +573,11 @@ export const getCommandPosition = (command: SVGCommand): Point | null => {
  * Gets the absolute position of a command (simplified since everything is already absolute internally)
  */
 export const getAbsoluteCommandPosition = (command: SVGCommand, subPath?: SVGSubPath, allSubPaths?: SVGSubPath[]): Point | null => {
+  // Guard against undefined command
+  if (!command) {
+    return null;
+  }
+  
   if (command.x !== undefined && command.y !== undefined) {
     return { x: command.x, y: command.y };
   }

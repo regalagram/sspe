@@ -94,6 +94,11 @@ export class CreationManager {
       return true;
     }
     
+    // Special handling for 'M' command - always creates a new sub-path
+    if ((commandType === 'M' || commandType === 'm')) {
+      return this.handleMoveToCommand(point);
+    }
+    
     // Get insertion context based on current selection
     const insertionContext = getCreationInsertionContext(this.editorStore, commandType);
     
@@ -108,6 +113,42 @@ export class CreationManager {
       // Default behavior: insert at the end of the last sub-path of the last path
       return this.handleDefaultInsertion(commandType, point);
     }
+  };
+
+  private handleMoveToCommand = (point: { x: number; y: number }): boolean => {
+    const { paths, addSubPath, addCommand, pushToHistory, setCreateMode, clearSelection, selectCommand } = this.editorStore;
+    
+    if (paths.length === 0) {
+      // No paths exist, create a new path (this case should be handled earlier)
+      console.warn('🔧 CreationManager: No paths exist when creating M command');
+      return false;
+    }
+    
+    // Get the last path to add the new sub-path to
+    const lastPath = paths[paths.length - 1];
+    
+    // Create new empty sub-path
+    const newSubPathId = addSubPath(lastPath.id);
+    
+    // Create M command
+    const newCommand = {
+      command: 'M',
+      x: point.x,
+      y: point.y,
+    };
+    
+    // Add the M command to the new sub-path
+    const newCommandId = addCommand(newSubPathId, newCommand);
+    pushToHistory();
+    
+    // Clear selection and select the new command
+    clearSelection();
+    selectCommand(newCommandId);
+    
+    // Automatically switch to 'L' command after creating 'M'
+    setCreateMode('L');
+    
+    return true;
   };
 
   private handleInsertAfterCommand = (commandId: string, commandType: EditorCommandType, point: { x: number; y: number }): boolean => {
