@@ -203,14 +203,32 @@ export const selectFinalPoint = () => {
 
 /**
  * Separate special points by moving them apart perpendicular to the path direction
+ * with smooth animation. Separation behavior depends on current selection:
+ * - Both points selected: both points move in opposite directions
+ * - Only initial point selected: only initial point moves  
+ * - Only final point selected: only final point moves
  */
 export const separateSpecialPoints = () => {
   const specialInfo = getSpecialPointFromSelection();
   if (!specialInfo) return;
   
   const store = useEditorStore.getState();
+  const { selection } = store;
   
   const { initialCommand, finalCommand, subPath, position } = specialInfo;
+  
+  // Determine what's currently selected
+  const hasInitialSelected = selection.selectedCommands.includes(initialCommand.id);
+  const hasFinalSelected = selection.selectedCommands.includes(finalCommand.id);
+  const hasBothSelected = hasInitialSelected && hasFinalSelected;
+  const hasOnlyInitial = hasInitialSelected && !hasFinalSelected;
+  const hasOnlyFinal = hasFinalSelected && !hasInitialSelected;
+  
+  // Store original positions for animation
+  const initialOriginalPos = { x: initialCommand.x ?? position.x, y: initialCommand.y ?? position.y };
+  const finalOriginalPos = finalCommand.command === 'Z' 
+    ? { x: position.x, y: position.y } 
+    : { x: finalCommand.x ?? position.x, y: finalCommand.y ?? position.y };
   
   // Calculate path direction using the same logic as VisualDebug.tsx
   let directionAngle = 0;
@@ -251,42 +269,159 @@ export const separateSpecialPoints = () => {
   const separationDistance = 50;
   const offsetDistance = separationDistance / 2;
   
-  // Calculate offsets for both points
-  const initialOffset = {
-    x: Math.cos(perpAngle) * offsetDistance,
-    y: Math.sin(perpAngle) * offsetDistance
+  // Calculate offsets based on selection
+  let initialOffset = { x: 0, y: 0 };
+  let finalOffset = { x: 0, y: 0 };
+  
+  if (hasBothSelected) {
+    // Both selected: move in opposite directions
+    initialOffset = {
+      x: Math.cos(perpAngle) * offsetDistance,
+      y: Math.sin(perpAngle) * offsetDistance
+    };
+    finalOffset = {
+      x: -Math.cos(perpAngle) * offsetDistance,
+      y: -Math.sin(perpAngle) * offsetDistance
+    };
+  } else if (hasOnlyInitial) {
+    // Only initial selected: move initial point away
+    initialOffset = {
+      x: Math.cos(perpAngle) * (separationDistance), // Full distance for single point
+      y: Math.sin(perpAngle) * (separationDistance)
+    };
+    finalOffset = { x: 0, y: 0 }; // Final point stays in place
+  } else if (hasOnlyFinal) {
+    // Only final selected: move final point away  
+    initialOffset = { x: 0, y: 0 }; // Initial point stays in place
+    finalOffset = {
+      x: -Math.cos(perpAngle) * (separationDistance), // Full distance for single point
+      y: -Math.sin(perpAngle) * (separationDistance)
+    };
+  }
+  
+  // Calculate target positions
+  const initialTargetPos = {
+    x: Math.round((initialOriginalPos.x + initialOffset.x) * 100) / 100,
+    y: Math.round((initialOriginalPos.y + initialOffset.y) * 100) / 100
   };
   
-  const finalOffset = {
-    x: -Math.cos(perpAngle) * offsetDistance,
-    y: -Math.sin(perpAngle) * offsetDistance
-  };
+  const finalTargetPos = (finalCommand.command !== 'Z' && (hasBothSelected || hasOnlyFinal)) ? {
+    x: Math.round((finalOriginalPos.x + finalOffset.x) * 100) / 100,
+    y: Math.round((finalOriginalPos.y + finalOffset.y) * 100) / 100
+  } : null;
   
   // Push to history before making changes
   store.pushToHistory();
   
-  // Move initial command (green semicircle)
-  if (initialCommand.x !== undefined && initialCommand.y !== undefined) {
-    store.updateCommand(initialCommand.id, {
-      x: Math.round((initialCommand.x + initialOffset.x) * 100) / 100,
-      y: Math.round((initialCommand.y + initialOffset.y) * 100) / 100
-    });
-  }
+  // Animate the separation
+  animatePointSeparation({
+    store,
+    initialCommand,
+    finalCommand,
+    initialOriginalPos,
+    finalOriginalPos,
+    initialTargetPos,
+    finalTargetPos,
+    moveInitial: hasBothSelected || hasOnlyInitial,
+    moveFinal: hasBothSelected || hasOnlyFinal,
+    onComplete: () => {
+      // Clear selection after animation completes
+      store.clearSelection();
+    }
+  });
+};
+
+/**
+ * Animate the separation of special points with smooth easing
+ */
+interface AnimatePointSeparationParams {
+  store: any;
+  initialCommand: SVGCommand;
+  finalCommand: SVGCommand;
+  initialOriginalPos: { x: number; y: number };
+  finalOriginalPos: { x: number; y: number };
+  initialTargetPos: { x: number; y: number };
+  finalTargetPos: { x: number; y: number } | null;
+  moveInitial: boolean;
+  moveFinal: boolean;
+  onComplete?: () => void;
+}
+
+const animatePointSeparation = (params: AnimatePointSeparationParams) => {
+  const {
+    store,
+    initialCommand,
+    finalCommand,
+    initialOriginalPos,
+    finalOriginalPos,
+    initialTargetPos,
+    finalTargetPos,
+    moveInitial,
+    moveFinal,
+    onComplete
+  } = params;
   
-  // Move final command (red semicircle) - handle Z command specially
-  if (finalCommand.command === 'Z') {
-    // Z commands don't have coordinates, they close to the initial point
-    // Since we moved the initial point, the Z will automatically follow
-    // No additional action needed
-  } else if (finalCommand.x !== undefined && finalCommand.y !== undefined) {
-    store.updateCommand(finalCommand.id, {
-      x: Math.round((finalCommand.x + finalOffset.x) * 100) / 100,
-      y: Math.round((finalCommand.y + finalOffset.y) * 100) / 100
-    });
-  }
+  const duration = 1000; // Animation duration in ms
+  const startTime = Date.now();
   
-  // Clear selection to show the separated points
-  store.clearSelection();
+  // Easing function (ease-out cubic)
+  const easeOutCubic = (t: number): number => {
+    return 1 - Math.pow(1 - t, 3);
+  };
+  
+  const animate = () => {
+    const elapsed = Date.now() - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easedProgress = easeOutCubic(progress);
+    
+    // Update initial command only if it should move
+    if (moveInitial && initialCommand.x !== undefined && initialCommand.y !== undefined) {
+      const currentInitialPos = {
+        x: initialOriginalPos.x + (initialTargetPos.x - initialOriginalPos.x) * easedProgress,
+        y: initialOriginalPos.y + (initialTargetPos.y - initialOriginalPos.y) * easedProgress
+      };
+      
+      store.updateCommand(initialCommand.id, {
+        x: Math.round(currentInitialPos.x * 100) / 100,
+        y: Math.round(currentInitialPos.y * 100) / 100
+      });
+    }
+    
+    // Update final command only if it should move and is not Z
+    if (moveFinal && finalTargetPos && finalCommand.command !== 'Z') {
+      const currentFinalPos = {
+        x: finalOriginalPos.x + (finalTargetPos.x - finalOriginalPos.x) * easedProgress,
+        y: finalOriginalPos.y + (finalTargetPos.y - finalOriginalPos.y) * easedProgress
+      };
+      
+      if (finalCommand.x !== undefined && finalCommand.y !== undefined) {
+        store.updateCommand(finalCommand.id, {
+          x: Math.round(currentFinalPos.x * 100) / 100,
+          y: Math.round(currentFinalPos.y * 100) / 100
+        });
+      }
+    }
+    
+    // Continue animation or complete
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      // Ensure final positions are exact
+      if (moveInitial && initialCommand.x !== undefined && initialCommand.y !== undefined) {
+        store.updateCommand(initialCommand.id, initialTargetPos);
+      }
+      
+      if (moveFinal && finalTargetPos && finalCommand.command !== 'Z' && 
+          finalCommand.x !== undefined && finalCommand.y !== undefined) {
+        store.updateCommand(finalCommand.id, finalTargetPos);
+      }
+      
+      onComplete?.();
+    }
+  };
+  
+  // Start animation
+  requestAnimationFrame(animate);
 };
 
 /**
