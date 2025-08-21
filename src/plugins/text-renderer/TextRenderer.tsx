@@ -142,6 +142,14 @@ const TextElementComponent: React.FC<{ text: TextElement }> = ({ text }) => {
                   }}
                   data-element-type="text"
                   data-element-id={text.id}
+                  onPointerDown={(e) => {
+                    // Check if text format copy mode is active - if so, let plugin system handle it
+                    const currentState = useEditorStore.getState();
+                    if (currentState.isTextFormatCopyActive && currentState.isTextFormatCopyActive()) {
+                      return; // Don't consume the event, let it bubble up to plugin system
+                    }
+                    // Handle normal selection if needed
+                  }}
                 />
               </>
             );
@@ -284,6 +292,14 @@ const MultilineTextElementComponent: React.FC<{ text: MultilineTextElement }> = 
                 }}
                 data-element-type="multiline-text"
                 data-element-id={text.id}
+                onPointerDown={(e) => {
+                  // Check if text format copy mode is active - if so, let plugin system handle it
+                  const currentState = useEditorStore.getState();
+                  if (currentState.isTextFormatCopyActive && currentState.isTextFormatCopyActive()) {
+                    return; // Don't consume the event, let it bubble up to plugin system
+                  }
+                  // Handle normal selection if needed
+                }}
               />
             );
           })()}

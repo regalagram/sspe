@@ -1,4 +1,4 @@
-import { Copy, Trash2, Lock, Group } from 'lucide-react';
+import { Copy, Trash2, Lock, Group, PaintBucket } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected } from './commonActions';
@@ -67,7 +67,57 @@ const groupSelectedTexts = () => {
   }
 };
 
+// Check if text format copy is active
+const isTextFormatCopyActive = (): boolean => {
+  const store = useEditorStore.getState();
+  return store.isTextFormatCopyActive ? store.isTextFormatCopyActive() : false;
+};
+
+// Start text format copy
+const startTextFormatCopy = () => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  const selectedTextPaths = store.selection.selectedTextPaths;
+  
+  // Get the first selected text (prefer regular texts over textPaths)
+  let sourceTextId: string | null = null;
+  
+  if (selectedTexts.length > 0) {
+    sourceTextId = selectedTexts[0];
+  } else if (selectedTextPaths.length > 0) {
+    sourceTextId = selectedTextPaths[0];
+  }
+  
+  if (sourceTextId) {
+    store.startTextFormatCopy(sourceTextId);
+  }
+};
+
+// Check if selected texts are compatible for format copying
+const areTextsCompatibleForFormatCopy = (): boolean => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  const selectedTextPaths = store.selection.selectedTextPaths;
+  
+  // Must have at least one text selected
+  const totalSelected = selectedTexts.length + selectedTextPaths.length;
+  return totalSelected > 0;
+};
+
 export const textActions: ToolbarAction[] = [
+  {
+    id: 'copy-text-format',
+    icon: PaintBucket,
+    label: 'Copy Format',
+    type: 'toggle',
+    toggle: {
+      isActive: isTextFormatCopyActive,
+      onToggle: startTextFormatCopy
+    },
+    priority: 1000,
+    tooltip: 'Copy text format (font, style, effects)',
+    visible: areTextsCompatibleForFormatCopy
+  },
   {
     id: 'group-texts',
     icon: Group,

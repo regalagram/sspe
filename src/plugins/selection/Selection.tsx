@@ -143,6 +143,62 @@ class RectSelectionManager {
     return false;
   };
 
+  handleTextFormatCopyPointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
+    const target = e.target as SVGElement;
+    
+    // Check what type of element was clicked
+    let elementType = target.getAttribute('data-element-type');
+    let elementId = target.getAttribute('data-element-id');
+    
+    // If we clicked on a tspan (child of multiline text), look at the parent text element
+    if (target.tagName === 'tspan' && target.parentElement) {
+      const parentElement = target.parentElement;
+      elementType = parentElement.getAttribute('data-element-type');
+      elementId = parentElement.getAttribute('data-element-id');
+    }
+    
+    // Handle text elements (regular text and multiline text)
+    if ((elementType === 'text' || elementType === 'multiline-text') && elementId) {
+      const textFormatCopyState = this.editorStore.getTextFormatCopyState();
+      
+      // Check if it's a different text than the source
+      if (elementId !== textFormatCopyState.sourceTextId) {
+        // Apply format to target text
+        this.editorStore.applyTextFormatToText(elementId);
+        return true;
+      } else {
+        // Same text - just cancel format copy
+        this.editorStore.cancelTextFormatCopy();
+        return true;
+      }
+    }
+    
+    // Handle textPath elements
+    if (elementType === 'textPath' && elementId) {
+      const textFormatCopyState = this.editorStore.getTextFormatCopyState();
+      
+      // Check if it's a different textPath than the source
+      if (elementId !== textFormatCopyState.sourceTextId) {
+        // Apply format to target textPath
+        this.editorStore.applyTextFormatToTextPath(elementId);
+        return true;
+      } else {
+        // Same textPath - just cancel format copy
+        this.editorStore.cancelTextFormatCopy();
+        return true;
+      }
+    }
+    
+    // If clicked on something else (empty space, other elements), cancel format copy
+    if (!elementType || !elementId || 
+        (elementType !== 'text' && elementType !== 'multiline-text' && elementType !== 'textPath')) {
+      this.editorStore.cancelTextFormatCopy();
+      return true;
+    }
+    
+    return false;
+  };
+
   handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     const { commandId, controlPoint } = context;
     const { mode } = this.editorStore;
@@ -151,6 +207,12 @@ class RectSelectionManager {
     const formatCopyState = this.editorStore.getFormatCopyState();
     if (formatCopyState.isActive) {
       return this.handleFormatCopyPointerDown(e, context);
+    }
+
+    // Check if text format copy mode is active
+    const textFormatCopyState = this.editorStore.getTextFormatCopyState();
+    if (textFormatCopyState.isActive) {
+      return this.handleTextFormatCopyPointerDown(e, context);
     }
 
     // Check if clicking on a transform handle - if so, don't start rectangle selection
@@ -1235,6 +1297,9 @@ export const SelectionPlugin: Plugin = {
         const store = useEditorStore.getState();
         if (store.isFormatCopyActive()) {
           store.cancelFormatCopy();
+        }
+        if (store.isTextFormatCopyActive()) {
+          store.cancelTextFormatCopy();
         }
       }
     },

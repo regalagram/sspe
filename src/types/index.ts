@@ -305,6 +305,13 @@ export interface EditorState {
     copiedStyle: PathStyle | null;
     sourcePathId: string | null;
   };
+  // Text format copy state
+  textFormatCopyState?: {
+    isActive: boolean;
+    copiedStyle: TextStyle | null;
+    sourceTextId: string | null;
+    sourceTextType: 'text' | 'multiline-text' | 'textPath' | null;
+  };
 }
 
 // Animation synchronization types

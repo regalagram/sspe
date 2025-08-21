@@ -18,6 +18,7 @@ import { GroupActions, createGroupActions } from './groupActions';
 import { SVGElementActions, createSVGElementActions } from './svgElementActions';
 import { AnimationActions, createAnimationActions } from './animationActions';
 import { FormatCopyActions, createFormatCopyActions } from './formatCopyActions';
+import { TextFormatCopyActions, createTextFormatCopyActions } from './textFormatCopyActions';
 import { handleManager } from '../plugins/handles/HandleManager';
 // Combined actions interface
 interface EditorActions extends 
@@ -34,7 +35,8 @@ interface EditorActions extends
   GroupActions,
   SVGElementActions,
   AnimationActions,
-  FormatCopyActions {}
+  FormatCopyActions,
+  TextFormatCopyActions {}
 
 const loadInitialState = (): EditorState => {
   const savedState = loadEditorState();
@@ -438,6 +440,13 @@ const loadInitialState = (): EditorState => {
       copiedStyle: null,
       sourcePathId: null,
     },
+    // Text format copy state
+    textFormatCopyState: {
+      isActive: false,
+      copiedStyle: null,
+      sourceTextId: null,
+      sourceTextType: null,
+    },
   };
   
   if (savedState && typeof savedState === 'object') {
@@ -470,6 +479,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     ...createSVGElementActions(set, get, api),
     ...createAnimationActions(set, get),
     ...createFormatCopyActions(set, get, api),
+    ...createTextFormatCopyActions(set, get, api),
   }))
 );
 
