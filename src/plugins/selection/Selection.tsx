@@ -318,13 +318,22 @@ export const SelectionRectRenderer: React.FC = () => {
     return false;
   };
 
-  // Use selectionBox from store (for pointer-interaction drag selection) or fallback to rectSelectionManager
+  // Show selection rect for legitimate drag selection, but not for command bounds
   const storeSelectionBox = selection.selectionBox;
   const managerSelectionRect = rectSelectionManager.getSelectionRect();
   const isManagerSelecting = rectSelectionManager.isSelecting();
   
-  // Prioritize store selectionBox over manager selectionRect
-  const selectionRect = storeSelectionBox || (isManagerSelecting ? managerSelectionRect : null);
+  // Determine if storeSelectionBox is from legitimate drag selection vs command bounds
+  // Command bounds selectionBox appears when multiple commands are selected
+  const hasMultipleCommands = selection.selectedCommands.length > 1;
+  const isStoreSelectionBoxFromCommands = storeSelectionBox && hasMultipleCommands;
+  
+  // Show rect when:
+  // 1. Manager is actively selecting (rectSelectionManager drag)
+  // 2. OR store has selectionBox but it's NOT from command bounds (PointerInteraction area drag)
+  const selectionRect = isManagerSelecting 
+    ? managerSelectionRect 
+    : (storeSelectionBox && !isStoreSelectionBoxFromCommands ? storeSelectionBox : null);
   
   // Hide selection rect for coincident commands (dual points)
   const shouldHideForCoincidentCommands = shouldHideSelectionForCoincidentCommands();

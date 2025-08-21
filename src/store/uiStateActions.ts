@@ -24,6 +24,7 @@ export interface UIStateActions {
   hideFloatingToolbarDuringDrag: () => void;
   showFloatingToolbarAfterDrag: () => void;
   forceFloatingToolbarUpdate: () => void;
+  setSpecialPointSeparationAnimating: (animating: boolean) => void;
 }
 
 export const createUIStateActions: StateCreator<
@@ -253,6 +254,12 @@ export const createUIStateActions: StateCreator<
     // Force a re-render of the floating toolbar by updating a timestamp
     set((state) => ({
       floatingToolbarUpdateTimestamp: Date.now(),
+    }));
+  },
+
+  setSpecialPointSeparationAnimating: (animating: boolean) => {
+    set((state) => ({
+      isSpecialPointSeparationAnimating: animating,
     }));
   },
 });

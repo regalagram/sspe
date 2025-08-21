@@ -297,6 +297,8 @@ export interface EditorState {
   // Floating toolbar state
   isFloatingToolbarHidden?: boolean;
   floatingToolbarUpdateTimestamp?: number;
+  // Special point separation animation state
+  isSpecialPointSeparationAnimating?: boolean;
 }
 
 // Animation synchronization types

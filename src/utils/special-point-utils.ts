@@ -416,9 +416,18 @@ const animatePointSeparation = (params: AnimatePointSeparationParams) => {
         store.updateCommand(finalCommand.id, finalTargetPos);
       }
       
+      // Clear selection box after separation to prevent unwanted visual feedback
+      store.updateSelectionBox(null);
+      
+      // Clear animation flag
+      store.setSpecialPointSeparationAnimating(false);
+      
       onComplete?.();
     }
   };
+  
+  // Set animation flag before starting
+  store.setSpecialPointSeparationAnimating(true);
   
   // Start animation
   requestAnimationFrame(animate);
