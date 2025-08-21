@@ -12,36 +12,38 @@ import { SVGImportOptions, ImportSettings } from '../../components/SVGImportOpti
 import { RotateCcw, CheckCircle2, Trash2, Upload, Download } from 'lucide-react';
 import { generateSVGCode as generateUnifiedSVG, downloadSVGFile } from '../../utils/svg-export';
 
+// Utility function to format file size
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+};
+
 interface PrecisionControlProps {
   precision: number;
   onPrecisionChange: (precision: number) => void;
 }
 
 const PrecisionControl: React.FC<PrecisionControlProps> = ({ precision, onPrecisionChange }) => {
-  const [inputValue, setInputValue] = useState(precision);
-
-  // Update input when precision prop changes
-  useEffect(() => {
-    setInputValue(precision);
-  }, [precision]);
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = parseInt(e.target.value, 10);
-    if (isNaN(val) || val < 0) val = 0;
-    if (val > 8) val = 8;
-    setInputValue(val);
-    
-    // Auto-apply the change immediately
+    const val = parseInt(e.target.value, 10);
     onPrecisionChange(val);
+  };
+
+  const containerStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    marginBottom: '8px',
+    marginTop: '8px'
   };
 
   const topRowStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: '8px',
-    marginBottom: '8px',
-    marginTop: '8px'
+    gap: '8px'
   };
 
   const labelStyle: React.CSSProperties = {
@@ -50,30 +52,39 @@ const PrecisionControl: React.FC<PrecisionControlProps> = ({ precision, onPrecis
     fontWeight: '500'
   };
 
-  const inputStyle: React.CSSProperties = {
-    padding: '4px 8px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    fontSize: '12px',
-    width: '50px',
+  const valueStyle: React.CSSProperties = {
+    fontSize: '11px',
+    color: '#333',
+    fontWeight: '600',
+    minWidth: '20px',
     textAlign: 'center' as const
   };
 
+  const sliderStyle: React.CSSProperties = {
+    width: '100%',
+    height: '4px',
+    borderRadius: '2px',
+    background: '#e0e0e0',
+    outline: 'none',
+    cursor: 'pointer'
+  };
+
   return (
-    <div >
+    <div style={containerStyle}>
       <div style={topRowStyle}>
         <label style={labelStyle}>
           Precision
         </label>
-        <input
-          type="number"
-          min={0}
-          max={8}
-          value={inputValue}
-          onChange={handleChange}
-          style={inputStyle}
-        />
+        <span style={valueStyle}>{precision}</span>
       </div>
+      <input
+        type="range"
+        min={0}
+        max={5}
+        value={precision}
+        onChange={handleChange}
+        style={sliderStyle}
+      />
     </div>
   );
 };
@@ -148,6 +159,20 @@ export const SVGEditor: React.FC<SVGEditorProps> = ({ svgCode, onSVGChange }) =>
             borderColor: isEditing ? '#ffa726' : '#e0e0e0',
           }}
         />
+      </div>
+
+      {/* SVG Size Information */}
+      <div style={{ 
+        fontSize: '11px', 
+        color: '#666', 
+        marginTop: '4px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '4px 0'
+      }}>
+        <span>Size: {formatFileSize(new Blob([svgCode]).size)}</span>
+        <span>{svgCode.length} characters</span>
       </div>
 
       {isEditing && (
