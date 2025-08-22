@@ -57,6 +57,9 @@ const applySubPathFillColor = (color: string) => {
   const store = useEditorStore.getState();
   const selectedSubPaths = store.selection.selectedSubPaths;
   
+  // Save to history before changing colors
+  store.pushToHistory();
+  
   selectedSubPaths.forEach(subPathId => {
     const parentPath = store.paths.find(path => 
       path.subPaths.some(sp => sp.id === subPathId)
@@ -92,6 +95,9 @@ const applySubPathStrokeColor = (color: string) => {
   const store = useEditorStore.getState();
   const selectedSubPaths = store.selection.selectedSubPaths;
   
+  // Save to history before changing colors
+  store.pushToHistory();
+  
   selectedSubPaths.forEach(subPathId => {
     const parentPath = store.paths.find(path => 
       path.subPaths.some(sp => sp.id === subPathId)
@@ -125,6 +131,9 @@ const applySubPathStrokeWidth = (width: string | number) => {
   const strokeWidth = typeof width === 'number' ? width : parseFloat(width);
   
   if (!isNaN(strokeWidth) && strokeWidth >= 0) {
+    // Save to history before changing stroke width
+    store.pushToHistory();
+    
     selectedSubPaths.forEach(subPathId => {
       const parentPath = store.paths.find(path => 
         path.subPaths.some(sp => sp.id === subPathId)
@@ -187,6 +196,9 @@ const applySubPathStrokeDash = (dash: string) => {
   const store = useEditorStore.getState();
   const selectedSubPaths = store.selection.selectedSubPaths;
   
+  // Save to history before changing stroke dash
+  store.pushToHistory();
+  
   selectedSubPaths.forEach(subPathId => {
     const parentPath = store.paths.find(path => 
       path.subPaths.some(sp => sp.id === subPathId)
@@ -202,6 +214,9 @@ const applySubPathStrokeLinecap = (linecap: string) => {
   const store = useEditorStore.getState();
   const selectedSubPaths = store.selection.selectedSubPaths;
   
+  // Save to history before changing stroke linecap
+  store.pushToHistory();
+  
   selectedSubPaths.forEach(subPathId => {
     const parentPath = store.paths.find(path => 
       path.subPaths.some(sp => sp.id === subPathId)
@@ -216,6 +231,9 @@ const applySubPathStrokeLinecap = (linecap: string) => {
 const applySubPathStrokeLinejoin = (linejoin: string) => {
   const store = useEditorStore.getState();
   const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  // Save to history before changing stroke linejoin
+  store.pushToHistory();
   
   selectedSubPaths.forEach(subPathId => {
     const parentPath = store.paths.find(path => 
@@ -358,11 +376,18 @@ const simplifySubPaths = () => {
 
 const duplicateSubPaths = () => {
   const store = useEditorStore.getState();
+  
+  // Save to history before duplicating
+  store.pushToHistory();
+  
   store.duplicateSelection();
 };
 
 const deleteSubPaths = () => {
   const store = useEditorStore.getState();
+  
+  // Save to history before deleting
+  store.pushToHistory();
   
   store.selection.selectedSubPaths.forEach(subPathId => {
     store.removeSubPath(subPathId);
@@ -496,6 +521,9 @@ const applyFilterToSubPaths = (filterCreatorFn: () => any) => {
   
   if (selectedSubPaths.length === 0) return;
   
+  // Save to history before applying filters
+  store.pushToHistory();
+  
   // Create the filter
   const filterData = filterCreatorFn();
   store.addFilter(filterData);
@@ -536,6 +564,9 @@ const addFadeAnimation = () => {
   const store = useEditorStore.getState();
   const selectedSubPaths = getSelectedSubPaths();
   
+  // Save to history before adding animations
+  store.pushToHistory();
+  
   selectedSubPaths.forEach(({ path }) => {
     if (path && path.id) {
       const opacityAnimation = {
@@ -557,6 +588,9 @@ const addFadeAnimation = () => {
 const addRotateAnimation = () => {
   const store = useEditorStore.getState();
   const selectedSubPaths = getSelectedSubPaths();
+  
+  // Save to history before adding animations
+  store.pushToHistory();
   
   selectedSubPaths.forEach(({ path }) => {
     if (path && path.id) {

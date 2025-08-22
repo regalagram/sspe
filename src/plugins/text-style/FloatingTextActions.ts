@@ -81,9 +81,13 @@ const getCurrentTextStyles = () => {
 };
 
 // Apply style to all selected texts
-const applyTextStyle = (styleUpdates: any) => {
+const applyTextStyle = (styleUpdates: any, saveToHistory: boolean = true) => {
   const store = useEditorStore.getState();
   const selectedTexts = store.selection.selectedTexts;
+  
+  if (saveToHistory) {
+    store.pushToHistory();
+  }
   
   selectedTexts.forEach(textId => {
     store.updateTextStyle(textId, styleUpdates);
@@ -238,6 +242,9 @@ const applyFilterToTexts = (filterCreatorFn: () => any) => {
   
   if (selectedTexts.length === 0) return;
   
+  // Save to history before applying filters
+  store.pushToHistory();
+  
   // Create the filter
   const filterData = filterCreatorFn();
   store.addFilter(filterData);
@@ -276,6 +283,9 @@ const addFadeAnimationToText = () => {
   const store = useEditorStore.getState();
   const selectedTexts = store.selection.selectedTexts;
   
+  // Save to history before adding animations
+  store.pushToHistory();
+  
   selectedTexts.forEach(textId => {
     const opacityAnimation = {
       targetElementId: textId,
@@ -295,6 +305,9 @@ const addFadeAnimationToText = () => {
 const addRotateAnimationToText = () => {
   const store = useEditorStore.getState();
   const selectedTexts = store.selection.selectedTexts;
+  
+  // Save to history before adding animations
+  store.pushToHistory();
   
   selectedTexts.forEach(textId => {
     const text = store.texts.find(t => t.id === textId);
@@ -319,6 +332,9 @@ const addRotateAnimationToText = () => {
 const addScaleAnimationToText = () => {
   const store = useEditorStore.getState();
   const selectedTexts = store.selection.selectedTexts;
+  
+  // Save to history before adding animations
+  store.pushToHistory();
   
   selectedTexts.forEach(textId => {
     const text = store.texts.find(t => t.id === textId);
@@ -804,6 +820,9 @@ const areTextsLocked = (): boolean => {
 const deleteTexts = () => {
   const store = useEditorStore.getState();
   const selectedTexts = store.selection.selectedTexts;
+  
+  // Save to history before deleting
+  store.pushToHistory();
   
   selectedTexts.forEach(textId => {
     store.deleteText(textId);
