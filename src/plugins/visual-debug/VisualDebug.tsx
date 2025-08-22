@@ -366,6 +366,7 @@ export const CommandPointsRenderer: React.FC = () => {
             // Handle Z commands specially - they close the path
             if (isZCommand) {
               // Z commands are positioned at the first command's position
+              if (!firstCommand) return null;
               const firstCommandPosition = getAbsoluteCommandPosition(firstCommand, subPath, path.subPaths);
               if (!firstCommandPosition) return null;
               
@@ -507,6 +508,7 @@ export const CommandPointsRenderer: React.FC = () => {
             // Skip rendering first command if there's a Z command (will render split visual instead)
             // UNLESS the first command is specifically selected in a multi-command selection
             if (isFirstCommand && hasZCommand) {
+              if (!firstCommand) return null;
               const isFirstCommandSelected = selection.selectedCommands.includes(firstCommand.id);
               const hasMultipleCommandsSelected = selection.selectedCommands.length > 1;
               // Only skip if the first command is NOT selected in a multi-command selection
@@ -590,6 +592,7 @@ export const CommandPointsRenderer: React.FC = () => {
               const splitY2 = position.y - Math.sin(splitAngle) * radius;
               
               // Render split visual for coinciding points
+              if (!firstCommand || !lastCommand) return null;
               const firstCommandSelected = selection.selectedCommands.includes(firstCommand.id);
               const lastCommandSelected = selection.selectedCommands.includes(lastCommand.id);
               
