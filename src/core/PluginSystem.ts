@@ -342,7 +342,7 @@ export class PluginManager {
         
         // Find all creation plugins
         const creationPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'creation');
-        const pencilPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'pencil');
+        const pencilPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'pencil2'); // Updated to pencil2
         const curvesPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'curves');
         const shapesPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'shapes');
         const textPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'text-placement');
@@ -353,7 +353,7 @@ export class PluginManager {
           const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'creation');
           pluginsToProcess = [creationPlugin, ...otherPlugins];
                   } else if (currentMode === 'pencil' && pencilPlugin) {
-          const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'pencil');
+          const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'pencil2'); // Updated to pencil2
           pluginsToProcess = [pencilPlugin, ...otherPlugins];
                   } else if (currentMode === 'curves' && curvesPlugin) {
           const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'curves');

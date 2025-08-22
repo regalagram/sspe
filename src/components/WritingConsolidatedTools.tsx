@@ -5,7 +5,7 @@ import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useToolbarStore } from '../store/toolbarStore';
 import { useEditorStore } from '../store/editorStore';
 import { toolModeManager } from '../managers/ToolModeManager';
-import { pencilManager } from '../plugins/pencil/PencilManager';
+import { pencil2Manager } from '../plugins/pencil2/Pencil2Manager';
 import { curvesManager } from '../plugins/curves/CurvesManager';
 import { creationManager } from '../plugins/creation/CreationManager';
 import { useMobileDetection } from '../hooks/useMobileDetection';
@@ -129,7 +129,7 @@ export const WritingConsolidatedTools: React.FC = () => {
 
   const handlePencilToggle = () => {
     if (isPencilActive) {
-      pencilManager.exitPencil();
+      pencil2Manager.deactivateExternally();
     } else {
       toolModeManager.setMode('pencil');
     }

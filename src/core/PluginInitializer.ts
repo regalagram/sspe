@@ -16,6 +16,7 @@ import { VisualDebugPlugin } from '../plugins/visual-debug/VisualDebug';
 import { SubPathTransformPlugin } from '../plugins/subpath-transform/SubPathTransform';
 import { PointTransformPlugin } from '../plugins/point-transform/PointTransform';
 import { PencilPlugin } from '../plugins/pencil/Pencil';
+import { Pencil2Plugin } from '../plugins/pencil2';
 import { ShapesPlugin } from '../plugins/shapes/Shapes';
 import { Transform } from '../plugins/transform/Transform';
 import { ArrangePlugin } from '../plugins/arrange/Arrange';
@@ -87,7 +88,8 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(StructureTreePlugin); // Tree structure view with lock controls
   
   // Register plugins that depend on others
-  pluginManager.registerPlugin(PencilPlugin); // Depends on mouse-interaction
+  // pluginManager.registerPlugin(PencilPlugin); // Depends on mouse-interaction (replaced by Pencil2Plugin)
+  pluginManager.registerPlugin(Pencil2Plugin); // Depends on mouse-interaction
   pluginManager.registerPlugin(CurvesPlugin); // Depends on mouse-interaction
   pluginManager.registerPlugin(SubPathTransformPlugin); // Depends on selection
   pluginManager.registerPlugin(PointTransformPlugin); // Depends on selection
