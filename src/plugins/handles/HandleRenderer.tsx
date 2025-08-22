@@ -96,11 +96,6 @@ export const HandleRenderer: React.FC = () => {
   const hasSelectedCommand = selection.selectedCommands.length > 0;
   const selectionVisible = ui?.selectionVisible ?? true;
   
-  // Debug logging for visibility
-  React.useEffect(() => {
-    console.log('🔧 HandleRenderer - selectionVisible:', selectionVisible, 'ui:', ui);
-  }, [selectionVisible, ui]);
-  
   // Show if feature is enabled OR if any sub-path is selected OR if any command is selected
   // For subpath-edit mode we additionally respect per-class flags
   // Also respect selectionVisible state for hiding during animations
@@ -149,17 +144,6 @@ export const HandleRenderer: React.FC = () => {
             // 3. This specific command is selected, OR
             // 4. This command has control points to show (from HandleManager)
             const shouldShowCommand = selectionVisible && (isSubpathEditMode || shouldShowSubPath || isCommandSelected || hasControlPoints);
-            
-            // Debug log for first command only to avoid spam
-            if (commandIndex === 0 && path.id === paths[0]?.id) {
-              console.log('🔧 HandleRenderer - shouldShowCommand:', shouldShowCommand, 'selectionVisible:', selectionVisible, 'conditions:', {
-                isSubpathEditMode, 
-                shouldShowSubPath, 
-                isCommandSelected, 
-                hasControlPoints
-              });
-            }
-            
             if (!shouldShowCommand) return null;
             
             // Durante el drag, solo mostrar el comando que se arrastra y su pareja

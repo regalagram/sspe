@@ -307,11 +307,6 @@ export const CommandPointsRenderer: React.FC = () => {
   const selectionVisible = ui?.selectionVisible ?? true;
   const shouldShow = selectionVisible && ((isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || hasSelectedSubPath || hasSelectedCommand);
 
-  // Debug logging for command points visibility
-  React.useEffect(() => {
-    console.log('🔧 CommandPointsRenderer - selectionVisible:', selectionVisible, 'shouldShow:', shouldShow);
-  }, [selectionVisible, shouldShow]);
-
   if (!shouldShow) {
     return null;
   }

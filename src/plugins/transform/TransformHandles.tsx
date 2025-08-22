@@ -18,11 +18,6 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
   const isMoving = transformManager.isMoving();
   const selectionVisible = ui?.selectionVisible ?? true;
   const shouldHideHandles = isTransforming || isMoving || isSpecialPointSeparationAnimating || !selectionVisible;
-  
-  // Debug logging for visibility
-  React.useEffect(() => {
-    console.log('🔧 TransformHandles - selectionVisible:', selectionVisible, 'shouldHideHandles:', shouldHideHandles, 'ui:', ui);
-  }, [selectionVisible, shouldHideHandles, ui]);
   const handleOpacity = shouldHideHandles ? 0 : 1;
   const boundingBoxOpacity = shouldHideHandles ? 0 : 1;
   const baseHandleSize = getControlPointSize(isMobile, isTablet);

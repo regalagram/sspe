@@ -278,21 +278,8 @@ export class SubPathTransformManager {
       subpathShowControlPoints: store.enabledFeatures.subpathShowControlPoints ?? true,
     };
     
-    console.log('🔧 SMOOTH - ANTES - Original states:', {
-      selectionVisible: originalSelectionVisible,
-      pointsVisible: originalPointsVisible,
-      'store.enabledFeatures': store.enabledFeatures
-    });
-    
     store.setSelectionVisible(false);
     store.setPointsVisible(false);
-    
-    console.log('🔧 SMOOTH - DESPUÉS - Hiding UI and points during animation');
-    console.log('🔧 SMOOTH - Current store state:', {
-      selectionVisible: useEditorStore.getState().ui?.selectionVisible,
-      commandPointsEnabled: useEditorStore.getState().enabledFeatures.commandPointsEnabled,
-      controlPointsEnabled: useEditorStore.getState().enabledFeatures.controlPointsEnabled
-    });
 
     const originalPoints = this.commandsToPoints(originalCommands);
     const smoothedCommands = this.applySmoothAlgorithm(originalCommands);
@@ -361,21 +348,8 @@ export class SubPathTransformManager {
       committed = true;
       
       // Restore selection UI and points visibility
-      console.log('🔧 SMOOTH - CLEANUP - Restoring UI visibility');
-      console.log('🔧 SMOOTH - CLEANUP - Restoring to:', {
-        selectionVisible: originalSelectionVisible,
-        pointsVisible: originalPointsVisible
-      });
-      console.log('🔧 SMOOTH - CLEANUP - Calling restorePointsVisibility with:', originalPointsVisible);
-      
       store.setSelectionVisible(originalSelectionVisible);
       store.restorePointsVisibility(originalPointsVisible);
-      
-      console.log('🔧 SMOOTH - CLEANUP - Final store state:', {
-        selectionVisible: useEditorStore.getState().ui?.selectionVisible,
-        commandPointsEnabled: useEditorStore.getState().enabledFeatures.commandPointsEnabled,
-        controlPointsEnabled: useEditorStore.getState().enabledFeatures.controlPointsEnabled
-      });
       
       onComplete(smoothedCommands);
       

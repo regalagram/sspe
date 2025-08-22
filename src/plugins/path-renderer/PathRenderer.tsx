@@ -568,7 +568,6 @@ export const PathRenderer: React.FC = () => {
         
         // Hide paths that contain selected subpaths during animations
         if (!selectionVisible && pathHasSelectedSubPath) {
-          console.log('🔧 PathRenderer - Hiding path during animation:', path.id, 'selectionVisible:', selectionVisible);
           return null;
         }
         
