@@ -278,84 +278,87 @@ export class Pencil2Manager {
     // Filter out duplicate and very close points to avoid curve artifacts
     const filteredPoints = this.filterPoints(points);
     
-    // Convert points to SVG commands using Catmull-Rom to Bezier conversion
-    const commands: SVGCommand[] = [];
+    // Use the exact pointsToPath logic provided
+    const pointsToPath = (points: Point[]) => {
+      // output path using cubic Beziers derived from Catmull-Rom spline
+      // also round all coordinates to integers
+      if (!points || points.length === 0) return ''
+      const round = (n: number) => Math.round(n)
+
+      if (points.length === 1) {
+        const p = points[0]
+        return `M ${round(p.x)} ${round(p.y)}`
+      }
+
+      if (points.length === 2) {
+        const p0 = points[0]
+        const p1 = points[1]
+        return `M ${round(p0.x)} ${round(p0.y)} L ${round(p1.x)} ${round(p1.y)}`
+      }
+
+      // For 3+ points, convert Catmull-Rom to cubic bezier segments
+      const pts = points
+      let d = `M ${round(pts[0].x)} ${round(pts[0].y)}`
+
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = i - 1 >= 0 ? pts[i - 1] : pts[i]
+        const p1 = pts[i]
+        const p2 = pts[i + 1]
+        const p3 = i + 2 < pts.length ? pts[i + 2] : p2
+
+        // Catmull-Rom to Bezier conversion (standard)
+        const c1x = p1.x + (p2.x - p0.x) / 6
+        const c1y = p1.y + (p2.y - p0.y) / 6
+        const c2x = p2.x - (p3.x - p1.x) / 6
+        const c2y = p2.y - (p3.y - p1.y) / 6
+
+        d += ` C ${round(c1x)} ${round(c1y)} ${round(c2x)} ${round(c2y)} ${round(p2.x)} ${round(p2.y)}`
+      }
+
+      return d
+    }
     
-    if (filteredPoints.length === 1) {
-      // Single point - create a small circle using move
-      const p = filteredPoints[0];
-      commands.push({
-        id: generateId(),
-        command: 'M',
-        x: p.x,
-        y: p.y
-      });
-    } else if (filteredPoints.length === 2) {
-      // Two points - generate smooth curve instead of line
-      const p0 = filteredPoints[0];
-      const p1 = filteredPoints[1];
+    // Generate path data using the exact logic
+    const pathData = pointsToPath(filteredPoints);
+    
+    // Parse the path data to create SVGCommand objects
+    const commands: SVGCommand[] = [];
+    const parts = pathData.trim().split(/\s+/);
+    
+    let i = 0;
+    while (i < parts.length) {
+      const cmd = parts[i];
       
-      commands.push({
-        id: generateId(),
-        command: 'M',
-        x: Math.round(p0.x),
-        y: Math.round(p0.y)
-      });
-      
-      // Create gentle curve even with 2 points
-      const dx = p1.x - p0.x;
-      const dy = p1.y - p0.y;
-      const c1x = p0.x + dx * 0.33;
-      const c1y = p0.y + dy * 0.33;
-      const c2x = p0.x + dx * 0.67;
-      const c2y = p0.y + dy * 0.67;
-      
-      commands.push({
-        id: generateId(),
-        command: 'C',
-        x1: Math.round(c1x),
-        y1: Math.round(c1y),
-        x2: Math.round(c2x),
-        y2: Math.round(c2y),
-        x: Math.round(p1.x),
-        y: Math.round(p1.y)
-      });
-    } else {
-      // 3+ points - use Catmull-Rom to Bezier conversion for smooth curves
-      const round = (n: number) => Math.round(n);
-      
-      // Start with move command
-      commands.push({
-        id: generateId(),
-        command: 'M',
-        x: round(filteredPoints[0].x),
-        y: round(filteredPoints[0].y)
-      });
-
-      // Generate cubic Bezier curves from filtered points
-      for (let i = 0; i < filteredPoints.length - 1; i++) {
-        const p0 = i - 1 >= 0 ? filteredPoints[i - 1] : filteredPoints[i];
-        const p1 = filteredPoints[i];
-        const p2 = filteredPoints[i + 1];
-        const p3 = i + 2 < filteredPoints.length ? filteredPoints[i + 2] : p2;
-
-        // Improved Catmull-Rom to Bezier conversion with tension control
-        const tension = 0.5; // Reduce tension to make curves smoother
-        const c1x = p1.x + (p2.x - p0.x) * tension / 6;
-        const c1y = p1.y + (p2.y - p0.y) * tension / 6;
-        const c2x = p2.x - (p3.x - p1.x) * tension / 6;
-        const c2y = p2.y - (p3.y - p1.y) * tension / 6;
-
+      if (cmd === 'M') {
+        commands.push({
+          id: generateId(),
+          command: 'M',
+          x: parseFloat(parts[i + 1]),
+          y: parseFloat(parts[i + 2])
+        });
+        i += 3;
+      } else if (cmd === 'L') {
+        commands.push({
+          id: generateId(),
+          command: 'L',
+          x: parseFloat(parts[i + 1]),
+          y: parseFloat(parts[i + 2])
+        });
+        i += 3;
+      } else if (cmd === 'C') {
         commands.push({
           id: generateId(),
           command: 'C',
-          x1: round(c1x),
-          y1: round(c1y),
-          x2: round(c2x),
-          y2: round(c2y),
-          x: round(p2.x),
-          y: round(p2.y)
+          x1: parseFloat(parts[i + 1]),
+          y1: parseFloat(parts[i + 2]),
+          x2: parseFloat(parts[i + 3]),
+          y2: parseFloat(parts[i + 4]),
+          x: parseFloat(parts[i + 5]),
+          y: parseFloat(parts[i + 6])
         });
+        i += 7;
+      } else {
+        i++;
       }
     }
 
@@ -487,7 +490,7 @@ export class Pencil2Manager {
   }
 
   // Filter out duplicate and very close points to avoid curve artifacts
-  private filterPoints(points: Point[], minDistance = 2): Point[] {
+  private filterPoints(points: Point[], minDistance = 4): Point[] {
     if (points.length <= 1) return points;
     
     const filtered = [points[0]];
