@@ -48,6 +48,7 @@ export const Pencil2Renderer: React.FC = () => {
         fill="none"
         opacity={isDrawing ? 0.8 : 1}
         pointerEvents="none"
+        vectorEffect="non-scaling-stroke"
       />
     </g>
   );

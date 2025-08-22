@@ -3,6 +3,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { generateId } from '../../utils/id-utils';
 import { rdp } from '../../utils/rdp-utils';
 import { pointsToPath } from '../../utils/catmull-rom-utils';
+import { getSVGPoint } from '../../utils/transform-utils';
 import type { Point, SVGCommand } from '../../types';
 
 export interface Pencil2Settings {
@@ -88,23 +89,23 @@ export class Pencil2Manager {
     }
   }
 
-  // Convert client coordinates to SVG coordinates
-  private clientToSvgPoint(clientX: number, clientY: number, svgElement: SVGSVGElement): Point {
-    const pt = svgElement.createSVGPoint();
-    pt.x = clientX;
-    pt.y = clientY;
+  // Convert pointer event to SVG coordinates considering viewport
+  private getPointFromEvent(e: React.PointerEvent<SVGElement>): Point {
+    const store = useEditorStore.getState();
+    const svgElement = e.currentTarget.closest('svg') as SVGSVGElement;
     
-    const ctm = svgElement.getScreenCTM();
-    if (!ctm) {
-      const rect = svgElement.getBoundingClientRect();
-      const rx = clientX - rect.left;
-      const ry = clientY - rect.top;
-      return { x: Math.round(rx), y: Math.round(ry) };
+    if (!svgElement) {
+      return { x: 0, y: 0 };
     }
     
-    const inv = ctm.inverse();
-    const transformed = pt.matrixTransform(inv);
-    return { x: Math.round(transformed.x), y: Math.round(transformed.y) };
+    // Create a mock svgRef for the getSVGPoint function
+    const svgRef = { current: svgElement };
+    const svgPoint = getSVGPoint(e as any, svgRef, store.viewport);
+    
+    return { 
+      x: Math.round(svgPoint.x), 
+      y: Math.round(svgPoint.y) 
+    };
   }
 
   // Sample a path at N points for animation morphing
@@ -212,7 +213,7 @@ export class Pencil2Manager {
     if (!svgElement) return false;
 
     this.isDrawing = true;
-    const point = this.clientToSvgPoint(e.clientX, e.clientY, svgElement);
+    const point = this.getPointFromEvent(e);
     this.currentPoints = [point];
     this.pointsBuffer = [];
 
@@ -222,10 +223,7 @@ export class Pencil2Manager {
   handlePointerMove = (e: React.PointerEvent<SVGElement>): boolean => {
     if (!this.isDrawing) return false;
 
-    const svgElement = e.currentTarget.closest('svg') as SVGSVGElement;
-    if (!svgElement) return false;
-
-    const point = this.clientToSvgPoint(e.clientX, e.clientY, svgElement);
+    const point = this.getPointFromEvent(e);
     this.pointsBuffer.push(point);
     this.scheduleFlush();
 
@@ -241,7 +239,7 @@ export class Pencil2Manager {
     this.isDrawing = false;
 
     // Add final point
-    const finalPoint = this.clientToSvgPoint(e.clientX, e.clientY, svgElement);
+    const finalPoint = this.getPointFromEvent(e);
     
     // Flush any remaining buffer
     const allPoints = [...this.currentPoints, ...this.pointsBuffer, finalPoint];
@@ -419,6 +417,12 @@ export class Pencil2Manager {
     animPath.setAttribute('fill', 'none');
     animPath.setAttribute('stroke-linecap', 'round');
     animPath.setAttribute('filter', 'url(#pencil2AnimGlowFilter)');
+    animPath.setAttribute('vector-effect', 'non-scaling-stroke');
+    
+    // Apply viewport transform to animation element
+    const store = useEditorStore.getState();
+    const transform = `translate(${store.viewport.pan.x}, ${store.viewport.pan.y}) scale(${store.viewport.zoom})`;
+    animPath.setAttribute('transform', transform);
 
     const animateEl = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
     animateEl.setAttribute('attributeName', 'd');
