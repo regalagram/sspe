@@ -18,7 +18,7 @@ export class Pencil2Manager {
   private rafId: number | null = null;
   private animationId: number | null = null;
   private settings: Pencil2Settings = {
-    simplifyEps: 2,
+    simplifyEps: 8,
     strokeWidth: 3
   };
 

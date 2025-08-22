@@ -129,7 +129,7 @@ export const WritingConsolidatedTools: React.FC = () => {
 
   const handlePencilToggle = () => {
     if (isPencilActive) {
-      pencil2Manager.deactivateExternally();
+      toolModeManager.setMode('select');
     } else {
       toolModeManager.setMode('pencil');
     }
