@@ -249,6 +249,9 @@ const smoothSubPaths = () => {
   
   if (targetSubPaths.length === 0) return;
   
+  // Save to history before making changes
+  store.pushToHistory();
+  
   // Apply smoothing with animation to each subpath
   targetSubPaths.forEach((subPath) => {
     const subPathCommands = subPath.commands;
@@ -306,6 +309,9 @@ const simplifySubPaths = () => {
   }
   
   if (targetSubPaths.length === 0) return;
+  
+  // Save to history before making changes
+  store.pushToHistory();
   
   // Apply simplification with animation to each subpath
   targetSubPaths.forEach((subPath) => {
