@@ -248,8 +248,7 @@ export class SubPathTransformManager {
     originalCommands: SVGCommand[],
     onComplete: (smoothedCommands: SVGCommand[]) => void
   ) {
-    console.log('🎬 Starting smooth animation with commands:', originalCommands.length);
-    
+        
     // Get the correct SVG element from plugin manager
     const svgRef = pluginManager.getSVGRef();
     const svgElement = svgRef?.current;
@@ -261,12 +260,10 @@ export class SubPathTransformManager {
       return;
     }
 
-    console.log('✅ SVG element found via plugin manager:', svgElement);
-
+    
     // Skip animation if already running
     if (svgElement.getAttribute('data-transform-anim-running') === '1') {
-      console.log('⏭️ Animation already running, skipping');
-      const smoothedCommands = this.applySmoothAlgorithm(originalCommands);
+            const smoothedCommands = this.applySmoothAlgorithm(originalCommands);
       onComplete(smoothedCommands);
       return;
     }
@@ -275,38 +272,29 @@ export class SubPathTransformManager {
     const smoothedCommands = this.applySmoothAlgorithm(originalCommands);
     const smoothedPoints = this.commandsToPoints(smoothedCommands);
 
-    console.log('📍 Original points:', originalPoints.length, originalPoints);
-    console.log('📍 Smoothed points:', smoothedPoints.length, smoothedPoints);
-
+        
     // NUEVO ENFOQUE: Para que funcione el morphing, ambos paths deben tener la misma estructura
     // Convertir los puntos originales a curvas usando el mismo algoritmo que smooth
     // pero con tensión 0 (líneas rectas como curvas)
     
-    console.log('🔄 Creating compatible curve paths for morphing');
-    
+        
     // Crear path con curvas para los puntos originales (curvas de líneas rectas)
     const originalAsCurves = this.convertLinesToMatchingCurves(originalPoints);
     const dFrom = this.commandsToPathString(originalAsCurves);
     const dTo = this.commandsToPathString(smoothedCommands);
     
-    console.log('📝 From curves path:', dFrom);
-    console.log('📝 To curves path:', dTo);
-    
+            
     // Verificar si son diferentes
     const arePathsDifferent = dFrom !== dTo;
-    console.log('🔍 Are curves paths different?', arePathsDifferent);
-    
+        
     if (!arePathsDifferent) {
       console.warn('⚠️ PROBLEMA: Los curve paths son iguales!');
     }
     
-    console.log('🎬 Morph from (curves):', dFrom);
-    console.log('🎬 Morph to (curves):', dTo);
-
+        
     const filterId = 'transformSmoothGlowFilter';
     this.ensureGlowFilter(svgElement, filterId);
-    console.log('🌟 Glow filter ensured:', filterId);
-
+    
     const animPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     animPath.setAttribute('d', dFrom);
     animPath.setAttribute('stroke', '#00ff88');
@@ -319,11 +307,9 @@ export class SubPathTransformManager {
     
     // Apply viewport transform to animation element - IGUAL que Pencil2
     const store = useEditorStore.getState();
-    console.log('🔍 Viewport state:', store.viewport);
-    const transform = `translate(${store.viewport.pan.x}, ${store.viewport.pan.y}) scale(${store.viewport.zoom})`;
+        const transform = `translate(${store.viewport.pan.x}, ${store.viewport.pan.y}) scale(${store.viewport.zoom})`;
     animPath.setAttribute('transform', transform);
-    console.log('🔄 Applied transform:', transform);
-
+    
     const animateEl = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
     animateEl.setAttribute('attributeName', 'd');
     animateEl.setAttribute('from', dFrom);
@@ -332,8 +318,7 @@ export class SubPathTransformManager {
     animateEl.setAttribute('fill', 'freeze');
     animPath.appendChild(animateEl);
     
-    console.log('➕ Adding animation path to SVG');
-    svgElement.appendChild(animPath);
+        svgElement.appendChild(animPath);
     svgElement.setAttribute('data-transform-anim-running', '1');
 
     try {
@@ -376,8 +361,7 @@ export class SubPathTransformManager {
     tolerance: number,
     onComplete: (simplifiedCommands: SVGCommand[]) => void
   ) {
-    console.log('🎬 Starting simplify animation with commands:', originalCommands.length, 'tolerance:', tolerance);
-    
+        
     // Get the correct SVG element from plugin manager
     const svgRef = pluginManager.getSVGRef();
     const svgElement = svgRef?.current;
@@ -389,12 +373,10 @@ export class SubPathTransformManager {
       return;
     }
 
-    console.log('✅ SVG element found via plugin manager for simplify:', svgElement);
-
+    
     // Skip animation if already running
     if (svgElement.getAttribute('data-transform-anim-running') === '1') {
-      console.log('⏭️ Simplify animation already running, skipping');
-      const simplifiedCommands = this.applySimplifyAlgorithm(originalCommands, tolerance);
+            const simplifiedCommands = this.applySimplifyAlgorithm(originalCommands, tolerance);
       onComplete(simplifiedCommands);
       return;
     }
@@ -403,19 +385,15 @@ export class SubPathTransformManager {
     const simplifiedCommands = this.applySimplifyAlgorithm(originalCommands, tolerance);
     const simplifiedPoints = this.commandsToPoints(simplifiedCommands);
 
-    console.log('📍 Original points (simplify):', originalPoints.length, originalPoints);
-    console.log('📍 Simplified points:', simplifiedPoints.length, simplifiedPoints);
-
+        
     // NUEVO ENFOQUE PARA SIMPLIFY: Crear paths compatibles para morphing
     // 1. Generar path inicial con puntos adicionales usando pointsToPath (curvas suaves)
     // 2. Convertir path final (simplificado) a curvas que representen líneas rectas
     
-    console.log('🔄 Creating enhanced initial path with additional points for simplify');
-    
+        
     // Usar pointsToPath para crear un path inicial más complejo con curvas suaves
     const enhancedInitialPath = this.pointsToPath(originalPoints);
-    console.log('🛤️ Enhanced initial path:', enhancedInitialPath);
-    
+        
     // Convertir los puntos simplificados a curvas que representen líneas rectas
     const simplifiedAsStraightCurves = this.convertLinesToMatchingCurves(simplifiedPoints);
     
@@ -423,24 +401,18 @@ export class SubPathTransformManager {
     const dFrom = enhancedInitialPath;
     const dTo = this.commandsToPathString(simplifiedAsStraightCurves);
     
-    console.log('📝 From enhanced path:', dFrom);
-    console.log('📝 To straight curves path:', dTo);
-    
+            
     // Verificar si son diferentes
     const arePathsDifferent = dFrom !== dTo;
-    console.log('🔍 Are simplify paths different?', arePathsDifferent);
-    
+        
     if (!arePathsDifferent) {
       console.warn('⚠️ PROBLEMA: Los simplify paths son iguales!');
     }
     
-    console.log('🎬 Simplify morph from:', dFrom);
-    console.log('🎬 Simplify morph to:', dTo);
-
+        
     const filterId = 'transformSimplifyGlowFilter';
     this.ensureGlowFilter(svgElement, filterId);
-    console.log('🌟 Simplify glow filter ensured:', filterId);
-
+    
     const animPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     animPath.setAttribute('d', dFrom);
     animPath.setAttribute('stroke', '#ff8800');
@@ -453,11 +425,9 @@ export class SubPathTransformManager {
     
     // Apply viewport transform to animation element - IGUAL que Pencil2
     const store = useEditorStore.getState();
-    console.log('🔍 Viewport state (simplify):', store.viewport);
-    const transform = `translate(${store.viewport.pan.x}, ${store.viewport.pan.y}) scale(${store.viewport.zoom})`;
+        const transform = `translate(${store.viewport.pan.x}, ${store.viewport.pan.y}) scale(${store.viewport.zoom})`;
     animPath.setAttribute('transform', transform);
-    console.log('🔄 Applied transform (simplify):', transform);
-
+    
     const animateEl = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
     animateEl.setAttribute('attributeName', 'd');
     animateEl.setAttribute('from', dFrom);

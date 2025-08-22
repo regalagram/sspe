@@ -30,6 +30,7 @@ import {
   generateSmoothPath, 
   simplifySegmentWithPointsOnPath
 } from '../../../utils/path-simplification-utils';
+import { subPathTransformManager } from '../../subpath-transform/SubPathTransformManager';
 
 // Get common fill color for selected subpaths
 const getCommonSubPathFillColor = (): string => {
@@ -227,21 +228,18 @@ const applySubPathStrokeLinejoin = (linejoin: string) => {
   });
 };
 
-// Smooth subpaths - based on SubPathTransformControls implementation
+// Smooth subpaths - using the new animation system
 const smoothSubPaths = () => {
   const store = useEditorStore.getState();
-  const { selection, paths, grid, replaceSubPathCommands, pushToHistory } = store;
+  const { selection, replaceSubPathCommands } = store;
   const { selectedSubPaths } = selection;
   
   if (selectedSubPaths.length === 0) return;
   
-  // Save current state to history before making changes
-  pushToHistory();
-  
   // Find target subpaths that can be smoothed
   const targetSubPaths: any[] = [];
   for (const subPathId of selectedSubPaths) {
-    for (const path of paths) {
+    for (const path of store.paths) {
       const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
       if (subPath && subPath.commands.length >= 2) {
         targetSubPaths.push(subPath);
@@ -251,61 +249,55 @@ const smoothSubPaths = () => {
   
   if (targetSubPaths.length === 0) return;
   
-  // Apply smoothing to each subpath
+  // Apply smoothing with animation to each subpath
   targetSubPaths.forEach((subPath) => {
     const subPathCommands = subPath.commands;
     
     if (subPathCommands.length < 2) return;
     
-    // Apply smoothing to entire subpath
-    const segmentToSmooth = [...subPathCommands];
-    
-    // Helper function to update this specific subpath
-    const updateSubPath = (newCommands: any[]) => {
-      // Ensure the subpath ALWAYS starts with M
-      if (newCommands.length > 0 && newCommands[0].command !== 'M') {
-        const firstCmd = newCommands[0];
-        if ('x' in firstCmd && 'y' in firstCmd) {
-          newCommands[0] = {
-            ...firstCmd,
-            command: 'M'
-          };
-        }
-      }
-      
-      // Replace all commands in this subpath
-      replaceSubPathCommands(subPath.id, newCommands);
-    };
-    
-    // Apply smoothing using the generateSmoothPath function
-    generateSmoothPath(
-      segmentToSmooth,
+    // Use the new animation system for smooth transformation
+    subPathTransformManager.smoothWithAnimation(
       subPathCommands,
-      updateSubPath,
-      grid.snapToGrid ? (value: number) => Math.round(value / grid.size) * grid.size : (value: number) => value
+      (smoothedCommands) => {
+        // Helper function to update this specific subpath
+        const updateSubPath = (newCommands: any[]) => {
+          // Ensure the subpath ALWAYS starts with M
+          if (newCommands.length > 0 && newCommands[0].command !== 'M') {
+            const firstCmd = newCommands[0];
+            if ('x' in firstCmd && 'y' in firstCmd) {
+              newCommands[0] = {
+                ...firstCmd,
+                command: 'M'
+              };
+            }
+          }
+          
+          // Replace all commands in this subpath
+          replaceSubPathCommands(subPath.id, newCommands);
+        };
+        
+        // Apply the smoothed commands
+        updateSubPath(smoothedCommands);
+      }
     );
   });
 };
 
-// Simplify subpaths - based on SubPathTransformControls implementation
+// Simplify subpaths - using the new animation system
 const simplifySubPaths = () => {
   const store = useEditorStore.getState();
-  const { selection, paths, grid, replaceSubPathCommands, pushToHistory } = store;
+  const { selection, replaceSubPathCommands } = store;
   const { selectedSubPaths } = selection;
   
   if (selectedSubPaths.length === 0) return;
   
-  // Default simplification parameters
+  // Default simplification tolerance
   const simplifyTolerance = 0.1;
-  const simplifyDistance = 10;
-  
-  // Save current state to history before making changes
-  pushToHistory();
   
   // Find target subpaths that can be simplified
   const targetSubPaths: any[] = [];
   for (const subPathId of selectedSubPaths) {
-    for (const path of paths) {
+    for (const path of store.paths) {
       const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
       if (subPath && subPath.commands.length >= 2) {
         targetSubPaths.push(subPath);
@@ -315,44 +307,47 @@ const simplifySubPaths = () => {
   
   if (targetSubPaths.length === 0) return;
   
-  // Apply simplification to each subpath
-  for (const subPath of targetSubPaths) {
-    if (subPath.commands.length < 2) continue;
+  // Apply simplification with animation to each subpath
+  targetSubPaths.forEach((subPath) => {
+    const subPathCommands = subPath.commands;
     
-    const commands = subPath.commands;
+    if (subPathCommands.length < 2) return;
     
-    // Use points-on-path algorithm for simplification (Ramer-Douglas-Peucker)
-    const simplifiedCommands = simplifySegmentWithPointsOnPath(
-      commands, 
-      simplifyTolerance, 
-      simplifyDistance, 
-      grid.snapToGrid ? grid.size : 0
-    );
-
-    if (simplifiedCommands.length === 0) continue;
-
-    // Ensure the subpath ALWAYS starts with M
-    if (simplifiedCommands.length > 0 && simplifiedCommands[0].command !== 'M') {
-      const firstCmd = simplifiedCommands[0];
-      if ('x' in firstCmd && 'y' in firstCmd) {
-        simplifiedCommands[0] = {
-          ...firstCmd,
-          command: 'M'
+    // Use the new animation system for simplify transformation
+    subPathTransformManager.simplifyWithAnimation(
+      subPathCommands,
+      simplifyTolerance,
+      (simplifiedCommands) => {
+        // Helper function to update this specific subpath
+        const updateSubPath = (newCommands: any[]) => {
+          // Ensure the subpath ALWAYS starts with M
+          if (newCommands.length > 0 && newCommands[0].command !== 'M') {
+            const firstCmd = newCommands[0];
+            if ('x' in firstCmd && 'y' in firstCmd) {
+              newCommands[0] = {
+                ...firstCmd,
+                command: 'M'
+              };
+            }
+          }
+          
+          // Replace all commands in this subpath
+          replaceSubPathCommands(subPath.id, newCommands.map(cmd => ({
+            command: cmd.command,
+            x: cmd.x,
+            y: cmd.y,
+            x1: cmd.x1,
+            y1: cmd.y1,
+            x2: cmd.x2,
+            y2: cmd.y2
+          })));
         };
+        
+        // Apply the simplified commands
+        updateSubPath(simplifiedCommands);
       }
-    }
-    
-    // Replace all commands in this subpath
-    replaceSubPathCommands(subPath.id, simplifiedCommands.map(cmd => ({
-      command: cmd.command,
-      x: cmd.x,
-      y: cmd.y,
-      x1: cmd.x1,
-      y1: cmd.y1,
-      x2: cmd.x2,
-      y2: cmd.y2
-    })));
-  }
+    );
+  });
 };
 
 const duplicateSubPaths = () => {

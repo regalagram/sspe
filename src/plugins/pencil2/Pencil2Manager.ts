@@ -247,9 +247,13 @@ export class Pencil2Manager {
 
     if (allPoints.length === 0) return true;
 
+    // Save to history once at the beginning of path creation
+    const store = useEditorStore.getState();
+    store.pushToHistory();
+
     // If no simplification, create path directly
     if (this.settings.simplifyEps === 0) {
-      this.createPathFromPoints(allPoints);
+      this.createPathFromPoints(allPoints, false); // Don't save to history again
       this.currentPoints = [];
       return true;
     }
@@ -259,7 +263,7 @@ export class Pencil2Manager {
 
     // If only one point or simplification didn't change much, create directly
     if (simplified.length <= 2 || simplified.length === allPoints.length) {
-      this.createPathFromPoints(allPoints);
+      this.createPathFromPoints(allPoints, false); // Don't save to history again
       this.currentPoints = [];
       return true;
     }
@@ -270,10 +274,15 @@ export class Pencil2Manager {
     return true;
   };
 
-  private createPathFromPoints(points: Point[]) {
+  private createPathFromPoints(points: Point[], saveToHistory: boolean = false) {
     if (points.length === 0) return;
 
     const store = useEditorStore.getState();
+    
+    // Save current state to history before adding new path (only if requested)
+    if (saveToHistory) {
+      store.pushToHistory();
+    }
     
     // Filter out duplicate and very close points to avoid curve artifacts
     const filteredPoints = this.filterPoints(points);
@@ -385,7 +394,7 @@ export class Pencil2Manager {
   private animateSimplification(originalPoints: Point[], simplifiedPoints: Point[], svgElement: SVGSVGElement) {
     // Skip animation if already running
     if (svgElement.getAttribute('data-pencil2-anim-running') === '1') {
-      this.createPathFromPoints(simplifiedPoints); // Use simplified points
+      this.createPathFromPoints(simplifiedPoints, false); // Use simplified points, don't save to history again
       this.currentPoints = [];
       return;
     }
@@ -451,7 +460,7 @@ export class Pencil2Manager {
       if (committed) return;
       committed = true;
       
-      this.createPathFromPoints(simplifiedPoints); // Use simplified points!
+      this.createPathFromPoints(simplifiedPoints, false); // Use simplified points, don't save to history again
       
       try {
         svgElement.removeChild(animPath);
