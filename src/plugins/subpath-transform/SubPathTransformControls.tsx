@@ -3,10 +3,9 @@ import { useEditorStore } from '../../store/editorStore';
 import { PluginButton } from '../../components/PluginButton';
 import { Move, RotateCw, Maximize2, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Waves, Minimize2, FlipHorizontal, FlipVertical } from 'lucide-react';
 import { 
-  generateSmoothPath, 
-  areCommandsInSameSubPath,
-  simplifySegmentWithPointsOnPath
+  areCommandsInSameSubPath
 } from '../../utils/path-simplification-utils';
+import { subPathTransformManager } from './SubPathTransformManager';
 
 // Custom hook for persistent state in localStorage
 const usePersistentState = <T,>(key: string, defaultValue: T): [T, (value: T) => void] => {
@@ -132,7 +131,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
     setSimplifyDistance(10);
   };
 
-  // Smoothing functionality
+  // Smoothing functionality with animation
   const handleSmooth = () => {
     const { selectedCommands, selectedSubPaths } = selection;
     
@@ -190,50 +189,39 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
     pushToHistory();
 
     if (isMultipleSubPaths && targetSubPaths.length > 0) {
-      // Handle multiple subpaths
-      targetSubPaths.forEach((subPath) => {
+      // Handle multiple subpaths - apply smoothing with animation to each
+      targetSubPaths.forEach((subPath, index) => {
         const subPathCommands = subPath.commands;
         
         if (subPathCommands.length < 2) return;
         
-        // Apply smoothing to entire subpath
         const segmentToSmooth = [...subPathCommands];
         
-        // Helper function to update this specific subpath
-        const updateSubPath = (newCommands: any[]) => {
-          // CRITICAL: Ensure the subpath ALWAYS starts with M
-          if (newCommands.length > 0 && newCommands[0].command !== 'M') {
-            console.warn('First command is not M, converting:', newCommands[0]);
-            const firstCmd = newCommands[0];
-            if ('x' in firstCmd && 'y' in firstCmd) {
-              newCommands[0] = {
-                ...firstCmd,
-                command: 'M'
-              };
+        // Apply smoothing with animation
+        const delay = index * 100; // Stagger animations
+        setTimeout(() => {
+          subPathTransformManager.smoothWithAnimation(segmentToSmooth, (smoothedCommands) => {
+            // Ensure the subpath ALWAYS starts with M
+            if (smoothedCommands.length > 0 && smoothedCommands[0].command !== 'M') {
+              const firstCmd = smoothedCommands[0];
+              if ('x' in firstCmd && 'y' in firstCmd) {
+                smoothedCommands[0] = {
+                  ...firstCmd,
+                  command: 'M'
+                };
+              }
             }
-          }
-
-          
-          // Replace all commands in this subpath
-          replaceSubPathCommands(subPath.id, newCommands);
-        };
-        
-        // Apply smoothing using the generateSmoothPath function
-        generateSmoothPath(
-          segmentToSmooth,
-          subPathCommands,
-          updateSubPath,
-          grid.snapToGrid ? (value: number) => Math.round(value / grid.size) * grid.size : (value: number) => value
-        );
+            
+            // Replace all commands in this subpath
+            replaceSubPathCommands(subPath.id, smoothedCommands);
+          });
+        }, delay);
       });
     } else if (!isMultipleSubPaths && targetSubPath && targetCommands && startIndex !== undefined && endIndex !== undefined) {
-      // Handle single subpath or selected commands (original logic)
-
-      // Extract the segment to smooth
+      // Handle single subpath or selected commands with animation
       const segmentToSmooth = [...targetCommands];
       
-      // Helper function to update the path after smoothing
-      const updatePath = (newCommands: any[], addToHistory: boolean = true) => {
+      subPathTransformManager.smoothWithAnimation(segmentToSmooth, (smoothedCommands) => {
         // Create the new commands array for the entire subpath
         let newSubPathCommands = [...targetSubPath.commands];
         
@@ -242,11 +230,10 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
         const actualEndIndex = Math.min(targetSubPath.commands.length - 1, endIndex!);
         const replaceLength = actualEndIndex - actualStartIndex + 1;
         
-        newSubPathCommands.splice(actualStartIndex, replaceLength, ...newCommands);
+        newSubPathCommands.splice(actualStartIndex, replaceLength, ...smoothedCommands);
         
-        // CRITICAL: Ensure the subpath ALWAYS starts with M
+        // Ensure the subpath ALWAYS starts with M
         if (newSubPathCommands.length > 0 && newSubPathCommands[0].command !== 'M') {
-          console.warn('First command is not M, converting:', newSubPathCommands[0]);
           const firstCmd = newSubPathCommands[0];
           if ('x' in firstCmd && 'y' in firstCmd) {
             newSubPathCommands[0] = {
@@ -255,23 +242,14 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
             };
           }
         }
-
         
         // Replace all commands in the subpath
         replaceSubPathCommands(targetSubPath.id, newSubPathCommands);
-      };
-      
-      // Apply smoothing using the generateSmoothPath function
-      generateSmoothPath(
-        segmentToSmooth,
-        targetSubPath.commands,
-        updatePath,
-        grid.snapToGrid ? (value: number) => Math.round(value / grid.size) * grid.size : (value: number) => value
-      );
+      });
     }
   };
 
-  // Simplification functionality
+  // Simplification functionality with animation
   const handleSimplify = () => {
     const { selectedCommands, selectedSubPaths } = selection;
     
@@ -334,98 +312,61 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
     pushToHistory();
 
     if (isMultiSubPath) {
-      // Handle multiple sub-paths
-      
-      for (const subPath of targetSubPaths) {
-        if (subPath.commands.length < 2) continue;
+      // Handle multiple sub-paths with animation
+      targetSubPaths.forEach((subPath, index) => {
+        if (subPath.commands.length < 2) return;
         
         const commands = subPath.commands;
         
-        // Use points-on-path algorithm for simplification (Ramer-Douglas-Peucker)
-        const simplifiedCommands = simplifySegmentWithPointsOnPath(
-          commands, 
-          simplifyTolerance, 
-          simplifyDistance, 
-          grid.snapToGrid ? grid.size : 0
-        );
+        // Apply simplification with animation
+        const delay = index * 100; // Stagger animations
+        setTimeout(() => {
+          subPathTransformManager.simplifyWithAnimation(commands, simplifyTolerance, (simplifiedCommands) => {
+            if (simplifiedCommands.length === 0) return;
 
-        if (simplifiedCommands.length === 0) continue;
+            // Ensure the subpath ALWAYS starts with M
+            if (simplifiedCommands.length > 0 && simplifiedCommands[0].command !== 'M') {
+              const firstCmd = simplifiedCommands[0];
+              if ('x' in firstCmd && 'y' in firstCmd) {
+                simplifiedCommands[0] = {
+                  ...firstCmd,
+                  command: 'M'
+                };
+              }
+            }
+            
+            // Replace all commands in this subpath
+            replaceSubPathCommands(subPath.id, simplifiedCommands);
+          });
+        }, delay);
+      });
+    } else if (targetSubPath && targetCommands && startIndex !== undefined && endIndex !== undefined) {
+      // Handle single sub-path with animation
+      const commandsToSimplify = [...targetCommands];
+      
+      subPathTransformManager.simplifyWithAnimation(commandsToSimplify, simplifyTolerance, (simplifiedCommands) => {
+        if (simplifiedCommands.length === 0) return;
 
-        // CRITICAL: Ensure the subpath ALWAYS starts with M
-        if (simplifiedCommands.length > 0 && simplifiedCommands[0].command !== 'M') {
-          console.warn('First command is not M, converting:', simplifiedCommands[0]);
-          const firstCmd = simplifiedCommands[0];
+        // Create the new commands array for the entire subpath
+        let newSubPathCommands = [...targetSubPath.commands];
+        
+        // Replace the selected range with simplified commands
+        newSubPathCommands.splice(startIndex!, endIndex! - startIndex! + 1, ...simplifiedCommands);
+        
+        // Ensure the subpath ALWAYS starts with M
+        if (newSubPathCommands.length > 0 && newSubPathCommands[0].command !== 'M') {
+          const firstCmd = newSubPathCommands[0];
           if ('x' in firstCmd && 'y' in firstCmd) {
-            simplifiedCommands[0] = {
+            newSubPathCommands[0] = {
               ...firstCmd,
               command: 'M'
             };
           }
         }
-
         
-        // Replace all commands in this subpath
-        replaceSubPathCommands(subPath.id, simplifiedCommands);
-      }
-    } else if (targetSubPath && targetCommands && startIndex !== undefined && endIndex !== undefined) {
-      // Handle single sub-path (existing logic)
-
-      // Check if the selection starts with the subpath's M command
-      const isStartingFromM = startIndex === 0 && targetCommands[0].command === 'M';
-      
-      // Determine commands to process
-      let commandsToSimplify = [...targetCommands];
-      let needsContextM = false;
-      
-      // If we're not starting from M, we need M for context
-      if (!isStartingFromM) {
-        const subpathMCommand = targetSubPath.commands[0]; // First command should be M
-        if (subpathMCommand && subpathMCommand.command === 'M') {
-          commandsToSimplify.unshift(subpathMCommand);
-          needsContextM = true;
-        }
-      }
-
-      // Use points-on-path algorithm for simplification (Ramer-Douglas-Peucker)
-      const simplifiedCommands = simplifySegmentWithPointsOnPath(
-        commandsToSimplify, 
-        simplifyTolerance, 
-        simplifyDistance, 
-        grid.snapToGrid ? grid.size : 0
-      );
-
-      if (simplifiedCommands.length === 0) return;
-
-      // Create the new commands array for the entire subpath
-      let newSubPathCommands = [...targetSubPath.commands];
-      
-      // Determine what commands to use for replacement
-      let commandsToReplace = simplifiedCommands;
-      
-      // If we added M for context and it's still there, handle it properly
-      if (needsContextM && simplifiedCommands.length > 0 && simplifiedCommands[0].command === 'M') {
-        // We added M for context, so skip it in the replacement since it's not part of selection
-        commandsToReplace = simplifiedCommands.slice(1);
-      }
-      
-      // Replace the selected range with simplified commands
-      newSubPathCommands.splice(startIndex, endIndex - startIndex + 1, ...commandsToReplace);
-      
-      // CRITICAL: Ensure the subpath ALWAYS starts with M
-      if (newSubPathCommands.length > 0 && newSubPathCommands[0].command !== 'M') {
-        console.warn('First command is not M, converting:', newSubPathCommands[0]);
-        const firstCmd = newSubPathCommands[0];
-        if ('x' in firstCmd && 'y' in firstCmd) {
-          newSubPathCommands[0] = {
-            ...firstCmd,
-            command: 'M'
-          };
-        }
-      }
-
-      
-      // Replace all commands in the subpath
-      replaceSubPathCommands(targetSubPath.id, newSubPathCommands);
+        // Replace all commands in the subpath
+        replaceSubPathCommands(targetSubPath.id, newSubPathCommands);
+      });
     }
   };
 
@@ -467,15 +408,21 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
   useEffect(() => {
     const handleMirrorHorizontalEvent = () => handleMirrorHorizontal();
     const handleMirrorVerticalEvent = () => handleMirrorVertical();
+    const handleSmoothEvent = () => handleSmooth();
+    const handleSimplifyEvent = () => handleSimplify();
     
     document.addEventListener('mirror-horizontal-trigger', handleMirrorHorizontalEvent);
     document.addEventListener('mirror-vertical-trigger', handleMirrorVerticalEvent);
+    document.addEventListener('path-smoothing-trigger', handleSmoothEvent);
+    document.addEventListener('path-simplification-trigger', handleSimplifyEvent);
     
     return () => {
       document.removeEventListener('mirror-horizontal-trigger', handleMirrorHorizontalEvent);
       document.removeEventListener('mirror-vertical-trigger', handleMirrorVerticalEvent);
+      document.removeEventListener('path-smoothing-trigger', handleSmoothEvent);
+      document.removeEventListener('path-simplification-trigger', handleSimplifyEvent);
     };
-  }, [handleMirrorHorizontal, handleMirrorVertical]);
+  }, [handleMirrorHorizontal, handleMirrorVertical, handleSmooth, handleSimplify]);
 
   return (
     <div>

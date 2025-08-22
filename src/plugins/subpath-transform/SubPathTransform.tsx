@@ -1,5 +1,6 @@
 import { Plugin } from '../../core/PluginSystem';
 import { SubPathTransformControls } from './SubPathTransformControls';
+import { subPathTransformManager } from './SubPathTransformManager';
 
 export const SubPathTransformPlugin: Plugin = {
   id: 'subpath-transform',
@@ -7,6 +8,9 @@ export const SubPathTransformPlugin: Plugin = {
   version: '1.0.0',
   enabled: true,
   dependencies: ['selection'],
+  destroy: () => {
+    subPathTransformManager.destroy();
+  },
   ui: [
     {
       id: 'subpath-transform-controls',

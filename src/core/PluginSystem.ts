@@ -98,6 +98,10 @@ export class PluginManager {
     this.svgRef = ref;
   }
 
+  getSVGRef(): React.RefObject<SVGSVGElement | null> | null {
+    return this.svgRef;
+  }
+
   setEditorStore(store: ReturnType<typeof useEditorStore>): void {
     this.editorStore = store;
   }
