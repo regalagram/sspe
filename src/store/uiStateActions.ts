@@ -25,6 +25,14 @@ export interface UIStateActions {
   showFloatingToolbarAfterDrag: () => void;
   forceFloatingToolbarUpdate: () => void;
   setSpecialPointSeparationAnimating: (animating: boolean) => void;
+  setSelectionVisible: (visible: boolean) => void;
+  setPointsVisible: (visible: boolean) => void;
+  restorePointsVisibility: (states: {
+    commandPointsEnabled: boolean;
+    controlPointsEnabled: boolean;
+    subpathShowCommandPoints: boolean;
+    subpathShowControlPoints: boolean;
+  }) => void;
 }
 
 export const createUIStateActions: StateCreator<
@@ -260,6 +268,39 @@ export const createUIStateActions: StateCreator<
   setSpecialPointSeparationAnimating: (animating: boolean) => {
     set((state) => ({
       isSpecialPointSeparationAnimating: animating,
+    }));
+  },
+
+  setSelectionVisible: (visible: boolean) => {
+    set((state) => ({
+      ui: {
+        ...(state.ui || {}),
+        selectionVisible: visible,
+      },
+    }));
+  },
+
+  setPointsVisible: (visible: boolean) => {
+    set((state) => ({
+      enabledFeatures: {
+        ...state.enabledFeatures,
+        commandPointsEnabled: visible,
+        controlPointsEnabled: visible,
+        subpathShowCommandPoints: visible,
+        subpathShowControlPoints: visible,
+      },
+    }));
+  },
+
+  restorePointsVisibility: (states) => {
+    set((state) => ({
+      enabledFeatures: {
+        ...state.enabledFeatures,
+        commandPointsEnabled: states.commandPointsEnabled,
+        controlPointsEnabled: states.controlPointsEnabled,
+        subpathShowCommandPoints: states.subpathShowCommandPoints,
+        subpathShowControlPoints: states.subpathShowControlPoints,
+      },
     }));
   },
 });

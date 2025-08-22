@@ -432,6 +432,10 @@ const loadInitialState = (): EditorState => {
       chains: [],
       events: [],
     },
+    // UI visibility state
+    ui: {
+      selectionVisible: true,
+    },
     // Floating toolbar state
     isFloatingToolbarHidden: false,
     // Format copy state

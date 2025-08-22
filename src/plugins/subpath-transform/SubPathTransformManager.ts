@@ -268,6 +268,32 @@ export class SubPathTransformManager {
       return;
     }
 
+    // Hide selection UI and points during animation
+    const store = useEditorStore.getState();
+    const originalSelectionVisible = store.ui?.selectionVisible ?? true;
+    const originalPointsVisible = {
+      commandPointsEnabled: store.enabledFeatures.commandPointsEnabled,
+      controlPointsEnabled: store.enabledFeatures.controlPointsEnabled,
+      subpathShowCommandPoints: store.enabledFeatures.subpathShowCommandPoints ?? true,
+      subpathShowControlPoints: store.enabledFeatures.subpathShowControlPoints ?? true,
+    };
+    
+    console.log('🔧 SMOOTH - ANTES - Original states:', {
+      selectionVisible: originalSelectionVisible,
+      pointsVisible: originalPointsVisible,
+      'store.enabledFeatures': store.enabledFeatures
+    });
+    
+    store.setSelectionVisible(false);
+    store.setPointsVisible(false);
+    
+    console.log('🔧 SMOOTH - DESPUÉS - Hiding UI and points during animation');
+    console.log('🔧 SMOOTH - Current store state:', {
+      selectionVisible: useEditorStore.getState().ui?.selectionVisible,
+      commandPointsEnabled: useEditorStore.getState().enabledFeatures.commandPointsEnabled,
+      controlPointsEnabled: useEditorStore.getState().enabledFeatures.controlPointsEnabled
+    });
+
     const originalPoints = this.commandsToPoints(originalCommands);
     const smoothedCommands = this.applySmoothAlgorithm(originalCommands);
     const smoothedPoints = this.commandsToPoints(smoothedCommands);
@@ -306,8 +332,8 @@ export class SubPathTransformManager {
     animPath.setAttribute('vector-effect', 'non-scaling-stroke');
     
     // Apply viewport transform to animation element - IGUAL que Pencil2
-    const store = useEditorStore.getState();
-        const transform = `translate(${store.viewport.pan.x}, ${store.viewport.pan.y}) scale(${store.viewport.zoom})`;
+    const viewportStore = useEditorStore.getState();
+        const transform = `translate(${viewportStore.viewport.pan.x}, ${viewportStore.viewport.pan.y}) scale(${viewportStore.viewport.zoom})`;
     animPath.setAttribute('transform', transform);
     
     const animateEl = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
@@ -333,6 +359,23 @@ export class SubPathTransformManager {
     const cleanup = () => {
       if (committed) return;
       committed = true;
+      
+      // Restore selection UI and points visibility
+      console.log('🔧 SMOOTH - CLEANUP - Restoring UI visibility');
+      console.log('🔧 SMOOTH - CLEANUP - Restoring to:', {
+        selectionVisible: originalSelectionVisible,
+        pointsVisible: originalPointsVisible
+      });
+      console.log('🔧 SMOOTH - CLEANUP - Calling restorePointsVisibility with:', originalPointsVisible);
+      
+      store.setSelectionVisible(originalSelectionVisible);
+      store.restorePointsVisibility(originalPointsVisible);
+      
+      console.log('🔧 SMOOTH - CLEANUP - Final store state:', {
+        selectionVisible: useEditorStore.getState().ui?.selectionVisible,
+        commandPointsEnabled: useEditorStore.getState().enabledFeatures.commandPointsEnabled,
+        controlPointsEnabled: useEditorStore.getState().enabledFeatures.controlPointsEnabled
+      });
       
       onComplete(smoothedCommands);
       
@@ -381,6 +424,19 @@ export class SubPathTransformManager {
       return;
     }
 
+    // Hide selection UI and points during animation
+    const store = useEditorStore.getState();
+    const originalSelectionVisible = store.ui?.selectionVisible ?? true;
+    const originalPointsVisible = {
+      commandPointsEnabled: store.enabledFeatures.commandPointsEnabled,
+      controlPointsEnabled: store.enabledFeatures.controlPointsEnabled,
+      subpathShowCommandPoints: store.enabledFeatures.subpathShowCommandPoints ?? true,
+      subpathShowControlPoints: store.enabledFeatures.subpathShowControlPoints ?? true,
+    };
+    
+    store.setSelectionVisible(false);
+    store.setPointsVisible(false);
+
     const originalPoints = this.commandsToPoints(originalCommands);
     const simplifiedCommands = this.applySimplifyAlgorithm(originalCommands, tolerance);
     const simplifiedPoints = this.commandsToPoints(simplifiedCommands);
@@ -424,8 +480,8 @@ export class SubPathTransformManager {
     animPath.setAttribute('vector-effect', 'non-scaling-stroke');
     
     // Apply viewport transform to animation element - IGUAL que Pencil2
-    const store = useEditorStore.getState();
-        const transform = `translate(${store.viewport.pan.x}, ${store.viewport.pan.y}) scale(${store.viewport.zoom})`;
+    const viewportStore = useEditorStore.getState();
+        const transform = `translate(${viewportStore.viewport.pan.x}, ${viewportStore.viewport.pan.y}) scale(${viewportStore.viewport.zoom})`;
     animPath.setAttribute('transform', transform);
     
     const animateEl = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
@@ -451,6 +507,10 @@ export class SubPathTransformManager {
     const cleanup = () => {
       if (committed) return;
       committed = true;
+      
+      // Restore selection UI and points visibility
+      store.setSelectionVisible(originalSelectionVisible);
+      store.restorePointsVisibility(originalPointsVisible);
       
       onComplete(simplifiedCommands);
       

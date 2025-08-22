@@ -224,6 +224,9 @@ const duplicateGroups = () => {
 const deleteGroups = () => {
   const store = useEditorStore.getState();
   
+  // Save to history before deleting
+  store.pushToHistory();
+  
   store.selection.selectedGroups.forEach(groupId => {
     store.deleteGroup(groupId, true); // Delete with children
   });
@@ -242,8 +245,10 @@ const exportGroupSVG = () => {
 
 // Bring groups to front
 const bringGroupsToFront = () => {
-  const reorderManager = new ReorderManager();
   const store = useEditorStore.getState();
+  store.pushToHistory();
+  
+  const reorderManager = new ReorderManager();
   reorderManager.setEditorStore(store);
   
   reorderManager.bringToFront();
@@ -251,8 +256,10 @@ const bringGroupsToFront = () => {
 
 // Send groups to back
 const sendGroupsToBack = () => {
-  const reorderManager = new ReorderManager();
   const store = useEditorStore.getState();
+  store.pushToHistory();
+  
+  const reorderManager = new ReorderManager();
   reorderManager.setEditorStore(store);
   
   reorderManager.sendToBack();
@@ -281,6 +288,7 @@ const groupLockOptions = [
     label: 'Unlock', 
     action: () => {
       const store = useEditorStore.getState();
+      store.pushToHistory();
       store.selection.selectedGroups.forEach(groupId => {
         store.setGroupLockLevel(groupId, 'none');
       });
@@ -291,6 +299,7 @@ const groupLockOptions = [
     label: 'Lock Selection', 
     action: () => {
       const store = useEditorStore.getState();
+      store.pushToHistory();
       store.selection.selectedGroups.forEach(groupId => {
         store.setGroupLockLevel(groupId, 'selection');
       });
@@ -301,6 +310,7 @@ const groupLockOptions = [
     label: 'Lock Editing', 
     action: () => {
       const store = useEditorStore.getState();
+      store.pushToHistory();
       store.selection.selectedGroups.forEach(groupId => {
         store.setGroupLockLevel(groupId, 'editing');
       });
@@ -311,6 +321,7 @@ const groupLockOptions = [
     label: 'Lock Movement', 
     action: () => {
       const store = useEditorStore.getState();
+      store.pushToHistory();
       store.selection.selectedGroups.forEach(groupId => {
         store.setGroupLockLevel(groupId, 'movement-sync');
       });
@@ -321,6 +332,7 @@ const groupLockOptions = [
     label: 'Lock All', 
     action: () => {
       const store = useEditorStore.getState();
+      store.pushToHistory();
       store.selection.selectedGroups.forEach(groupId => {
         store.setGroupLockLevel(groupId, 'full');
       });

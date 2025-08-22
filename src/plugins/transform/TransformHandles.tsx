@@ -8,7 +8,7 @@ interface TransformHandlesProps {
   handles: TransformHandle[];
 }
 export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, handles }) => {
-  const { viewport, visualDebugSizes, isSpecialPointSeparationAnimating } = useEditorStore();
+  const { viewport, visualDebugSizes, isSpecialPointSeparationAnimating, ui } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   const [hoveredHandle, setHoveredHandle] = useState<string | null>(null);
   if (!bounds || handles.length === 0) {
@@ -16,7 +16,13 @@ export const TransformHandles: React.FC<TransformHandlesProps> = ({ bounds, hand
   }
   const isTransforming = transformManager.isTransforming();
   const isMoving = transformManager.isMoving();
-  const shouldHideHandles = isTransforming || isMoving || isSpecialPointSeparationAnimating;
+  const selectionVisible = ui?.selectionVisible ?? true;
+  const shouldHideHandles = isTransforming || isMoving || isSpecialPointSeparationAnimating || !selectionVisible;
+  
+  // Debug logging for visibility
+  React.useEffect(() => {
+    console.log('🔧 TransformHandles - selectionVisible:', selectionVisible, 'shouldHideHandles:', shouldHideHandles, 'ui:', ui);
+  }, [selectionVisible, shouldHideHandles, ui]);
   const handleOpacity = shouldHideHandles ? 0 : 1;
   const boundingBoxOpacity = shouldHideHandles ? 0 : 1;
   const baseHandleSize = getControlPointSize(isMobile, isTablet);

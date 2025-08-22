@@ -1,3 +1,4 @@
+import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { getAbsoluteCommandPosition } from '../../utils/path-utils';
@@ -287,7 +288,7 @@ export const StickyVisualFeedback: React.FC = () => {
 // Command Points Renderer Component
 export const CommandPointsRenderer: React.FC = () => {
   // All hooks must be called before any early returns
-  const { paths, selection, viewport, enabledFeatures, renderVersion, visualDebugSizes, mode, enabledFeatures: storeEnabledFeatures } = useEditorStore();
+  const { paths, selection, viewport, enabledFeatures, renderVersion, visualDebugSizes, mode, enabledFeatures: storeEnabledFeatures, ui } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
 
   // Early returns after all hooks are called
@@ -303,7 +304,13 @@ export const CommandPointsRenderer: React.FC = () => {
   const isSubpathEditMode = mode?.current === 'subpath-edit';
   const subpathShowCommandPoints = storeEnabledFeatures.subpathShowCommandPoints ?? true;
 
-  const shouldShow = (isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || hasSelectedSubPath || hasSelectedCommand;
+  const selectionVisible = ui?.selectionVisible ?? true;
+  const shouldShow = selectionVisible && ((isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || hasSelectedSubPath || hasSelectedCommand);
+
+  // Debug logging for command points visibility
+  React.useEffect(() => {
+    console.log('🔧 CommandPointsRenderer - selectionVisible:', selectionVisible, 'shouldShow:', shouldShow);
+  }, [selectionVisible, shouldShow]);
 
   if (!shouldShow) {
     return null;

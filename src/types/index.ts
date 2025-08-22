@@ -294,6 +294,10 @@ export interface EditorState {
     chains: AnimationChain[]; // Synchronized animation chains
     events: AnimationEvent[]; // Custom animation events
   };
+  // UI visibility state
+  ui?: {
+    selectionVisible?: boolean;
+  };
   // Floating toolbar state
   isFloatingToolbarHidden?: boolean;
   floatingToolbarUpdateTimestamp?: number;

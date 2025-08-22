@@ -39,7 +39,7 @@ const getHandleColors = (type: ControlPointType, isOptionPressed: boolean, isNex
 };
 
 export const HandleRenderer: React.FC = () => {
-  const { paths, enabledFeatures, viewport, selection, visualDebugSizes, mode } = useEditorStore();
+  const { paths, enabledFeatures, viewport, selection, visualDebugSizes, mode, ui } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   const [handleState, setHandleState] = React.useState(handleManager.getState());
   const [renderKey, setRenderKey] = React.useState(0);
@@ -94,10 +94,17 @@ export const HandleRenderer: React.FC = () => {
   // Check if any sub-path is selected or any command is selected
   const hasSelectedSubPath = selection.selectedSubPaths.length > 0;
   const hasSelectedCommand = selection.selectedCommands.length > 0;
+  const selectionVisible = ui?.selectionVisible ?? true;
+  
+  // Debug logging for visibility
+  React.useEffect(() => {
+    console.log('🔧 HandleRenderer - selectionVisible:', selectionVisible, 'ui:', ui);
+  }, [selectionVisible, ui]);
   
   // Show if feature is enabled OR if any sub-path is selected OR if any command is selected
   // For subpath-edit mode we additionally respect per-class flags
-  const shouldShow = (isSubpathEditMode && (subpathShowCommandPoints || subpathShowControlPoints)) || controlPointsEnabled || hasSelectedSubPath || hasSelectedCommand ;
+  // Also respect selectionVisible state for hiding during animations
+  const shouldShow = selectionVisible && ((isSubpathEditMode && (subpathShowCommandPoints || subpathShowControlPoints)) || controlPointsEnabled || hasSelectedSubPath || hasSelectedCommand);
 
   if (!shouldShow) {
     return null;
@@ -127,7 +134,7 @@ export const HandleRenderer: React.FC = () => {
 
           if (enabledFeatures.hidePointsInSelect && isSubPathSelected) return null;
 
-          const shouldShowSubPath = enabledFeatures.controlPointsEnabled || isSubPathSelected;
+          const shouldShowSubPath = selectionVisible && (enabledFeatures.controlPointsEnabled || isSubPathSelected);
           return subPath.commands.map((command, commandIndex) => {
             // Get the absolute position of the command
             const position = getAbsoluteCommandPosition(command, subPath, path.subPaths);
@@ -141,7 +148,18 @@ export const HandleRenderer: React.FC = () => {
             // 2. Feature is enabled / subpath is selected, OR 
             // 3. This specific command is selected, OR
             // 4. This command has control points to show (from HandleManager)
-            const shouldShowCommand = isSubpathEditMode || shouldShowSubPath || isCommandSelected || hasControlPoints;
+            const shouldShowCommand = selectionVisible && (isSubpathEditMode || shouldShowSubPath || isCommandSelected || hasControlPoints);
+            
+            // Debug log for first command only to avoid spam
+            if (commandIndex === 0 && path.id === paths[0]?.id) {
+              console.log('🔧 HandleRenderer - shouldShowCommand:', shouldShowCommand, 'selectionVisible:', selectionVisible, 'conditions:', {
+                isSubpathEditMode, 
+                shouldShowSubPath, 
+                isCommandSelected, 
+                hasControlPoints
+              });
+            }
+            
             if (!shouldShowCommand) return null;
             
             // Durante el drag, solo mostrar el comando que se arrastra y su pareja

@@ -146,7 +146,8 @@ export const PathRenderer: React.FC = () => {
     renderVersion, 
     enabledFeatures,
     grid,
-    mode
+    mode,
+    ui
   } = useEditorStore();
   const svgRef = useRef<SVGSVGElement>(null);
   
@@ -559,6 +560,18 @@ export const PathRenderer: React.FC = () => {
   return (
     <>
       {paths.map((path) => {
+        // Check if this path contains a selected subpath and if selection should be hidden
+        const selectionVisible = ui?.selectionVisible ?? true;
+        const pathHasSelectedSubPath = path.subPaths.some(subPath => 
+          selection.selectedSubPaths.includes(subPath.id)
+        );
+        
+        // Hide paths that contain selected subpaths during animations
+        if (!selectionVisible && pathHasSelectedSubPath) {
+          console.log('🔧 PathRenderer - Hiding path during animation:', path.id, 'selectionVisible:', selectionVisible);
+          return null;
+        }
+        
         // Render the main path (all subpaths joined)
         const d = path.subPaths.map(subPathToString).join(' ');
         const isWireframeMode = enabledFeatures.wireframeEnabled;
@@ -689,7 +702,7 @@ export const PathRenderer: React.FC = () => {
       })}
 
       {/* Render selected subpaths with visual feedback */}
-      {paths.map((path) => 
+      {(ui?.selectionVisible ?? true) && paths.map((path) => 
         path.subPaths.map((subPath) => {
           const isSelected = selection.selectedSubPaths.includes(subPath.id);
           if (!isSelected) return null;
