@@ -4,6 +4,24 @@ import { useEditorStore } from '../store/editorStore';
 
 export const usePointerEventHandlers = () => {
   const handlePointerDown = (e: React.PointerEvent<SVGElement>) => {
+    // Enhanced gesture prevention for mobile edge touches
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Additional protection for touches in edge areas
+    if (e.nativeEvent instanceof TouchEvent || (e as any).pointerType === 'touch') {
+      const isLeftEdge = e.clientX < 50;
+      const isRightEdge = e.clientX > window.innerWidth - 50;
+      const isTopEdge = e.clientY < 50;
+      const isBottomEdge = e.clientY > window.innerHeight - 50;
+      
+      // Force prevention for touches in edge areas
+      if (isLeftEdge || isRightEdge || isTopEdge || isBottomEdge) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }
+    
     const target = e.target as SVGElement;
     const commandId = target.getAttribute('data-command-id') || undefined;
     const controlPoint = target.getAttribute('data-control-point') as 'x1y1' | 'x2y2' | undefined;
@@ -46,6 +64,11 @@ export const usePointerEventHandlers = () => {
   };
   
   const handlePointerMove = (e: React.PointerEvent<SVGElement>) => {
+    // Prevent gesture interference during pointer move
+    if (e.nativeEvent instanceof TouchEvent || (e as any).pointerType === 'touch') {
+      e.preventDefault();
+    }
+    
     const target = e.target as SVGElement;
     const commandId = target.getAttribute('data-command-id') || undefined;
     const controlPoint = target.getAttribute('data-control-point') as 'x1y1' | 'x2y2' | undefined;

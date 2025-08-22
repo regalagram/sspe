@@ -10,6 +10,7 @@ import { useEditorStyles } from '../hooks/useEditorStyles';
 import { usePluginInitialization } from '../hooks/usePluginInitialization';
 import { usePointerEventHandlers } from '../hooks/usePointerEventHandlers';
 import { useMobileDetection } from '../hooks/useMobileDetection';
+import { usePreventNavGestures } from '../hooks/usePreventNavGestures';
 import { pluginManager } from './PluginSystem';
 import { AccordionSidebar } from '../plugins/panelmode/AccordionSidebar';
 import { SVGDefinitions } from '../components/SVGDefinitions';
@@ -34,6 +35,9 @@ export const SvgEditor: React.FC = () => {
   // Mobile detection
   const { isMobile, isTablet } = useMobileDetection();
   const isMobileDevice = isMobile || isTablet;
+  
+  // Prevent mobile navigation gestures
+  usePreventNavGestures();
   
   // State for mobile bottom sheet
   const [mobileBottomSheetOpen, setMobileBottomSheetOpen] = React.useState(false);

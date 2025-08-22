@@ -24,6 +24,9 @@ body {
 #root {
   height: 100vh;
   overflow: hidden;
+  overscroll-behavior: none;
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: none;
 }
 
 .svg-editor {
@@ -349,7 +352,9 @@ path[data-command-id] {
 .svg-editor svg {
   overscroll-behavior: none;
   overscroll-behavior-x: none;
+  overscroll-behavior-y: none;
   touch-action: none;
+  -webkit-overflow-scrolling: auto;
 }
 
 html,body {
