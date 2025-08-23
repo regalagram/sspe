@@ -14,7 +14,7 @@ export class SubPathTransformManager {
     }
   }
 
-  // Convert points to path using Catmull-Rom to Bezier (exact same logic as Pencil2)
+  // Convert points to path using Catmull-Rom to Bezier (exact same logic as pencil)
   private pointsToPath(points: Point[]): string {
     // output path using cubic Beziers derived from Catmull-Rom spline
     // also round all coordinates to integers
@@ -181,7 +181,7 @@ export class SubPathTransformManager {
     return out;
   }
 
-  // Create morphing path data for animation - IDENTICAL to Pencil2
+  // Create morphing path data for animation - IDENTICAL to pencil
   private createMorphD(pts: Point[]): string {
     if (!pts || pts.length === 0) return '';
     
@@ -318,7 +318,7 @@ export class SubPathTransformManager {
     animPath.setAttribute('filter', `url(#${filterId})`);
     animPath.setAttribute('vector-effect', 'non-scaling-stroke');
     
-    // Apply viewport transform to animation element - IGUAL que Pencil2
+    // Apply viewport transform to animation element - IGUAL que pencil
     const viewportStore = useEditorStore.getState();
         const transform = `translate(${viewportStore.viewport.pan.x}, ${viewportStore.viewport.pan.y}) scale(${viewportStore.viewport.zoom})`;
     animPath.setAttribute('transform', transform);
@@ -453,7 +453,7 @@ export class SubPathTransformManager {
     animPath.setAttribute('filter', `url(#${filterId})`);
     animPath.setAttribute('vector-effect', 'non-scaling-stroke');
     
-    // Apply viewport transform to animation element - IGUAL que Pencil2
+    // Apply viewport transform to animation element - IGUAL que pencil
     const viewportStore = useEditorStore.getState();
         const transform = `translate(${viewportStore.viewport.pan.x}, ${viewportStore.viewport.pan.y}) scale(${viewportStore.viewport.zoom})`;
     animPath.setAttribute('transform', transform);
@@ -625,7 +625,7 @@ export class SubPathTransformManager {
       // Skip si estamos procesando puntos fantasma
       if (p2.index < 0 || p2.index >= points.length) continue;
       
-      // Catmull-Rom to Bezier conversion (standard) - igual que en Pencil2
+      // Catmull-Rom to Bezier conversion (standard) - igual que en pencil
       const c1x = p1.x + (p2.x - p0.x) / 6;
       const c1y = p1.y + (p2.y - p0.y) / 6;
       const c2x = p2.x - (p3.x - p1.x) / 6;

@@ -1,8 +1,8 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { pencil2Manager } from './Pencil2Manager';
+import { pencilManager } from './PencilManager';
 
-export const Pencil2Renderer: React.FC = () => {
+export const PencilRenderer: React.FC = () => {
   const { mode } = useEditorStore();
   const [currentPath, setCurrentPath] = React.useState('');
   const [strokeWidth, setStrokeWidth] = React.useState(3);
@@ -14,9 +14,9 @@ export const Pencil2Renderer: React.FC = () => {
     
     if (mode.current === 'create' && mode.createMode?.commandType === 'PENCIL') {
       intervalId = setInterval(() => {
-        const pathData = pencil2Manager.getCurrentPathData();
-        const settings = pencil2Manager.getSettings();
-        const drawing = pencil2Manager.getIsDrawing();
+        const pathData = pencilManager.getCurrentPathData();
+        const settings = pencilManager.getSettings();
+        const drawing = pencilManager.getIsDrawing();
         
         setCurrentPath(pathData);
         setStrokeWidth(settings.strokeWidth);
@@ -38,7 +38,7 @@ export const Pencil2Renderer: React.FC = () => {
   }
 
   return (
-    <g data-pencil2-current-stroke="true">
+    <g data-pencil-current-stroke="true">
       <path
         d={currentPath}
         stroke="#000000"

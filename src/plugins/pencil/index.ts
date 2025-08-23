@@ -1,31 +1,31 @@
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { pencil2Manager } from './Pencil2Manager';
-import { Pencil2UI } from './Pencil2UI';
-import { Pencil2Renderer } from './Pencil2Renderer';
+import { pencilManager } from './PencilManager';
+import { PencilUI } from './PencilUI';
+import { PencilRenderer } from './PencilRenderer';
 import { toolModeManager } from '../../managers/ToolModeManager';
 
-export const Pencil2Plugin: Plugin = {
-  id: 'pencil2',
+export const PencilPlugin: Plugin = {
+  id: 'pencil',
   name: 'Pencil Drawing Tool v2',
   version: '1.0.0',
   enabled: true,
   dependencies: ['pointer-interaction'],
   
   initialize: (editor) => {
-    pencil2Manager.setEditorStore(editor);
+    pencilManager.setEditorStore(editor);
     // Register with tool mode manager
-    toolModeManager.setPencilManager(pencil2Manager);
+    toolModeManager.setPencilManager(pencilManager);
   },
 
   destroy: () => {
-    pencil2Manager.destroy();
+    pencilManager.destroy();
   },
   
   pointerHandlers: {
-    onPointerDown: pencil2Manager.handlePointerDown,
-    onPointerMove: pencil2Manager.handlePointerMove,
-    onPointerUp: pencil2Manager.handlePointerUp,
+    onPointerDown: pencilManager.handlePointerDown,
+    onPointerMove: pencilManager.handlePointerMove,
+    onPointerUp: pencilManager.handlePointerUp,
   },
   
   shortcuts: [
@@ -48,7 +48,7 @@ export const Pencil2Plugin: Plugin = {
 
   tools: [
     {
-      id: 'pencil2',
+      id: 'pencil',
       name: 'Pencil v2',
       category: 'create',
       shortcut: 'P',
@@ -56,21 +56,21 @@ export const Pencil2Plugin: Plugin = {
         toolModeManager.setMode('pencil');
       },
       onDeactivate: () => {
-        pencil2Manager.destroy();
+        pencilManager.destroy();
       }
     }
   ],
 
   ui: [
     {
-      id: 'pencil2-controls',
-      component: Pencil2UI,
+      id: 'pencil-controls',
+      component: PencilUI,
       position: 'sidebar',
       order: 4
     },
     {
-      id: 'pencil2-renderer',
-      component: Pencil2Renderer,
+      id: 'pencil-renderer',
+      component: PencilRenderer,
       position: 'svg-content',
       order: 10
     }

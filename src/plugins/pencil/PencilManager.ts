@@ -1,682 +1,519 @@
-import { PointerEvent } from 'react';
-import { PointerEventContext } from '../../core/PluginSystem';
+import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { SVGCommand, Point } from '../../types';
-import { smoother, SmoothedPoint } from './Smoother';
-import { PencilStorage, PencilStorageData } from './PencilStorage';
-import { toolModeManager } from '../../managers/ToolModeManager';
+import { generateId } from '../../utils/id-utils';
+import { rdp } from '../../utils/rdp-utils';
+import { pointsToPath } from '../../utils/catmull-rom-utils';
+import { getSVGPoint } from '../../utils/transform-utils';
+import type { Point, SVGCommand } from '../../types';
 
-interface PencilState {
-  isDrawing: boolean;
-  currentPath: string | null;
-  currentSubPath: string | null;
-  rawPoints: SmoothedPoint[];
-  lastPoint: Point | null;
-  strokeStyle: {
-    stroke: string;
-    strokeWidth: number;
-    fill: string;
-    strokeLinecap: 'round';
-    strokeLinejoin: 'round';
-  };
-  rawDrawingMode: boolean;
+export interface PencilSettings {
+  simplifyEps: number; // Simplification epsilon (0 = no simplification)
+  strokeWidth: number; // Stroke width for drawing
 }
 
-class PencilManager {
-  private state: PencilState = {
-    isDrawing: false,
-    currentPath: null,
-    currentSubPath: null,
-    rawPoints: [],
-    lastPoint: null,
-    strokeStyle: {
-      stroke: '#000000',
-      strokeWidth: 2,
-      fill: 'none',
-      strokeLinecap: 'round',
-      strokeLinejoin: 'round',
-    },
-    rawDrawingMode: true
+export class PencilManager {
+  private editorStore: any = null;
+  private isDrawing = false;
+  private currentPoints: Point[] = [];
+  private pointsBuffer: Point[] = [];
+  private rafId: number | null = null;
+  private animationId: number | null = null;
+  private settings: PencilSettings = {
+    simplifyEps: 8,
+    strokeWidth: 3
   };
-
-  private editorStore: any;
-  private readonly minDistance = 0.1; // Much more sensitive for testing
-  private smoothingFactor = 0.85; // Increased for smoother result
-  private readonly maxPoints = 500; // Reduced for better performance
-  private lastUpdateTime = 0;
-  private readonly updateThrottle = 1; // Very responsive for debugging
-
-  constructor() {
-    // Force fixed pencil style (don't load from storage)
-    this.state.strokeStyle = {
-      stroke: '#000000',
-      strokeWidth: 2,
-      fill: 'none',
-      strokeLinecap: 'round',
-      strokeLinejoin: 'round',
-    };
-    this.loadFromStorage(); // Load only smoothing settings, not stroke style
-    // Registrar con ToolModeManager
-    toolModeManager.setPencilManager(this);
-  }
-
-  /**
-   * Load settings from localStorage
-   */
-  private loadFromStorage() {
-    const savedData = PencilStorage.load();
-    if (savedData) {
-      // DON'T load stroke style - always use fixed defaults
-      // this.state.strokeStyle = { ...savedData.strokeStyle };
-
-      // Apply raw drawing mode
-      this.state.rawDrawingMode = savedData.rawDrawingMode;
-
-      // Apply smoother parameters
-      smoother.setSimplifyTolerance(savedData.smootherParams.simplifyTolerance);
-      smoother.setSmoothingFactor(savedData.smootherParams.smoothingFactor);
-      smoother.setMinDistance(savedData.smootherParams.minDistance);
-      smoother.setPressureDecay(savedData.smootherParams.pressureDecay);
-      smoother.setLowPassAlpha(savedData.smootherParams.lowPassAlpha);
-    }
-  }
-
-  /**
-   * Save current settings to localStorage
-   */
-  private saveToStorage() {
-    const data: PencilStorageData = {
-      strokeStyle: { ...this.state.strokeStyle },
-      smootherParams: smoother.getParameters(),
-      rawDrawingMode: this.state.rawDrawingMode
-    };
-    PencilStorage.save(data);
-  }
-
-  private svgRef: React.RefObject<SVGSVGElement | null> | null = null;
 
   setEditorStore(store: any) {
     this.editorStore = store;
   }
 
-  setSVGRef(ref: React.RefObject<SVGSVGElement | null>) {
-    this.svgRef = ref;
-  }
-
-  isPencilMode(): boolean {
-    if (!this.editorStore) return false;
-    const state = useEditorStore.getState();
-    const { mode } = state;
-    const isPencil = mode.current === 'create' && mode.createMode?.commandType === 'PENCIL';
-    return isPencil;
-  }
-
-  /**
-   * Activar modo pencil - llamado por ToolModeManager
-   */
-  activatePencil(): void {
-    const store = useEditorStore.getState();
-    store.setCreateMode('PENCIL');
-  }
-
-  /**
-   * Método para activación externa por ToolModeManager
-   * No genera recursión porque no llama de vuelta a ToolModeManager
-   */
-  activateExternally = (): void => {
-    const store = useEditorStore.getState();
-    store.setCreateMode('PENCIL');
-  };
-
-  /**
-   * Método para desactivación externa por ToolModeManager
-   * No notifica de vuelta para evitar loops
-   */
-  deactivateExternally = (): void => {
-
-    // Finalizar dibujo actual si está en progreso
-    if (this.state.isDrawing) {
-      this.state.isDrawing = false;
-      this.resetDrawingState();
-      this.removeGlobalPointerEvents();
-    }
-
-    // Cambiar modo del editor a select - NO notificar a ToolModeManager para evitar loop
-    const store = useEditorStore.getState();
-    if (store.mode.current === 'create' && store.mode.createMode?.commandType === 'PENCIL') {
-      store.setMode('select');
-    }
-
-  };
-
-  /**
-   * Salir del modo pencil - llamado cuando el usuario presiona Escape o Exit
-   */
-  exitPencil = (): void => {
-
-    // Finalizar dibujo actual si está en progreso
-    if (this.state.isDrawing) {
-      this.state.isDrawing = false;
-      this.resetDrawingState();
-      this.removeGlobalPointerEvents();
-    }
-
-    // Verificar si fue activado por ToolModeManager
-    if (toolModeManager.isActive('pencil')) {
-      toolModeManager.notifyModeDeactivated('pencil');
-    } else {
-      // Solo cambiar modo del editor si no fue coordinado por ToolModeManager
-      const store = useEditorStore.getState();
-      if (store.mode.current === 'create' && store.mode.createMode?.commandType === 'PENCIL') {
-        store.setMode('select');
-      }
-    }
-  };
-
-  handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
-    if (!this.isPencilMode()) {
-      return false;
-    }
-    e.preventDefault();
-    e.stopPropagation();
-    const { svgPoint } = context;
-    // Get current store state
-    if (!this.editorStore) {
-      console.error('PencilManager: EditorStore not initialized');
-      return false;
-    }
-
-    // Start new drawing session but don't create path yet
-    this.state.isDrawing = true;
-    this.state.rawPoints = [{ ...svgPoint, timestamp: Date.now() }];
-    this.state.lastPoint = svgPoint;
-
-    // Don't create path yet - we'll create it only when we start drawing
-    this.state.currentPath = null;
-    this.state.currentSubPath = null;
-
-    // Set up global pointer events for drawing
-    this.setupGlobalPointerEvents();
-
-    return true;
-  };
-
-  handlePointerMove = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
-    if (!this.isPencilMode() || !this.state.isDrawing) {
-      // 
-      return false;
-    }
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    // Throttle updates for better performance
-    const now = Date.now();
-    if (now - this.lastUpdateTime < this.updateThrottle) {
-
-      return true;
-    }
-    this.lastUpdateTime = now;
-
-    const { svgPoint } = context;
-    const { lastPoint } = this.state;
-
-    if (!lastPoint || !this.editorStore) {
-
-      return true;
-    }
-
-
-
-    // Calculate distance from last point to reduce noise
-    const distance = Math.sqrt(
-      Math.pow(svgPoint.x - lastPoint.x, 2) +
-      Math.pow(svgPoint.y - lastPoint.y, 2)
-    );
-
-    if (distance < this.minDistance) {
-
-      return true;
-    }
-
-    // If this is the first real movement (second point), create the path and save state
-    if (this.state.rawPoints.length === 1 && this.editorStore) {
-      // Save the clean state BEFORE creating any path
-      this.editorStore.pushToHistory();
-
-      // Now create the path
-      const { addPath } = this.editorStore;
-      const firstPoint = this.state.rawPoints[0];
-      const pathId = addPath(this.state.strokeStyle, firstPoint.x, firstPoint.y);
-
-      // Get the existing subpath that was created with the path
-      const currentState = useEditorStore.getState();
-      const createdPath = currentState.paths.find((p: any) => p.id === pathId);
-      const subPathId = createdPath?.subPaths[0]?.id;
-
-      if (!subPathId) {
-        console.error('PencilManager: Failed to find created subpath');
-        return true;
-      }
-
-      this.state.currentPath = pathId;
-      this.state.currentSubPath = subPathId;
-    }
-
-    // Add point to raw points collection
-    this.state.rawPoints.push({ ...svgPoint, timestamp: Date.now() });
-    this.state.lastPoint = svgPoint;
-
-
-
-    // Limit the number of points for performance
-    if (this.state.rawPoints.length > this.maxPoints) {
-      // Keep the most recent points
-      const keepPoints = Math.floor(this.maxPoints * 0.8);
-      this.state.rawPoints = [
-        this.state.rawPoints[0], // Keep the first point (move command)
-        ...this.state.rawPoints.slice(-keepPoints)
-      ];
-    }
-
-    // Update the path with smoothed points
-
-    this.updateSmoothPath();
-
-
-    return true;
-  };
-
-  handlePointerUp = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
-    if (!this.isPencilMode() || !this.state.isDrawing) return false;
-
-    e.preventDefault();
-    e.stopPropagation();
-
-    // Check if we have meaningful drawing content (more than just the initial point)
-    const hasDrawingContent = this.state.rawPoints.length > 1;
-
-    if (hasDrawingContent && this.state.currentPath) {
-      // Final smoothing pass
-      this.updateSmoothPath();
-
-      // No need to push to history here - we already saved the initial state
-      // when the first movement happened
-    } else {
-      // If we only have the initial point, no path was created, so nothing to clean up
-      // The state remains clean as if nothing happened
-    }
-
-    // Finish drawing
-    this.state.isDrawing = false;
-
-    // Reset state
-    this.resetDrawingState();
-
-    return true;
-  };
-
-  private updateSmoothPath() {
-    if (!this.state.currentSubPath || this.state.rawPoints.length < 1 || !this.editorStore) return;
-
-    const { replaceSubPathCommands } = this.editorStore;
-
-    // For a single point, create a minimal visible mark
-    if (this.state.rawPoints.length === 1) {
-      const point = this.state.rawPoints[0];
-
-      const svgCommands: Omit<SVGCommand, 'id'>[] = [
-        { command: 'M', x: point.x, y: point.y },
-        { command: 'L', x: point.x + 0.5, y: point.y } // Very small line to make it visible
-      ];
-
-      replaceSubPathCommands(this.state.currentSubPath, svgCommands);
-      return;
-    }
-
-    // Check if raw drawing mode is enabled
-    if (this.state.rawDrawingMode) {
-      // Raw mode: Direct conversion to line commands without optimization
-      const svgCommands: Omit<SVGCommand, 'id'>[] = [];
-      
-      if (this.state.rawPoints.length > 0) {
-        // Start with move command - use the first raw point
-        svgCommands.push({
-          command: 'M',
-          x: this.state.rawPoints[0].x,
-          y: this.state.rawPoints[0].y
-        });
-
-        // Add line commands for all subsequent points
-        for (let i = 1; i < this.state.rawPoints.length; i++) {
-          svgCommands.push({
-            command: 'L',
-            x: this.state.rawPoints[i].x,
-            y: this.state.rawPoints[i].y
-          });
-        }
-      }
-
-      // Replace subpath commands with raw version
-      replaceSubPathCommands(this.state.currentSubPath, svgCommands);
-      return;
-    }
-
-    // Normal mode: Apply smoothing and simplification
-    const smoothedPoints = smoother.smoothPoints(this.state.rawPoints);
-
-    // Calculate pressure for potential variable stroke width
-    const pointsWithPressure = smoother.calculatePressure(smoothedPoints);
-
-    // Convert smoothed points to SVG commands
-    const svgCommands: Omit<SVGCommand, 'id'>[] = [];
-
-    if (pointsWithPressure.length > 0) {
-      // Start with move command - use the first smoothed point
-      svgCommands.push({
-        command: 'M',
-        x: pointsWithPressure[0].x,
-        y: pointsWithPressure[0].y
-      });
-
-      // Create smooth curves using cubic bezier commands for better smoothness
-      if (pointsWithPressure.length >= 4) {
-        for (let i = 1; i < pointsWithPressure.length - 2; i += 3) {
-          const p0 = pointsWithPressure[i - 1] || pointsWithPressure[0];
-          const p1 = pointsWithPressure[i];
-          const p2 = pointsWithPressure[i + 1];
-          const p3 = pointsWithPressure[i + 2] || pointsWithPressure[pointsWithPressure.length - 1];
-
-          // Calculate smooth control points
-          const cp1x = p0.x + (p1.x - p0.x) * 0.6;
-          const cp1y = p0.y + (p1.y - p0.y) * 0.6;
-          const cp2x = p3.x - (p3.x - p2.x) * 0.6;
-          const cp2y = p3.y - (p3.y - p2.y) * 0.6;
-
-          svgCommands.push({
-            command: 'C',
-            x1: cp1x,
-            y1: cp1y,
-            x2: cp2x,
-            y2: cp2y,
-            x: p3.x,
-            y: p3.y
-          });
-        }
-
-        // Add final line to last point if needed
-        const lastPoint = pointsWithPressure[pointsWithPressure.length - 1];
-        const secondLastPoint = pointsWithPressure[pointsWithPressure.length - 2];
-        if (lastPoint && secondLastPoint &&
-          (Math.abs(lastPoint.x - secondLastPoint.x) > 1 ||
-            Math.abs(lastPoint.y - secondLastPoint.y) > 1)) {
-          svgCommands.push({
-            command: 'L',
-            x: lastPoint.x,
-            y: lastPoint.y
-          });
-        }
-      } else {
-        // Simple lines for short strokes
-        for (let i = 1; i < pointsWithPressure.length; i++) {
-          svgCommands.push({
-            command: 'L',
-            x: pointsWithPressure[i].x,
-            y: pointsWithPressure[i].y
-          });
-        }
-      }
-    }
-
-    // Replace subpath commands with smoothed version
-    replaceSubPathCommands(this.state.currentSubPath, svgCommands);
-  }
-
-  private resetDrawingState() {
-    this.state.currentPath = null;
-    this.state.currentSubPath = null;
-    this.state.rawPoints = [];
-    this.state.lastPoint = null;
-  }
-
-  // Method to change pencil stroke style (DISABLED - uses fixed defaults)
-  setStrokeStyle(style: Partial<PencilState['strokeStyle']>) {
-    // Fixed pencil style - ignore any style changes
-    this.state.strokeStyle = {
-      stroke: '#000000',
-      strokeWidth: 2,
-      fill: 'none',
-      strokeLinecap: 'round',
-      strokeLinejoin: 'round',
-    };
-    // Don't save custom styles anymore
-  }
-
-  getStrokeStyle() {
-    return { ...this.state.strokeStyle };
-  }
-
-  // Method to get raw drawing mode
-  getRawDrawingMode() {
-    return this.state.rawDrawingMode;
-  }
-
-  // Method to set raw drawing mode
-  setRawDrawingMode(enabled: boolean) {
-    this.state.rawDrawingMode = enabled;
-    this.saveToStorage(); // Auto-save when mode changes
-  }
-
-  // Method to set smoothing parameters
-  setSmoothingFactor(factor: number) {
-    this.smoothingFactor = Math.max(0, Math.min(1, factor));
-  }
-
-  // Methods for accessing smoother parameters
-  getSmootherParameters() {
-    return smoother.getParameters();
-  }
-
-  setSmootherParameter(param: string, value: number) {
-    switch (param) {
-      case 'simplifyTolerance':
-        smoother.setSimplifyTolerance(value);
-        break;
-      case 'smoothingFactor':
-        smoother.setSmoothingFactor(value);
-        break;
-      case 'minDistance':
-        smoother.setMinDistance(value);
-        break;
-      case 'pressureDecay':
-        smoother.setPressureDecay(value);
-        break;
-      case 'lowPassAlpha':
-        smoother.setLowPassAlpha(value);
-        break;
-    }
-    this.saveToStorage(); // Auto-save when parameters change
-  }
-
-  resetSmootherToDefaults() {
-    smoother.resetToDefaults();
-    this.saveToStorage(); // Auto-save when reset
-  }
-
-  // Preset methods
-  applyPreciseDrawingPreset() {
-    smoother.applyPreciseDrawingPreset();
-    this.saveToStorage(); // Auto-save when preset applied
-  }
-
-  applyFluidDrawingPreset() {
-    smoother.applyFluidDrawingPreset();
-    this.saveToStorage(); // Auto-save when preset applied
-  }
-
-  applyQuickSketchPreset() {
-    smoother.applyQuickSketchPreset();
-    this.saveToStorage(); // Auto-save when preset applied
-  }
-
-  /**
-   * Clear saved settings and reset to defaults
-   */
-  clearSavedSettings() {
-    PencilStorage.clear();
-
-    // Reset to defaults
-    const defaults = PencilStorage.getDefaults();
-    this.state.strokeStyle = { ...defaults.strokeStyle };
-    this.state.rawDrawingMode = defaults.rawDrawingMode;
-
-    smoother.setSimplifyTolerance(defaults.smootherParams.simplifyTolerance);
-    smoother.setSmoothingFactor(defaults.smootherParams.smoothingFactor);
-    smoother.setMinDistance(defaults.smootherParams.minDistance);
-    smoother.setPressureDecay(defaults.smootherParams.pressureDecay);
-    smoother.setLowPassAlpha(defaults.smootherParams.lowPassAlpha);
-  }
-
-  // Clean up method
   destroy() {
-    this.resetDrawingState();
-    this.removeGlobalPointerEvents();
+    this.stopDrawing();
   }
 
-  private setupGlobalPointerEvents() {
-    document.addEventListener('pointermove', this.handleGlobalPointerMove);
-    document.addEventListener('pointerup', this.handleGlobalPointerUp);
+  activateExternally() {
+    const store = useEditorStore.getState();
+    store.setCreateMode('PENCIL');
   }
 
-  private removeGlobalPointerEvents() {
-    document.removeEventListener('pointermove', this.handleGlobalPointerMove);
-    document.removeEventListener('pointerup', this.handleGlobalPointerUp);
+  deactivateExternally() {
+    this.stopDrawing();
+    const store = useEditorStore.getState();
+    store.setMode('select');
   }
 
-  private handleGlobalPointerMove = (e: globalThis.PointerEvent) => {
-    if (!this.state.isDrawing) return;
+  // Settings management
+  updateSettings(newSettings: Partial<PencilSettings>) {
+    this.settings = { ...this.settings, ...newSettings };
+  }
 
-    // Find the SVG element
-    const svg = document.querySelector('.svg-editor svg') as SVGSVGElement;
-    if (!svg) return;
+  getSettings(): PencilSettings {
+    return { ...this.settings };
+  }
 
-    // Convert global pointer event to SVG coordinates
-    const svgRect = svg.getBoundingClientRect();
-    const svgPoint = this.clientToSVGPoint(e.clientX, e.clientY, svgRect);
-
-    this.addPointToPath(svgPoint);
-  };
-
-  private handleGlobalPointerUp = (e: globalThis.PointerEvent) => {
-    if (!this.state.isDrawing) return;
-
-    // Check if we have meaningful drawing content (more than just the initial point)
-    const hasDrawingContent = this.state.rawPoints.length > 1;
-
-    if (hasDrawingContent && this.state.currentPath) {
-      // Final smoothing pass
-      this.updateSmoothPath();
-
-      // No need to push to history here - we already saved the initial state
-      // when the first movement happened
-    } else {
-      // If we only have the initial point, no path was created, so nothing to clean up
-      // The state remains clean as if nothing happened
+  private stopDrawing() {
+    this.isDrawing = false;
+    this.currentPoints = [];
+    this.pointsBuffer = [];
+    
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
     }
+    
+    if (this.animationId) {
+      clearTimeout(this.animationId);
+      this.animationId = null;
+    }
+  }
 
-    // Finish drawing
-    this.state.isDrawing = false;
+  private flushBuffer() {
+    if (this.pointsBuffer.length === 0) {
+      this.rafId = null;
+      return;
+    }
+    
+    this.currentPoints = [...this.currentPoints, ...this.pointsBuffer];
+    this.pointsBuffer = [];
+    this.rafId = null;
+    
+    // Force re-render by updating a timestamp or similar
+    if (this.editorStore) {
+      this.editorStore.forceRender();
+    }
+  }
 
-    // Reset state and remove global listeners
-    this.resetDrawingState();
-    this.removeGlobalPointerEvents();
-  };
+  private scheduleFlush() {
+    if (this.rafId == null) {
+      this.rafId = requestAnimationFrame(() => this.flushBuffer());
+    }
+  }
 
-  private clientToSVGPoint(clientX: number, clientY: number, svgRect: DOMRect): Point {
-    // Find the main SVG element
-    const svg = document.querySelector('.svg-editor svg') as SVGSVGElement;
-    if (!svg || !this.editorStore) {
+  // Convert pointer event to SVG coordinates considering viewport
+  private getPointFromEvent(e: React.PointerEvent<SVGElement>): Point {
+    const store = useEditorStore.getState();
+    const svgElement = e.currentTarget.closest('svg') as SVGSVGElement;
+    
+    if (!svgElement) {
       return { x: 0, y: 0 };
     }
-
-    // Convert client coordinates to SVG coordinates
-    const pt = svg.createSVGPoint();
-    pt.x = clientX - svgRect.left;
-    pt.y = clientY - svgRect.top;
-
-    const screenCTM = svg.getScreenCTM();
-    if (screenCTM) {
-      const svgPoint = pt.matrixTransform(screenCTM.inverse());
-
-      // Apply viewport transform
-      const { viewport } = this.editorStore;
-      return {
-        x: (svgPoint.x - viewport.pan.x) / viewport.zoom,
-        y: (svgPoint.y - viewport.pan.y) / viewport.zoom
-      };
-    }
-
-    return { x: pt.x, y: pt.y };
+    
+    // Create a mock svgRef for the getSVGPoint function
+    const svgRef = { current: svgElement };
+    const svgPoint = getSVGPoint(e as any, svgRef, store.viewport);
+    
+    return { 
+      x: Math.round(svgPoint.x), 
+      y: Math.round(svgPoint.y) 
+    };
   }
 
-  private addPointToPath(svgPoint: Point) {
-    const { lastPoint } = this.state;
+  // Sample a path at N points for animation morphing
+  private samplePathD(pathD: string, n: number, svgElement: SVGSVGElement): Point[] {
+    const tmp = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    tmp.setAttribute('d', pathD);
+    tmp.setAttribute('fill', 'none');
+    tmp.setAttribute('stroke', 'none');
+    
+    svgElement.appendChild(tmp);
+    
+    const len = (tmp as SVGPathElement).getTotalLength();
+    if (!isFinite(len) || len === 0) {
+      svgElement.removeChild(tmp);
+      const pts: Point[] = [];
+      const fallbackPoint = this.currentPoints[0] || { x: 0, y: 0 };
+      for (let i = 0; i < n; i++) {
+        pts.push({ x: Math.round(fallbackPoint.x), y: Math.round(fallbackPoint.y) });
+      }
+      return pts;
+    }
+    
+    const out: Point[] = [];
+    for (let i = 0; i < n; i++) {
+      const t = (i / (n - 1)) * len;
+      const pt = (tmp as SVGPathElement).getPointAtLength(t);
+      out.push({ x: Math.round(pt.x), y: Math.round(pt.y) });
+    }
+    
+    svgElement.removeChild(tmp);
+    return out;
+  }
 
-    if (!lastPoint || !this.editorStore) return;
+  // Create morphing path data for animation
+  private createMorphD(pts: Point[]): string {
+    if (!pts || pts.length === 0) return '';
+    
+    const round = (n: number) => Math.round(n);
+    let d = `M ${round(pts[0].x)} ${round(pts[0].y)}`;
+    
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1];
+      const b = pts[i];
+      d += ` C ${round(a.x)} ${round(a.y)} ${round(b.x)} ${round(b.y)} ${round(b.x)} ${round(b.y)}`;
+    }
+    
+    return d;
+  }
 
-    // Throttle updates for better performance
-    const now = Date.now();
-    if (now - this.lastUpdateTime < this.updateThrottle) return;
-    this.lastUpdateTime = now;
+  // Create glow filter for animation
+  private ensureGlowFilter(svgElement: SVGSVGElement) {
+    if (svgElement.querySelector('#pencilAnimGlowFilter')) return;
+    
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+    filter.setAttribute('id', 'pencilAnimGlowFilter');
+    filter.setAttribute('filterUnits', 'objectBoundingBox');
+    filter.setAttribute('primitiveUnits', 'userSpaceOnUse');
 
-    // Calculate distance from last point to reduce noise
-    const distance = Math.sqrt(
-      Math.pow(svgPoint.x - lastPoint.x, 2) +
-      Math.pow(svgPoint.y - lastPoint.y, 2)
-    );
+    const feMorph = document.createElementNS('http://www.w3.org/2000/svg', 'feMorphology');
+    feMorph.setAttribute('in', 'SourceGraphic');
+    feMorph.setAttribute('result', 'dilated');
+    feMorph.setAttribute('operator', 'dilate');
+    feMorph.setAttribute('radius', '2');
 
-    if (distance < this.minDistance) return;
+    const feBlur = document.createElementNS('http://www.w3.org/2000/svg', 'feGaussianBlur');
+    feBlur.setAttribute('in', 'dilated');
+    feBlur.setAttribute('result', 'blurred');
+    feBlur.setAttribute('stdDeviation', '3');
 
-    // If this is the first real movement (second point), create the path and save state
-    if (this.state.rawPoints.length === 1 && this.editorStore) {
-      // Save the clean state BEFORE creating any path
-      this.editorStore.pushToHistory();
+    const feFlood = document.createElementNS('http://www.w3.org/2000/svg', 'feFlood');
+    feFlood.setAttribute('result', 'glowColor');
+    feFlood.setAttribute('flood-color', '#ffff00');
+    feFlood.setAttribute('flood-opacity', '0.8');
 
-      // Now create the path
-      const { addPath } = this.editorStore;
-      const firstPoint = this.state.rawPoints[0];
-      const pathId = addPath(this.state.strokeStyle, firstPoint.x, firstPoint.y);
+    const feComposite1 = document.createElementNS('http://www.w3.org/2000/svg', 'feComposite');
+    feComposite1.setAttribute('in', 'glowColor');
+    feComposite1.setAttribute('in2', 'blurred');
+    feComposite1.setAttribute('operator', 'in');
+    feComposite1.setAttribute('result', 'coloredGlow');
 
-      // Get the existing subpath that was created with the path
-      const currentState = useEditorStore.getState();
-      const createdPath = currentState.paths.find((p: any) => p.id === pathId);
-      const subPathId = createdPath?.subPaths[0]?.id;
+    const feComposite2 = document.createElementNS('http://www.w3.org/2000/svg', 'feComposite');
+    feComposite2.setAttribute('in', 'SourceGraphic');
+    feComposite2.setAttribute('in2', 'coloredGlow');
+    feComposite2.setAttribute('operator', 'over');
+    feComposite2.setAttribute('result', 'effect4');
 
-      if (!subPathId) {
-        console.error('PencilManager: Failed to find created subpath');
-        return;
+    filter.appendChild(feMorph);
+    filter.appendChild(feBlur);
+    filter.appendChild(feFlood);
+    filter.appendChild(feComposite1);
+    filter.appendChild(feComposite2);
+    defs.appendChild(filter);
+    svgElement.appendChild(defs);
+  }
+
+  handlePointerDown = (e: React.PointerEvent<SVGElement>): boolean => {
+    const store = useEditorStore.getState();
+    
+    if (store.mode.current !== 'create' || store.mode.createMode?.commandType !== 'PENCIL') {
+      return false;
+    }
+
+    const svgElement = e.currentTarget.closest('svg') as SVGSVGElement;
+    if (!svgElement) return false;
+
+    this.isDrawing = true;
+    const point = this.getPointFromEvent(e);
+    this.currentPoints = [point];
+    this.pointsBuffer = [];
+
+    return true;
+  };
+
+  handlePointerMove = (e: React.PointerEvent<SVGElement>): boolean => {
+    if (!this.isDrawing) return false;
+
+    const point = this.getPointFromEvent(e);
+    this.pointsBuffer.push(point);
+    this.scheduleFlush();
+
+    return true;
+  };
+
+  handlePointerUp = (e: React.PointerEvent<SVGElement>): boolean => {
+    if (!this.isDrawing) return false;
+
+    const svgElement = e.currentTarget.closest('svg') as SVGSVGElement;
+    if (!svgElement) return false;
+
+    this.isDrawing = false;
+
+    // Add final point
+    const finalPoint = this.getPointFromEvent(e);
+    
+    // Flush any remaining buffer
+    const allPoints = [...this.currentPoints, ...this.pointsBuffer, finalPoint];
+    this.pointsBuffer = [];
+
+    if (allPoints.length === 0) return true;
+
+    // Save to history once at the beginning of path creation
+    const store = useEditorStore.getState();
+    store.pushToHistory();
+
+    // If no simplification, create path directly
+    if (this.settings.simplifyEps === 0) {
+      this.createPathFromPoints(allPoints, false); // Don't save to history again
+      this.currentPoints = [];
+      return true;
+    }
+
+    // Simplify the points
+    const simplified = rdp(allPoints, this.settings.simplifyEps);
+
+    // If only one point or simplification didn't change much, create directly
+    if (simplified.length <= 2 || simplified.length === allPoints.length) {
+      this.createPathFromPoints(allPoints, false); // Don't save to history again
+      this.currentPoints = [];
+      return true;
+    }
+
+    // Show animation if simplification occurred
+    this.animateSimplification(allPoints, simplified, svgElement);
+
+    return true;
+  };
+
+  private createPathFromPoints(points: Point[], saveToHistory: boolean = false) {
+    if (points.length === 0) return;
+
+    const store = useEditorStore.getState();
+    
+    // Save current state to history before adding new path (only if requested)
+    if (saveToHistory) {
+      store.pushToHistory();
+    }
+    
+    // Filter out duplicate and very close points to avoid curve artifacts
+    const filteredPoints = this.filterPoints(points);
+    
+    // Use the exact pointsToPath logic provided
+    const pointsToPath = (points: Point[]) => {
+      // output path using cubic Beziers derived from Catmull-Rom spline
+      // also round all coordinates to integers
+      if (!points || points.length === 0) return ''
+      const round = (n: number) => Math.round(n)
+
+      if (points.length === 1) {
+        const p = points[0]
+        return `M ${round(p.x)} ${round(p.y)}`
       }
 
-      this.state.currentPath = pathId;
-      this.state.currentSubPath = subPathId;
+      if (points.length === 2) {
+        const p0 = points[0]
+        const p1 = points[1]
+        return `M ${round(p0.x)} ${round(p0.y)} L ${round(p1.x)} ${round(p1.y)}`
+      }
+
+      // For 3+ points, convert Catmull-Rom to cubic bezier segments
+      const pts = points
+      let d = `M ${round(pts[0].x)} ${round(pts[0].y)}`
+
+      for (let i = 0; i < pts.length - 1; i++) {
+        const p0 = i - 1 >= 0 ? pts[i - 1] : pts[i]
+        const p1 = pts[i]
+        const p2 = pts[i + 1]
+        const p3 = i + 2 < pts.length ? pts[i + 2] : p2
+
+        // Catmull-Rom to Bezier conversion (standard)
+        const c1x = p1.x + (p2.x - p0.x) / 6
+        const c1y = p1.y + (p2.y - p0.y) / 6
+        const c2x = p2.x - (p3.x - p1.x) / 6
+        const c2y = p2.y - (p3.y - p1.y) / 6
+
+        d += ` C ${round(c1x)} ${round(c1y)} ${round(c2x)} ${round(c2y)} ${round(p2.x)} ${round(p2.y)}`
+      }
+
+      return d
+    }
+    
+    // Generate path data using the exact logic
+    const pathData = pointsToPath(filteredPoints);
+    
+    // Parse the path data to create SVGCommand objects
+    const commands: SVGCommand[] = [];
+    const parts = pathData.trim().split(/\s+/);
+    
+    let i = 0;
+    while (i < parts.length) {
+      const cmd = parts[i];
+      
+      if (cmd === 'M') {
+        commands.push({
+          id: generateId(),
+          command: 'M',
+          x: parseFloat(parts[i + 1]),
+          y: parseFloat(parts[i + 2])
+        });
+        i += 3;
+      } else if (cmd === 'L') {
+        commands.push({
+          id: generateId(),
+          command: 'L',
+          x: parseFloat(parts[i + 1]),
+          y: parseFloat(parts[i + 2])
+        });
+        i += 3;
+      } else if (cmd === 'C') {
+        commands.push({
+          id: generateId(),
+          command: 'C',
+          x1: parseFloat(parts[i + 1]),
+          y1: parseFloat(parts[i + 2]),
+          x2: parseFloat(parts[i + 3]),
+          y2: parseFloat(parts[i + 4]),
+          x: parseFloat(parts[i + 5]),
+          y: parseFloat(parts[i + 6])
+        });
+        i += 7;
+      } else {
+        i++;
+      }
     }
 
-    // Add point to raw points collection
-    this.state.rawPoints.push({ ...svgPoint, timestamp: Date.now() });
-    this.state.lastPoint = svgPoint;
+    // Create a new path with custom structure
+    const newPath = {
+      id: generateId(),
+      subPaths: [{
+        id: generateId(),
+        commands: commands
+      }],
+      style: {
+        fill: 'none',
+        stroke: '#000000',
+        strokeWidth: this.settings.strokeWidth,
+        strokeLinecap: 'round' as const,
+        strokeLinejoin: 'round' as const
+      }
+    };
 
-    // Limit the number of points for performance
-    if (this.state.rawPoints.length > this.maxPoints) {
-      // Keep the most recent points
-      const keepPoints = Math.floor(this.maxPoints * 0.8);
-      this.state.rawPoints = [
-        this.state.rawPoints[0], // Keep the first point (move command)
-        ...this.state.rawPoints.slice(-keepPoints)
-      ];
+    // Add the path to the store
+    store.replacePaths([...store.paths, newPath]);
+  }
+
+  private animateSimplification(originalPoints: Point[], simplifiedPoints: Point[], svgElement: SVGSVGElement) {
+    // Skip animation if already running
+    if (svgElement.getAttribute('data-pencil-anim-running') === '1') {
+      this.createPathFromPoints(simplifiedPoints, false); // Use simplified points, don't save to history again
+      this.currentPoints = [];
+      return;
     }
 
-    // Update the path with smoothed points
-    this.updateSmoothPath();
+    const baseFromD = pointsToPath(originalPoints);
+    const baseToD = pointsToPath(simplifiedPoints);
+    const n = Math.max(Math.max(originalPoints.length, simplifiedPoints.length), 8);
+    
+    const fromPts = this.samplePathD(baseFromD, n, svgElement);
+    const toPts = this.samplePathD(baseToD, n, svgElement);
+
+    // Force endpoints to match
+    if (fromPts.length > 0 && originalPoints.length > 0) {
+      fromPts[0] = { x: Math.round(originalPoints[0].x), y: Math.round(originalPoints[0].y) };
+      fromPts[fromPts.length - 1] = { x: Math.round(originalPoints[originalPoints.length - 1].x), y: Math.round(originalPoints[originalPoints.length - 1].y) };
+    }
+    if (toPts.length > 0 && simplifiedPoints.length > 0) {
+      toPts[0] = { x: Math.round(simplifiedPoints[0].x), y: Math.round(simplifiedPoints[0].y) };
+      toPts[toPts.length - 1] = { x: Math.round(simplifiedPoints[simplifiedPoints.length - 1].x), y: Math.round(simplifiedPoints[simplifiedPoints.length - 1].y) };
+    }
+
+    const dFrom = this.createMorphD(fromPts);
+    const dTo = this.createMorphD(toPts);
+
+    this.ensureGlowFilter(svgElement);
+
+    const animPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    animPath.setAttribute('d', dFrom);
+    animPath.setAttribute('stroke', '#d9d9d9');
+    animPath.setAttribute('stroke-opacity', '0.8');
+    animPath.setAttribute('stroke-width', String(this.settings.strokeWidth));
+    animPath.setAttribute('fill', 'none');
+    animPath.setAttribute('stroke-linecap', 'round');
+    animPath.setAttribute('filter', 'url(#pencilAnimGlowFilter)');
+    animPath.setAttribute('vector-effect', 'non-scaling-stroke');
+    
+    // Apply viewport transform to animation element
+    const store = useEditorStore.getState();
+    const transform = `translate(${store.viewport.pan.x}, ${store.viewport.pan.y}) scale(${store.viewport.zoom})`;
+    animPath.setAttribute('transform', transform);
+
+    const animateEl = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
+    animateEl.setAttribute('attributeName', 'd');
+    animateEl.setAttribute('from', dFrom);
+    animateEl.setAttribute('to', dTo);
+    animateEl.setAttribute('dur', '500ms');
+    animateEl.setAttribute('fill', 'freeze');
+    animPath.appendChild(animateEl);
+    
+    svgElement.appendChild(animPath);
+    svgElement.setAttribute('data-pencil-anim-running', '1');
+
+    try {
+      (animateEl as any).beginElement();
+    } catch (e) {
+      // Fallback for browsers that don't support beginElement
+    }
+
+    const durationMs = 500;
+    let committed = false;
+    
+    const cleanup = () => {
+      if (committed) return;
+      committed = true;
+      
+      this.createPathFromPoints(simplifiedPoints, false); // Use simplified points, don't save to history again
+      
+      try {
+        svgElement.removeChild(animPath);
+      } catch (e) {
+        // Element might already be removed
+      }
+      
+      svgElement.removeAttribute('data-pencil-anim-running');
+      this.currentPoints = [];
+      this.animationId = null;
+    };
+
+    const timeout = setTimeout(cleanup, durationMs + 50);
+    this.animationId = timeout as unknown as number;
+
+    // Listen for animation end
+    if ((animateEl as any).addEventListener) {
+      (animateEl as any).addEventListener('endEvent', cleanup);
+    }
+  }
+
+  // Get current drawing points for rendering
+  getCurrentPoints(): Point[] {
+    return [...this.currentPoints, ...this.pointsBuffer];
+  }
+
+  // Get current path data for rendering
+  getCurrentPathData(): string {
+    const points = this.getCurrentPoints();
+    return points.length > 0 ? pointsToPath(points) : '';
+  }
+
+  // Check if currently drawing
+  getIsDrawing(): boolean {
+    return this.isDrawing;
+  }
+
+  // Filter out duplicate and very close points to avoid curve artifacts
+  private filterPoints(points: Point[], minDistance = 4): Point[] {
+    if (points.length <= 1) return points;
+    
+    const filtered = [points[0]];
+    for (let i = 1; i < points.length; i++) {
+      const prev = filtered[filtered.length - 1];
+      const curr = points[i];
+      const dist = Math.sqrt((curr.x - prev.x) ** 2 + (curr.y - prev.y) ** 2);
+      
+      if (dist >= minDistance) {
+        filtered.push(curr);
+      }
+    }
+    
+    return filtered;
   }
 }
 
