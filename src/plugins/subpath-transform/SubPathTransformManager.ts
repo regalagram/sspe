@@ -57,22 +57,22 @@ export class SubPathTransformManager {
   // Convert SVG commands to points
   private commandsToPoints(commands: SVGCommand[]): Point[] {
     const points: Point[] = [];
-    
+
     for (const cmd of commands) {
       if (cmd.command === 'Z') continue; // Skip Z commands
-      
+
       if ('x' in cmd && 'y' in cmd && cmd.x !== undefined && cmd.y !== undefined) {
         points.push({ x: cmd.x, y: cmd.y });
       }
     }
-    
+
     return points;
   }
 
   // Convert SVG commands directly to path string
   private commandsToPathString(commands: SVGCommand[]): string {
     let pathString = '';
-    
+
     for (const cmd of commands) {
       switch (cmd.command.toUpperCase()) {
         case 'M':
@@ -89,7 +89,7 @@ export class SubPathTransformManager {
           break;
       }
     }
-    
+
     return pathString.trim();
   }
 
@@ -98,7 +98,7 @@ export class SubPathTransformManager {
     if (points.length < 2) return [];
 
     const commands: SVGCommand[] = [];
-    
+
     // First command is always M
     commands.push({
       id: generateId(),
@@ -111,14 +111,14 @@ export class SubPathTransformManager {
     for (let i = 1; i < points.length; i++) {
       const p1 = points[i - 1];
       const p2 = points[i];
-      
+
       // Create a cubic curve that represents a line
       // Control points are positioned 1/3 and 2/3 along the line
       const c1x = p1.x + (p2.x - p1.x) / 3;
       const c1y = p1.y + (p2.y - p1.y) / 3;
       const c2x = p1.x + (p2.x - p1.x) * 2 / 3;
       const c2y = p1.y + (p2.y - p1.y) * 2 / 3;
-      
+
       commands.push({
         id: generateId(),
         command: 'C',
@@ -140,12 +140,12 @@ export class SubPathTransformManager {
     if (commands1.length === commands2.length) {
       return true;
     }
-    
+
     // If the difference is small (less than 50%), try direct animation
     const sizeDiff = Math.abs(commands1.length - commands2.length);
     const avgSize = (commands1.length + commands2.length) / 2;
     const diffPercent = sizeDiff / avgSize;
-    
+
     return diffPercent < 0.5; // Less than 50% difference
   }
 
@@ -155,9 +155,9 @@ export class SubPathTransformManager {
     tmp.setAttribute('d', pathD);
     tmp.setAttribute('fill', 'none');
     tmp.setAttribute('stroke', 'none');
-    
+
     svgElement.appendChild(tmp);
-    
+
     const len = (tmp as SVGPathElement).getTotalLength();
     if (!isFinite(len) || len === 0) {
       svgElement.removeChild(tmp);
@@ -169,14 +169,14 @@ export class SubPathTransformManager {
       }
       return pts;
     }
-    
+
     const out: Point[] = [];
     for (let i = 0; i < n; i++) {
       const t = (i / (n - 1)) * len;
       const pt = (tmp as SVGPathElement).getPointAtLength(t);
       out.push({ x: Math.round(pt.x), y: Math.round(pt.y) });
     }
-    
+
     svgElement.removeChild(tmp);
     return out;
   }
@@ -184,23 +184,23 @@ export class SubPathTransformManager {
   // Create morphing path data for animation - IDENTICAL to pencil
   private createMorphD(pts: Point[]): string {
     if (!pts || pts.length === 0) return '';
-    
+
     const round = (n: number) => Math.round(n);
     let d = `M ${round(pts[0].x)} ${round(pts[0].y)}`;
-    
+
     for (let i = 1; i < pts.length; i++) {
       const a = pts[i - 1];
       const b = pts[i];
       d += ` C ${round(a.x)} ${round(a.y)} ${round(b.x)} ${round(b.y)} ${round(b.x)} ${round(b.y)}`;
     }
-    
+
     return d;
   }
 
   // Create glow filter for animation
   private ensureGlowFilter(svgElement: SVGSVGElement, filterId: string) {
     if (svgElement.querySelector(`#${filterId}`)) return;
-    
+
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
     const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
     filter.setAttribute('id', filterId);
@@ -248,11 +248,11 @@ export class SubPathTransformManager {
     originalCommands: SVGCommand[],
     onComplete: (smoothedCommands: SVGCommand[]) => void
   ) {
-        
+
     // Get the correct SVG element from plugin manager
     const svgRef = pluginManager.getSVGRef();
     const svgElement = svgRef?.current;
-                       
+
     if (!svgElement) {
       console.warn('⚠️ SVG element not found via plugin manager, falling back without animation');
       const smoothedCommands = this.applySmoothAlgorithm(originalCommands);
@@ -260,10 +260,10 @@ export class SubPathTransformManager {
       return;
     }
 
-    
+
     // Skip animation if already running
     if (svgElement.getAttribute('data-transform-anim-running') === '1') {
-            const smoothedCommands = this.applySmoothAlgorithm(originalCommands);
+      const smoothedCommands = this.applySmoothAlgorithm(originalCommands);
       onComplete(smoothedCommands);
       return;
     }
@@ -277,7 +277,7 @@ export class SubPathTransformManager {
       subpathShowCommandPoints: store.enabledFeatures.subpathShowCommandPoints ?? true,
       subpathShowControlPoints: store.enabledFeatures.subpathShowControlPoints ?? true,
     };
-    
+
     store.setSelectionVisible(false);
     store.setPointsVisible(false);
 
@@ -285,29 +285,29 @@ export class SubPathTransformManager {
     const smoothedCommands = this.applySmoothAlgorithm(originalCommands);
     const smoothedPoints = this.commandsToPoints(smoothedCommands);
 
-        
-  // NEW APPROACH: For morphing to work, both paths must share the same structure
-  // Convert the original points to curves using the same smoothing algorithm
-  // but with zero tension (straight lines represented as curves)
-    
-        
-  // Create a path of curves for the original points (line-like curves)
+
+    // NEW APPROACH: For morphing to work, both paths must share the same structure
+    // Convert the original points to curves using the same smoothing algorithm
+    // but with zero tension (straight lines represented as curves)
+
+
+    // Create a path of curves for the original points (line-like curves)
     const originalAsCurves = this.convertLinesToMatchingCurves(originalPoints);
     const dFrom = this.commandsToPathString(originalAsCurves);
     const dTo = this.commandsToPathString(smoothedCommands);
-    
-            
-  // Check whether the paths are different
+
+
+    // Check whether the paths are different
     const arePathsDifferent = dFrom !== dTo;
-        
+
     if (!arePathsDifferent) {
       console.warn('⚠️ WARNING: The curve paths are identical!');
     }
-    
-        
+
+
     const filterId = 'transformSmoothGlowFilter';
     this.ensureGlowFilter(svgElement, filterId);
-    
+
     const animPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     animPath.setAttribute('d', dFrom);
     animPath.setAttribute('stroke', '#00ff88');
@@ -317,12 +317,12 @@ export class SubPathTransformManager {
     animPath.setAttribute('stroke-linecap', 'round');
     animPath.setAttribute('filter', `url(#${filterId})`);
     animPath.setAttribute('vector-effect', 'non-scaling-stroke');
-    
-  // Apply viewport transform to animation element - same as pencil
+
+    // Apply viewport transform to animation element - same as pencil
     const viewportStore = useEditorStore.getState();
-        const transform = `translate(${viewportStore.viewport.pan.x}, ${viewportStore.viewport.pan.y}) scale(${viewportStore.viewport.zoom})`;
+    const transform = `translate(${viewportStore.viewport.pan.x}, ${viewportStore.viewport.pan.y}) scale(${viewportStore.viewport.zoom})`;
     animPath.setAttribute('transform', transform);
-    
+
     const animateEl = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
     animateEl.setAttribute('attributeName', 'd');
     animateEl.setAttribute('from', dFrom);
@@ -330,8 +330,8 @@ export class SubPathTransformManager {
     animateEl.setAttribute('dur', '1000ms');
     animateEl.setAttribute('fill', 'freeze');
     animPath.appendChild(animateEl);
-    
-        svgElement.appendChild(animPath);
+
+    svgElement.appendChild(animPath);
     svgElement.setAttribute('data-transform-anim-running', '1');
 
     try {
@@ -342,23 +342,23 @@ export class SubPathTransformManager {
 
     const durationMs = 1000;
     let committed = false;
-    
+
     const cleanup = () => {
       if (committed) return;
       committed = true;
-      
+
       // Restore selection UI and points visibility
       store.setSelectionVisible(originalSelectionVisible);
       store.restorePointsVisibility(originalPointsVisible);
-      
+
       onComplete(smoothedCommands);
-      
+
       try {
         svgElement.removeChild(animPath);
       } catch (e) {
         // Element might already be removed
       }
-      
+
       svgElement.removeAttribute('data-transform-anim-running');
       this.animationId = null;
     };
@@ -378,11 +378,11 @@ export class SubPathTransformManager {
     tolerance: number,
     onComplete: (simplifiedCommands: SVGCommand[]) => void
   ) {
-        
+
     // Get the correct SVG element from plugin manager
     const svgRef = pluginManager.getSVGRef();
     const svgElement = svgRef?.current;
-                       
+
     if (!svgElement) {
       console.warn('⚠️ SVG element not found via plugin manager for simplify, falling back without animation');
       const simplifiedCommands = this.applySimplifyAlgorithm(originalCommands, tolerance);
@@ -390,10 +390,10 @@ export class SubPathTransformManager {
       return;
     }
 
-    
+
     // Skip animation if already running
     if (svgElement.getAttribute('data-transform-anim-running') === '1') {
-            const simplifiedCommands = this.applySimplifyAlgorithm(originalCommands, tolerance);
+      const simplifiedCommands = this.applySimplifyAlgorithm(originalCommands, tolerance);
       onComplete(simplifiedCommands);
       return;
     }
@@ -407,7 +407,7 @@ export class SubPathTransformManager {
       subpathShowCommandPoints: store.enabledFeatures.subpathShowCommandPoints ?? true,
       subpathShowControlPoints: store.enabledFeatures.subpathShowControlPoints ?? true,
     };
-    
+
     store.setSelectionVisible(false);
     store.setPointsVisible(false);
 
@@ -415,34 +415,34 @@ export class SubPathTransformManager {
     const simplifiedCommands = this.applySimplifyAlgorithm(originalCommands, tolerance);
     const simplifiedPoints = this.commandsToPoints(simplifiedCommands);
 
-        
-  // NEW APPROACH FOR SIMPLIFY: Create compatible paths for morphing
-  // 1. Generate an initial path with extra points using pointsToPath (smooth curves)
-  // 2. Convert the final (simplified) path to curves that represent straight lines
-    
-        
+
+    // NEW APPROACH FOR SIMPLIFY: Create compatible paths for morphing
+    // 1. Generate an initial path with extra points using pointsToPath (smooth curves)
+    // 2. Convert the final (simplified) path to curves that represent straight lines
+
+
     // Use pointsToPath to create a more complex initial path with smooth curves
     const enhancedInitialPath = this.pointsToPath(originalPoints);
-        
+
     // Convert the simplified points to curves that represent straight lines
     const simplifiedAsStraightCurves = this.convertLinesToMatchingCurves(simplifiedPoints);
-    
+
     // Create command paths
     const dFrom = enhancedInitialPath;
     const dTo = this.commandsToPathString(simplifiedAsStraightCurves);
-    
-            
+
+
     // Check whether the paths are different
     const arePathsDifferent = dFrom !== dTo;
-        
+
     if (!arePathsDifferent) {
       console.warn('⚠️ WARNING: The simplify paths are identical!');
     }
-    
-        
+
+
     const filterId = 'transformSimplifyGlowFilter';
     this.ensureGlowFilter(svgElement, filterId);
-    
+
     const animPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     animPath.setAttribute('d', dFrom);
     animPath.setAttribute('stroke', '#ff8800');
@@ -452,12 +452,12 @@ export class SubPathTransformManager {
     animPath.setAttribute('stroke-linecap', 'round');
     animPath.setAttribute('filter', `url(#${filterId})`);
     animPath.setAttribute('vector-effect', 'non-scaling-stroke');
-    
-  // Apply viewport transform to animation element - same as pencil
+
+    // Apply viewport transform to animation element - same as pencil
     const viewportStore = useEditorStore.getState();
-        const transform = `translate(${viewportStore.viewport.pan.x}, ${viewportStore.viewport.pan.y}) scale(${viewportStore.viewport.zoom})`;
+    const transform = `translate(${viewportStore.viewport.pan.x}, ${viewportStore.viewport.pan.y}) scale(${viewportStore.viewport.zoom})`;
     animPath.setAttribute('transform', transform);
-    
+
     const animateEl = document.createElementNS('http://www.w3.org/2000/svg', 'animate');
     animateEl.setAttribute('attributeName', 'd');
     animateEl.setAttribute('from', dFrom);
@@ -465,7 +465,7 @@ export class SubPathTransformManager {
     animateEl.setAttribute('dur', '1000ms');
     animateEl.setAttribute('fill', 'freeze');
     animPath.appendChild(animateEl);
-    
+
     svgElement.appendChild(animPath);
     svgElement.setAttribute('data-transform-anim-running', '1');
 
@@ -477,23 +477,23 @@ export class SubPathTransformManager {
 
     const durationMs = 1000;
     let committed = false;
-    
+
     const cleanup = () => {
       if (committed) return;
       committed = true;
-      
+
       // Restore selection UI and points visibility
       store.setSelectionVisible(originalSelectionVisible);
       store.restorePointsVisibility(originalPointsVisible);
-      
+
       onComplete(simplifiedCommands);
-      
+
       try {
         svgElement.removeChild(animPath);
       } catch (e) {
         // Element might already be removed
       }
-      
+
       svgElement.removeAttribute('data-transform-anim-running');
       this.animationId = null;
     };
@@ -511,16 +511,16 @@ export class SubPathTransformManager {
   private applySmoothAlgorithm(commands: SVGCommand[]): SVGCommand[] {
     if (commands.length < 2) return commands;
 
-  // STEP 1: Normalize Z commands (convert trailing Z to an explicit L)
+    // STEP 1: Normalize Z commands (convert trailing Z to an explicit L)
     const normalizedCommands = this.normalizeZCommandsForSmoothing(commands);
     const originalEndsWithZ = commands[commands.length - 1]?.command === 'Z';
 
-  // STEP 2: Extract points with handling for H and V commands
+    // STEP 2: Extract points with handling for H and V commands
     const points: { x: number; y: number; originalCommand: SVGCommand; index: number }[] = [];
-    
+
     for (let i = 0; i < normalizedCommands.length; i++) {
       const cmd = normalizedCommands[i];
-      
+
       if ('x' in cmd && 'y' in cmd && cmd.x !== undefined && cmd.y !== undefined) {
         points.push({
           x: cmd.x,
@@ -560,13 +560,13 @@ export class SubPathTransformManager {
 
     // STEP 4: Prepare ghost points for edge cases
     const pointsWithGhosts: typeof points = [];
-    
+
     if (isClosedPath) {
       const firstPoint = points[0];
       const lastPoint = points[points.length - 1];
-      const areFirstLastEqual = Math.abs(firstPoint.x - lastPoint.x) < toleranceComparison && 
-                               Math.abs(firstPoint.y - lastPoint.y) < toleranceComparison;
-      
+      const areFirstLastEqual = Math.abs(firstPoint.x - lastPoint.x) < toleranceComparison &&
+        Math.abs(firstPoint.y - lastPoint.y) < toleranceComparison;
+
       if (areFirstLastEqual && points.length > 2) {
         // SPECIAL CASE: first point == last point
         // Add the penultimate point at the start as a ghost
@@ -591,7 +591,7 @@ export class SubPathTransformManager {
         };
         pointsWithGhosts.push(ghostStart);
         pointsWithGhosts.push(...points);
-        
+
         const lastIdx = points.length - 1;
         const prevIdx = points.length - 2;
         const ghostEnd = {
@@ -606,7 +606,7 @@ export class SubPathTransformManager {
 
     // STEP 5: Generate smoothed commands
     const smoothedCommands: SVGCommand[] = [];
-    
+
     // Preserve the first command (always M)
     if (points.length > 0) {
       smoothedCommands.push({
@@ -621,16 +621,16 @@ export class SubPathTransformManager {
       const p1 = pointsWithGhosts[i];
       const p2 = pointsWithGhosts[i + 1];
       const p3 = pointsWithGhosts[i + 2];
-      
+
       // Skip if we are processing ghost points
       if (p2.index < 0 || p2.index >= points.length) continue;
-      
+
       // Catmull-Rom to Bezier conversion (standard) - same as in pencil
       const c1x = p1.x + (p2.x - p0.x) / 6;
       const c1y = p1.y + (p2.y - p0.y) / 6;
       const c2x = p2.x - (p3.x - p1.x) / 6;
       const c2y = p2.y - (p3.y - p1.y) / 6;
-      
+
       // Create a cubic Bezier command
       const bezierCommand: SVGCommand = {
         ...p2.originalCommand,
@@ -643,7 +643,7 @@ export class SubPathTransformManager {
         x: Math.round(p2.x),
         y: Math.round(p2.y)
       };
-      
+
       smoothedCommands.push(bezierCommand);
     }
 
@@ -651,16 +651,16 @@ export class SubPathTransformManager {
     if (originalEndsWithZ && smoothedCommands.length > 0) {
       const lastCmd = smoothedCommands[smoothedCommands.length - 1];
       const firstCmd = smoothedCommands[0];
-      
-      if (lastCmd && firstCmd && 
-          'x' in lastCmd && 'y' in lastCmd && 'x' in firstCmd && 'y' in firstCmd &&
-          lastCmd.x !== undefined && lastCmd.y !== undefined &&
-          firstCmd.x !== undefined && firstCmd.y !== undefined) {
-        
+
+      if (lastCmd && firstCmd &&
+        'x' in lastCmd && 'y' in lastCmd && 'x' in firstCmd && 'y' in firstCmd &&
+        lastCmd.x !== undefined && lastCmd.y !== undefined &&
+        firstCmd.x !== undefined && firstCmd.y !== undefined) {
+
         const distanciaX = Math.abs(lastCmd.x - firstCmd.x);
         const distanciaY = Math.abs(lastCmd.y - firstCmd.y);
         const epsilon = 1e-6;
-        
+
         if (distanciaX > epsilon || distanciaY > epsilon) {
           // Add an explicit line to close the path
           const comandoCierre: SVGCommand = {
@@ -672,7 +672,7 @@ export class SubPathTransformManager {
           smoothedCommands.push(comandoCierre);
         }
       }
-      
+
       // DO NOT add a Z command for better behavior with smoothing
     }
 
@@ -684,18 +684,18 @@ export class SubPathTransformManager {
     if (!segment || segment.length < 2) {
       return segment;
     }
-    
+
     const normalizedSegment = JSON.parse(JSON.stringify(segment));
     const lastCommand = normalizedSegment[normalizedSegment.length - 1];
-    
+
     if (lastCommand && (lastCommand.command === 'Z' || lastCommand.command === 'z')) {
-      const firstCommand = normalizedSegment.find((cmd: SVGCommand) => 
+      const firstCommand = normalizedSegment.find((cmd: SVGCommand) =>
         cmd.command === 'M'
       );
-      
-      if (firstCommand && 'x' in firstCommand && 'y' in firstCommand && 
-          firstCommand.x !== undefined && firstCommand.y !== undefined) {
-        
+
+      if (firstCommand && 'x' in firstCommand && 'y' in firstCommand &&
+        firstCommand.x !== undefined && firstCommand.y !== undefined) {
+
         const lastIndex = normalizedSegment.length - 1;
         normalizedSegment[lastIndex] = {
           id: `${lastCommand.id || 'normalized'}-close`,
@@ -705,7 +705,7 @@ export class SubPathTransformManager {
         };
       }
     }
-    
+
     return normalizedSegment;
   }
 
@@ -718,14 +718,14 @@ export class SubPathTransformManager {
 
     // Apply RDP simplification
     const simplifiedPoints = rdp(points, tolerance);
-    
+
     // Convert back to commands
     const newCommands: SVGCommand[] = [];
-    
+
     for (let i = 0; i < simplifiedPoints.length; i++) {
       const point = simplifiedPoints[i];
       const command = i === 0 ? 'M' : 'L';
-      
+
       newCommands.push({
         id: generateId(),
         command: command,
