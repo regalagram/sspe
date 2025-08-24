@@ -263,7 +263,7 @@ export class PencilManager {
 
     // If only one point or simplification didn't change much, create directly
     if (simplified.length <= 2 || simplified.length === allPoints.length) {
-      this.createPathFromPoints(allPoints, false); // Don't save to history again
+      this.createPathFromPoints(simplified, false); // Don't save to history again
       this.currentPoints = [];
       return true;
     }
