@@ -136,17 +136,17 @@ export class SubPathTransformManager {
 
   // Check if two command arrays can use direct animation (similar structure)
   private canUseDirectAnimation(commands1: SVGCommand[], commands2: SVGCommand[]): boolean {
-    // Si tienen el mismo número de comandos, probablemente pueden usar animación directa
+    // If they have the same number of commands, they will probably be able to use direct animation
     if (commands1.length === commands2.length) {
       return true;
     }
     
-    // Si la diferencia es pequeña (menos del 50%), intentar animación directa
+    // If the difference is small (less than 50%), try direct animation
     const sizeDiff = Math.abs(commands1.length - commands2.length);
     const avgSize = (commands1.length + commands2.length) / 2;
     const diffPercent = sizeDiff / avgSize;
     
-    return diffPercent < 0.5; // Menos del 50% de diferencia
+    return diffPercent < 0.5; // Less than 50% difference
   }
 
   // Convert path string to points by sampling
@@ -286,22 +286,22 @@ export class SubPathTransformManager {
     const smoothedPoints = this.commandsToPoints(smoothedCommands);
 
         
-    // NUEVO ENFOQUE: Para que funcione el morphing, ambos paths deben tener la misma estructura
-    // Convertir los puntos originales a curvas usando el mismo algoritmo que smooth
-    // pero con tensión 0 (líneas rectas como curvas)
+  // NEW APPROACH: For morphing to work, both paths must share the same structure
+  // Convert the original points to curves using the same smoothing algorithm
+  // but with zero tension (straight lines represented as curves)
     
         
-    // Crear path con curvas para los puntos originales (curvas de líneas rectas)
+  // Create a path of curves for the original points (line-like curves)
     const originalAsCurves = this.convertLinesToMatchingCurves(originalPoints);
     const dFrom = this.commandsToPathString(originalAsCurves);
     const dTo = this.commandsToPathString(smoothedCommands);
     
             
-    // Verificar si son diferentes
+  // Check whether the paths are different
     const arePathsDifferent = dFrom !== dTo;
         
     if (!arePathsDifferent) {
-      console.warn('⚠️ PROBLEMA: Los curve paths son iguales!');
+      console.warn('⚠️ WARNING: The curve paths are identical!');
     }
     
         
@@ -318,7 +318,7 @@ export class SubPathTransformManager {
     animPath.setAttribute('filter', `url(#${filterId})`);
     animPath.setAttribute('vector-effect', 'non-scaling-stroke');
     
-    // Apply viewport transform to animation element - IGUAL que pencil
+  // Apply viewport transform to animation element - same as pencil
     const viewportStore = useEditorStore.getState();
         const transform = `translate(${viewportStore.viewport.pan.x}, ${viewportStore.viewport.pan.y}) scale(${viewportStore.viewport.zoom})`;
     animPath.setAttribute('transform', transform);
@@ -416,27 +416,27 @@ export class SubPathTransformManager {
     const simplifiedPoints = this.commandsToPoints(simplifiedCommands);
 
         
-    // NUEVO ENFOQUE PARA SIMPLIFY: Crear paths compatibles para morphing
-    // 1. Generar path inicial con puntos adicionales usando pointsToPath (curvas suaves)
-    // 2. Convertir path final (simplificado) a curvas que representen líneas rectas
+  // NEW APPROACH FOR SIMPLIFY: Create compatible paths for morphing
+  // 1. Generate an initial path with extra points using pointsToPath (smooth curves)
+  // 2. Convert the final (simplified) path to curves that represent straight lines
     
         
-    // Usar pointsToPath para crear un path inicial más complejo con curvas suaves
+    // Use pointsToPath to create a more complex initial path with smooth curves
     const enhancedInitialPath = this.pointsToPath(originalPoints);
         
-    // Convertir los puntos simplificados a curvas que representen líneas rectas
+    // Convert the simplified points to curves that represent straight lines
     const simplifiedAsStraightCurves = this.convertLinesToMatchingCurves(simplifiedPoints);
     
-    // Crear paths de comandos
+    // Create command paths
     const dFrom = enhancedInitialPath;
     const dTo = this.commandsToPathString(simplifiedAsStraightCurves);
     
             
-    // Verificar si son diferentes
+    // Check whether the paths are different
     const arePathsDifferent = dFrom !== dTo;
         
     if (!arePathsDifferent) {
-      console.warn('⚠️ PROBLEMA: Los simplify paths son iguales!');
+      console.warn('⚠️ WARNING: The simplify paths are identical!');
     }
     
         
@@ -453,7 +453,7 @@ export class SubPathTransformManager {
     animPath.setAttribute('filter', `url(#${filterId})`);
     animPath.setAttribute('vector-effect', 'non-scaling-stroke');
     
-    // Apply viewport transform to animation element - IGUAL que pencil
+  // Apply viewport transform to animation element - same as pencil
     const viewportStore = useEditorStore.getState();
         const transform = `translate(${viewportStore.viewport.pan.x}, ${viewportStore.viewport.pan.y}) scale(${viewportStore.viewport.zoom})`;
     animPath.setAttribute('transform', transform);
@@ -511,11 +511,11 @@ export class SubPathTransformManager {
   private applySmoothAlgorithm(commands: SVGCommand[]): SVGCommand[] {
     if (commands.length < 2) return commands;
 
-    // PASO 1: Normalización de comandos Z (convertir Z a L explícita)
+  // STEP 1: Normalize Z commands (convert trailing Z to an explicit L)
     const normalizedCommands = this.normalizeZCommandsForSmoothing(commands);
     const originalEndsWithZ = commands[commands.length - 1]?.command === 'Z';
 
-    // PASO 2: Extracción de puntos con manejo de comandos H, V
+  // STEP 2: Extract points with handling for H and V commands
     const points: { x: number; y: number; originalCommand: SVGCommand; index: number }[] = [];
     
     for (let i = 0; i < normalizedCommands.length; i++) {
@@ -548,17 +548,17 @@ export class SubPathTransformManager {
     }
 
     if (points.length < 3) {
-      return commands; // No enough points for smoothing
+      return commands; // Not enough points for smoothing
     }
 
-    // PASO 3: Detectar si es path cerrado
+    // STEP 3: Detect whether the path is closed
     const toleranceComparison = 1e-6;
     const isClosedPath = points.length > 2 && (
       Math.abs(points[0].x - points[points.length - 1].x) < toleranceComparison &&
       Math.abs(points[0].y - points[points.length - 1].y) < toleranceComparison
     );
 
-    // PASO 4: Preparación de puntos fantasma según casos de borde
+    // STEP 4: Prepare ghost points for edge cases
     const pointsWithGhosts: typeof points = [];
     
     if (isClosedPath) {
@@ -568,20 +568,20 @@ export class SubPathTransformManager {
                                Math.abs(firstPoint.y - lastPoint.y) < toleranceComparison;
       
       if (areFirstLastEqual && points.length > 2) {
-        // CASO ESPECIAL: primer punto = último punto
-        // Agregar el penúltimo punto al inicio como fantasma
+        // SPECIAL CASE: first point == last point
+        // Add the penultimate point at the start as a ghost
         pointsWithGhosts.push(points[points.length - 2]);
         pointsWithGhosts.push(...points);
-        // Agregar el segundo punto al final como fantasma
+        // Add the second point at the end as a ghost
         pointsWithGhosts.push(points[1]);
       } else {
-        // Caso normal de path cerrado
+        // Normal closed-path case
         pointsWithGhosts.push(points[points.length - 1]);
         pointsWithGhosts.push(...points);
         pointsWithGhosts.push(points[0]);
       }
     } else {
-      // Para paths abiertos: calcular puntos fantasma por extrapolación
+      // For open paths: compute ghost points by extrapolation
       if (points.length >= 2) {
         const ghostStart = {
           x: points[0].x - (points[1].x - points[0].x),
@@ -604,10 +604,10 @@ export class SubPathTransformManager {
       }
     }
 
-    // PASO 5: Generación de comandos suavizados
+    // STEP 5: Generate smoothed commands
     const smoothedCommands: SVGCommand[] = [];
     
-    // Preservar el primer comando (siempre M)
+    // Preserve the first command (always M)
     if (points.length > 0) {
       smoothedCommands.push({
         ...points[0].originalCommand,
@@ -615,23 +615,23 @@ export class SubPathTransformManager {
       });
     }
 
-    // Generar curvas Bézier cúbicas usando el algoritmo estándar de Catmull-Rom
+    // Generate cubic Bezier curves using the standard Catmull-Rom algorithm
     for (let i = 1; i < pointsWithGhosts.length - 2; i++) {
       const p0 = pointsWithGhosts[i - 1];
       const p1 = pointsWithGhosts[i];
       const p2 = pointsWithGhosts[i + 1];
       const p3 = pointsWithGhosts[i + 2];
       
-      // Skip si estamos procesando puntos fantasma
+      // Skip if we are processing ghost points
       if (p2.index < 0 || p2.index >= points.length) continue;
       
-      // Catmull-Rom to Bezier conversion (standard) - igual que en pencil
+      // Catmull-Rom to Bezier conversion (standard) - same as in pencil
       const c1x = p1.x + (p2.x - p0.x) / 6;
       const c1y = p1.y + (p2.y - p0.y) / 6;
       const c2x = p2.x - (p3.x - p1.x) / 6;
       const c2y = p2.y - (p3.y - p1.y) / 6;
       
-      // Crear comando Bézier cúbico
+      // Create a cubic Bezier command
       const bezierCommand: SVGCommand = {
         ...p2.originalCommand,
         id: generateId(),
@@ -647,7 +647,7 @@ export class SubPathTransformManager {
       smoothedCommands.push(bezierCommand);
     }
 
-    // PASO 6: Manejo de paths cerrados - agregar línea de cierre si es necesario
+    // STEP 6: Handle closed paths - add an explicit closing line if necessary
     if (originalEndsWithZ && smoothedCommands.length > 0) {
       const lastCmd = smoothedCommands[smoothedCommands.length - 1];
       const firstCmd = smoothedCommands[0];
@@ -662,7 +662,7 @@ export class SubPathTransformManager {
         const epsilon = 1e-6;
         
         if (distanciaX > epsilon || distanciaY > epsilon) {
-          // Agregar línea explícita para cerrar el path
+          // Add an explicit line to close the path
           const comandoCierre: SVGCommand = {
             id: generateId(),
             command: 'L',
@@ -673,7 +673,7 @@ export class SubPathTransformManager {
         }
       }
       
-      // NO agregar comando Z para mejor comportamiento con suavizado
+      // DO NOT add a Z command for better behavior with smoothing
     }
 
     return smoothedCommands;
