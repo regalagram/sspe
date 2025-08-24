@@ -71,12 +71,12 @@ export const WritingConsolidatedTools: React.FC = () => {
   const toggleSubpathEditMode = () => {
     if (isSubpathEditMode) {
       // exit to select
-      useEditorStore.getState().setMode('select');
+      toolModeManager.setMode('select');
     } else {
       // Clear existing selections before entering subpath-edit mode
       const store = useEditorStore.getState();
       store.clearSelection();
-      store.setMode('subpath-edit' as any);
+      toolModeManager.setMode('subpath-edit');
     }
   };
 

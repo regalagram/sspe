@@ -1,7 +1,7 @@
 import { useEditorStore } from '../store/editorStore';
 import { EditorCommandType } from '../types';
 
-export type ToolMode = 'select' | 'pencil' | 'curves' | 'shapes' | 'text' | 'text-edit' | 'creation';
+export type ToolMode = 'select' | 'pencil' | 'curves' | 'shapes' | 'text' | 'text-edit' | 'creation' | 'subpath-edit';
 
 export interface ToolModeState {
   activeMode: ToolMode;
@@ -195,6 +195,11 @@ export class ToolModeManager {
         }
         break;
 
+      case 'subpath-edit':
+        // Cambiar el editor store de subpath-edit de vuelta a select
+        useEditorStore.getState().setMode('select');
+        break;
+
       case 'select':
         // Select mode no necesita desactivación especial
         break;
@@ -269,6 +274,10 @@ export class ToolModeManager {
             useEditorStore.getState().setCreateMode(options.commandType);
           }
         }
+        break;
+
+      case 'subpath-edit':
+        useEditorStore.getState().setMode('subpath-edit');
         break;
 
       case 'select':

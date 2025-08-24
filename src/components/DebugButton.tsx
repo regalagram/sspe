@@ -84,12 +84,6 @@ export const DebugButton: React.FC<DebugButtonProps> = ({ onOpenVisualDebugPanel
         </div>
         
         <SubmenuItem
-          icon={<RotateCcw size={isMobile ? 12 : 13} />}
-          label="Delete LocalStorage"
-          onClick={handleClearLocalStorage}
-        />
-        
-        <SubmenuItem
           icon={<Eye size={isMobile ? 12 : 13} />}
           label={enabledFeatures.commandPointsEnabled ? "Hide Command Points" : "Show Command Points"}
           onClick={handleToggleCommandPoints}
@@ -128,6 +122,12 @@ export const DebugButton: React.FC<DebugButtonProps> = ({ onOpenVisualDebugPanel
           icon={<Settings size={isMobile ? 12 : 13} />}
           label="Configuration"
           onClick={handleOpenConfig}
+        />
+        
+        <SubmenuItem
+          icon={<RotateCcw size={isMobile ? 12 : 13} />}
+          label="Delete LocalStorage"
+          onClick={handleClearLocalStorage}
         />
       </ToolbarSubmenu>
     </ToolbarSection>
