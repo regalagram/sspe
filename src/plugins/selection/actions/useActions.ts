@@ -2,6 +2,8 @@ import { Copy, Trash2, Lock, Group } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected, getSelectedElementsBounds } from './commonActions';
+import { createGenericArrangeActions } from '../../../utils/floating-arrange-actions';
+import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';
 
 // Check if selected use elements are locked
 const areUsesLocked = (): boolean => {
@@ -100,6 +102,57 @@ const groupSelectedUses = () => {
   }
 };
 
+// Use element arrange actions helper functions
+const getUseSelectionCount = () => {
+  const store = useEditorStore.getState();
+  return store.selection.selectedUses.length;
+};
+
+const setupArrangeManagerForUse = () => {
+  const store = useEditorStore.getState();
+  arrangeManager.setEditorStore(store);
+};
+
+// Create use element-specific arrange actions
+const createUseArrangeActions = () => createGenericArrangeActions(
+  'use-elements',
+  getUseSelectionCount,
+  {
+    alignLeft: () => {
+      setupArrangeManagerForUse();
+      arrangeManager.alignLeft();
+    },
+    alignCenter: () => {
+      setupArrangeManagerForUse();
+      arrangeManager.alignCenter();
+    },
+    alignRight: () => {
+      setupArrangeManagerForUse();
+      arrangeManager.alignRight();
+    },
+    alignTop: () => {
+      setupArrangeManagerForUse();
+      arrangeManager.alignTop();
+    },
+    alignMiddle: () => {
+      setupArrangeManagerForUse();
+      arrangeManager.alignMiddle();
+    },
+    alignBottom: () => {
+      setupArrangeManagerForUse();
+      arrangeManager.alignBottom();
+    },
+    distributeHorizontally: () => {
+      setupArrangeManagerForUse();
+      arrangeManager.distributeHorizontally();
+    },
+    distributeVertically: () => {
+      setupArrangeManagerForUse();
+      arrangeManager.distributeVertically();
+    }
+  }
+);
+
 export const useActions: ToolbarAction[] = [
   {
     id: 'group-uses',
@@ -115,6 +168,8 @@ export const useActions: ToolbarAction[] = [
       return store.selection.selectedUses.length >= 2;
     }
   },
+  // Add arrange actions for use/symbol elements
+  ...createUseArrangeActions(),
   {
     id: 'duplicate-use',
     icon: Copy,

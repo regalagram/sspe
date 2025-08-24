@@ -2,6 +2,8 @@ import { Copy, Trash2, Lock, Filter, Move, Group } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected, getSelectedElementsBounds } from './commonActions';
+import { createGenericArrangeActions } from '../../../utils/floating-arrange-actions';
+import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';
 
 // Check if selected images are locked
 const areImagesLocked = (): boolean => {
@@ -100,6 +102,57 @@ const groupSelectedImages = () => {
   }
 };
 
+// Image arrange actions helper functions
+const getImageSelectionCount = () => {
+  const store = useEditorStore.getState();
+  return store.selection.selectedImages.length;
+};
+
+const setupArrangeManagerForImage = () => {
+  const store = useEditorStore.getState();
+  arrangeManager.setEditorStore(store);
+};
+
+// Create image-specific arrange actions
+const createImageArrangeActions = () => createGenericArrangeActions(
+  'images',
+  getImageSelectionCount,
+  {
+    alignLeft: () => {
+      setupArrangeManagerForImage();
+      arrangeManager.alignLeft();
+    },
+    alignCenter: () => {
+      setupArrangeManagerForImage();
+      arrangeManager.alignCenter();
+    },
+    alignRight: () => {
+      setupArrangeManagerForImage();
+      arrangeManager.alignRight();
+    },
+    alignTop: () => {
+      setupArrangeManagerForImage();
+      arrangeManager.alignTop();
+    },
+    alignMiddle: () => {
+      setupArrangeManagerForImage();
+      arrangeManager.alignMiddle();
+    },
+    alignBottom: () => {
+      setupArrangeManagerForImage();
+      arrangeManager.alignBottom();
+    },
+    distributeHorizontally: () => {
+      setupArrangeManagerForImage();
+      arrangeManager.distributeHorizontally();
+    },
+    distributeVertically: () => {
+      setupArrangeManagerForImage();
+      arrangeManager.distributeVertically();
+    }
+  }
+);
+
 export const imageActions: ToolbarAction[] = [
   {
     id: 'group-images',
@@ -115,6 +168,8 @@ export const imageActions: ToolbarAction[] = [
       return store.selection.selectedImages.length >= 2;
     }
   },
+  // Add arrange actions for image elements
+  ...createImageArrangeActions(),
   {
     id: 'duplicate-image',
     icon: Copy,

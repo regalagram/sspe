@@ -327,11 +327,6 @@ export const FileActionsButton: React.FC = () => {
         position="top"
       >
         <SubmenuItem
-          icon={<Trash2 size={16} />}
-          label="Clear All"
-          onClick={handleClearAll}
-        />
-        <SubmenuItem
           icon={<Upload size={16} />}
           label="Upload"
           onClick={handleUpload}
@@ -341,6 +336,11 @@ export const FileActionsButton: React.FC = () => {
           label="Download"
           onClick={handleDownload}
           disabled={!hasContent}
+        />
+        <SubmenuItem
+          icon={<Trash2 size={16} />}
+          label="Clear All"
+          onClick={handleClearAll}
         />
       </ToolbarSubmenu>
       

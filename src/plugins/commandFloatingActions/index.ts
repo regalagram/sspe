@@ -6,24 +6,12 @@ import {
 import { SVGCommand } from '../../types';
 import { useEditorStore } from '../../store/editorStore';
 import { getUniqueCommandPositions, isCommandArrangeable } from '../../utils/command-point-utils';
+import { createCommandArrangeActions } from '../../utils/floating-arrange-actions';
 import { 
-  Move, 
-  RotateCw, 
-  Scale, 
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  AlignVerticalJustifyStart,
-  AlignVerticalJustifyCenter,
-  AlignVerticalJustifyEnd,
-  ArrowLeftRight,
-  ArrowUpDown,
   Trash2,
   Grid3X3,
-  MousePointer2,
   Spline,
-  Minus,
-  LayoutGrid
+  Minus
 } from 'lucide-react';
 
 // Helper functions for conditional visibility
@@ -240,120 +228,8 @@ const getTransformActions = (): ToolbarAction[] => [
   }
 ];
 
-// Arrange actions for command points - now as submenu
-const getArrangeActions = (): ToolbarAction[] => [
-  {
-    id: 'arrange-commands',
-    icon: LayoutGrid,
-    label: 'Arrange',
-    type: 'dropdown',
-    dropdown: {
-      options: [
-        // Alignment options
-        {
-          id: 'align-commands-left',
-          icon: AlignLeft,
-          label: 'Align Left',
-          action: () => {
-            const store = useEditorStore.getState();
-            if (!canAlign()) return;
-            store.pushToHistory();
-            store.alignCommandsLeft(store.selection.selectedCommands);
-          },
-          disabled: () => !canAlign()
-        },
-        {
-          id: 'align-commands-center',
-          icon: AlignCenter,
-          label: 'Align Center',
-          action: () => {
-            const store = useEditorStore.getState();
-            if (!canAlign()) return;
-            store.pushToHistory();
-            store.alignCommandsCenter(store.selection.selectedCommands);
-          },
-          disabled: () => !canAlign()
-        },
-        {
-          id: 'align-commands-right',
-          icon: AlignRight,
-          label: 'Align Right',
-          action: () => {
-            const store = useEditorStore.getState();
-            if (!canAlign()) return;
-            store.pushToHistory();
-            store.alignCommandsRight(store.selection.selectedCommands);
-          },
-          disabled: () => !canAlign()
-        },
-        {
-          id: 'align-commands-top',
-          icon: AlignVerticalJustifyStart,
-          label: 'Align Top',
-          action: () => {
-            const store = useEditorStore.getState();
-            if (!canAlign()) return;
-            store.pushToHistory();
-            store.alignCommandsTop(store.selection.selectedCommands);
-          },
-          disabled: () => !canAlign()
-        },
-        {
-          id: 'align-commands-middle',
-          icon: AlignVerticalJustifyCenter,
-          label: 'Align Middle',
-          action: () => {
-            const store = useEditorStore.getState();
-            if (!canAlign()) return;
-            store.pushToHistory();
-            store.alignCommandsMiddle(store.selection.selectedCommands);
-          },
-          disabled: () => !canAlign()
-        },
-        {
-          id: 'align-commands-bottom',
-          icon: AlignVerticalJustifyEnd,
-          label: 'Align Bottom',
-          action: () => {
-            const store = useEditorStore.getState();
-            if (!canAlign()) return;
-            store.pushToHistory();
-            store.alignCommandsBottom(store.selection.selectedCommands);
-          },
-          disabled: () => !canAlign()
-        },
-        // Distribution options
-        {
-          id: 'distribute-commands-horizontally',
-          icon: ArrowLeftRight,
-          label: 'Distribute Horizontally',
-          action: () => {
-            const store = useEditorStore.getState();
-            if (!canDistribute()) return;
-            store.pushToHistory();
-            store.distributeCommandsHorizontally(store.selection.selectedCommands);
-          },
-          disabled: () => !canDistribute()
-        },
-        {
-          id: 'distribute-commands-vertically',
-          icon: ArrowUpDown,
-          label: 'Distribute Vertically',
-          action: () => {
-            const store = useEditorStore.getState();
-            if (!canDistribute()) return;
-            store.pushToHistory();
-            store.distributeCommandsVertically(store.selection.selectedCommands);
-          },
-          disabled: () => !canDistribute()
-        }
-      ]
-    },
-    priority: 80,
-    tooltip: 'Align and distribute command points',
-    visible: () => canAlign() || canDistribute()
-  }
-];
+// Use the new reusable arrange actions
+const getArrangeActions = (): ToolbarAction[] => createCommandArrangeActions();
 
 // Delete action for command points
 const getDeleteActions = (): ToolbarAction[] => [

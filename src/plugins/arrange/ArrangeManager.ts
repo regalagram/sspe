@@ -218,24 +218,55 @@ export class ArrangeManager {
   alignLeft() {
     console.log('⬅️ ArrangeManager.alignLeft() called');
     
-    // Check if we have pure command selection - use optimized command actions
+    // Use unified element handling for all types including commands
+    const elements = this.getSelectedElements();
+    console.log('⬅️ Selected elements:', elements.length);
+    
+    // Special handling for pure command selections - use unique positions
     if (this.isPureCommandSelection()) {
-      const { selection } = useEditorStore.getState();
-      if (selection.selectedCommands.length < 2) return;
+      const { paths, selection } = useEditorStore.getState();
+      const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
       
+      selection.selectedCommands.forEach(id => {
+        for (const path of paths) {
+          for (const subPath of path.subPaths) {
+            const cmd = subPath.commands.find(c => c.id === id);
+            if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+              commandsWithContext.push({
+                command: cmd,
+                subPathCommands: subPath.commands
+              });
+              return;
+            }
+          }
+        }
+      });
+
+      const uniquePositions = getUniqueCommandPositions(commandsWithContext);
+      if (uniquePositions.length < 2) return;
+
+      // IMPORTANT: Push to history BEFORE making changes
       const editorState = useEditorStore.getState();
-      editorState.alignCommandsLeft(selection.selectedCommands);
       editorState.pushToHistory();
+
+      const leftmostX = Math.min(...uniquePositions.map(pos => pos.position.x));
+
+      uniquePositions.forEach(posGroup => {
+        posGroup.commands.forEach(cmd => {
+          editorState.updateCommand(cmd.id, { x: leftmostX });
+        });
+      });
       return;
     }
 
-    // Fallback to general element handling
-    const elements = this.getSelectedElements();
-    console.log('⬅️ Selected elements:', elements.length);
     if (elements.length < 2) {
       console.log('⬅️ Less than 2 elements selected, returning');
       return;
     }
+
+    // IMPORTANT: Push to history BEFORE making changes
+    const editorState = useEditorStore.getState();
+    editorState.pushToHistory();
 
     const leftmostX = Math.min(...elements.map(el => el.bounds.x));
     
@@ -243,20 +274,44 @@ export class ArrangeManager {
       const deltaX = leftmostX - element.bounds.x;
       this.moveElement(element, { x: deltaX, y: 0 });
     });
-
-    const editorState = useEditorStore.getState();
-    editorState.pushToHistory();
   }
 
   alignCenter() {
-    // Check if we have pure command selection - use optimized command actions
+    // Special handling for pure command selections - use unique positions
     if (this.isPureCommandSelection()) {
-      const { selection } = useEditorStore.getState();
-      if (selection.selectedCommands.length < 2) return;
+      const { paths, selection } = useEditorStore.getState();
+      const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
       
+      selection.selectedCommands.forEach(id => {
+        for (const path of paths) {
+          for (const subPath of path.subPaths) {
+            const cmd = subPath.commands.find(c => c.id === id);
+            if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+              commandsWithContext.push({
+                command: cmd,
+                subPathCommands: subPath.commands
+              });
+              return;
+            }
+          }
+        }
+      });
+
+      const uniquePositions = getUniqueCommandPositions(commandsWithContext);
+      if (uniquePositions.length < 2) return;
+
+      // IMPORTANT: Push to history BEFORE making changes
       const editorState = useEditorStore.getState();
-      editorState.alignCommandsCenter(selection.selectedCommands);
       editorState.pushToHistory();
+
+      const allX = uniquePositions.map(pos => pos.position.x);
+      const centerX = (Math.min(...allX) + Math.max(...allX)) / 2;
+
+      uniquePositions.forEach(posGroup => {
+        posGroup.commands.forEach(cmd => {
+          editorState.updateCommand(cmd.id, { x: centerX });
+        });
+      });
       return;
     }
 
@@ -266,29 +321,60 @@ export class ArrangeManager {
     const overallBounds = this.getOverallBounds(elements);
     if (!overallBounds) return;
 
+    // IMPORTANT: Push to history BEFORE making changes
+    const editorState = useEditorStore.getState();
+    editorState.pushToHistory();
+
     elements.forEach((element) => {
       const deltaX = overallBounds.centerX - element.bounds.centerX;
       this.moveElement(element, { x: deltaX, y: 0 });
     });
-
-    const editorState = useEditorStore.getState();
-    editorState.pushToHistory();
   }
 
   alignRight() {
-    // Check if we have pure command selection - use optimized command actions
+    // Special handling for pure command selections - use unique positions
     if (this.isPureCommandSelection()) {
-      const { selection } = useEditorStore.getState();
-      if (selection.selectedCommands.length < 2) return;
+      const { paths, selection } = useEditorStore.getState();
+      const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
       
+      selection.selectedCommands.forEach(id => {
+        for (const path of paths) {
+          for (const subPath of path.subPaths) {
+            const cmd = subPath.commands.find(c => c.id === id);
+            if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+              commandsWithContext.push({
+                command: cmd,
+                subPathCommands: subPath.commands
+              });
+              return;
+            }
+          }
+        }
+      });
+
+      const uniquePositions = getUniqueCommandPositions(commandsWithContext);
+      if (uniquePositions.length < 2) return;
+
+      // IMPORTANT: Push to history BEFORE making changes
       const editorState = useEditorStore.getState();
-      editorState.alignCommandsRight(selection.selectedCommands);
       editorState.pushToHistory();
+
+      const rightmostX = Math.max(...uniquePositions.map(pos => pos.position.x));
+
+      uniquePositions.forEach(posGroup => {
+        posGroup.commands.forEach(cmd => {
+          editorState.updateCommand(cmd.id, { x: rightmostX });
+        });
+      });
       return;
     }
 
     const elements = this.getSelectedElements();
     if (elements.length < 2) return;
+
+    // IMPORTANT: Push to history BEFORE making changes
+    const editorState = useEditorStore.getState();
+    editorState.pushToHistory();
 
     const rightmostX = Math.max(...elements.map(el => el.bounds.x + el.bounds.width));
     
@@ -296,25 +382,52 @@ export class ArrangeManager {
       const deltaX = rightmostX - (element.bounds.x + element.bounds.width);
       this.moveElement(element, { x: deltaX, y: 0 });
     });
-
-    const editorState = useEditorStore.getState();
-    editorState.pushToHistory();
   }
 
   alignTop() {
-    // Check if we have pure command selection - use optimized command actions
+    // Special handling for pure command selections - use unique positions
     if (this.isPureCommandSelection()) {
-      const { selection } = useEditorStore.getState();
-      if (selection.selectedCommands.length < 2) return;
+      const { paths, selection } = useEditorStore.getState();
+      const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
       
+      selection.selectedCommands.forEach(id => {
+        for (const path of paths) {
+          for (const subPath of path.subPaths) {
+            const cmd = subPath.commands.find(c => c.id === id);
+            if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+              commandsWithContext.push({
+                command: cmd,
+                subPathCommands: subPath.commands
+              });
+              return;
+            }
+          }
+        }
+      });
+
+      const uniquePositions = getUniqueCommandPositions(commandsWithContext);
+      if (uniquePositions.length < 2) return;
+
+      // IMPORTANT: Push to history BEFORE making changes
       const editorState = useEditorStore.getState();
-      editorState.alignCommandsTop(selection.selectedCommands);
       editorState.pushToHistory();
+
+      const topmostY = Math.min(...uniquePositions.map(pos => pos.position.y));
+
+      uniquePositions.forEach(posGroup => {
+        posGroup.commands.forEach(cmd => {
+          editorState.updateCommand(cmd.id, { y: topmostY });
+        });
+      });
       return;
     }
 
     const elements = this.getSelectedElements();
     if (elements.length < 2) return;
+
+    // IMPORTANT: Push to history BEFORE making changes
+    const editorState = useEditorStore.getState();
+    editorState.pushToHistory();
 
     const topmostY = Math.min(...elements.map(el => el.bounds.y));
     
@@ -322,20 +435,44 @@ export class ArrangeManager {
       const deltaY = topmostY - element.bounds.y;
       this.moveElement(element, { x: 0, y: deltaY });
     });
-
-    const editorState = useEditorStore.getState();
-    editorState.pushToHistory();
   }
 
   alignMiddle() {
-    // Check if we have pure command selection - use optimized command actions
+    // Special handling for pure command selections - use unique positions
     if (this.isPureCommandSelection()) {
-      const { selection } = useEditorStore.getState();
-      if (selection.selectedCommands.length < 2) return;
+      const { paths, selection } = useEditorStore.getState();
+      const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
       
+      selection.selectedCommands.forEach(id => {
+        for (const path of paths) {
+          for (const subPath of path.subPaths) {
+            const cmd = subPath.commands.find(c => c.id === id);
+            if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+              commandsWithContext.push({
+                command: cmd,
+                subPathCommands: subPath.commands
+              });
+              return;
+            }
+          }
+        }
+      });
+
+      const uniquePositions = getUniqueCommandPositions(commandsWithContext);
+      if (uniquePositions.length < 2) return;
+
+      // IMPORTANT: Push to history BEFORE making changes
       const editorState = useEditorStore.getState();
-      editorState.alignCommandsMiddle(selection.selectedCommands);
       editorState.pushToHistory();
+
+      const allY = uniquePositions.map(pos => pos.position.y);
+      const centerY = (Math.min(...allY) + Math.max(...allY)) / 2;
+
+      uniquePositions.forEach(posGroup => {
+        posGroup.commands.forEach(cmd => {
+          editorState.updateCommand(cmd.id, { y: centerY });
+        });
+      });
       return;
     }
 
@@ -345,29 +482,60 @@ export class ArrangeManager {
     const overallBounds = this.getOverallBounds(elements);
     if (!overallBounds) return;
 
+    // IMPORTANT: Push to history BEFORE making changes
+    const editorState = useEditorStore.getState();
+    editorState.pushToHistory();
+
     elements.forEach((element) => {
       const deltaY = overallBounds.centerY - element.bounds.centerY;
       this.moveElement(element, { x: 0, y: deltaY });
     });
-
-    const editorState = useEditorStore.getState();
-    editorState.pushToHistory();
   }
 
   alignBottom() {
-    // Check if we have pure command selection - use optimized command actions
+    // Special handling for pure command selections - use unique positions
     if (this.isPureCommandSelection()) {
-      const { selection } = useEditorStore.getState();
-      if (selection.selectedCommands.length < 2) return;
+      const { paths, selection } = useEditorStore.getState();
+      const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
       
+      selection.selectedCommands.forEach(id => {
+        for (const path of paths) {
+          for (const subPath of path.subPaths) {
+            const cmd = subPath.commands.find(c => c.id === id);
+            if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+              commandsWithContext.push({
+                command: cmd,
+                subPathCommands: subPath.commands
+              });
+              return;
+            }
+          }
+        }
+      });
+
+      const uniquePositions = getUniqueCommandPositions(commandsWithContext);
+      if (uniquePositions.length < 2) return;
+
+      // IMPORTANT: Push to history BEFORE making changes
       const editorState = useEditorStore.getState();
-      editorState.alignCommandsBottom(selection.selectedCommands);
       editorState.pushToHistory();
+
+      const bottommostY = Math.max(...uniquePositions.map(pos => pos.position.y));
+
+      uniquePositions.forEach(posGroup => {
+        posGroup.commands.forEach(cmd => {
+          editorState.updateCommand(cmd.id, { y: bottommostY });
+        });
+      });
       return;
     }
 
     const elements = this.getSelectedElements();
     if (elements.length < 2) return;
+
+    // IMPORTANT: Push to history BEFORE making changes
+    const editorState = useEditorStore.getState();
+    editorState.pushToHistory();
 
     const bottommostY = Math.max(...elements.map(el => el.bounds.y + el.bounds.height));
     
@@ -375,27 +543,65 @@ export class ArrangeManager {
       const deltaY = bottommostY - (element.bounds.y + element.bounds.height);
       this.moveElement(element, { x: 0, y: deltaY });
     });
-
-    const editorState = useEditorStore.getState();
-    editorState.pushToHistory();
   }
 
   // Distribution operations
   distributeHorizontally() {
-    // Check if we have pure command selection - use optimized command actions
-    // Note: Command actions handle coincident points (e.g., first/last point overlap)
+    // Special handling for pure command selections - use unique positions
+    // Note: This handles coincident points (e.g., first/last point overlap)
     if (this.isPureCommandSelection()) {
-      const { selection } = useEditorStore.getState();
-      if (selection.selectedCommands.length < 3) return;
+      const { paths, selection } = useEditorStore.getState();
+      const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
       
+      selection.selectedCommands.forEach(id => {
+        for (const path of paths) {
+          for (const subPath of path.subPaths) {
+            const cmd = subPath.commands.find(c => c.id === id);
+            if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+              commandsWithContext.push({
+                command: cmd,
+                subPathCommands: subPath.commands
+              });
+              return;
+            }
+          }
+        }
+      });
+
+      const uniquePositions = getUniqueCommandPositions(commandsWithContext);
+      if (uniquePositions.length < 3) return;
+
+      // IMPORTANT: Push to history BEFORE making changes
       const editorState = useEditorStore.getState();
-      editorState.distributeCommandsHorizontally(selection.selectedCommands);
       editorState.pushToHistory();
+
+      // Sort by current X position
+      const sortedPositions = [...uniquePositions].sort((a, b) => a.position.x - b.position.x);
+
+      const leftmostX = sortedPositions[0].position.x;
+      const rightmostX = sortedPositions[sortedPositions.length - 1].position.x;
+      const totalDistance = rightmostX - leftmostX;
+      const spacing = totalDistance / (sortedPositions.length - 1);
+
+      sortedPositions.forEach((posGroup, index) => {
+        if (index === 0 || index === sortedPositions.length - 1) return; // Skip first and last
+        
+        const targetX = leftmostX + (spacing * index);
+        
+        // Move all commands in this position group to the new X position
+        posGroup.commands.forEach(cmd => {
+          editorState.updateCommand(cmd.id, { x: targetX });
+        });
+      });
       return;
     }
 
     const elements = this.getSelectedElements();
     if (elements.length < 3) return;
+
+    // IMPORTANT: Push to history BEFORE making changes
+    const editorState = useEditorStore.getState();
+    editorState.pushToHistory();
 
     // Sort by current X position
     const sortedElements = [...elements].sort((a, b) => a.bounds.centerX - b.bounds.centerX);
@@ -413,26 +619,64 @@ export class ArrangeManager {
       
       this.moveElement(element, { x: deltaX, y: 0 });
     });
-
-    const editorState = useEditorStore.getState();
-    editorState.pushToHistory();
   }
 
   distributeVertically() {
-    // Check if we have pure command selection - use optimized command actions
-    // Note: Command actions handle coincident points (e.g., first/last point overlap)
+    // Special handling for pure command selections - use unique positions
+    // Note: This handles coincident points (e.g., first/last point overlap)
     if (this.isPureCommandSelection()) {
-      const { selection } = useEditorStore.getState();
-      if (selection.selectedCommands.length < 3) return;
+      const { paths, selection } = useEditorStore.getState();
+      const commandsWithContext: Array<{ command: SVGCommand; subPathCommands: SVGCommand[] }> = [];
       
+      selection.selectedCommands.forEach(id => {
+        for (const path of paths) {
+          for (const subPath of path.subPaths) {
+            const cmd = subPath.commands.find(c => c.id === id);
+            if (cmd && isCommandArrangeable(cmd, subPath.commands)) {
+              commandsWithContext.push({
+                command: cmd,
+                subPathCommands: subPath.commands
+              });
+              return;
+            }
+          }
+        }
+      });
+
+      const uniquePositions = getUniqueCommandPositions(commandsWithContext);
+      if (uniquePositions.length < 3) return;
+
+      // IMPORTANT: Push to history BEFORE making changes
       const editorState = useEditorStore.getState();
-      editorState.distributeCommandsVertically(selection.selectedCommands);
       editorState.pushToHistory();
+
+      // Sort by current Y position
+      const sortedPositions = [...uniquePositions].sort((a, b) => a.position.y - b.position.y);
+
+      const topmostY = sortedPositions[0].position.y;
+      const bottommostY = sortedPositions[sortedPositions.length - 1].position.y;
+      const totalDistance = bottommostY - topmostY;
+      const spacing = totalDistance / (sortedPositions.length - 1);
+
+      sortedPositions.forEach((posGroup, index) => {
+        if (index === 0 || index === sortedPositions.length - 1) return; // Skip first and last
+        
+        const targetY = topmostY + (spacing * index);
+        
+        // Move all commands in this position group to the new Y position
+        posGroup.commands.forEach(cmd => {
+          editorState.updateCommand(cmd.id, { y: targetY });
+        });
+      });
       return;
     }
 
     const elements = this.getSelectedElements();
     if (elements.length < 3) return;
+
+    // IMPORTANT: Push to history BEFORE making changes
+    const editorState = useEditorStore.getState();
+    editorState.pushToHistory();
 
     // Sort by current Y position
     const sortedElements = [...elements].sort((a, b) => a.bounds.centerY - b.bounds.centerY);
@@ -450,9 +694,6 @@ export class ArrangeManager {
       
       this.moveElement(element, { x: 0, y: deltaY });
     });
-
-    const editorState = useEditorStore.getState();
-    editorState.pushToHistory();
   }
 
   // Stretch operations - Only available for subpaths as other elements don't support scaling

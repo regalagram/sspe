@@ -15,6 +15,8 @@ import { ReorderManager } from '../../../plugins/reorder/ReorderManager';
 import { duplicatePath } from '../../../utils/duplicate-utils';
 import { generateId } from '../../../utils/id-utils';
 import { duplicateSelected, deleteSelected } from './commonActions';
+import { createGenericArrangeActions } from '../../../utils/floating-arrange-actions';
+import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';
 
 // Calculate group bounds
 const calculateGroupBounds = (group: any) => {
@@ -451,6 +453,57 @@ const ungroupSelected = () => {
   });
 };
 
+// Group arrange actions helper functions
+const getGroupSelectionCount = () => {
+  const store = useEditorStore.getState();
+  return store.selection.selectedGroups.length;
+};
+
+const setupArrangeManagerForGroup = () => {
+  const store = useEditorStore.getState();
+  arrangeManager.setEditorStore(store);
+};
+
+// Create group-specific arrange actions (alignment/distribution, not z-order)
+const createGroupAlignArrangeActions = () => createGenericArrangeActions(
+  'groups',
+  getGroupSelectionCount,
+  {
+    alignLeft: () => {
+      setupArrangeManagerForGroup();
+      arrangeManager.alignLeft();
+    },
+    alignCenter: () => {
+      setupArrangeManagerForGroup();
+      arrangeManager.alignCenter();
+    },
+    alignRight: () => {
+      setupArrangeManagerForGroup();
+      arrangeManager.alignRight();
+    },
+    alignTop: () => {
+      setupArrangeManagerForGroup();
+      arrangeManager.alignTop();
+    },
+    alignMiddle: () => {
+      setupArrangeManagerForGroup();
+      arrangeManager.alignMiddle();
+    },
+    alignBottom: () => {
+      setupArrangeManagerForGroup();
+      arrangeManager.alignBottom();
+    },
+    distributeHorizontally: () => {
+      setupArrangeManagerForGroup();
+      arrangeManager.distributeHorizontally();
+    },
+    distributeVertically: () => {
+      setupArrangeManagerForGroup();
+      arrangeManager.distributeVertically();
+    }
+  }
+);
+
 export const groupActions: ToolbarAction[] = [
   {
     id: 'ungroup',
@@ -461,6 +514,8 @@ export const groupActions: ToolbarAction[] = [
     priority: 100,
     tooltip: 'Ungroup elements'
   },
+  // Add align/distribute arrange actions for group elements
+  ...createGroupAlignArrangeActions(),
   {
     id: 'duplicate-group',
     icon: Copy,

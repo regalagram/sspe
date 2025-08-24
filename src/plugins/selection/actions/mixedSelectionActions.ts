@@ -2,6 +2,8 @@ import { Copy, Trash2, RotateCcw, Lock, Group } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected } from './commonActions';
+import { createGenericArrangeActions } from '../../../utils/floating-arrange-actions';
+import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';
 
 // Clear mixed style
 const clearMixedStyle = () => {
@@ -348,6 +350,63 @@ const groupMixedSelected = () => {
   }
 };
 
+// Mixed selection arrange actions helper functions
+const getMixedSelectionCount = () => {
+  const store = useEditorStore.getState();
+  const { selection } = store;
+  return selection.selectedPaths.length + 
+         selection.selectedSubPaths.length + 
+         selection.selectedTexts.length + 
+         selection.selectedImages.length + 
+         selection.selectedUses.length + 
+         selection.selectedGroups.length;
+};
+
+const setupArrangeManagerForMixed = () => {
+  const store = useEditorStore.getState();
+  arrangeManager.setEditorStore(store);
+};
+
+// Create mixed selection-specific arrange actions
+const createMixedArrangeActions = () => createGenericArrangeActions(
+  'mixed-selection',
+  getMixedSelectionCount,
+  {
+    alignLeft: () => {
+      setupArrangeManagerForMixed();
+      arrangeManager.alignLeft();
+    },
+    alignCenter: () => {
+      setupArrangeManagerForMixed();
+      arrangeManager.alignCenter();
+    },
+    alignRight: () => {
+      setupArrangeManagerForMixed();
+      arrangeManager.alignRight();
+    },
+    alignTop: () => {
+      setupArrangeManagerForMixed();
+      arrangeManager.alignTop();
+    },
+    alignMiddle: () => {
+      setupArrangeManagerForMixed();
+      arrangeManager.alignMiddle();
+    },
+    alignBottom: () => {
+      setupArrangeManagerForMixed();
+      arrangeManager.alignBottom();
+    },
+    distributeHorizontally: () => {
+      setupArrangeManagerForMixed();
+      arrangeManager.distributeHorizontally();
+    },
+    distributeVertically: () => {
+      setupArrangeManagerForMixed();
+      arrangeManager.distributeVertically();
+    }
+  }
+);
+
 export const mixedSelectionActions: ToolbarAction[] = [
   {
     id: 'mixed-group',
@@ -358,6 +417,8 @@ export const mixedSelectionActions: ToolbarAction[] = [
     priority: 100,
     tooltip: 'Group selected elements'
   },
+  // Add arrange actions for mixed selections
+  ...createMixedArrangeActions(),
   {
     id: 'mixed-duplicate',
     icon: Copy,

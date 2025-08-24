@@ -2,6 +2,8 @@ import { Copy, Trash2, Lock, Group, PaintBucket } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected } from './commonActions';
+import { createGenericArrangeActions } from '../../../utils/floating-arrange-actions';
+import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';
 
 // Check if selected texts are locked
 const areTextsLocked = (): boolean => {
@@ -104,6 +106,58 @@ const areTextsCompatibleForFormatCopy = (): boolean => {
   return totalSelected > 0;
 };
 
+// Text arrange actions helper functions
+const getTextSelectionCount = () => {
+  const store = useEditorStore.getState();
+  return store.selection.selectedTexts.length + store.selection.selectedTextPaths.length;
+};
+
+const setupArrangeManagerForText = () => {
+  const store = useEditorStore.getState();
+  arrangeManager.setEditorStore(store);
+};
+
+// Create text-specific arrange actions using the new reusable component
+const createTextArrangeActions = () => createGenericArrangeActions(
+  'texts',
+  getTextSelectionCount,
+  {
+    alignLeft: () => {
+      setupArrangeManagerForText();
+      arrangeManager.alignLeft();
+    },
+    alignCenter: () => {
+      setupArrangeManagerForText();
+      arrangeManager.alignCenter();
+    },
+    alignRight: () => {
+      setupArrangeManagerForText();
+      arrangeManager.alignRight();
+    },
+    alignTop: () => {
+      setupArrangeManagerForText();
+      arrangeManager.alignTop();
+    },
+    alignMiddle: () => {
+      setupArrangeManagerForText();
+      arrangeManager.alignMiddle();
+    },
+    alignBottom: () => {
+      setupArrangeManagerForText();
+      arrangeManager.alignBottom();
+    },
+    distributeHorizontally: () => {
+      setupArrangeManagerForText();
+      arrangeManager.distributeHorizontally();
+    },
+    distributeVertically: () => {
+      setupArrangeManagerForText();
+      arrangeManager.distributeVertically();
+    }
+  }
+);
+
+
 export const textActions: ToolbarAction[] = [
   {
     id: 'copy-text-format',
@@ -132,6 +186,8 @@ export const textActions: ToolbarAction[] = [
       return store.selection.selectedTexts.length >= 2;
     }
   },
+  // Add arrange actions for text elements using the new reusable component
+  ...createTextArrangeActions(),
   {
     id: 'duplicate-text',
     icon: Copy,

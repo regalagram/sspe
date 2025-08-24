@@ -4,6 +4,7 @@ import {
   LineSquiggle, 
   Waves, 
   Minimize2, 
+  Maximize2,
   Layers, 
   Filter, 
   Play, 
@@ -16,6 +17,7 @@ import {
 } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
+import { createSubPathArrangeActions } from '../../../utils/floating-arrange-actions';
 import {
   createDropShadowFilter,
   createBlurFilter,
@@ -745,6 +747,8 @@ export const subPathActions: ToolbarAction[] = [
       return store.selection.selectedSubPaths.length >= 2;
     }
   },
+  // Add arrange actions - spread the array to include all arrange options
+  ...createSubPathArrangeActions(),
   {
     id: 'subpath-fill-color',
     icon: Palette,
@@ -795,7 +799,7 @@ export const subPathActions: ToolbarAction[] = [
   },
   {
     id: 'subpath-smooth',
-    icon: Waves,
+    icon: Maximize2,
     label: 'Smooth',
     type: 'button',
     action: smoothSubPaths,
