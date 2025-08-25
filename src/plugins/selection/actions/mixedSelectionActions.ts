@@ -1,4 +1,4 @@
-import { Copy, Trash2, RotateCcw, Lock, Group, ArrowUp } from 'lucide-react';
+import { Copy, Trash2, RotateCcw, Lock, Group, ArrowUp, Layers } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected } from './commonActions';

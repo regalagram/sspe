@@ -1,4 +1,4 @@
-import { ArrowUp, ArrowDown } from 'lucide-react';
+import { Layers, ArrowUp, ArrowDown } from 'lucide-react';
 import { ToolbarAction } from '../types/floatingToolbar';
 import { useEditorStore } from '../store/editorStore';
 import { ReorderManager } from '../plugins/reorder/ReorderManager';
@@ -16,8 +16,8 @@ export const createReorderActions = (
 
   return [
     {
-      id: `reorder-${elementType}`,
-      icon: ArrowUp,
+      id: `${elementType}-reorder`,
+      icon: Layers,
       label: 'Reorder',
       type: 'dropdown',
       dropdown: {
@@ -26,20 +26,19 @@ export const createReorderActions = (
             id: `${elementType}-bring-front`,
             label: 'Bring to Front',
             icon: ArrowUp,
-            action: reorderActions.bringToFront
+            action: reorderActions.bringToFront,
           },
           {
             id: `${elementType}-send-back`,
             label: 'Send to Back',
             icon: ArrowDown,
-            action: reorderActions.sendToBack
-          }
-        ]
+            action: reorderActions.sendToBack,
+          },
+        ],
       },
       priority: 14,
-      tooltip: 'Change stacking order',
-      visible: hasSelection
-    }
+      tooltip: 'Reorder elements',
+    } as ToolbarAction,
   ];
 };
 
