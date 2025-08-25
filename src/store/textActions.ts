@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { EditorState, TextElementType, TextElement, MultilineTextElement, TextStyle, Point } from '../types';
 import { generateId } from '../utils/id-utils';
+import { calculateSmartDuplicationOffset } from '../utils/duplication-positioning';
 
 export interface TextActions {
   // Text creation
@@ -255,11 +256,39 @@ export const createTextActions: StateCreator<
     const text = state.texts.find(t => t.id === textId);
     if (!text) return null;
     
+    // Create temporary selection to calculate smart offset
+    const tempSelection = {
+      selectedTexts: [textId],
+      selectedPaths: [],
+      selectedSubPaths: [],
+      selectedCommands: [],
+      selectedControlPoints: [],
+      selectedTextSpans: [],
+      selectedTextPaths: [],
+      selectedGroups: [],
+      selectedImages: [],
+      selectedClipPaths: [],
+      selectedMasks: [],
+      selectedFilters: [],
+      selectedFilterPrimitives: [],
+      selectedMarkers: [],
+      selectedSymbols: [],
+      selectedUses: [],
+      selectedAnimations: [],
+      selectedGradients: [],
+      selectedGradientStops: [],
+    };
+    
+    const offset = calculateSmartDuplicationOffset(tempSelection);
+    
+    // For individual text duplication (used in mixed selections), 
+    // use simple relative positioning as it maintains the expected behavior
+    // where each element is offset individually from its original position
     const newText: TextElementType = {
       ...text,
       id: generateId(),
-      x: text.x + 20,
-      y: text.y + 20
+      x: text.x + offset.x,
+      y: text.y + offset.y
     };
     
     set(state => ({

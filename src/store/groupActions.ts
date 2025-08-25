@@ -6,6 +6,7 @@ import { TextActions } from './textActions';
 import { SVGElementActions } from './svgElementActions';
 import { generateGroupSVG, downloadGroupSVG } from '../utils/group-svg-utils';
 import { duplicatePath } from '../utils/duplicate-utils';
+import { calculateSmartDuplicationOffset } from '../utils/duplication-positioning';
 
 export interface GroupActions {
   // Group creation and management
@@ -686,8 +687,33 @@ export const createGroupActions: StateCreator<
       return null;
     }
 
-    // Use custom offset if provided, otherwise use default
-    const offset = customOffset || { x: 20, y: 20 };
+    // Use custom offset if provided, otherwise calculate smart offset
+    let offset = customOffset;
+    if (!offset) {
+      const tempSelection = {
+        selectedGroups: [groupId],
+        selectedPaths: [],
+        selectedSubPaths: [],
+        selectedCommands: [],
+        selectedControlPoints: [],
+        selectedTexts: [],
+        selectedTextSpans: [],
+        selectedTextPaths: [],
+        selectedImages: [],
+        selectedClipPaths: [],
+        selectedMasks: [],
+        selectedFilters: [],
+        selectedFilterPrimitives: [],
+        selectedMarkers: [],
+        selectedSymbols: [],
+        selectedUses: [],
+        selectedAnimations: [],
+        selectedGradients: [],
+        selectedGradientStops: [],
+      };
+      offset = calculateSmartDuplicationOffset(tempSelection);
+    }
+    
     const newGroupId = generateId();
     
     // Duplicate all child elements and collect their new IDs

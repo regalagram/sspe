@@ -1219,24 +1219,89 @@ export class FloatingToolbarManager {
           // Push to history before making changes
           store.pushToHistory();
 
-          // Duplicate texts
-          const newTextIds: string[] = [];
-          selection.selectedTexts.forEach(textId => {
-            const newTextId = store.duplicateText(textId);
-            if (newTextId) newTextIds.push(newTextId);
-          });
-
-          // Use existing duplicateSelection for paths/subpaths/commands
-          if (selection.selectedPaths.length > 0 || selection.selectedSubPaths.length > 0 || selection.selectedCommands.length > 0) {
-            store.duplicateSelection();
-          }
-
-          // If we only duplicated texts, select them
-          if (newTextIds.length > 0 && selection.selectedPaths.length === 0 && selection.selectedSubPaths.length === 0) {
-            store.clearSelection();
-            newTextIds.forEach((textId, index) => {
-              store.selectText(textId, index > 0);
+          // For text-only selections, use the corrected absolute positioning logic
+          if (selection.selectedTexts.length > 0 && 
+              selection.selectedPaths.length === 0 && 
+              selection.selectedSubPaths.length === 0 && 
+              selection.selectedCommands.length === 0 &&
+              selection.selectedImages.length === 0 &&
+              selection.selectedUses.length === 0 &&
+              selection.selectedGroups.length === 0) {
+            
+            // Import duplication utilities
+            import('../../utils/duplication-positioning').then(({ calculateSmartDuplicationOffset, getUnifiedSelectionBounds }) => {
+              import('../../utils/id-utils').then(({ generateId }) => {
+                // Get the unified bounds of all selected texts
+                const unifiedBounds = getUnifiedSelectionBounds(selection);
+                if (!unifiedBounds) return;
+                
+                // Calculate offset for positioning from bottom-right corner
+                const offset = calculateSmartDuplicationOffset(selection);
+                
+                // Calculate the bottom-right corner of the entire selection
+                const bottomRightX = unifiedBounds.x + unifiedBounds.width;
+                const bottomRightY = unifiedBounds.y + unifiedBounds.height;
+                
+                // The target position for the duplicated selection's top-left corner
+                const targetTopLeftX = bottomRightX + (offset.x - unifiedBounds.width);
+                const targetTopLeftY = bottomRightY + (offset.y - unifiedBounds.height);
+                
+                const newTextIds: string[] = [];
+                
+                selection.selectedTexts.forEach(textId => {
+                  const text = store.texts.find(t => t.id === textId);
+                  if (text) {
+                    const newTextId = generateId();
+                    
+                    // Calculate relative position within the original selection
+                    const relativeX = text.x - unifiedBounds.x;
+                    const relativeY = text.y - unifiedBounds.y;
+                    
+                    // Position in the duplicated selection maintaining relative position
+                    const newText = {
+                      ...text,
+                      id: newTextId,
+                      x: targetTopLeftX + relativeX,
+                      y: targetTopLeftY + relativeY
+                    };
+                    
+                    useEditorStore.setState(state => ({
+                      texts: [...state.texts, newText]
+                    }));
+                    newTextIds.push(newTextId);
+                  }
+                });
+                
+                // Select the new duplicated texts
+                if (newTextIds.length > 0) {
+                  store.clearSelection();
+                  newTextIds.forEach((textId, index) => {
+                    store.selectText(textId, index > 0);
+                  });
+                }
+              });
             });
+          } else {
+            // For mixed selections or non-text selections, use existing logic
+            // Duplicate texts individually (for mixed selections)
+            const newTextIds: string[] = [];
+            selection.selectedTexts.forEach(textId => {
+              const newTextId = store.duplicateText(textId);
+              if (newTextId) newTextIds.push(newTextId);
+            });
+
+            // Use existing duplicateSelection for paths/subpaths/commands
+            if (selection.selectedPaths.length > 0 || selection.selectedSubPaths.length > 0 || selection.selectedCommands.length > 0) {
+              store.duplicateSelection();
+            }
+
+            // If we only duplicated texts, select them
+            if (newTextIds.length > 0 && selection.selectedPaths.length === 0 && selection.selectedSubPaths.length === 0) {
+              store.clearSelection();
+              newTextIds.forEach((textId, index) => {
+                store.selectText(textId, index > 0);
+              });
+            }
           }
         });
       }

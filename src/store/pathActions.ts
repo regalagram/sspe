@@ -4,6 +4,7 @@ import { generateId } from '../utils/id-utils.js';
 import { duplicatePath, duplicateSubPath, duplicateCommand } from '../utils/duplicate-utils';
 import { createNewPath } from '../utils/subpath-utils';
 import { getAllPathsBounds, snapToGrid, getSelectedElementsBounds } from '../utils/path-utils';
+import { calculateSmartDuplicationOffset } from '../utils/duplication-positioning';
 
 export interface PathActions {
   addPath: (style?: PathStyle, x?: number, y?: number) => string;
@@ -312,7 +313,11 @@ export const createPathActions: StateCreator<
       const { selection, paths } = state;
       let newPaths = [...paths];
       let newSelection = { ...selection };
-      const OFFSET = 32;
+      
+      // Use the new smart duplication offset calculation
+      const offset = calculateSmartDuplicationOffset(selection);
+      const dx = offset.x;
+      const dy = offset.y;
       function offsetCommand(cmd: SVGCommand, dx: number, dy: number): SVGCommand {
         return {
           ...cmd,
@@ -336,27 +341,7 @@ export const createPathActions: StateCreator<
           subPaths: path.subPaths.map(sp => offsetSubPath(sp, dx, dy)),
         };
       }
-      let bounds: import('../types').BoundingBox | null = null;
-      if (selection.selectedPaths.length > 0) {
-        bounds = getAllPathsBounds(paths.filter(p => selection.selectedPaths.includes(p.id)));
-      } else if (selection.selectedSubPaths.length > 0) {
-        const selectedSubPaths: SVGSubPath[] = [];
-        paths.forEach(path => {
-          path.subPaths.forEach(subPath => {
-            if (selection.selectedSubPaths.includes(subPath.id)) {
-              selectedSubPaths.push(subPath);
-            }
-          });
-        });
-        if (selectedSubPaths.length > 0) {
-          const tempPaths = selectedSubPaths.map(sp => ({ id: '', subPaths: [sp], style: {} }));
-          bounds = getAllPathsBounds(tempPaths);
-        }
-      } else if (selection.selectedCommands.length > 0) {
-        bounds = getSelectedElementsBounds(paths, selection.selectedCommands);
-      }
-      const dx = bounds ? (bounds.width > 0 ? bounds.width + OFFSET : OFFSET) : OFFSET;
-      const dy = bounds ? (bounds.height > 0 ? bounds.height + OFFSET : OFFSET) : OFFSET;
+      
       if (selection.selectedPaths.length > 0) {
         const duplicated = selection.selectedPaths.map(pathId => {
           const orig = paths.find(p => p.id === pathId);

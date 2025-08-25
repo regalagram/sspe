@@ -5,6 +5,7 @@ import { BoundingBox } from '../../../types';
 import { getTextBoundingBox, getImageBoundingBox, getPathBoundingBox, getGroupBoundingBox } from '../../../utils/bbox-utils';
 import { duplicatePath } from '../../../utils/duplicate-utils';
 import { generateId } from '../../../utils/id-utils';
+import { calculateSmartDuplicationOffset, getUnifiedSelectionBounds } from '../../../utils/duplication-positioning';
 
 // Calculate bounding box of all selected elements
 export const getSelectedElementsBounds = (): BoundingBox | null => {
@@ -108,11 +109,20 @@ export const duplicateSelected = () => {
   // Push to history before making changes
   store.pushToHistory();
   
-  // Calculate dynamic offset based on all selected elements
-  const bounds = getSelectedElementsBounds();
-  const OFFSET = 32;
-  const dx = bounds ? (bounds.width > 0 ? bounds.width + OFFSET : OFFSET) : OFFSET;
-  const dy = bounds ? (bounds.height > 0 ? bounds.height + OFFSET : OFFSET) : OFFSET;
+  // Get the unified bounds of the entire selection
+  const unifiedBounds = getUnifiedSelectionBounds(store.selection);
+  if (!unifiedBounds) return;
+  
+  // Calculate offset for positioning from bottom-right corner
+  const offset = calculateSmartDuplicationOffset(store.selection);
+  
+  // Calculate the bottom-right corner of the entire selection
+  const bottomRightX = unifiedBounds.x + unifiedBounds.width;
+  const bottomRightY = unifiedBounds.y + unifiedBounds.height;
+  
+  // The target position for the duplicated selection's top-left corner
+  const targetTopLeftX = bottomRightX + (offset.x - unifiedBounds.width);
+  const targetTopLeftY = bottomRightY + (offset.y - unifiedBounds.height);
   
   // Track new element IDs for selection update
   const newElementIds = {
@@ -140,17 +150,25 @@ export const duplicateSelected = () => {
   // Duplicate individual texts (only if not part of a selected group)
   store.selection.selectedTexts.forEach(textId => {
     if (!groupChildrenIds.has(textId)) {
-      const newTextId = store.duplicateText(textId);
-      if (newTextId) {
+      const text = store.texts.find(t => t.id === textId);
+      if (text) {
+        const newTextId = generateId();
+        
+        // Calculate relative position within the original selection
+        const relativeX = text.x - unifiedBounds.x;
+        const relativeY = text.y - unifiedBounds.y;
+        
+        const newText = {
+          ...text,
+          id: newTextId,
+          x: targetTopLeftX + relativeX,
+          y: targetTopLeftY + relativeY
+        };
+        
+        useEditorStore.setState(state => ({
+          texts: [...state.texts, newText]
+        }));
         newElementIds.texts.push(newTextId);
-        // Update position with dynamic offset instead of the default 20px
-        const newText = store.texts.find(t => t.id === newTextId);
-        if (newText) {
-          store.updateText(newTextId, {
-            x: newText.x - 20 + dx, // Remove default 20px offset and apply dynamic offset
-            y: newText.y - 20 + dy
-          });
-        }
       }
     }
   });
@@ -161,11 +179,16 @@ export const duplicateSelected = () => {
       const image = store.images.find(img => img.id === imageId);
       if (image) {
         const newImageId = generateId();
+        
+        // Calculate relative position within the original selection
+        const relativeX = (image.x || 0) - unifiedBounds.x;
+        const relativeY = (image.y || 0) - unifiedBounds.y;
+        
         const newImage = {
           ...image,
           id: newImageId,
-          x: (image.x || 0) + dx,
-          y: (image.y || 0) + dy
+          x: targetTopLeftX + relativeX,
+          y: targetTopLeftY + relativeY
         };
         
         useEditorStore.setState(state => ({
@@ -182,11 +205,16 @@ export const duplicateSelected = () => {
       const use = store.uses.find(u => u.id === useId);
       if (use) {
         const newUseId = generateId();
+        
+        // Calculate relative position within the original selection
+        const relativeX = (use.x || 0) - unifiedBounds.x;
+        const relativeY = (use.y || 0) - unifiedBounds.y;
+        
         const newUse = {
           ...use,
           id: newUseId,
-          x: (use.x || 0) + dx,
-          y: (use.y || 0) + dy
+          x: targetTopLeftX + relativeX,
+          y: targetTopLeftY + relativeY
         };
         
         useEditorStore.setState(state => ({
@@ -197,9 +225,11 @@ export const duplicateSelected = () => {
     }
   });
 
-  // Duplicate groups using the existing duplicateGroup method with dynamic offset
+  // For groups, we still need to use the relative offset approach since group duplication
+  // handles internal positioning differently
+  const groupOffset = { x: offset.x, y: offset.y };
   store.selection.selectedGroups.forEach(groupId => {
-    const newGroupId = store.duplicateGroup(groupId, { x: dx, y: dy });
+    const newGroupId = store.duplicateGroup(groupId, groupOffset);
     if (newGroupId) {
       newElementIds.groups.push(newGroupId);
     }

@@ -18,9 +18,11 @@ import {
 } from 'lucide-react';
 import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { useEditorStore } from '../../store/editorStore';
-import { textEditManager } from '../../managers/TextEditManager';
+import { calculateSmartDuplicationOffset, getUnifiedSelectionBounds } from '../../utils/duplication-positioning';
 import { getTextBoundingBox, getImageBoundingBox, getPathBoundingBox, getGroupBoundingBox } from '../../utils/bbox-utils';
 import { BoundingBox } from '../../types';
+import { generateId } from '../../utils/id-utils';
+import { textEditManager } from '../../managers/TextEditManager';
 import {
   createDropShadowFilter,
   createBlurFilter,
@@ -396,127 +398,52 @@ const textFilterOptions = [
   { id: 'text-more-filters', label: 'More ...', action: openFilterPanelForText }
 ];
 
-// Calculate bounding box of all selected elements
-const getSelectedElementsBounds = (): BoundingBox | null => {
-  const store = useEditorStore.getState();
-  const { selection, paths, texts, images, uses, groups } = store;
-  
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-  let hasElements = false;
-
-  // Include selected paths
-  selection.selectedPaths.forEach(pathId => {
-    const path = paths.find(p => p.id === pathId);
-    if (path) {
-      const bbox = getPathBoundingBox(path);
-      if (bbox) {
-        minX = Math.min(minX, bbox.x);
-        maxX = Math.max(maxX, bbox.x + bbox.width);
-        minY = Math.min(minY, bbox.y);
-        maxY = Math.max(maxY, bbox.y + bbox.height);
-        hasElements = true;
-      }
-    }
-  });
-
-  // Include selected texts
-  selection.selectedTexts.forEach(textId => {
-    const text = texts.find(t => t.id === textId);
-    if (text) {
-      const bbox = getTextBoundingBox(text);
-      minX = Math.min(minX, bbox.x);
-      maxX = Math.max(maxX, bbox.x + bbox.width);
-      minY = Math.min(minY, bbox.y);
-      maxY = Math.max(maxY, bbox.y + bbox.height);
-      hasElements = true;
-    }
-  });
-
-  // Include selected images
-  selection.selectedImages.forEach(imageId => {
-    const image = images.find(img => img.id === imageId);
-    if (image) {
-      const bbox = getImageBoundingBox(image);
-      minX = Math.min(minX, bbox.x);
-      maxX = Math.max(maxX, bbox.x + bbox.width);
-      minY = Math.min(minY, bbox.y);
-      maxY = Math.max(maxY, bbox.y + bbox.height);
-      hasElements = true;
-    }
-  });
-
-  // Include selected use elements
-  selection.selectedUses.forEach(useId => {
-    const use = uses.find(u => u.id === useId);
-    if (use) {
-      const bbox = {
-        x: use.x || 0,
-        y: use.y || 0,
-        width: use.width || 50,
-        height: use.height || 50
-      };
-      minX = Math.min(minX, bbox.x);
-      maxX = Math.max(maxX, bbox.x + bbox.width);
-      minY = Math.min(minY, bbox.y);
-      maxY = Math.max(maxY, bbox.y + bbox.height);
-      hasElements = true;
-    }
-  });
-
-  // Include selected groups
-  selection.selectedGroups.forEach(groupId => {
-    const group = groups.find(g => g.id === groupId);
-    if (group) {
-      const bbox = getGroupBoundingBox(group, paths, texts, images, groups);
-      minX = Math.min(minX, bbox.x);
-      maxX = Math.max(maxX, bbox.x + bbox.width);
-      minY = Math.min(minY, bbox.y);
-      maxY = Math.max(maxY, bbox.y + bbox.height);
-      hasElements = true;
-    }
-  });
-
-  if (!hasElements) {
-    return null;
-  }
-
-  return {
-    x: minX,
-    y: minY,
-    width: maxX - minX,
-    height: maxY - minY
-  };
-};
-
-// Duplicate selected texts using the built-in duplicateText method with dynamic offset
+// Duplicate selected texts using the built-in duplicateText method with smart positioning
 const duplicateTexts = () => {
   const store = useEditorStore.getState();
   store.pushToHistory();
   
-  // Calculate dynamic offset based on all selected elements
-  const bounds = getSelectedElementsBounds();
-  const OFFSET = 32;
-  const dx = bounds ? (bounds.width > 0 ? bounds.width + OFFSET : OFFSET) : OFFSET;
-  const dy = bounds ? (bounds.height > 0 ? bounds.height + OFFSET : OFFSET) : OFFSET;
-  
   const selectedTexts = store.selection.selectedTexts;
+  if (selectedTexts.length === 0) return;
+  
+  // Get the unified bounds of all selected texts
+  const unifiedBounds = getUnifiedSelectionBounds(store.selection);
+  if (!unifiedBounds) return;
+  
+  // Calculate offset for positioning from bottom-right corner
+  const offset = calculateSmartDuplicationOffset(store.selection);
+  
+  // Calculate the bottom-right corner of the entire selection
+  const bottomRightX = unifiedBounds.x + unifiedBounds.width;
+  const bottomRightY = unifiedBounds.y + unifiedBounds.height;
+  
+  // The target position for the duplicated selection's top-left corner
+  const targetTopLeftX = bottomRightX + (offset.x - unifiedBounds.width);
+  const targetTopLeftY = bottomRightY + (offset.y - unifiedBounds.height);
+  
   const newTextIds: string[] = [];
   
   selectedTexts.forEach(textId => {
-    const newTextId = store.duplicateText(textId);
-    if (newTextId) {
+    const text = store.texts.find(t => t.id === textId);
+    if (text) {
+      const newTextId = generateId();
+      
+      // Calculate relative position within the original selection
+      const relativeX = text.x - unifiedBounds.x;
+      const relativeY = text.y - unifiedBounds.y;
+      
+      // Position in the duplicated selection maintaining relative position
+      const newText = {
+        ...text,
+        id: newTextId,
+        x: targetTopLeftX + relativeX,
+        y: targetTopLeftY + relativeY
+      };
+      
+      useEditorStore.setState(state => ({
+        texts: [...state.texts, newText]
+      }));
       newTextIds.push(newTextId);
-      // Update position with dynamic offset instead of the default 20px
-      const newText = store.texts.find(t => t.id === newTextId);
-      if (newText) {
-        store.updateText(newTextId, {
-          x: newText.x - 20 + dx, // Remove default 20px offset and apply dynamic offset
-          y: newText.y - 20 + dy
-        });
-      }
     }
   });
   

@@ -120,20 +120,30 @@ export function getTextBoundingBox(text: TextElementType): BoundingBox {
   let estimatedHeight = fontSize * 1.2; // Include line height
   
   if (text.type === 'text') {
-    // Single line text
-    estimatedWidth = text.content.length * fontSize * 0.6; // Rough estimate
+    // Single line text - use more realistic width estimation
+    estimatedWidth = text.content.length * fontSize * 0.8; // More generous estimate
   } else if (text.type === 'multiline-text') {
     // Multiline text - use longest span
     estimatedWidth = text.spans.reduce((maxWidth, span) => {
-      const spanWidth = span.content.length * fontSize * 0.6;
+      const spanWidth = span.content.length * fontSize * 0.8;
       return Math.max(maxWidth, spanWidth);
     }, 0);
     estimatedHeight = text.spans.length * fontSize * 1.2;
   }
 
   // Calculate base bounding box (without transform)
-  const baseX = text.x;
-  const baseY = text.y - estimatedHeight * 0.8; // Adjust for text baseline
+  let baseX = text.x;
+  let baseY: number;
+  
+  if (text.type === 'multiline-text') {
+    // For multiline text, text.y is already the position of the first line (top)
+    // No baseline adjustment needed - the text spans down from this point
+    baseY = text.y;
+  } else {
+    // For single line text, text.y is the baseline, adjust to get top
+    baseY = text.y - estimatedHeight * 0.85; // Better baseline adjustment
+  }
+  
   const baseWidth = estimatedWidth;
   const baseHeight = estimatedHeight;
 

@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { EditorState, SVGImage, SVGClipPath, SVGMask, SVGFilter, SVGMarker, SVGSymbol, SVGUse, Point, PathStyle } from '../types';
 import { generateId } from '../utils/id-utils';
+import { calculateSmartDuplicationOffset } from '../utils/duplication-positioning';
 import { HistoryActions } from './historyActions';
 
 export interface SVGElementActions {
@@ -122,14 +123,42 @@ export const createSVGElementActions: StateCreator<
       renderVersion: state.renderVersion + 1,
     })),
 
-  duplicateImage: (id, offset = { x: 20, y: 20 }) => {
+  duplicateImage: (id, offset) => {
     const state = get();
     const image = state.images.find((img) => img.id === id);
     if (image) {
+      let actualOffset = offset || { x: 20, y: 20 };
+      
+      // If no offset provided, calculate smart offset
+      if (!offset) {
+        const tempSelection = {
+          selectedImages: [id],
+          selectedPaths: [],
+          selectedSubPaths: [],
+          selectedCommands: [],
+          selectedControlPoints: [],
+          selectedTexts: [],
+          selectedTextSpans: [],
+          selectedTextPaths: [],
+          selectedGroups: [],
+          selectedClipPaths: [],
+          selectedMasks: [],
+          selectedFilters: [],
+          selectedFilterPrimitives: [],
+          selectedMarkers: [],
+          selectedSymbols: [],
+          selectedUses: [],
+          selectedAnimations: [],
+          selectedGradients: [],
+          selectedGradientStops: [],
+        };
+        actualOffset = calculateSmartDuplicationOffset(tempSelection);
+      }
+      
       state.addImage({
         ...image,
-        x: image.x + offset.x,
-        y: image.y + offset.y,
+        x: image.x + actualOffset.x,
+        y: image.y + actualOffset.y,
       });
     }
   },
@@ -345,14 +374,42 @@ export const createSVGElementActions: StateCreator<
       renderVersion: state.renderVersion + 1,
     })),
 
-  duplicateUse: (id, offset = { x: 20, y: 20 }) => {
+  duplicateUse: (id, offset) => {
     const state = get();
     const use = state.uses.find((u) => u.id === id);
     if (use) {
+      let actualOffset = offset || { x: 20, y: 20 };
+      
+      // If no offset provided, calculate smart offset
+      if (!offset) {
+        const tempSelection = {
+          selectedUses: [id],
+          selectedPaths: [],
+          selectedSubPaths: [],
+          selectedCommands: [],
+          selectedControlPoints: [],
+          selectedTexts: [],
+          selectedTextSpans: [],
+          selectedTextPaths: [],
+          selectedGroups: [],
+          selectedImages: [],
+          selectedClipPaths: [],
+          selectedMasks: [],
+          selectedFilters: [],
+          selectedFilterPrimitives: [],
+          selectedMarkers: [],
+          selectedSymbols: [],
+          selectedAnimations: [],
+          selectedGradients: [],
+          selectedGradientStops: [],
+        };
+        actualOffset = calculateSmartDuplicationOffset(tempSelection);
+      }
+      
       state.addUse({
         ...use,
-        x: (use.x || 0) + offset.x,
-        y: (use.y || 0) + offset.y,
+        x: (use.x || 0) + actualOffset.x,
+        y: (use.y || 0) + actualOffset.y,
       });
     }
   },
