@@ -2,12 +2,13 @@ import React, { useState, PointerEvent } from 'react';
 import { Plugin, PointerEventContext } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { PluginButton } from '../../components/PluginButton';
-import { Copy } from 'lucide-react';
+import { Copy, RotateCcw } from 'lucide-react';
 import { Pointer, XCircle } from 'lucide-react';
 import { getCommandPosition } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
 import { toolModeManager } from '../../managers/ToolModeManager';
+import { duplicateSelected, invertSelection } from './actions/commonActions';
 
 
 // Rectangle Selection Manager
@@ -1195,7 +1196,11 @@ export const SelectionTools: React.FC<SelectionToolsProps> = ({
   onClearSelection,
   selectedCount,
 }) => {
-  const duplicateSelection = useEditorStore(s => s.duplicateSelection);
+  // Use the unified duplicate function from commonActions
+  const handleDuplicate = () => {
+      duplicateSelected();
+  };
+
   return (
     <div className="selection-tools" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <PluginButton
@@ -1220,7 +1225,17 @@ export const SelectionTools: React.FC<SelectionToolsProps> = ({
         color="#28a745"
         active={false}
         disabled={selectedCount === 0}
-        onPointerDown={duplicateSelection}
+        onPointerDown={handleDuplicate}
+      />
+      <PluginButton
+        icon={<RotateCcw size={16} />}
+        text="Invertir selección"
+        color="#6366f1"
+        active={false}
+        disabled={false}
+        onPointerDown={() => {
+            invertSelection();
+        }}
       />
       <div style={{ 
         fontSize: '12px', 

@@ -1,13 +1,12 @@
-import { Copy, Trash2, RotateCcw, Lock } from 'lucide-react';
+import { Copy, Trash2, RotateCcw } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { BoundingBox } from '../../../types';
 import { getTextBoundingBox, getImageBoundingBox, getPathBoundingBox, getGroupBoundingBox } from '../../../utils/bbox-utils';
-import { duplicatePath } from '../../../utils/duplicate-utils';
+import { calculateSmartDuplicationOffset } from '../../../utils/duplication-positioning';
 import { generateId } from '../../../utils/id-utils';
-import { calculateSmartDuplicationOffset, getUnifiedSelectionBounds } from '../../../utils/duplication-positioning';
 
-// Calculate bounding box of all selected elements
+// Calculate bounding box of all selected elements using existing bbox utilities
 export const getSelectedElementsBounds = (): BoundingBox | null => {
   const store = useEditorStore.getState();
   const { selection, paths, texts, images, uses, groups } = store;
@@ -77,7 +76,7 @@ export const getSelectedElementsBounds = (): BoundingBox | null => {
     }
   });
 
-  // Include selected groups
+  // Include selected groups - use the existing getGroupBoundingBox utility
   selection.selectedGroups.forEach(groupId => {
     const group = groups.find(g => g.id === groupId);
     if (group) {
@@ -102,15 +101,88 @@ export const getSelectedElementsBounds = (): BoundingBox | null => {
   };
 };
 
-// Duplicate selected elements with unified approach
+// Duplicate selected elements with unified approach using existing bbox utilities
 export const duplicateSelected = () => {
   const store = useEditorStore.getState();
   
   // Push to history before making changes
   store.pushToHistory();
   
-  // Get the unified bounds of the entire selection
-  const unifiedBounds = getUnifiedSelectionBounds(store.selection);
+  // Special case: single group selected - use bottom-right positioning logic
+  if (store.selection.selectedGroups.length === 1 && 
+      store.selection.selectedPaths.length === 0 && 
+      store.selection.selectedSubPaths.length === 0 && 
+      store.selection.selectedCommands.length === 0 &&
+      store.selection.selectedTexts.length === 0 &&
+      store.selection.selectedImages.length === 0 &&
+      store.selection.selectedUses.length === 0) {
+    
+    const groupId = store.selection.selectedGroups[0];
+    const group = store.groups.find(g => g.id === groupId);
+    
+    if (group) {
+      // Use the same bottom-right positioning logic as multiple selections
+      const groupBounds = getGroupBoundingBox(group, store.paths, store.texts, store.images, store.groups);
+      
+      // Calculate smart offset for padding (width + padding, height + padding with minimums)
+      const PADDING = 8;
+      
+      // Calculate the bottom-right corner of the group
+      const bottomRightX = groupBounds.x + groupBounds.width;
+      const bottomRightY = groupBounds.y + groupBounds.height;
+      
+      // The target position for the duplicated group's top-left corner should be bottom-right + padding
+      const targetTopLeftX = bottomRightX + PADDING;
+      const targetTopLeftY = bottomRightY + PADDING;
+      
+      // Calculate the offset needed to move the group from its current position to target position
+      const customOffset = {
+        x: targetTopLeftX - groupBounds.x,
+        y: targetTopLeftY - groupBounds.y
+      };
+      
+      // Duplicate the group WITHOUT any offset first
+      const newGroupId = store.duplicateGroup(groupId);
+      
+      if (newGroupId) {
+        // Get the duplicated group object
+        const newGroup = store.groups.find(g => g.id === newGroupId);
+        
+        if (newGroup) {
+          // Get the bounding box of the newly duplicated group
+          const newGroupBounds = getGroupBoundingBox(newGroup, store.paths, store.texts, store.images, store.groups);
+          
+          // Calculate the actual offset needed to move from current position to target position
+          const actualOffset = {
+            x: targetTopLeftX - newGroupBounds.x,
+            y: targetTopLeftY - newGroupBounds.y
+          };
+          
+          // Move the entire duplicated group to the correct position
+          store.moveGroup(newGroupId, actualOffset);
+          
+          // Select the newly duplicated group
+          useEditorStore.setState(state => ({
+            selection: {
+              ...state.selection,
+              selectedGroups: [newGroupId],
+              selectedPaths: [],
+              selectedSubPaths: [],
+              selectedCommands: [],
+              selectedControlPoints: [],
+              selectedTexts: [],
+              selectedImages: [],
+              selectedUses: []
+            }
+          }));
+        }
+      }
+    }
+    return;
+  }
+  
+  // For multiple elements or mixed selections, use unified positioning approach
+  const unifiedBounds = getSelectedElementsBounds();
   if (!unifiedBounds) return;
   
   // Calculate offset for positioning from bottom-right corner
@@ -225,13 +297,31 @@ export const duplicateSelected = () => {
     }
   });
 
-  // For groups, we still need to use the relative offset approach since group duplication
-  // handles internal positioning differently
-  const groupOffset = { x: offset.x, y: offset.y };
+  // For groups, use the existing getGroupBoundingBox utility for accurate positioning
   store.selection.selectedGroups.forEach(groupId => {
-    const newGroupId = store.duplicateGroup(groupId, groupOffset);
-    if (newGroupId) {
-      newElementIds.groups.push(newGroupId);
+    const group = store.groups.find(g => g.id === groupId);
+    if (group) {
+      // Use the existing getGroupBoundingBox utility function
+      const groupBounds = getGroupBoundingBox(group, store.paths, store.texts, store.images, store.groups);
+      
+      // Calculate relative position within the original selection
+      const relativeX = groupBounds.x - unifiedBounds.x;
+      const relativeY = groupBounds.y - unifiedBounds.y;
+      
+      // The group should be positioned at the new target position maintaining its relative position
+      const targetGroupX = targetTopLeftX + relativeX;
+      const targetGroupY = targetTopLeftY + relativeY;
+      
+      // Calculate the offset to move the group from its current position to target position
+      const groupSpecificOffset = {
+        x: targetGroupX - groupBounds.x,
+        y: targetGroupY - groupBounds.y
+      };
+      
+      const newGroupId = store.duplicateGroup(groupId, groupSpecificOffset);
+      if (newGroupId) {
+        newElementIds.groups.push(newGroupId);
+      }
     }
   });
 
@@ -350,6 +440,44 @@ export const deleteSelected = () => {
 
   // Clear selection
   store.clearSelection();
+};
+
+// Invert selection - Select all unselected elements and deselect all selected ones
+export const invertSelection = () => {
+  const store = useEditorStore.getState();
+  const currentSelection = store.selection;
+
+  // Get all available element IDs
+  const allPathIds = store.paths.map(p => p.id);
+  const allTextIds = store.texts.map(t => t.id);
+  const allImageIds = store.images.map(img => img.id);
+  const allUseIds = store.uses.map(u => u.id);
+  const allGroupIds = store.groups.map(g => g.id);
+
+  // Calculate inverted selection
+  const invertedPaths = allPathIds.filter(id => !currentSelection.selectedPaths.includes(id));
+  const invertedTexts = allTextIds.filter(id => !currentSelection.selectedTexts.includes(id));
+  const invertedImages = allImageIds.filter(id => !currentSelection.selectedImages.includes(id));
+  const invertedUses = allUseIds.filter(id => !currentSelection.selectedUses.includes(id));
+  const invertedGroups = allGroupIds.filter(id => !currentSelection.selectedGroups.includes(id));
+
+  // Apply the inverted selection
+  useEditorStore.setState(state => ({
+    selection: {
+      ...state.selection,
+      selectedPaths: invertedPaths,
+      selectedTexts: invertedTexts,
+      selectedImages: invertedImages,
+      selectedUses: invertedUses,
+      selectedGroups: invertedGroups,
+      // Clear sub-selections as they depend on path selection
+      selectedSubPaths: [],
+      selectedCommands: [],
+      selectedControlPoints: [],
+      selectedTextSpans: [],
+      selectedTextPaths: []
+    }
+  }));
 };
 
 // Common duplicate action

@@ -751,8 +751,22 @@ export const createGroupActions: StateCreator<
           }
           break;
         case 'text':
-          const newTextId = state.duplicateText(child.id);
-          if (newTextId) {
+          // Manually duplicate text to avoid automatic offset from duplicateText
+          const text = state.texts.find(t => t.id === child.id);
+          if (text) {
+            const newTextId = generateId();
+            const newText = {
+              ...text,
+              id: newTextId,
+              // Keep original position - offset will be applied later with moveText
+              x: text.x,
+              y: text.y
+            };
+            
+            set(prevState => ({
+              texts: [...prevState.texts, newText]
+            }));
+            
             newChildren.push({ type: 'text', id: newTextId });
             // Move the duplicated text  
             state.moveText(newTextId, offset, true);

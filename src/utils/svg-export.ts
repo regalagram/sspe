@@ -1076,12 +1076,113 @@ export const generateSVGCode = (editorState: any): string => {
     return allDefs.length > 0 ? `  <defs>\n${allDefs.join('\n')}\n  </defs>\n` : '';
   };
 
-  // Generate element content
-  const pathElements = paths.map((path: any) => `  ${renderPath(path)}`).join('\n');
-  const textElements = texts.map((text: any) => `  ${renderText(text)}`).join('\n');
-  const textPathElements = textPaths.map((textPath: any) => `  ${renderTextPath(textPath)}`).join('\n');
-  const imageElements = images.map((image: any) => `  ${renderImage(image)}`).join('\n');
-  const useElements = uses.map((use: any) => `  ${renderUse(use)}`).join('\n');
+  // Helper function to render a group element
+  const renderGroup = (group: any) => {
+    const style = group.style || {};
+    
+    const attributes = [
+      `id="${group.id}"`,
+      group.name ? `data-name="${group.name}"` : '',
+      group.transform ? `transform="${group.transform}"` : '',
+      style.opacity !== undefined && style.opacity !== 1 ? `opacity="${style.opacity}"` : '',
+      style.filter ? `filter="${convertStyleValue(style.filter)}"` : '',
+      style.clipPath ? `clip-path="${convertStyleValue(style.clipPath)}"` : '',
+      style.mask ? `mask="${convertStyleValue(style.mask)}"` : '',
+    ].filter(Boolean).join(' ');
+
+    // Collect elements that are NOT in any group
+    const elementsInGroups = new Set<string>();
+    groups.forEach((g: any) => {
+      g.children.forEach((child: any) => {
+        elementsInGroups.add(child.id);
+      });
+    });
+
+    // Generate child elements for this group
+    const childElements: string[] = [];
+    
+    group.children?.forEach((child: any) => {
+      switch (child.type) {
+        case 'path':
+          const path = paths.find((p: any) => p.id === child.id);
+          if (path) {
+            childElements.push(`    ${renderPath(path)}`);
+          }
+          break;
+        case 'text':
+          const text = texts.find((t: any) => t.id === child.id);
+          if (text) {
+            childElements.push(`    ${renderText(text)}`);
+          }
+          break;
+        case 'textPath':
+          const textPath = textPaths.find((tp: any) => tp.id === child.id);
+          if (textPath) {
+            childElements.push(`    ${renderTextPath(textPath)}`);
+          }
+          break;
+        case 'image':
+          const image = images.find((img: any) => img.id === child.id);
+          if (image) {
+            childElements.push(`    ${renderImage(image)}`);
+          }
+          break;
+        case 'use':
+          const use = uses.find((u: any) => u.id === child.id);
+          if (use) {
+            childElements.push(`    ${renderUse(use)}`);
+          }
+          break;
+        case 'group':
+          const nestedGroup = groups.find((g: any) => g.id === child.id);
+          if (nestedGroup) {
+            childElements.push(`    ${renderGroup(nestedGroup)}`);
+          }
+          break;
+      }
+    });
+
+    const childContent = childElements.join('\n');
+    
+    // Get animations for this group
+    const groupAnimations = renderAnimationsForElement(group.id, chainDelays);
+    
+    if (groupAnimations) {
+      return `<g ${attributes}>
+${groupAnimations}
+${childContent}
+  </g>`;
+    } else {
+      return `<g ${attributes}>
+${childContent}
+  </g>`;
+    }
+  };
+
+  // Collect elements that are NOT in any group
+  const elementsInGroups = new Set<string>();
+  groups.forEach((group: any) => {
+    group.children.forEach((child: any) => {
+      elementsInGroups.add(child.id);
+    });
+  });
+
+  // Filter standalone elements (not in any group)
+  const standalonePaths = paths.filter((path: any) => !elementsInGroups.has(path.id));
+  const standaloneTexts = texts.filter((text: any) => !elementsInGroups.has(text.id));
+  const standaloneTextPaths = textPaths.filter((textPath: any) => !elementsInGroups.has(textPath.id));
+  const standaloneImages = images.filter((image: any) => !elementsInGroups.has(image.id));
+  const standaloneUses = uses.filter((use: any) => !elementsInGroups.has(use.id));
+
+  // Generate element content for standalone elements only
+  const pathElements = standalonePaths.map((path: any) => `  ${renderPath(path)}`).join('\n');
+  const textElements = standaloneTexts.map((text: any) => `  ${renderText(text)}`).join('\n');
+  const textPathElements = standaloneTextPaths.map((textPath: any) => `  ${renderTextPath(textPath)}`).join('\n');
+  const imageElements = standaloneImages.map((image: any) => `  ${renderImage(image)}`).join('\n');
+  const useElements = standaloneUses.map((use: any) => `  ${renderUse(use)}`).join('\n');
+  
+  // Generate group elements
+  const groupElements = groups.map((group: any) => `  ${renderGroup(group)}`).join('\n');
 
   // Combine all elements
   const allElements = [
@@ -1089,7 +1190,8 @@ export const generateSVGCode = (editorState: any): string => {
     textElements, 
     textPathElements,
     imageElements,
-    useElements
+    useElements,
+    groupElements
   ].filter(Boolean).join('\n');
 
   // Calculate dynamic viewport based on all elements
