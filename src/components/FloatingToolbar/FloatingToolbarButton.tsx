@@ -930,7 +930,7 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
   const isMobileDevice = isMobile || isTablet;
 
   // Import the store to get real-time data
-  const { paths, texts, images, selection } = useEditorStore();
+  const { paths, texts, images, uses, selection } = useEditorStore();
 
   // Get the actual current style value dynamically
   const getCurrentStyleValue = (): any => {
@@ -944,6 +944,7 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
     const selectedPaths = selection.selectedPaths.map(id => paths.find(p => p.id === id)).filter(Boolean);
     const selectedTexts = selection.selectedTexts.map(id => texts.find(t => t.id === id)).filter(Boolean);
     const selectedImages = selection.selectedImages.map(id => images.find(img => img.id === id)).filter(Boolean);
+    const selectedUses = selection.selectedUses.map(id => uses.find(u => u.id === id)).filter(Boolean);
     
     // Handle subpath selection
     if (isSubpathAction && selection.selectedSubPaths.length > 0) {
@@ -980,6 +981,13 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
       return styleValue;
     }
     
+    // Check uses
+    if (selectedUses.length > 0) {
+      const firstUse = selectedUses[0];
+      const styleValue = isStroke ? firstUse?.style?.stroke : firstUse?.style?.fill;
+      return styleValue;
+    }
+    
     return currentColor; // fallback
   };
 
@@ -995,6 +1003,7 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
     const selectedPaths = selection.selectedPaths.map(id => paths.find(p => p.id === id)).filter(Boolean);
     const selectedTexts = selection.selectedTexts.map(id => texts.find(t => t.id === id)).filter(Boolean);
     const selectedImages = selection.selectedImages.map(id => images.find(img => img.id === id)).filter(Boolean);
+    const selectedUses = selection.selectedUses.map(id => uses.find(u => u.id === id)).filter(Boolean);
     
     let opacityValue: number | undefined = undefined;
     let colorValue: string | any = undefined;
@@ -1053,6 +1062,12 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
       opacityValue = extractOpacityFromElement(firstImage);
     }
     
+    // Check uses if no opacity found yet
+    if (opacityValue === undefined && selectedUses.length > 0) {
+      const firstUse = selectedUses[0];
+      opacityValue = extractOpacityFromElement(firstUse);
+    }
+    
     // Return the found opacity value or default to 1 (fully opaque)
     return opacityValue !== undefined ? opacityValue : 1;
   };
@@ -1066,6 +1081,7 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
     const selectedPaths = selection.selectedPaths.map(id => paths.find(p => p.id === id)).filter(Boolean);
     const selectedTexts = selection.selectedTexts.map(id => texts.find(t => t.id === id)).filter(Boolean);
     const selectedImages = selection.selectedImages.map(id => images.find(img => img.id === img.id)).filter(Boolean);
+    const selectedUses = selection.selectedUses.map(id => uses.find(u => u.id === id)).filter(Boolean);
     
     let hasRGBAOpacity = false;
     let hasExplicitOpacity = false;
@@ -1109,6 +1125,7 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
     selectedPaths.forEach(analyzeElementOpacity);
     selectedTexts.forEach(analyzeElementOpacity);
     selectedImages.forEach(analyzeElementOpacity);
+    selectedUses.forEach(analyzeElementOpacity);
     
     return { hasRGBAOpacity, hasExplicitOpacity, rgbaOpacity, explicitOpacity };
   };
@@ -1136,7 +1153,7 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
   useEffect(() => {
     const newTab = getInitialTab();
     setActiveTab(newTab);
-  }, [selection.selectedPaths, selection.selectedTexts, selection.selectedSubPaths, selection.selectedImages]);
+  }, [selection.selectedPaths, selection.selectedTexts, selection.selectedSubPaths, selection.selectedImages, selection.selectedUses]);
 
   // Update opacity when selection changes
   useEffect(() => {
@@ -1150,7 +1167,7 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
     const opacityState = getOpacityState();
     setRgbaOpacity(opacityState.rgbaOpacity);
     setExplicitOpacity(opacityState.explicitOpacity);
-  }, [selection.selectedPaths, selection.selectedTexts, selection.selectedSubPaths, paths, texts, actionId]);
+  }, [selection.selectedPaths, selection.selectedTexts, selection.selectedSubPaths, selection.selectedImages, selection.selectedUses, paths, texts, actionId]);
 
   // Also update when the actual style values change
   useEffect(() => {
@@ -1164,7 +1181,8 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
     setRgbaOpacity(opacityState.rgbaOpacity);
     setExplicitOpacity(opacityState.explicitOpacity);
   }, [paths.map(p => `${p.id}-${p.style.fillOpacity}-${p.style.strokeOpacity}`).join(','), 
-      texts.map(t => `${t.id}-${t.style?.fillOpacity}-${t.style?.strokeOpacity}`).join(',')]);
+      texts.map(t => `${t.id}-${t.style?.fillOpacity}-${t.style?.strokeOpacity}`).join(','),
+      uses.map(u => `${u.id}-${u.style?.fillOpacity}-${u.style?.strokeOpacity}`).join(',')]);
 
   // Soft color palette - 70 colors in 10x7 grid
   const softColors = [
@@ -1517,6 +1535,38 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
           }
         }
       });
+
+      // Apply to uses
+      selection.selectedUses.forEach(useId => {
+        const use = store.uses.find(u => u.id === useId);
+        if (use) {
+          const currentColor = isStroke ? use.style?.stroke : use.style?.fill;
+          const result = updateColorWithOpacity(currentColor, clampedOpacity);
+          
+          if (typeof result === 'string') {
+            // Update with new RGBA/HSLA string
+            const updates: any = {
+              ...use.style
+            };
+            updates[isStroke ? 'stroke' : 'fill'] = result;
+            store.updateUse(useId, { style: updates });
+          } else {
+            // Update color and opacity separately
+            const updates: any = {
+              ...use.style
+            };
+            if (result.color !== currentColor) {
+              updates[isStroke ? 'stroke' : 'fill'] = result.color;
+            }
+            if (isStroke) {
+              updates.strokeOpacity = result.opacity;
+            } else {
+              updates.fillOpacity = result.opacity;
+            }
+            store.updateUse(useId, { style: updates });
+          }
+        }
+      });
     });
   };
 
@@ -1570,6 +1620,22 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
             updates.opacity = clampedOpacity; // For images, use opacity for fill-like behavior
           }
           store.updateImage(imageId, { style: updates });
+        }
+      });
+
+      // Apply to uses
+      selection.selectedUses.forEach(useId => {
+        const use = store.uses.find(u => u.id === useId);
+        if (use) {
+          const updates: any = {
+            ...use.style
+          };
+          if (isStroke) {
+            updates.strokeOpacity = clampedOpacity;
+          } else {
+            updates.fillOpacity = clampedOpacity;
+          }
+          store.updateUse(useId, { style: updates });
         }
       });
     });
@@ -1679,6 +1745,23 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
             };
             updates[isStroke ? 'stroke' : 'fill'] = newColor;
             store.updateImage(imageId, { style: updates });
+          }
+        }
+      });
+
+      // Apply to uses
+      selection.selectedUses.forEach(useId => {
+        const use = store.uses.find(u => u.id === useId);
+        if (use) {
+          const currentColor = isStroke ? use.style?.stroke : use.style?.fill;
+          const newColor = updateEmbeddedOpacity(currentColor);
+          
+          if (newColor !== currentColor) {
+            const updates: any = {
+              ...use.style
+            };
+            updates[isStroke ? 'stroke' : 'fill'] = newColor;
+            store.updateUse(useId, { style: updates });
           }
         }
       });

@@ -1456,15 +1456,17 @@ class PointerInteractionManager {
     let isFormatCopyActive = false;
     let isTextFormatCopyActive = false;
     let isImageFormatCopyActive = false;
+    let isUseFormatCopyActive = false;
     try {
       isFormatCopyActive = this.editorStore && this.editorStore.isFormatCopyActive && this.editorStore.isFormatCopyActive();
       isTextFormatCopyActive = this.editorStore && this.editorStore.isTextFormatCopyActive && this.editorStore.isTextFormatCopyActive();
       isImageFormatCopyActive = this.editorStore && this.editorStore.isImageFormatCopyActive && this.editorStore.isImageFormatCopyActive();
+      isUseFormatCopyActive = this.editorStore && this.editorStore.isUseFormatCopyActive && this.editorStore.isUseFormatCopyActive();
     } catch (error) {
       console.error('Error checking format copy state:', error);
     }
     
-    if (isFormatCopyActive || isTextFormatCopyActive || isImageFormatCopyActive) {
+    if (isFormatCopyActive || isTextFormatCopyActive || isImageFormatCopyActive || isUseFormatCopyActive) {
       return false; // Don't consume the event, let it reach SelectionPlugin
     }
 
@@ -1630,6 +1632,24 @@ class PointerInteractionManager {
 
     // Handle element selection and dragging
     if (elementType && elementId && !this.state.isSpacePressed) {
+      // Check if any format copy mode is active - if so, don't handle selection here
+      let isAnyFormatCopyActive = false;
+      try {
+        isAnyFormatCopyActive = (
+          (this.editorStore && this.editorStore.isFormatCopyActive && this.editorStore.isFormatCopyActive()) ||
+          (this.editorStore && this.editorStore.isTextFormatCopyActive && this.editorStore.isTextFormatCopyActive()) ||
+          (this.editorStore && this.editorStore.isImageFormatCopyActive && this.editorStore.isImageFormatCopyActive()) ||
+          (this.editorStore && this.editorStore.isUseFormatCopyActive && this.editorStore.isUseFormatCopyActive())
+        );
+      } catch (error) {
+        console.error('Error checking format copy state:', error);
+      }
+      
+      // If format copy is active, don't consume the event - let Selection plugin handle it
+      if (isAnyFormatCopyActive) {
+        return false;
+      }
+      
       e.stopPropagation();
 
       const elementTypeTyped = elementType as ElementType;

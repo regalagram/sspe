@@ -20,6 +20,7 @@ import { AnimationActions, createAnimationActions } from './animationActions';
 import { FormatCopyActions, createFormatCopyActions } from './formatCopyActions';
 import { TextFormatCopyActions, createTextFormatCopyActions } from './textFormatCopyActions';
 import { ImageFormatCopyActions, createImageFormatCopyActions } from './imageFormatCopyActions';
+import { UseFormatCopyActions, createUseFormatCopyActions } from './useFormatCopyActions';
 import { DeepSelectionActions, createDeepSelectionActions } from './deepSelectionActions';
 import { handleManager } from '../plugins/handles/HandleManager';
 // Combined actions interface
@@ -40,6 +41,7 @@ interface EditorActions extends
   FormatCopyActions,
   TextFormatCopyActions,
   ImageFormatCopyActions,
+  UseFormatCopyActions,
   DeepSelectionActions {}
 
 const loadInitialState = (): EditorState => {
@@ -475,6 +477,12 @@ const loadInitialState = (): EditorState => {
       sourceTextId: null,
       sourceTextType: null,
     },
+    // Use format copy state
+    useFormatCopyState: {
+      isActive: false,
+      copiedStyle: null,
+      sourceUseId: null,
+    },
   };
   
   if (savedState && typeof savedState === 'object') {
@@ -509,6 +517,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     ...createFormatCopyActions(set, get, api),
     ...createTextFormatCopyActions(set, get, api),
     ...createImageFormatCopyActions(set, get, api),
+    ...createUseFormatCopyActions(set, get, api),
     ...createDeepSelectionActions(set, get, api),
   }))
 );

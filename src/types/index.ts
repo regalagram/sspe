@@ -329,6 +329,12 @@ export interface EditorState {
     copiedStyle: Partial<PathStyle> | null;
     sourceImageId: string | null;
   };
+  // Use format copy state
+  useFormatCopyState?: {
+    isActive: boolean;
+    copiedStyle: Partial<PathStyle> | null;
+    sourceUseId: string | null;
+  };
 }
 
 // Animation synchronization types

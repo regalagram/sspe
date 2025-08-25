@@ -49,6 +49,13 @@ const isTextFormatCopyActive = (): boolean => {
 // Start text format copy from textPath
 const startTextFormatCopy = () => {
   const store = useEditorStore.getState();
+  
+  // Check if text format copy is already active - if so, cancel it
+  if (store.isTextFormatCopyActive && store.isTextFormatCopyActive()) {
+    store.cancelTextFormatCopy();
+    return;
+  }
+  
   const selectedTextPaths = store.selection.selectedTextPaths;
   
   if (selectedTextPaths.length > 0) {

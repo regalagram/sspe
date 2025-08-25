@@ -834,3 +834,56 @@ export const validateViewBox = (viewBox: string): boolean => {
   const parts = viewBox.trim().split(/\s+/);
   return parts.length === 4 && parts.every(part => !isNaN(parseFloat(part)));
 };
+
+// Helper function to match filter signatures by comparing primitive sequences
+export const matchesFilterSignature = (primitives: any[], filterType: string): boolean => {
+  switch (filterType) {
+    case 'blur':
+      // Simple blur: single feGaussianBlur
+      return primitives.length === 1 && 
+             primitives[0].type === 'feGaussianBlur';
+             
+    case 'shadow':
+      // Drop shadow: feDropShadow OR (feOffset + feGaussianBlur)
+      return primitives.some(p => p.type === 'feDropShadow') ||
+             (primitives.some(p => p.type === 'feOffset') && 
+              primitives.some(p => p.type === 'feGaussianBlur'));
+              
+    case 'glow':
+      // Basic glow: feMorphology(dilate) + feGaussianBlur + feFlood + feComposite(in) + feComposite(over)
+      return primitives.length === 5 &&
+             primitives.some(p => p.type === 'feMorphology' && p.operator === 'dilate') &&
+             primitives.some(p => p.type === 'feGaussianBlur') &&
+             primitives.some(p => p.type === 'feFlood') &&
+             primitives.filter(p => p.type === 'feComposite').length === 2 &&
+             !primitives.some(p => p.type === 'feColorMatrix'); // Distinguish from neon-glow
+             
+    case 'neon-glow':
+      // Neon glow: feGaussianBlur + feFlood + feComposite + feGaussianBlur + feFlood + feComposite + feComposite + feComposite
+      return primitives.length === 8 &&
+             primitives.filter(p => p.type === 'feGaussianBlur').length === 2 &&
+             primitives.filter(p => p.type === 'feFlood').length === 2 &&
+             primitives.filter(p => p.type === 'feComposite').length === 4 &&
+             !primitives.some(p => p.type === 'feMorphology'); // Distinguish from basic glow
+             
+    case 'grayscale':
+      // Grayscale: feColorMatrix with grayscale values (0.3 0.6 0.1 pattern)
+      return primitives.length === 1 &&
+             primitives[0].type === 'feColorMatrix' &&
+             (primitives[0].values?.includes('0.299') || primitives[0].values?.includes('0.3 0.6 0.1'));
+             
+    case 'sepia':
+      // Sepia: feColorMatrix with sepia values
+      return primitives.length === 1 &&
+             primitives[0].type === 'feColorMatrix' &&
+             primitives[0].values?.includes('0.393');
+             
+    case 'emboss':
+      // Emboss: feConvolveMatrix
+      return primitives.length === 1 &&
+             primitives[0].type === 'feConvolveMatrix';
+             
+    default:
+      return false;
+  }
+};

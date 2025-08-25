@@ -657,9 +657,16 @@ export const PathRenderer: React.FC = () => {
                     // Only handle left pointer button
                     if (e.button !== 0) return;
                     
-                    // Check if format copy mode is active - if so, let plugin system handle it
+                    // Check if any format copy mode is active - if so, let plugin system handle it
                     const currentState = useEditorStore.getState();
-                    if (currentState.isFormatCopyActive && currentState.isFormatCopyActive()) {
+                    const isAnyFormatCopyActive = (
+                      (currentState.isFormatCopyActive && currentState.isFormatCopyActive()) ||
+                      (currentState.isTextFormatCopyActive && currentState.isTextFormatCopyActive()) ||
+                      (currentState.isImageFormatCopyActive && currentState.isImageFormatCopyActive()) ||
+                      (currentState.isUseFormatCopyActive && currentState.isUseFormatCopyActive())
+                    );
+                    
+                    if (isAnyFormatCopyActive) {
                       return; // Don't consume the event, let it bubble up to plugin system
                     }
                     
@@ -770,9 +777,16 @@ export const PathRenderer: React.FC = () => {
                   filter: `drop-shadow(0 0 ${3 / viewport.zoom}px ${contrastColor})`,
                 }}
                 onPointerDown={(e) => {
-                  // Check if format copy mode is active - if so, let plugin system handle it
+                  // Check if any format copy mode is active - if so, let plugin system handle it
                   const currentState = useEditorStore.getState();
-                  if (currentState.isFormatCopyActive && currentState.isFormatCopyActive()) {
+                  const isAnyFormatCopyActive = (
+                    (currentState.isFormatCopyActive && currentState.isFormatCopyActive()) ||
+                    (currentState.isTextFormatCopyActive && currentState.isTextFormatCopyActive()) ||
+                    (currentState.isImageFormatCopyActive && currentState.isImageFormatCopyActive()) ||
+                    (currentState.isUseFormatCopyActive && currentState.isUseFormatCopyActive())
+                  );
+                  
+                  if (isAnyFormatCopyActive) {
                     return; // Don't consume the event, let it bubble up to plugin system
                   }
                   

@@ -26,7 +26,8 @@ import {
   createEmbossFilter,
   createGlowFilter,
   createNeonGlowFilter,
-  formatSVGReference
+  formatSVGReference,
+  matchesFilterSignature
 } from '../../../utils/svg-elements-utils';
 import { 
   generateSmoothPath, 
@@ -665,6 +666,129 @@ const addRotateAnimation = () => {
   });
 };
 
+// Check if a specific filter is active on selected subpaths
+const isSubPathFilterActive = (filterType: string): boolean => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  if (selectedSubPaths.length === 0) return false;
+  
+  // Check if any selected subpath's parent path has a filter applied
+  return selectedSubPaths.some(({ path }) => {
+    if (!path) return false;
+    
+    const filterRef = path.style?.filter;
+    if (!filterRef || typeof filterRef !== 'string') return false;
+    
+    // Extract filter ID from url(#id) format
+    const match = filterRef.match(/url\(#([^)]+)\)/);
+    if (!match) return false;
+    
+    const filterId = match[1];
+    const filter = store.filters.find(f => f.id === filterId);
+    
+    if (!filter) return false;
+    
+    // Match filter type based on complete primitive sequences
+    return matchesFilterSignature(filter.primitives, filterType);
+  });
+};
+
+// Check if a specific animation is active on selected subpaths
+const isSubPathAnimationActive = (animationType: string): boolean => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  if (selectedSubPaths.length === 0) return false;
+  
+  // Check if any selected subpath's parent path has an animation applied
+  return selectedSubPaths.some(({ path }) => {
+    if (!path) return false;
+    
+    return store.animations.some(animation => {
+      if (animation.targetElementId !== path.id) return false;
+      
+      switch (animationType) {
+        case 'fade':
+          return animation.type === 'animate' && (animation as any).attributeName === 'opacity';
+        case 'rotate':
+          return animation.type === 'animateTransform' && 
+                 (animation as any).transformType === 'rotate';
+        default:
+          return false;
+      }
+    });
+  });
+};
+
+// Remove specific filter from selected subpaths
+const removeSubPathFilter = (filterType: string) => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  if (selectedSubPaths.length === 0) return;
+  
+  store.pushToHistory();
+  
+  selectedSubPaths.forEach(({ path }) => {
+    if (!path) return;
+    
+    // Update the path style to remove the filter
+    store.updatePathStyle(path.id, { filter: undefined });
+  });
+};
+
+// Remove specific animation from selected subpaths
+const removeSubPathAnimation = (animationType: string) => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = getSelectedSubPaths();
+  
+  if (selectedSubPaths.length === 0) return;
+  
+  store.pushToHistory();
+  
+  selectedSubPaths.forEach(({ path }) => {
+    if (!path) return;
+    
+    // Find animations that match the type and target this path
+    const animationsToRemove = store.animations.filter(animation => {
+      if (animation.targetElementId !== path.id) return false;
+      
+      switch (animationType) {
+        case 'fade':
+          return animation.type === 'animate' && (animation as any).attributeName === 'opacity';
+        case 'rotate':
+          return animation.type === 'animateTransform' && 
+                 (animation as any).transformType === 'rotate';
+        default:
+          return false;
+      }
+    });
+    
+    // Remove each matching animation
+    animationsToRemove.forEach(animation => {
+      store.removeAnimation(animation.id);
+    });
+  });
+};
+
+// Toggle functions that either apply or remove filters/animations
+const toggleSubPathFilter = (filterType: string, applyFunction: () => void) => {
+  if (isSubPathFilterActive(filterType)) {
+    removeSubPathFilter(filterType);
+  } else {
+    applyFunction();
+  }
+};
+
+const toggleSubPathAnimation = (animationType: string, applyFunction: () => void) => {
+  if (isSubPathAnimationActive(animationType)) {
+    removeSubPathAnimation(animationType);
+  } else {
+    applyFunction();
+  }
+};
+
 // Function to open filter panel
 const openFilterPanel = async () => {
   // Use pluginManager to open filter panel (handles both mobile and desktop)
@@ -674,13 +798,48 @@ const openFilterPanel = async () => {
 
 // SubPath filter options
 const subPathFilterOptions = [
-  { id: 'subpath-blur', label: 'Blur', action: applyBlurFilter },
-  { id: 'subpath-shadow', label: 'Drop Shadow', action: applyDropShadow },
-  { id: 'subpath-glow', label: 'Glow', action: applyGlowFilter },
-  { id: 'subpath-grayscale', label: 'Grayscale', action: applyGrayscaleFilter },
-  { id: 'subpath-sepia', label: 'Sepia', action: applySepiaFilter },
-  { id: 'subpath-emboss', label: 'Emboss', action: applyEmbossFilter },
-  { id: 'subpath-neon-glow', label: 'Neon Glow', action: applyNeonGlowFilter },
+  { 
+    id: 'subpath-blur', 
+    label: 'Blur', 
+    action: () => toggleSubPathFilter('blur', applyBlurFilter),
+    active: () => isSubPathFilterActive('blur')
+  },
+  { 
+    id: 'subpath-shadow', 
+    label: 'Drop Shadow', 
+    action: () => toggleSubPathFilter('shadow', applyDropShadow),
+    active: () => isSubPathFilterActive('shadow')
+  },
+  { 
+    id: 'subpath-glow', 
+    label: 'Glow', 
+    action: () => toggleSubPathFilter('glow', applyGlowFilter),
+    active: () => isSubPathFilterActive('glow')
+  },
+  { 
+    id: 'subpath-grayscale', 
+    label: 'Grayscale', 
+    action: () => toggleSubPathFilter('grayscale', applyGrayscaleFilter),
+    active: () => isSubPathFilterActive('grayscale')
+  },
+  { 
+    id: 'subpath-sepia', 
+    label: 'Sepia', 
+    action: () => toggleSubPathFilter('sepia', applySepiaFilter),
+    active: () => isSubPathFilterActive('sepia')
+  },
+  { 
+    id: 'subpath-emboss', 
+    label: 'Emboss', 
+    action: () => toggleSubPathFilter('emboss', applyEmbossFilter),
+    active: () => isSubPathFilterActive('emboss')
+  },
+  { 
+    id: 'subpath-neon-glow', 
+    label: 'Neon Glow', 
+    action: () => toggleSubPathFilter('neon-glow', applyNeonGlowFilter),
+    active: () => isSubPathFilterActive('neon-glow')
+  },
   { id: 'subpath-more-filters', label: 'More ...', action: openFilterPanel }
 ];
 
@@ -696,12 +855,14 @@ const subPathAnimationOptions = [
   { 
     id: 'subpath-fade', 
     label: 'Fade In/Out', 
-    action: addFadeAnimation 
+    action: () => toggleSubPathAnimation('fade', addFadeAnimation),
+    active: () => isSubPathAnimationActive('fade')
   },
   { 
     id: 'subpath-rotate', 
     label: 'Rotate', 
-    action: addRotateAnimation 
+    action: () => toggleSubPathAnimation('rotate', addRotateAnimation),
+    active: () => isSubPathAnimationActive('rotate')
   },
   { id: 'subpath-more-animations', label: 'More ...', action: openAnimationPanel }
 ];
@@ -729,6 +890,13 @@ const groupSelectedSubPaths = () => {
 // Format copy functions
 const startFormatCopy = () => {
   const store = useEditorStore.getState();
+  
+  // Check if format copy is already active - if so, cancel it
+  if (store.isFormatCopyActive && store.isFormatCopyActive()) {
+    store.cancelFormatCopy();
+    return;
+  }
+  
   const selectedSubPaths = store.selection.selectedSubPaths;
   
   if (selectedSubPaths.length === 0) return;

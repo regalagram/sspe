@@ -50,104 +50,60 @@ class RectSelectionManager {
   handleFormatCopyPointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     const target = e.target as SVGElement;
     
-    // Check what type of element was clicked
-    const elementType = target.getAttribute('data-element-type');
-    const elementId = target.getAttribute('data-element-id');
+    // Get element info from clicked target
+    let elementType = target.getAttribute('data-element-type');
+    let elementId = target.getAttribute('data-element-id');
     
-    
-    // If clicked on a subpath (using data-element-type="subpath" and data-element-id)
-    if (elementType === 'subpath' && elementId) {
-      // Find the parent path of the clicked subpath
-      const parentPath = this.editorStore.paths.find((path: any) => 
-        path.subPaths.some((sp: any) => sp.id === elementId)
-      );
+    // Handle format copy logic
+    if (elementType && elementId) {
+      const formatCopyState = this.editorStore.getFormatCopyState();
       
-      if (parentPath) {
-        const formatCopyState = this.editorStore.getFormatCopyState();
+      // For subpath elements, use the subpath ID directly
+      if (elementType === 'subpath') {
+        // Find the parent path of the clicked subpath
+        const parentPath = this.editorStore.paths.find((path: any) => 
+          path.subPaths.some((sp: any) => sp.id === elementId)
+        );
         
-        // Check if it's a different path than the source
-        if (parentPath.id !== formatCopyState.sourcePathId) {
+        if (parentPath && parentPath.id !== formatCopyState.sourcePathId) {
           // Apply format to target path
           this.editorStore.applyFormatToPath(parentPath.id);
           return true;
         } else {
-          // Same path - just cancel format copy
+          // Cancel format copy (either same path or not found)
           this.editorStore.cancelFormatCopy();
           return true;
         }
       }
-    }
-    
-    // Alternative detection: if clicked on a path element directly, try to find the subpath
-    if (target.tagName === 'path' && !elementType) {
-      // This might be a visual path element without data attributes
-      // Try to find it by examining nearby elements or parent context
-      const pathElement = target;
       
-      // Look for a parent group or nearby elements with data attributes
-      let currentElement = target.parentElement;
-      while (currentElement && currentElement.tagName !== 'svg') {
-        const siblingPaths = currentElement.querySelectorAll('path[data-element-type="subpath"]');
-        
-        // Try to match by d attribute or position
-        const pathD = pathElement.getAttribute('d');
-        if (pathD) {
-          for (const siblingPath of siblingPaths) {
-            if (siblingPath.getAttribute('d') === pathD) {
-              const siblingElementId = siblingPath.getAttribute('data-element-id');
-              if (siblingElementId) {
-                console.log('Found matching subpath via sibling search:', siblingElementId);
-                
-                // Find the parent path of this subpath
-                const parentPath = this.editorStore.paths.find((path: any) => 
-                  path.subPaths.some((sp: any) => sp.id === siblingElementId)
-                );
-                
-                if (parentPath) {
-                  const formatCopyState = this.editorStore.getFormatCopyState();
-                  
-                  if (parentPath.id !== formatCopyState.sourcePathId) {
-                    this.editorStore.applyFormatToPath(parentPath.id);
-                    return true;
-                  } else {
-                    this.editorStore.cancelFormatCopy();
-                    return true;
-                  }
-                }
-              }
-            }
-          }
+      // For path-overlay elements, use the path ID directly
+      if (elementType === 'path-overlay') {
+        // elementId is already the path ID for overlays
+        if (elementId !== formatCopyState.sourcePathId) {
+          // Apply format to target path
+          this.editorStore.applyFormatToPath(elementId);
+          return true;
+        } else {
+          // Cancel format copy (same path)
+          this.editorStore.cancelFormatCopy();
+          return true;
         }
-        currentElement = currentElement.parentElement;
       }
-    }
-    
-    // If clicked on other elements (text, image, group, etc.) - cancel format copy
-    if (elementType && (
-      elementType === 'text' || 
-      elementType === 'multiline-text' || 
-      elementType === 'textPath' ||
-      elementType === 'image' ||
-      elementType === 'use' ||
-      elementType === 'group'
-    )) {
+      
+      // For other element types, cancel format copy
       this.editorStore.cancelFormatCopy();
       return true;
     }
     
-    // If clicked on empty space - cancel format copy
-    if (!elementType && !elementId) {
-      this.editorStore.cancelFormatCopy();
-      return true;
-    }
-    
-    return false;
+    // No element found - cancel format copy
+    this.editorStore.cancelFormatCopy();
+    return true;
   };
 
   handleTextFormatCopyPointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     const target = e.target as SVGElement;
     
-    // Check what type of element was clicked
+    // Get element info from clicked target
     let elementType = target.getAttribute('data-element-type');
     let elementId = target.getAttribute('data-element-id');
     
@@ -157,79 +113,87 @@ class RectSelectionManager {
       elementType = parentElement.getAttribute('data-element-type');
       elementId = parentElement.getAttribute('data-element-id');
     }
-    
-    // Handle text elements (regular text and multiline text)
-    if ((elementType === 'text' || elementType === 'multiline-text') && elementId) {
+
+    // Handle format copy logic
+    if (elementType && elementId) {
       const textFormatCopyState = this.editorStore.getTextFormatCopyState();
       
-      // Check if it's a different text than the source
-      if (elementId !== textFormatCopyState.sourceTextId) {
-        // Apply format to target text
-        this.editorStore.applyTextFormatToText(elementId);
+      // Check if it's a text element and different from source
+      if ((elementType === 'text' || elementType === 'multiline-text' || elementType === 'textPath') && 
+          elementId !== textFormatCopyState.sourceTextId) {
+        // Apply format to target
+        if (elementType === 'textPath') {
+          this.editorStore.applyTextFormatToTextPath(elementId);
+        } else {
+          this.editorStore.applyTextFormatToText(elementId);
+        }
         return true;
       } else {
-        // Same text - just cancel format copy
+        // Cancel format copy (either same element or non-text element)
         this.editorStore.cancelTextFormatCopy();
         return true;
       }
     }
     
-    // Handle textPath elements
-    if (elementType === 'textPath' && elementId) {
-      const textFormatCopyState = this.editorStore.getTextFormatCopyState();
-      
-      // Check if it's a different textPath than the source
-      if (elementId !== textFormatCopyState.sourceTextId) {
-        // Apply format to target textPath
-        this.editorStore.applyTextFormatToTextPath(elementId);
-        return true;
-      } else {
-        // Same textPath - just cancel format copy
-        this.editorStore.cancelTextFormatCopy();
-        return true;
-      }
-    }
-    
-    // If clicked on something else (empty space, other elements), cancel format copy
-    if (!elementType || !elementId || 
-        (elementType !== 'text' && elementType !== 'multiline-text' && elementType !== 'textPath')) {
-      this.editorStore.cancelTextFormatCopy();
-      return true;
-    }
-    
-    return false;
+    // No element found - cancel format copy
+    this.editorStore.cancelTextFormatCopy();
+    return true;
   };
 
   handleImageFormatCopyPointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     const target = e.target as SVGElement;
     
-    // Check what type of element was clicked
+    // Get element info from clicked target
     const elementType = target.getAttribute('data-element-type');
     const elementId = target.getAttribute('data-element-id');
-    
-    // If clicked on an image
-    if (elementType === 'image' && elementId) {
+
+    // Handle format copy logic
+    if (elementType && elementId) {
       const imageFormatCopyState = this.editorStore.getImageFormatCopyState();
       
-      // Check if it's a different image than the source
-      if (elementId !== imageFormatCopyState.sourceImageId) {
-        // Apply format to target image
+      // Check if it's an image element and different from source
+      if (elementType === 'image' && elementId !== imageFormatCopyState.sourceImageId) {
+        // Apply format to target
         this.editorStore.applyImageFormatToImage(elementId);
         return true;
       } else {
-        // Same image - just cancel image format copy
+        // Cancel format copy (either same element or non-image element)
         this.editorStore.cancelImageFormatCopy();
         return true;
       }
     }
     
-    // If clicked on something that's not an image, cancel image format copy
-    if (elementType !== 'image') {
-      this.editorStore.cancelImageFormatCopy();
-      return true;
+    // No element found - cancel format copy
+    this.editorStore.cancelImageFormatCopy();
+    return true;
+  };
+
+  handleUseFormatCopyPointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
+    const target = e.target as SVGElement;
+    
+    // Get element info from clicked target
+    const elementType = target.getAttribute('data-element-type');
+    const elementId = target.getAttribute('data-element-id');
+
+    // Handle format copy logic
+    if (elementType && elementId) {
+      const useFormatCopyState = this.editorStore.getUseFormatCopyState();
+      
+      // Check if it's a use element and different from source
+      if (elementType === 'use' && elementId !== useFormatCopyState.sourceUseId) {
+        // Apply format to target
+        this.editorStore.applyUseFormatToUse(elementId);
+        return true;
+      } else {
+        // Cancel format copy (either same element or non-use element)
+        this.editorStore.cancelUseFormatCopy();
+        return true;
+      }
     }
     
-    return false;
+    // No element found - cancel format copy
+    this.editorStore.cancelUseFormatCopy();
+    return true;
   };
 
   handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
@@ -252,6 +216,12 @@ class RectSelectionManager {
     const imageFormatCopyState = this.editorStore.getImageFormatCopyState();
     if (imageFormatCopyState.isActive) {
       return this.handleImageFormatCopyPointerDown(e, context);
+    }
+
+    // Check if use format copy mode is active
+    const useFormatCopyState = this.editorStore.getUseFormatCopyState();
+    if (useFormatCopyState.isActive) {
+      return this.handleUseFormatCopyPointerDown(e, context);
     }
 
     // Check if clicking on a transform handle - if so, don't start rectangle selection
@@ -1356,6 +1326,9 @@ export const SelectionPlugin: Plugin = {
         }
         if (store.isImageFormatCopyActive()) {
           store.cancelImageFormatCopy();
+        }
+        if (store.isUseFormatCopyActive()) {
+          store.cancelUseFormatCopy();
         }
       }
     },

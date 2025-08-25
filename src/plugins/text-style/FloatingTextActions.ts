@@ -61,7 +61,8 @@ import {
   createColoredSpotsFilter,
   createColoredFlameFilter,
   createAdvancedWatercolorFilter,
-  formatSVGReference
+  formatSVGReference,
+  matchesFilterSignature
 } from '../../utils/svg-elements-utils';
 
 // Get current text styles for selected texts
@@ -350,6 +351,135 @@ const addScaleAnimationToText = () => {
   });
 };
 
+// Check if a specific filter is active on selected texts
+const isTextFilterActive = (filterType: string): boolean => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  if (selectedTexts.length === 0) return false;
+  
+  // Check if any selected text has a filter applied
+  return selectedTexts.some(textId => {
+    const text = store.texts.find(t => t.id === textId);
+    const filterRef = text?.style?.filter;
+    if (!filterRef || typeof filterRef !== 'string') return false;
+    
+    // Extract filter ID from url(#id) format
+    const match = filterRef.match(/url\(#([^)]+)\)/);
+    if (!match) return false;
+    
+    const filterId = match[1];
+    const filter = store.filters.find(f => f.id === filterId);
+    
+    if (!filter) return false;
+    
+    // Match filter type based on complete primitive sequences
+    return matchesFilterSignature(filter.primitives, filterType);
+  });
+};
+
+// Check if a specific animation is active on selected texts
+const isTextAnimationActive = (animationType: string): boolean => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  if (selectedTexts.length === 0) return false;
+  
+  // Check if any selected text has an animation applied
+  return selectedTexts.some(textId => {
+    return store.animations.some(animation => {
+      if (animation.targetElementId !== textId) return false;
+      
+      switch (animationType) {
+        case 'fade':
+          return animation.type === 'animate' && (animation as any).attributeName === 'opacity';
+        case 'rotate':
+          return animation.type === 'animateTransform' && 
+                 (animation as any).transformType === 'rotate';
+        case 'scale':
+          return animation.type === 'animateTransform' && 
+                 (animation as any).transformType === 'scale';
+        default:
+          return false;
+      }
+    });
+  });
+};
+
+// Remove specific filter from selected texts
+const removeTextFilter = (filterType: string) => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  if (selectedTexts.length === 0) return;
+  
+  store.pushToHistory();
+  
+  selectedTexts.forEach(textId => {
+    const text = store.texts.find(t => t.id === textId);
+    if (!text) return;
+    
+    // Create a new style object without the filter property
+    const currentStyle = text.style || {};
+    const { filter, ...newStyle } = currentStyle;
+    
+    // Update the text style without the filter
+    store.updateTextStyle(textId, { filter: undefined });
+  });
+};
+
+// Remove specific animation from selected texts
+const removeTextAnimation = (animationType: string) => {
+  const store = useEditorStore.getState();
+  const selectedTexts = store.selection.selectedTexts;
+  
+  if (selectedTexts.length === 0) return;
+  
+  store.pushToHistory();
+  
+  selectedTexts.forEach(textId => {
+    // Find animations that match the type and target this text
+    const animationsToRemove = store.animations.filter(animation => {
+      if (animation.targetElementId !== textId) return false;
+      
+      switch (animationType) {
+        case 'fade':
+          return animation.type === 'animate' && (animation as any).attributeName === 'opacity';
+        case 'rotate':
+          return animation.type === 'animateTransform' && 
+                 (animation as any).transformType === 'rotate';
+        case 'scale':
+          return animation.type === 'animateTransform' && 
+                 (animation as any).transformType === 'scale';
+        default:
+          return false;
+      }
+    });
+    
+    // Remove each matching animation
+    animationsToRemove.forEach(animation => {
+      store.removeAnimation(animation.id);
+    });
+  });
+};
+
+// Toggle functions that either apply or remove filters/animations
+const toggleTextFilter = (filterType: string, applyFunction: () => void) => {
+  if (isTextFilterActive(filterType)) {
+    removeTextFilter(filterType);
+  } else {
+    applyFunction();
+  }
+};
+
+const toggleTextAnimation = (animationType: string, applyFunction: () => void) => {
+  if (isTextAnimationActive(animationType)) {
+    removeTextAnimation(animationType);
+  } else {
+    applyFunction();
+  }
+};
+
 // Function to open animation panel for text
 const openAnimationPanel = async () => {
   // Use pluginManager to open animation panel (handles both mobile and desktop)
@@ -362,17 +492,20 @@ const textAnimationOptions = [
   { 
     id: 'text-fade', 
     label: 'Fade In/Out', 
-    action: addFadeAnimationToText 
+    action: () => toggleTextAnimation('fade', addFadeAnimationToText),
+    active: () => isTextAnimationActive('fade')
   },
   { 
     id: 'text-rotate', 
     label: 'Rotate', 
-    action: addRotateAnimationToText 
+    action: () => toggleTextAnimation('rotate', addRotateAnimationToText),
+    active: () => isTextAnimationActive('rotate')
   },
   { 
     id: 'text-scale', 
     label: 'Scale', 
-    action: addScaleAnimationToText 
+    action: () => toggleTextAnimation('scale', addScaleAnimationToText),
+    active: () => isTextAnimationActive('scale')
   },
   { id: 'text-more-animations', label: 'More ...', action: openAnimationPanel }
 ];
@@ -388,13 +521,48 @@ const openFilterPanelForText = async () => {
 
 // Text filter options - Essential 7 filters
 const textFilterOptions = [
-  { id: 'text-blur', label: 'Blur', action: applyBlurFilterToText },
-  { id: 'text-shadow', label: 'Drop Shadow', action: applyDropShadowToText },
-  { id: 'text-glow', label: 'Glow', action: applyGlowFilterToText },
-  { id: 'text-grayscale', label: 'Grayscale', action: applyGrayscaleFilterToText },
-  { id: 'text-sepia', label: 'Sepia', action: applySepiaFilterToText },
-  { id: 'text-emboss', label: 'Emboss', action: applyEmbossFilterToText },
-  { id: 'text-neon-glow', label: 'Neon Glow', action: applyNeonGlowFilterToText },
+  { 
+    id: 'text-blur', 
+    label: 'Blur', 
+    action: () => toggleTextFilter('blur', applyBlurFilterToText),
+    active: () => isTextFilterActive('blur')
+  },
+  { 
+    id: 'text-shadow', 
+    label: 'Drop Shadow', 
+    action: () => toggleTextFilter('shadow', applyDropShadowToText),
+    active: () => isTextFilterActive('shadow')
+  },
+  { 
+    id: 'text-glow', 
+    label: 'Glow', 
+    action: () => toggleTextFilter('glow', applyGlowFilterToText),
+    active: () => isTextFilterActive('glow')
+  },
+  { 
+    id: 'text-grayscale', 
+    label: 'Grayscale', 
+    action: () => toggleTextFilter('grayscale', applyGrayscaleFilterToText),
+    active: () => isTextFilterActive('grayscale')
+  },
+  { 
+    id: 'text-sepia', 
+    label: 'Sepia', 
+    action: () => toggleTextFilter('sepia', applySepiaFilterToText),
+    active: () => isTextFilterActive('sepia')
+  },
+  { 
+    id: 'text-emboss', 
+    label: 'Emboss', 
+    action: () => toggleTextFilter('emboss', applyEmbossFilterToText),
+    active: () => isTextFilterActive('emboss')
+  },
+  { 
+    id: 'text-neon-glow', 
+    label: 'Neon Glow', 
+    action: () => toggleTextFilter('neon-glow', applyNeonGlowFilterToText),
+    active: () => isTextFilterActive('neon-glow')
+  },
   { id: 'text-more-filters', label: 'More ...', action: openFilterPanelForText }
 ];
 

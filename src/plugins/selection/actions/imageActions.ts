@@ -25,7 +25,8 @@ import {
   createEmbossFilter,
   createGlowFilter,
   createNeonGlowFilter,
-  formatSVGReference
+  formatSVGReference,
+  matchesFilterSignature
 } from '../../../utils/svg-elements-utils';
 
 // Get common opacity for selected images
@@ -558,33 +559,8 @@ const isImageFilterActive = (filterType: string): boolean => {
     const filter = store.filters.find(f => f.id === filterId);
     if (!filter) return false;
     
-    // Check filter type based on the filter definition
-    switch (filterType) {
-      case 'blur':
-        return filter.primitives.some((primitive: any) => primitive.type === 'feGaussianBlur');
-      case 'shadow':
-        return filter.primitives.some((primitive: any) => primitive.type === 'feDropShadow');
-      case 'glow':
-        return filter.primitives.some((primitive: any) => 
-          primitive.type === 'feDropShadow' && primitive.dx === 0 && primitive.dy === 0
-        );
-      case 'grayscale':
-        return filter.primitives.some((primitive: any) => 
-          primitive.type === 'feColorMatrix' && primitive.values?.includes('0.299')
-        );
-      case 'sepia':
-        return filter.primitives.some((primitive: any) => 
-          primitive.type === 'feColorMatrix' && primitive.values?.includes('0.393')
-        );
-      case 'emboss':
-        return filter.primitives.some((primitive: any) => primitive.type === 'feConvolveMatrix');
-      case 'neon-glow':
-        return filter.primitives.some((primitive: any) => 
-          primitive.type === 'feDropShadow' && primitive.floodColor === '#00ff00'
-        );
-      default:
-        return false;
-    }
+    // Use the shared filter signature matching function
+    return matchesFilterSignature(filter.primitives, filterType);
   });
 };
 
@@ -611,47 +587,12 @@ const removeImageFilter = (filterType: string) => {
     const filter = store.filters.find(f => f.id === filterId);
     if (!filter) return;
     
-    // Check if this filter matches the type we want to remove
-    let shouldRemove = false;
-    switch (filterType) {
-      case 'blur':
-        shouldRemove = filter.primitives.some((primitive: any) => primitive.type === 'feGaussianBlur');
-        break;
-      case 'shadow':
-        shouldRemove = filter.primitives.some((primitive: any) => primitive.type === 'feDropShadow');
-        break;
-      case 'glow':
-        shouldRemove = filter.primitives.some((primitive: any) => 
-          primitive.type === 'feDropShadow' && primitive.dx === 0 && primitive.dy === 0
-        );
-        break;
-      case 'grayscale':
-        shouldRemove = filter.primitives.some((primitive: any) => 
-          primitive.type === 'feColorMatrix' && primitive.values?.includes('0.299')
-        );
-        break;
-      case 'sepia':
-        shouldRemove = filter.primitives.some((primitive: any) => 
-          primitive.type === 'feColorMatrix' && primitive.values?.includes('0.393')
-        );
-        break;
-      case 'emboss':
-        shouldRemove = filter.primitives.some((primitive: any) => primitive.type === 'feConvolveMatrix');
-        break;
-      case 'neon-glow':
-        shouldRemove = filter.primitives.some((primitive: any) => 
-          primitive.type === 'feDropShadow' && primitive.floodColor === '#00ff00'
-        );
-        break;
-    }
+    // Check if this filter matches the type we want to remove using the shared signature matching
+    const shouldRemove = matchesFilterSignature(filter.primitives, filterType);
     
     if (shouldRemove) {
-      // Remove the filter by clearing the filter property
-      const currentStyle = image.style || {};
-      const newStyle = { ...currentStyle };
-      delete newStyle.filter;
-      
-      store.updateImage(image.id, { style: newStyle });
+      // Remove the filter by setting it to undefined
+      store.updateImage(image.id, { style: { ...image.style, filter: undefined } });
     }
   });
 };
@@ -854,6 +795,13 @@ const clearImageStyle = () => {
 // Format copy functions for images
 const startImageFormatCopy = () => {
   const store = useEditorStore.getState();
+  
+  // Check if image format copy is already active - if so, cancel it
+  if (store.isImageFormatCopyActive && store.isImageFormatCopyActive()) {
+    store.cancelImageFormatCopy();
+    return;
+  }
+  
   const selectedImages = store.selection.selectedImages;
   
   if (selectedImages.length === 0) return;
