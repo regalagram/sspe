@@ -3,16 +3,13 @@ import {
   Trash2, 
   Lock, 
   Filter, 
-  Move, 
   Group, 
   Palette, 
   Brush, 
   LineSquiggle, 
   Play, 
   RotateCcw, 
-  PaintBucket,
-  ArrowUp,
-  Layers
+  PaintBucket
 } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';

@@ -1,4 +1,4 @@
-import { Copy, Trash2, Lock, Group, PaintBucket, ArrowUp, Layers } from 'lucide-react';
+import { Copy, Trash2, Lock, Group, PaintBucket } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected } from './commonActions';

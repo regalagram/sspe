@@ -9,9 +9,7 @@ import {
   Filter, 
   Play, 
   PaintBucket, 
-  RotateCcw,
-  ArrowUp,
-  Layers
+  RotateCcw
 } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';

@@ -12,8 +12,6 @@ export const createReorderActions = (
     sendToBack: () => void;
   }
 ): ToolbarAction[] => {
-  const hasSelection = () => getSelectionCount() > 0;
-
   return [
     {
       id: `${elementType}-reorder`,
