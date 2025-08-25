@@ -17,7 +17,7 @@ import { SVGDefinitions } from '../components/SVGDefinitions';
 import { MobileContainer } from '../components/MobileContainer';
 import { Toolbar } from '../components/Toolbar';
 import { FloatingToolbarRenderer } from '../components/FloatingToolbar/FloatingToolbarRenderer';
-import { extractGradientsFromPaths } from '../utils/gradient-utils';
+import { extractGradientsFromPaths, extractGradientsFromImages } from '../utils/gradient-utils';
 
 // Register plugins immediately during module loading
 
@@ -26,7 +26,7 @@ initializePlugins();
 
 export const SvgEditor: React.FC = () => {
   const editorStore = useEditorStore();
-  const { isFullscreen, paths, gradients: storeGradients, enabledFeatures } = editorStore;
+  const { isFullscreen, paths, images, gradients: storeGradients, enabledFeatures } = editorStore;
   const svgRef = useRef<SVGSVGElement>(null);
   
   // Get panel mode from store
@@ -186,8 +186,9 @@ export const SvgEditor: React.FC = () => {
   // Mouse event handlers
   const { handlePointerDown, handlePointerMove, handlePointerUp, handleWheel } = usePointerEventHandlers();
 
-  // Extract gradients and patterns from paths
+  // Extract gradients and patterns from paths and images
   const pathGradients = extractGradientsFromPaths(paths);
+  const imageGradients = extractGradientsFromImages(images);
   
   // Add predefined gradients for text styling with proper normalized coordinates
   const predefinedGradients = [
@@ -221,7 +222,7 @@ export const SvgEditor: React.FC = () => {
   ];
   
   // Deduplicate gradients by id to avoid React key conflicts
-  const allGradientsArray = [...pathGradients, ...predefinedGradients, ...storeGradients];
+  const allGradientsArray = [...pathGradients, ...imageGradients, ...predefinedGradients, ...storeGradients];
   const gradients = allGradientsArray.filter((gradient, index, array) => 
     array.findIndex(g => g.id === gradient.id) === index
   );

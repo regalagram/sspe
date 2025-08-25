@@ -35,11 +35,19 @@ export interface ToolbarAction {
     getCurrentStrokeLinecap: () => string;
     getCurrentStrokeLinejoin: () => string;
     getCurrentFillRule?: () => string;
+    getCurrentStrokeOpacity?: () => number;
     onStrokeWidthChange: (width: number) => void;
     onStrokeDashChange: (dash: string) => void;
     onStrokeLinecapChange: (linecap: string) => void;
     onStrokeLinejoinChange: (linejoin: string) => void;
     onFillRuleChange?: (fillRule: string) => void;
+    onStrokeOpacityChange?: (opacity: number) => void;
+  };
+  opacityOptions?: {
+    getCurrentOpacity: () => number;
+    onOpacityChange: (opacity: number) => void;
+    quickValues?: number[];
+    unit?: string;
   };
   
   // Metadata
@@ -57,6 +65,7 @@ export interface DropdownOption {
   icon?: React.ComponentType<{ size?: number }>;
   action: () => void;
   disabled?: boolean | (() => boolean);
+  active?: boolean | (() => boolean); // New: for visual feedback without disabling
 }
 
 export interface FloatingActionDefinition {

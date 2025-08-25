@@ -1455,14 +1455,16 @@ class PointerInteractionManager {
     // Check if format copy mode is active - if so, let SelectionPlugin handle it
     let isFormatCopyActive = false;
     let isTextFormatCopyActive = false;
+    let isImageFormatCopyActive = false;
     try {
       isFormatCopyActive = this.editorStore && this.editorStore.isFormatCopyActive && this.editorStore.isFormatCopyActive();
       isTextFormatCopyActive = this.editorStore && this.editorStore.isTextFormatCopyActive && this.editorStore.isTextFormatCopyActive();
+      isImageFormatCopyActive = this.editorStore && this.editorStore.isImageFormatCopyActive && this.editorStore.isImageFormatCopyActive();
     } catch (error) {
       console.error('Error checking format copy state:', error);
     }
     
-    if (isFormatCopyActive || isTextFormatCopyActive) {
+    if (isFormatCopyActive || isTextFormatCopyActive || isImageFormatCopyActive) {
       return false; // Don't consume the event, let it reach SelectionPlugin
     }
 

@@ -30,6 +30,9 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
   // Check if this is a complex stroke action (has strokeOptions)
   const isComplexStroke = action.type === 'input' && (action as any).strokeOptions;
   
+  // Check if this is an opacity action (has opacityOptions)
+  const isOpacityControl = action.type === 'input' && (action as any).opacityOptions;
+  
   const isMobileDevice = isMobile || isTablet;
   const buttonSize = size || (isMobileDevice ? 44 : 32);
   const iconSize = isMobileDevice ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
@@ -198,6 +201,11 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
               action={action}
               onClose={closeSubmenu}
             />
+          ) : isOpacityControl ? (
+            <OpacityOptionsContent 
+              action={action}
+              onClose={closeSubmenu}
+            />
           ) : (
             <InputFieldContent 
               action={action}
@@ -252,6 +260,9 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ option, onSelect }) => {
   // Evaluate disabled state - could be boolean or function
   const isDisabled = typeof option.disabled === 'function' ? option.disabled() : !!option.disabled;
   
+  // Evaluate active state - could be boolean or function  
+  const isActive = typeof option.active === 'function' ? option.active() : !!option.active;
+  
   const handlePointerEnter = (e: React.PointerEvent) => {
     if (!isDisabled) {
       (e.currentTarget as HTMLDivElement).style.background = '#f3f4f6';
@@ -271,7 +282,8 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ option, onSelect }) => {
         cursor: isDisabled ? 'not-allowed' : 'pointer',
         opacity: isDisabled ? 0.5 : 1,
         fontSize: '14px',
-        color: '#374151',
+        color: isActive ? '#1f2937' : '#374151',
+        fontWeight: isActive ? '600' : '400',
         transition: 'background 0.15s ease'
       }}
       onPointerDown={isDisabled ? undefined : onSelect}
@@ -296,6 +308,11 @@ interface InputFieldContentProps {
 }
 
 interface StrokeOptionsContentProps {
+  action: ToolbarAction;
+  onClose: () => void;
+}
+
+interface OpacityOptionsContentProps {
   action: ToolbarAction;
   onClose: () => void;
 }
@@ -498,6 +515,7 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
   const currentLinecap = strokeOptions?.getCurrentStrokeLinecap?.() || 'butt';
   const currentLinejoin = strokeOptions?.getCurrentStrokeLinejoin?.() || 'miter';
   const currentFillRule = strokeOptions?.getCurrentFillRule?.() || 'nonzero';
+  const currentStrokeOpacity = strokeOptions?.getCurrentStrokeOpacity?.() || 1;
   
   // Compact stroke width values - reduced set
   const predefinedWidths = [0.5, 1, 2, 4, 8, 16];
@@ -751,6 +769,7 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
         </div>
       )}
       
+      
       {/* Close button for mobile - more compact */}
       {isMobileDevice && (
         <button
@@ -779,6 +798,127 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
   );
 };
 
+const OpacityOptionsContent: React.FC<OpacityOptionsContentProps> = ({ action, onClose }) => {
+  const { isMobile, isTablet } = useMobileDetection();
+  const isMobileDevice = isMobile || isTablet;
+  const opacityOptions = (action as any).opacityOptions;
+  
+  // Get current values from opacityOptions
+  const currentOpacity = opacityOptions?.getCurrentOpacity?.() || 100;
+  const quickValues = opacityOptions?.quickValues || [0, 25, 50, 75, 100];
+  const unit = opacityOptions?.unit || '%';
+  
+  return (
+    <div style={{ padding: '8px', width: '160px' }}>
+      {/* Quick select buttons */}
+      <div style={{ marginBottom: '12px' }}>
+        <div style={{ fontSize: '11px', color: '#9ca3af', fontWeight: '500', marginBottom: '6px' }}>
+          Quick Select:
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+          {quickValues.map((value: number) => (
+            <button
+              key={value}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                opacityOptions?.onOpacityChange?.(value);
+                if (!isMobileDevice) onClose();
+              }}
+              style={{
+                padding: '4px 8px',
+                fontSize: '10px',
+                border: '1px solid #d1d5db',
+                background: currentOpacity === value ? '#3b82f6' : 'white',
+                color: currentOpacity === value ? 'white' : '#374151',
+                cursor: 'pointer',
+                borderRadius: '4px',
+                fontWeight: currentOpacity === value ? '600' : '500',
+                minWidth: '32px',
+                touchAction: 'manipulation'
+              }}
+              title={`${value}${unit}`}
+            >
+              {value}{unit}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Slider */}
+      <div style={{ marginBottom: '12px' }}>
+        <div style={{ 
+          fontSize: '11px', 
+          color: '#9ca3af', 
+          fontWeight: '500', 
+          marginBottom: '6px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span>Custom Value:</span>
+          <span style={{ fontWeight: '600', color: '#374151' }}>{Math.round(currentOpacity)}{unit}</span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          value={Math.round(currentOpacity)}
+          onChange={(e) => {
+            const value = parseInt(e.target.value);
+            opacityOptions?.onOpacityChange?.(value);
+          }}
+          style={{
+            width: '100%',
+            height: '6px',
+            background: '#e5e7eb',
+            borderRadius: '0px',
+            outline: 'none',
+            cursor: 'pointer',
+            touchAction: 'manipulation'
+          }}
+        />
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          fontSize: '10px', 
+          color: '#9ca3af',
+          marginTop: '4px'
+        }}>
+          <span>0{unit}</span>
+          <span>100{unit}</span>
+        </div>
+      </div>
+      
+      {/* Close button for mobile */}
+      {isMobileDevice && (
+        <button
+          type="button"
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onClose();
+          }}
+          style={{
+            width: '100%',
+            padding: '8px',
+            background: '#f3f4f6',
+            border: '1px solid #d1d5db',
+            borderRadius: '4px',
+            fontSize: '12px',
+            color: '#374151',
+            cursor: 'pointer',
+            touchAction: 'manipulation'
+          }}
+        >
+          Done
+        </button>
+      )}
+    </div>
+  );
+};
+
 interface ColorPickerContentProps {
   currentColor: string | any; // Can be string color or GradientOrPattern object
   onChange: (color: string | any) => void; // Can return string color or GradientOrPattern object
@@ -790,7 +930,7 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
   const isMobileDevice = isMobile || isTablet;
 
   // Import the store to get real-time data
-  const { paths, texts, selection } = useEditorStore();
+  const { paths, texts, images, selection } = useEditorStore();
 
   // Get the actual current style value dynamically
   const getCurrentStyleValue = (): any => {
@@ -803,6 +943,7 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
     // Get currently selected elements
     const selectedPaths = selection.selectedPaths.map(id => paths.find(p => p.id === id)).filter(Boolean);
     const selectedTexts = selection.selectedTexts.map(id => texts.find(t => t.id === id)).filter(Boolean);
+    const selectedImages = selection.selectedImages.map(id => images.find(img => img.id === id)).filter(Boolean);
     
     // Handle subpath selection
     if (isSubpathAction && selection.selectedSubPaths.length > 0) {
@@ -832,6 +973,13 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
       return styleValue;
     }
     
+    // Check images
+    if (selectedImages.length > 0) {
+      const firstImage = selectedImages[0];
+      const styleValue = isStroke ? firstImage?.style?.stroke : firstImage?.style?.fill;
+      return styleValue;
+    }
+    
     return currentColor; // fallback
   };
 
@@ -846,6 +994,7 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
     // Get currently selected elements
     const selectedPaths = selection.selectedPaths.map(id => paths.find(p => p.id === id)).filter(Boolean);
     const selectedTexts = selection.selectedTexts.map(id => texts.find(t => t.id === id)).filter(Boolean);
+    const selectedImages = selection.selectedImages.map(id => images.find(img => img.id === id)).filter(Boolean);
     
     let opacityValue: number | undefined = undefined;
     let colorValue: string | any = undefined;
@@ -898,6 +1047,12 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
       opacityValue = extractOpacityFromElement(firstText);
     }
     
+    // Check images if no opacity found yet
+    if (opacityValue === undefined && selectedImages.length > 0) {
+      const firstImage = selectedImages[0];
+      opacityValue = extractOpacityFromElement(firstImage);
+    }
+    
     // Return the found opacity value or default to 1 (fully opaque)
     return opacityValue !== undefined ? opacityValue : 1;
   };
@@ -910,6 +1065,7 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
     // Get currently selected elements
     const selectedPaths = selection.selectedPaths.map(id => paths.find(p => p.id === id)).filter(Boolean);
     const selectedTexts = selection.selectedTexts.map(id => texts.find(t => t.id === id)).filter(Boolean);
+    const selectedImages = selection.selectedImages.map(id => images.find(img => img.id === img.id)).filter(Boolean);
     
     let hasRGBAOpacity = false;
     let hasExplicitOpacity = false;
@@ -952,6 +1108,7 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
     
     selectedPaths.forEach(analyzeElementOpacity);
     selectedTexts.forEach(analyzeElementOpacity);
+    selectedImages.forEach(analyzeElementOpacity);
     
     return { hasRGBAOpacity, hasExplicitOpacity, rgbaOpacity, explicitOpacity };
   };
@@ -979,7 +1136,7 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
   useEffect(() => {
     const newTab = getInitialTab();
     setActiveTab(newTab);
-  }, [selection.selectedPaths, selection.selectedTexts, selection.selectedSubPaths]);
+  }, [selection.selectedPaths, selection.selectedTexts, selection.selectedSubPaths, selection.selectedImages]);
 
   // Update opacity when selection changes
   useEffect(() => {
@@ -1328,6 +1485,38 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
           }
         }
       });
+
+      // Apply to images
+      selection.selectedImages.forEach(imageId => {
+        const image = store.images.find(img => img.id === imageId);
+        if (image) {
+          const currentColor = isStroke ? image.style?.stroke : image.style?.fill;
+          const result = updateColorWithOpacity(currentColor, clampedOpacity);
+          
+          if (typeof result === 'string') {
+            // Update with new RGBA/HSLA string
+            const updates: any = {
+              ...image.style
+            };
+            updates[isStroke ? 'stroke' : 'fill'] = result;
+            store.updateImage(imageId, { style: updates });
+          } else {
+            // Update color and opacity separately
+            const updates: any = {
+              ...image.style
+            };
+            if (result.color !== currentColor) {
+              updates[isStroke ? 'stroke' : 'fill'] = result.color;
+            }
+            if (isStroke) {
+              updates.strokeOpacity = result.opacity;
+            } else {
+              updates.opacity = result.opacity; // For images, use opacity for fill-like behavior
+            }
+            store.updateImage(imageId, { style: updates });
+          }
+        }
+      });
     });
   };
 
@@ -1366,6 +1555,22 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
           updates.fillOpacity = clampedOpacity;
         }
         store.updatePathStyle(pathId, updates);
+      });
+
+      // Apply to images
+      selection.selectedImages.forEach(imageId => {
+        const image = store.images.find(img => img.id === imageId);
+        if (image) {
+          const updates: any = {
+            ...image.style
+          };
+          if (isStroke) {
+            updates.strokeOpacity = clampedOpacity;
+          } else {
+            updates.opacity = clampedOpacity; // For images, use opacity for fill-like behavior
+          }
+          store.updateImage(imageId, { style: updates });
+        }
       });
     });
   };
@@ -1457,6 +1662,23 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
             const updates: any = {};
             updates[isStroke ? 'stroke' : 'fill'] = newColor;
             store.updatePathStyle(pathId, updates);
+          }
+        }
+      });
+
+      // Apply to images
+      selection.selectedImages.forEach(imageId => {
+        const image = store.images.find(img => img.id === imageId);
+        if (image) {
+          const currentColor = isStroke ? image.style?.stroke : image.style?.fill;
+          const newColor = updateEmbeddedOpacity(currentColor);
+          
+          if (newColor !== currentColor) {
+            const updates: any = {
+              ...image.style
+            };
+            updates[isStroke ? 'stroke' : 'fill'] = newColor;
+            store.updateImage(imageId, { style: updates });
           }
         }
       });
@@ -2056,6 +2278,7 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
           }
         `}</style>
       </div>
+
 
       {/* Quick Actions */}
       <div style={{ 

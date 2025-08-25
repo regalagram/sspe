@@ -323,6 +323,12 @@ export interface EditorState {
     sourceTextId: string | null;
     sourceTextType: 'text' | 'multiline-text' | 'textPath' | null;
   };
+  // Image format copy state
+  imageFormatCopyState?: {
+    isActive: boolean;
+    copiedStyle: Partial<PathStyle> | null;
+    sourceImageId: string | null;
+  };
 }
 
 // Animation synchronization types

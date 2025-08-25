@@ -98,3 +98,25 @@ export const extractGradientsFromPaths = (paths: any[]): GradientOrPattern[] => 
   
   return uniqueGradients;
 };
+
+export const extractGradientsFromImages = (images: any[]): GradientOrPattern[] => {
+  const gradients: GradientOrPattern[] = [];
+  
+  images.forEach(image => {
+    if (image.style) {
+      if (isGradientOrPattern(image.style.fill)) {
+        gradients.push(image.style.fill);
+      }
+      if (isGradientOrPattern(image.style.stroke)) {
+        gradients.push(image.style.stroke);
+      }
+    }
+  });
+  
+  // Remove duplicates by id
+  const uniqueGradients = gradients.filter((gradient, index, self) => 
+    self.findIndex(g => g.id === gradient.id) === index
+  );
+  
+  return uniqueGradients;
+};

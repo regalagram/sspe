@@ -1,6 +1,7 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { useAnimationsForElement } from '../../components/AnimationRenderer';
+import { getStyleValue } from '../../utils/gradient-utils';
 // Individual Image Element Component that can use hooks
 const ImageElementComponent: React.FC<{ image: any }> = ({ image }) => {
   const { selection, viewport, enabledFeatures } = useEditorStore();
@@ -81,26 +82,55 @@ const ImageElementComponent: React.FC<{ image: any }> = ({ image }) => {
         </g>
       ) : (
         // Normal mode: render actual image
-        <image
-          id={image.id}
-          x={image.x}
-          y={image.y}
-          width={image.width}
-          height={image.height}
-          href={image.href}
-          preserveAspectRatio={image.preserveAspectRatio || 'xMidYMid'}
-          transform={image.transform}
-          style={{
-            opacity: image.locked ? (image.style?.opacity ?? 1) * 0.6 : (image.style?.opacity ?? 1),
-            clipPath: image.style?.clipPath,
-            mask: image.style?.mask,
-            filter: image.style?.filter,
-          }}
-          data-element-type="image"
-          data-element-id={image.id}
-          data-locked={image.locked}
-          onError={() => handleImageError(image.id)}
-        />
+        <>
+          <image
+            id={image.id}
+            x={image.x}
+            y={image.y}
+            width={image.width}
+            height={image.height}
+            href={image.href}
+            preserveAspectRatio={image.preserveAspectRatio || 'xMidYMid'}
+            transform={image.transform}
+            style={{
+              opacity: image.locked ? (image.style?.opacity ?? 1) * 0.6 : (image.style?.opacity ?? 1),
+              clipPath: image.style?.clipPath,
+              mask: image.style?.mask,
+              filter: image.style?.filter,
+              fill: image.style?.fill,
+              fillOpacity: image.style?.fillOpacity,
+            }}
+            data-element-type="image"
+            data-element-id={image.id}
+            data-locked={image.locked}
+            onError={() => handleImageError(image.id)}
+          />
+          {/* Stroke overlay - SVG images don't support stroke natively */}
+          {image.style?.stroke && (
+            <rect
+              x={image.x}
+              y={image.y}
+              width={image.width}
+              height={image.height}
+              fill="none"
+              stroke={getStyleValue(image.style.stroke)}
+              strokeWidth={image.style.strokeWidth || 1}
+              strokeDasharray={image.style.strokeDasharray}
+              strokeLinecap={image.style.strokeLinecap}
+              strokeLinejoin={image.style.strokeLinejoin}
+              strokeOpacity={image.style.strokeOpacity}
+              opacity={image.locked ? 0.6 : 1}
+              transform={image.transform}
+              vectorEffect="non-scaling-stroke"
+              style={{
+                pointerEvents: 'none'
+              }}
+              data-stroke-overlay="true"
+              data-element-type="image-stroke"
+              data-element-id={image.id}
+            />
+          )}
+        </>
       )}
       {/* Include animations as siblings that target the image */}
       {animations}

@@ -19,6 +19,7 @@ import { SVGElementActions, createSVGElementActions } from './svgElementActions'
 import { AnimationActions, createAnimationActions } from './animationActions';
 import { FormatCopyActions, createFormatCopyActions } from './formatCopyActions';
 import { TextFormatCopyActions, createTextFormatCopyActions } from './textFormatCopyActions';
+import { ImageFormatCopyActions, createImageFormatCopyActions } from './imageFormatCopyActions';
 import { DeepSelectionActions, createDeepSelectionActions } from './deepSelectionActions';
 import { handleManager } from '../plugins/handles/HandleManager';
 // Combined actions interface
@@ -38,6 +39,7 @@ interface EditorActions extends
   AnimationActions,
   FormatCopyActions,
   TextFormatCopyActions,
+  ImageFormatCopyActions,
   DeepSelectionActions {}
 
 const loadInitialState = (): EditorState => {
@@ -506,6 +508,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     ...createAnimationActions(set, get),
     ...createFormatCopyActions(set, get, api),
     ...createTextFormatCopyActions(set, get, api),
+    ...createImageFormatCopyActions(set, get, api),
     ...createDeepSelectionActions(set, get, api),
   }))
 );

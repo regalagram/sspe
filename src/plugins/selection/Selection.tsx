@@ -200,6 +200,38 @@ class RectSelectionManager {
     return false;
   };
 
+  handleImageFormatCopyPointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
+    const target = e.target as SVGElement;
+    
+    // Check what type of element was clicked
+    const elementType = target.getAttribute('data-element-type');
+    const elementId = target.getAttribute('data-element-id');
+    
+    // If clicked on an image
+    if (elementType === 'image' && elementId) {
+      const imageFormatCopyState = this.editorStore.getImageFormatCopyState();
+      
+      // Check if it's a different image than the source
+      if (elementId !== imageFormatCopyState.sourceImageId) {
+        // Apply format to target image
+        this.editorStore.applyImageFormatToImage(elementId);
+        return true;
+      } else {
+        // Same image - just cancel image format copy
+        this.editorStore.cancelImageFormatCopy();
+        return true;
+      }
+    }
+    
+    // If clicked on something that's not an image, cancel image format copy
+    if (elementType !== 'image') {
+      this.editorStore.cancelImageFormatCopy();
+      return true;
+    }
+    
+    return false;
+  };
+
   handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
     const { commandId, controlPoint } = context;
     const { mode } = this.editorStore;
@@ -214,6 +246,12 @@ class RectSelectionManager {
     const textFormatCopyState = this.editorStore.getTextFormatCopyState();
     if (textFormatCopyState.isActive) {
       return this.handleTextFormatCopyPointerDown(e, context);
+    }
+
+    // Check if image format copy mode is active
+    const imageFormatCopyState = this.editorStore.getImageFormatCopyState();
+    if (imageFormatCopyState.isActive) {
+      return this.handleImageFormatCopyPointerDown(e, context);
     }
 
     // Check if clicking on a transform handle - if so, don't start rectangle selection
@@ -1315,6 +1353,9 @@ export const SelectionPlugin: Plugin = {
         }
         if (store.isTextFormatCopyActive()) {
           store.cancelTextFormatCopy();
+        }
+        if (store.isImageFormatCopyActive()) {
+          store.cancelImageFormatCopy();
         }
       }
     },
