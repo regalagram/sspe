@@ -367,6 +367,7 @@ export class FloatingToolbarManager {
         getCurrentStrokeDash: baseStrokeOptions?.getCurrentStrokeDash || (() => 'none'),
         getCurrentStrokeLinecap: baseStrokeOptions?.getCurrentStrokeLinecap || (() => 'butt'),
         getCurrentStrokeLinejoin: baseStrokeOptions?.getCurrentStrokeLinejoin || (() => 'miter'),
+        getCurrentFillRule: baseStrokeOptions?.getCurrentFillRule || (() => this.getCurrentFillRuleForAllSelected()),
         onStrokeWidthChange: (width: number) => {
           this.applyStrokeWidthToAllSelected(width);
         },
@@ -378,6 +379,9 @@ export class FloatingToolbarManager {
         },
         onStrokeLinejoinChange: (linejoin: string) => {
           this.applyStrokeLinejoinToAllSelected(linejoin);
+        },
+        onFillRuleChange: (fillRule: string) => {
+          this.applyFillRuleToAllSelected(fillRule);
         }
       }
     };
@@ -595,6 +599,53 @@ export class FloatingToolbarManager {
         store.updatePathStyle(pathId, { strokeLinejoin: linejoin as 'miter' | 'round' | 'bevel' });
       });
     });
+  }
+
+  private applyFillRuleToAllSelected(fillRule: string): void {
+    import('../../store/editorStore').then(({ useEditorStore }) => {
+      const store = useEditorStore.getState();
+      const selection = store.selection;
+
+      // Apply to paths only (fillRule doesn't apply to text elements)
+      const pathIds = new Set<string>();
+      selection.selectedPaths.forEach(pathId => pathIds.add(pathId));
+      selection.selectedSubPaths.forEach(subPathId => {
+        const path = store.paths.find(p => p.subPaths.some(sp => sp.id === subPathId));
+        if (path) pathIds.add(path.id);
+      });
+
+      pathIds.forEach(pathId => {
+        store.updatePathStyle(pathId, { fillRule: fillRule as 'nonzero' | 'evenodd' });
+      });
+    });
+  }
+
+  private getCurrentFillRuleForAllSelected(): string {
+    // This method returns the current fillRule for all selected elements
+    try {
+      const editorStore = require('../../store/editorStore');
+      const store = editorStore.useEditorStore.getState();
+      const selection = store.selection;
+
+      // Check paths
+      const pathIds = new Set<string>();
+      selection.selectedPaths.forEach((pathId: string) => pathIds.add(pathId));
+      selection.selectedSubPaths.forEach((subPathId: string) => {
+        const path = store.paths.find((p: any) => p.subPaths.some((sp: any) => sp.id === subPathId));
+        if (path) pathIds.add(path.id);
+      });
+
+      // Get fillRule from first selected path
+      if (pathIds.size > 0) {
+        const firstPathId = Array.from(pathIds)[0];
+        const path = store.paths.find((p: any) => p.id === firstPathId);
+        return path?.style?.fillRule || 'nonzero';
+      }
+
+      return 'nonzero';
+    } catch {
+      return 'nonzero';
+    }
   }
 
   private applyFilterToAllSelected(filterOption: any): void {

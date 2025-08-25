@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MoreVertical } from 'lucide-react';
 import { ToolbarAction, DropdownOption } from '../../types/floatingToolbar';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 import { createLinearGradient, createRadialGradient, createGradientStop } from '../../utils/gradient-utils';
 import { useEditorStore } from '../../store/editorStore';
+import { parseColorWithOpacity } from '../../utils/color-utils';
 
 interface FloatingToolbarButtonProps {
   action: ToolbarAction;
@@ -496,6 +497,7 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
   const currentDash = strokeOptions?.getCurrentStrokeDash?.() || 'none';
   const currentLinecap = strokeOptions?.getCurrentStrokeLinecap?.() || 'butt';
   const currentLinejoin = strokeOptions?.getCurrentStrokeLinejoin?.() || 'miter';
+  const currentFillRule = strokeOptions?.getCurrentFillRule?.() || 'nonzero';
   
   // Compact stroke width values - reduced set
   const predefinedWidths = [0.5, 1, 2, 4, 8, 16];
@@ -522,6 +524,12 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
     { id: 'bevel', label: 'B', value: 'bevel', title: 'Bevel' }
   ];
 
+  // Fill Rule options
+  const fillRuleOptions = [
+    { id: 'nonzero', label: 'NZ', value: 'nonzero', title: 'Non-zero' },
+    { id: 'evenodd', label: 'EO', value: 'evenodd', title: 'Even-odd' }
+  ];
+
   const handleWidthChange = (width: number) => {
     strokeOptions?.onStrokeWidthChange?.(width);
   };
@@ -536,6 +544,10 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
 
   const handleLinejoinChange = (linejoin: string) => {
     strokeOptions?.onStrokeLinejoinChange?.(linejoin);
+  };
+
+  const handleFillRuleChange = (fillRule: string) => {
+    strokeOptions?.onFillRuleChange?.(fillRule);
   };
 
   return (
@@ -694,6 +706,50 @@ const StrokeOptionsContent: React.FC<StrokeOptionsContentProps> = ({ action, onC
           ))}
         </div>
       </div>
+
+      {/* Fill Rule - only show if fillRule options are available */}
+      {strokeOptions?.getCurrentFillRule && strokeOptions?.onFillRuleChange && (
+        <div style={{ display: 'flex', gap: '2px' }}>
+          <div style={{ 
+            fontSize: '9px', 
+            color: '#6b7280', 
+            alignSelf: 'center',
+            minWidth: '25px',
+            fontWeight: '500'
+          }}>
+            Rule:
+          </div>
+          <div style={{ display: 'flex', gap: '2px', flex: 1 }}>
+            {fillRuleOptions.map(option => (
+              <button
+                key={option.id}
+                type="button"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleFillRuleChange(option.value);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '4px 2px',
+                  fontSize: '9px',
+                  border: currentFillRule === option.value ? '2px solid #3b82f6' : '1px solid #d1d5db',
+                  borderRadius: '0px',
+                  background: currentFillRule === option.value ? '#eff6ff' : 'white',
+                  color: currentFillRule === option.value ? '#3b82f6' : '#374151',
+                  cursor: 'pointer',
+                  fontWeight: currentFillRule === option.value ? '600' : '400',
+                  touchAction: 'manipulation',
+                  minHeight: '24px'
+                }}
+                title={`Fill Rule: ${option.title}`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       
       {/* Close button for mobile - more compact */}
       {isMobileDevice && (
@@ -779,6 +835,127 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
     return currentColor; // fallback
   };
 
+  // Get the current opacity value from the selected elements
+  const getCurrentOpacity = (): number => {
+    // Determine if we're dealing with fill or stroke based on action ID
+    const isStroke = actionId?.includes('stroke') || false;
+    
+    // Check if we're dealing with subpaths specifically
+    const isSubpathAction = actionId?.includes('subpath');
+    
+    // Get currently selected elements
+    const selectedPaths = selection.selectedPaths.map(id => paths.find(p => p.id === id)).filter(Boolean);
+    const selectedTexts = selection.selectedTexts.map(id => texts.find(t => t.id === id)).filter(Boolean);
+    
+    let opacityValue: number | undefined = undefined;
+    let colorValue: string | any = undefined;
+    
+    // Helper function to extract opacity from color or style
+    const extractOpacityFromElement = (element: any) => {
+      const color = isStroke ? element?.style?.stroke : element?.style?.fill;
+      const explicitOpacity = isStroke ? element?.style?.strokeOpacity : element?.style?.fillOpacity;
+      
+      // First check if there's an explicit opacity value
+      if (explicitOpacity !== undefined) {
+        return explicitOpacity;
+      }
+      
+      // Then check if the color itself contains opacity (RGBA, HSLA)
+      if (typeof color === 'string') {
+        const parsed = parseColorWithOpacity(color);
+        if (parsed.opacity !== undefined) {
+          return parsed.opacity;
+        }
+      }
+      
+      return undefined;
+    };
+    
+    // Handle subpath selection
+    if (isSubpathAction && selection.selectedSubPaths.length > 0) {
+      // Find the path that contains the selected subpath
+      for (const subPathId of selection.selectedSubPaths) {
+        for (const path of paths) {
+          const foundSubPath = path.subPaths.find(sp => sp.id === subPathId);
+          if (foundSubPath) {
+            opacityValue = extractOpacityFromElement(path);
+            break;
+          }
+        }
+        if (opacityValue !== undefined) break;
+      }
+    }
+    
+    // Check paths if no opacity found yet
+    if (opacityValue === undefined && selectedPaths.length > 0) {
+      const firstPath = selectedPaths[0];
+      opacityValue = extractOpacityFromElement(firstPath);
+    }
+    
+    // Check texts if no opacity found yet
+    if (opacityValue === undefined && selectedTexts.length > 0) {
+      const firstText = selectedTexts[0];
+      opacityValue = extractOpacityFromElement(firstText);
+    }
+    
+    // Return the found opacity value or default to 1 (fully opaque)
+    return opacityValue !== undefined ? opacityValue : 1;
+  };
+
+  // Analyze opacity state for dual slider system
+  const getOpacityState = () => {
+    const isStroke = actionId?.includes('stroke') || false;
+    const isSubpathAction = actionId?.includes('subpath');
+    
+    // Get currently selected elements
+    const selectedPaths = selection.selectedPaths.map(id => paths.find(p => p.id === id)).filter(Boolean);
+    const selectedTexts = selection.selectedTexts.map(id => texts.find(t => t.id === id)).filter(Boolean);
+    
+    let hasRGBAOpacity = false;
+    let hasExplicitOpacity = false;
+    let rgbaOpacity = 1;
+    let explicitOpacity = 1;
+    
+    // Helper function to analyze element opacity
+    const analyzeElementOpacity = (element: any) => {
+      const color = isStroke ? element?.style?.stroke : element?.style?.fill;
+      const explicitOp = isStroke ? element?.style?.strokeOpacity : element?.style?.fillOpacity;
+      
+      // Check for explicit opacity
+      if (explicitOp !== undefined) {
+        hasExplicitOpacity = true;
+        explicitOpacity = explicitOp;
+      }
+      
+      // Check for embedded RGBA/HSLA opacity
+      if (typeof color === 'string') {
+        const parsed = parseColorWithOpacity(color);
+        if (parsed.opacity !== undefined) {
+          hasRGBAOpacity = true;
+          rgbaOpacity = parsed.opacity;
+        }
+      }
+    };
+    
+    // Analyze all selected elements
+    if (isSubpathAction && selection.selectedSubPaths.length > 0) {
+      for (const subPathId of selection.selectedSubPaths) {
+        for (const path of paths) {
+          const foundSubPath = path.subPaths.find(sp => sp.id === subPathId);
+          if (foundSubPath) {
+            analyzeElementOpacity(path);
+            break;
+          }
+        }
+      }
+    }
+    
+    selectedPaths.forEach(analyzeElementOpacity);
+    selectedTexts.forEach(analyzeElementOpacity);
+    
+    return { hasRGBAOpacity, hasExplicitOpacity, rgbaOpacity, explicitOpacity };
+  };
+
   // Determine initial tab based on actual current style value
   const getInitialTab = (): 'colors' | 'gradients' | 'patterns' => {
     const actualValue = getCurrentStyleValue();
@@ -794,12 +971,43 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
   };
 
   const [activeTab, setActiveTab] = useState<'colors' | 'gradients' | 'patterns'>(getInitialTab());
+  const [opacity, setOpacity] = useState<number>(getCurrentOpacity());
+  const [rgbaOpacity, setRgbaOpacity] = useState<number>(1);
+  const [explicitOpacity, setExplicitOpacity] = useState<number>(1);
 
   // Update active tab when selection changes
-  React.useEffect(() => {
+  useEffect(() => {
     const newTab = getInitialTab();
     setActiveTab(newTab);
   }, [selection.selectedPaths, selection.selectedTexts, selection.selectedSubPaths]);
+
+  // Update opacity when selection changes
+  useEffect(() => {
+    const newOpacity = getCurrentOpacity();
+    // Only update if the value is significantly different to avoid unnecessary re-renders
+    if (Math.abs(newOpacity - opacity) > 0.01) {
+      setOpacity(newOpacity);
+    }
+    
+    // Update dual opacity states
+    const opacityState = getOpacityState();
+    setRgbaOpacity(opacityState.rgbaOpacity);
+    setExplicitOpacity(opacityState.explicitOpacity);
+  }, [selection.selectedPaths, selection.selectedTexts, selection.selectedSubPaths, paths, texts, actionId]);
+
+  // Also update when the actual style values change
+  useEffect(() => {
+    const newOpacity = getCurrentOpacity();
+    if (Math.abs(newOpacity - opacity) > 0.01) {
+      setOpacity(newOpacity);
+    }
+    
+    // Update dual opacity states
+    const opacityState = getOpacityState();
+    setRgbaOpacity(opacityState.rgbaOpacity);
+    setExplicitOpacity(opacityState.explicitOpacity);
+  }, [paths.map(p => `${p.id}-${p.style.fillOpacity}-${p.style.strokeOpacity}`).join(','), 
+      texts.map(t => `${t.id}-${t.style?.fillOpacity}-${t.style?.strokeOpacity}`).join(',')]);
 
   // Soft color palette - 70 colors in 10x7 grid
   const softColors = [
@@ -1002,6 +1210,276 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
       preview: '△△'
     }
   ];
+
+  // Function to apply opacity changes to selected elements
+  const applyOpacityToSelected = (newOpacity: number) => {
+    import('../../store/editorStore').then(({ useEditorStore }) => {
+      const store = useEditorStore.getState();
+      const selection = store.selection;
+      const isStroke = actionId?.includes('stroke') || false;
+
+      // Clamp opacity value between 0 and 1
+      const clampedOpacity = Math.max(0, Math.min(1, newOpacity));
+
+      // Helper function to update color with new opacity
+      const updateColorWithOpacity = (currentColor: string | any, newOpacity: number): any => {
+        // If it's not a string, return opacity as separate property
+        if (typeof currentColor !== 'string') {
+          return { 
+            color: currentColor, 
+            opacity: newOpacity 
+          };
+        }
+
+        // Parse current color to check if it has embedded opacity
+        const parsed = parseColorWithOpacity(currentColor);
+        
+        // If the color has embedded opacity (RGBA, HSLA), update it
+        if (parsed.opacity !== undefined) {
+          // Check if it's RGBA format
+          const rgbaMatch = currentColor.match(/rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9.]+)\s*\)/);
+          if (rgbaMatch) {
+            const r = rgbaMatch[1];
+            const g = rgbaMatch[2];
+            const b = rgbaMatch[3];
+            return `rgba(${r},${g},${b},${newOpacity})`;
+          }
+
+          // Check if it's HSLA format
+          const hslaMatch = currentColor.match(/hsla\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*,\s*([0-9.]+)\s*\)/);
+          if (hslaMatch) {
+            const h = hslaMatch[1];
+            const s = hslaMatch[2];
+            const l = hslaMatch[3];
+            return `hsla(${h},${s}%,${l}%,${newOpacity})`;
+          }
+        }
+
+        // If no embedded opacity, return color and separate opacity
+        return { 
+          color: parsed.color || currentColor, 
+          opacity: newOpacity 
+        };
+      };
+
+      // Apply to texts
+      selection.selectedTexts.forEach(textId => {
+        const text = store.texts.find(t => t.id === textId);
+        if (text) {
+          const currentColor = isStroke ? text.style?.stroke : text.style?.fill;
+          const result = updateColorWithOpacity(currentColor, clampedOpacity);
+          
+          if (typeof result === 'string') {
+            // Update with new RGBA/HSLA string
+            if (isStroke) {
+              store.updateTextStyle(textId, { stroke: result });
+            } else {
+              store.updateTextStyle(textId, { fill: result });
+            }
+          } else {
+            // Update color and opacity separately
+            const updates: any = {};
+            if (result.color !== currentColor) {
+              updates[isStroke ? 'stroke' : 'fill'] = result.color;
+            }
+            if (isStroke) {
+              updates.strokeOpacity = result.opacity;
+            } else {
+              updates.fillOpacity = result.opacity;
+            }
+            store.updateTextStyle(textId, updates);
+          }
+        }
+      });
+
+      // Apply to paths (including subpaths)
+      const pathIds = new Set<string>();
+      selection.selectedPaths.forEach(pathId => pathIds.add(pathId));
+      selection.selectedSubPaths.forEach(subPathId => {
+        const path = store.paths.find(p => p.subPaths.some(sp => sp.id === subPathId));
+        if (path) pathIds.add(path.id);
+      });
+
+      pathIds.forEach(pathId => {
+        const path = store.paths.find(p => p.id === pathId);
+        if (path) {
+          const currentColor = isStroke ? path.style?.stroke : path.style?.fill;
+          const result = updateColorWithOpacity(currentColor, clampedOpacity);
+          
+          if (typeof result === 'string') {
+            // Update with new RGBA/HSLA string
+            if (isStroke) {
+              store.updatePathStyle(pathId, { stroke: result });
+            } else {
+              store.updatePathStyle(pathId, { fill: result });
+            }
+          } else {
+            // Update color and opacity separately
+            const updates: any = {};
+            if (result.color !== currentColor) {
+              updates[isStroke ? 'stroke' : 'fill'] = result.color;
+            }
+            if (isStroke) {
+              updates.strokeOpacity = result.opacity;
+            } else {
+              updates.fillOpacity = result.opacity;
+            }
+            store.updatePathStyle(pathId, updates);
+          }
+        }
+      });
+    });
+  };
+
+  // Apply explicit opacity (separate opacity property)
+  const applyExplicitOpacity = (newOpacity: number) => {
+    import('../../store/editorStore').then(({ useEditorStore }) => {
+      const store = useEditorStore.getState();
+      const selection = store.selection;
+      const isStroke = actionId?.includes('stroke') || false;
+      const clampedOpacity = Math.max(0, Math.min(1, newOpacity));
+
+      // Apply to texts
+      selection.selectedTexts.forEach(textId => {
+        const updates: any = {};
+        if (isStroke) {
+          updates.strokeOpacity = clampedOpacity;
+        } else {
+          updates.fillOpacity = clampedOpacity;
+        }
+        store.updateTextStyle(textId, updates);
+      });
+
+      // Apply to paths
+      const pathIds = new Set<string>();
+      selection.selectedPaths.forEach(pathId => pathIds.add(pathId));
+      selection.selectedSubPaths.forEach(subPathId => {
+        const path = store.paths.find(p => p.subPaths.some(sp => sp.id === subPathId));
+        if (path) pathIds.add(path.id);
+      });
+
+      pathIds.forEach(pathId => {
+        const updates: any = {};
+        if (isStroke) {
+          updates.strokeOpacity = clampedOpacity;
+        } else {
+          updates.fillOpacity = clampedOpacity;
+        }
+        store.updatePathStyle(pathId, updates);
+      });
+    });
+  };
+
+  // Apply embedded opacity (RGBA/HSLA opacity)
+  const applyEmbeddedOpacity = (newOpacity: number) => {
+    import('../../store/editorStore').then(({ useEditorStore }) => {
+      const store = useEditorStore.getState();
+      const selection = store.selection;
+      const isStroke = actionId?.includes('stroke') || false;
+      const clampedOpacity = Math.max(0, Math.min(1, newOpacity));
+
+      // Helper function to update embedded opacity in color
+      const updateEmbeddedOpacity = (currentColor: string | any): string | any => {
+        if (typeof currentColor !== 'string') {
+          return currentColor;
+        }
+
+        // Check if it's RGBA format
+        const rgbaMatch = currentColor.match(/rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9.]+)\s*\)/);
+        if (rgbaMatch) {
+          const r = rgbaMatch[1];
+          const g = rgbaMatch[2];
+          const b = rgbaMatch[3];
+          return `rgba(${r},${g},${b},${clampedOpacity})`;
+        }
+
+        // Check if it's HSLA format
+        const hslaMatch = currentColor.match(/hsla\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*,\s*([0-9.]+)\s*\)/);
+        if (hslaMatch) {
+          const h = hslaMatch[1];
+          const s = hslaMatch[2];
+          const l = hslaMatch[3];
+          return `hsla(${h},${s}%,${l}%,${clampedOpacity})`;
+        }
+
+        // If no embedded opacity, convert to RGBA
+        const parsed = parseColorWithOpacity(currentColor);
+        if (parsed.color) {
+          // Convert to RGB values for RGBA format
+          const tempDiv = document.createElement('div');
+          tempDiv.style.color = parsed.color;
+          document.body.appendChild(tempDiv);
+          const computedColor = window.getComputedStyle(tempDiv).color;
+          document.body.removeChild(tempDiv);
+          
+          const rgbMatch = computedColor.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
+          if (rgbMatch) {
+            const r = rgbMatch[1];
+            const g = rgbMatch[2];
+            const b = rgbMatch[3];
+            return `rgba(${r},${g},${b},${clampedOpacity})`;
+          }
+        }
+
+        return currentColor;
+      };
+
+      // Apply to texts
+      selection.selectedTexts.forEach(textId => {
+        const text = store.texts.find(t => t.id === textId);
+        if (text) {
+          const currentColor = isStroke ? text.style?.stroke : text.style?.fill;
+          const newColor = updateEmbeddedOpacity(currentColor);
+          
+          if (newColor !== currentColor) {
+            const updates: any = {};
+            updates[isStroke ? 'stroke' : 'fill'] = newColor;
+            store.updateTextStyle(textId, updates);
+          }
+        }
+      });
+
+      // Apply to paths
+      const pathIds = new Set<string>();
+      selection.selectedPaths.forEach(pathId => pathIds.add(pathId));
+      selection.selectedSubPaths.forEach(subPathId => {
+        const path = store.paths.find(p => p.subPaths.some(sp => sp.id === subPathId));
+        if (path) pathIds.add(path.id);
+      });
+
+      pathIds.forEach(pathId => {
+        const path = store.paths.find(p => p.id === pathId);
+        if (path) {
+          const currentColor = isStroke ? path.style?.stroke : path.style?.fill;
+          const newColor = updateEmbeddedOpacity(currentColor);
+          
+          if (newColor !== currentColor) {
+            const updates: any = {};
+            updates[isStroke ? 'stroke' : 'fill'] = newColor;
+            store.updatePathStyle(pathId, updates);
+          }
+        }
+      });
+    });
+  };
+
+  // Function to handle opacity slider changes
+  const handleOpacityChange = (newOpacity: number) => {
+    setOpacity(newOpacity);
+    applyOpacityToSelected(newOpacity);
+  };
+
+  // Handle RGBA opacity changes
+  const handleRgbaOpacityChange = (newOpacity: number) => {
+    setRgbaOpacity(newOpacity);
+    applyEmbeddedOpacity(newOpacity);
+  };
+
+  // Handle explicit opacity changes
+  const handleExplicitOpacityChange = (newOpacity: number) => {
+    setExplicitOpacity(newOpacity);
+    applyExplicitOpacity(newOpacity);
+  };
 
   // Helper functions to check if current item is selected
   const isColorSelected = (color: string): boolean => {
@@ -1228,6 +1706,356 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
           ))}
         </div>
       )}
+
+      {/* Transparency Sliders */}
+      <div style={{ 
+        marginTop: '8px', 
+        paddingTop: '6px', 
+        borderTop: '1px solid #e5e7eb'
+      }}>
+        {(() => {
+          const opacityState = getOpacityState();
+          const { hasRGBAOpacity, hasExplicitOpacity } = opacityState;
+          
+          // Case 1: Both RGBA and explicit opacity exist
+          if (hasRGBAOpacity && hasExplicitOpacity) {
+            return (
+              <>
+                {/* RGBA Opacity Slider */}
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{ fontSize: '9px', color: '#6b7280', marginBottom: '2px' }}>
+                    RGBA Opacity
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '3px'
+                  }}>
+                    <div style={{
+                      position: 'relative',
+                      width: 'calc(100% - 35px)',
+                      height: '14px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        width: '100%',
+                        height: '4px',
+                        background: 'linear-gradient(to right, rgba(128,128,128,0.3) 0%, rgba(64,64,64,1) 100%)',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '2px'
+                      }} />
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={rgbaOpacity}
+                        onChange={(e) => handleRgbaOpacityChange(parseFloat(e.target.value))}
+                        style={{
+                          position: 'relative',
+                          width: '100%',
+                          height: '14px',
+                          background: 'transparent',
+                          appearance: 'none',
+                          cursor: 'pointer',
+                          zIndex: 2,
+                          margin: 0,
+                          padding: 0
+                        }}
+                        onPointerDown={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                    <span style={{
+                      fontSize: '9px',
+                      color: '#6b7280',
+                      minWidth: '32px',
+                      textAlign: 'right'
+                    }}>
+                      {Math.round(rgbaOpacity * 100)}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Explicit Opacity Slider */}
+                <div>
+                  <div style={{ fontSize: '9px', color: '#6b7280', marginBottom: '2px' }}>
+                    Explicit Opacity
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: '3px'
+                  }}>
+                    <div style={{
+                      position: 'relative',
+                      width: 'calc(100% - 35px)',
+                      height: '14px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        width: '100%',
+                        height: '4px',
+                        background: 'linear-gradient(to right, rgba(128,128,128,0.3) 0%, rgba(64,64,64,1) 100%)',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '2px'
+                      }} />
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={explicitOpacity}
+                        onChange={(e) => handleExplicitOpacityChange(parseFloat(e.target.value))}
+                        style={{
+                          position: 'relative',
+                          width: '100%',
+                          height: '14px',
+                          background: 'transparent',
+                          appearance: 'none',
+                          cursor: 'pointer',
+                          zIndex: 2,
+                          margin: 0,
+                          padding: 0
+                        }}
+                        onPointerDown={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                    <span style={{
+                      fontSize: '9px',
+                      color: '#6b7280',
+                      minWidth: '32px',
+                      textAlign: 'right'
+                    }}>
+                      {Math.round(explicitOpacity * 100)}%
+                    </span>
+                  </div>
+                </div>
+              </>
+            );
+          }
+          
+          // Case 2: Only RGBA opacity exists
+          if (hasRGBAOpacity && !hasExplicitOpacity) {
+            return (
+              <div>
+                <div style={{ fontSize: '9px', color: '#6b7280', marginBottom: '2px' }}>
+                  RGBA Opacity
+                </div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '3px'
+                }}>
+                  <div style={{
+                    position: 'relative',
+                    width: 'calc(100% - 35px)',
+                    height: '14px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    <div style={{
+                      position: 'absolute',
+                      width: '100%',
+                      height: '4px',
+                      background: 'linear-gradient(to right, rgba(128,128,128,0.3) 0%, rgba(64,64,64,1) 100%)',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '2px'
+                    }} />
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={rgbaOpacity}
+                      onChange={(e) => handleRgbaOpacityChange(parseFloat(e.target.value))}
+                      style={{
+                        position: 'relative',
+                        width: '100%',
+                        height: '14px',
+                        background: 'transparent',
+                        appearance: 'none',
+                        cursor: 'pointer',
+                        zIndex: 2,
+                        margin: 0,
+                        padding: 0
+                      }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  <span style={{
+                    fontSize: '9px',
+                    color: '#6b7280',
+                    minWidth: '32px',
+                    textAlign: 'right'
+                  }}>
+                    {Math.round(rgbaOpacity * 100)}%
+                  </span>
+                </div>
+              </div>
+            );
+          }
+          
+          // Case 3: Only explicit opacity exists
+          if (!hasRGBAOpacity && hasExplicitOpacity) {
+            return (
+              <div>
+                <div style={{ fontSize: '9px', color: '#6b7280', marginBottom: '2px' }}>
+                  Opacity
+                </div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '3px'
+                }}>
+                  <div style={{
+                    position: 'relative',
+                    width: 'calc(100% - 35px)',
+                    height: '14px',
+                    display: 'flex',
+                    alignItems: 'center'
+                  }}>
+                    <div style={{
+                      position: 'absolute',
+                      width: '100%',
+                      height: '4px',
+                      background: 'linear-gradient(to right, rgba(128,128,128,0.3) 0%, rgba(64,64,64,1) 100%)',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '2px'
+                    }} />
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={explicitOpacity}
+                      onChange={(e) => handleExplicitOpacityChange(parseFloat(e.target.value))}
+                      style={{
+                        position: 'relative',
+                        width: '100%',
+                        height: '14px',
+                        background: 'transparent',
+                        appearance: 'none',
+                        cursor: 'pointer',
+                        zIndex: 2,
+                        margin: 0,
+                        padding: 0
+                      }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  <span style={{
+                    fontSize: '9px',
+                    color: '#6b7280',
+                    minWidth: '32px',
+                    textAlign: 'right'
+                  }}>
+                    {Math.round(explicitOpacity * 100)}%
+                  </span>
+                </div>
+              </div>
+            );
+          }
+          
+          // Case 4: No opacity exists - show basic opacity control
+          return (
+            <div>
+              <div style={{ fontSize: '9px', color: '#6b7280', marginBottom: '2px' }}>
+                Opacity
+              </div>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '3px'
+              }}>
+                <div style={{
+                  position: 'relative',
+                  width: 'calc(100% - 35px)',
+                  height: '14px',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}>
+                  <div style={{
+                    position: 'absolute',
+                    width: '100%',
+                    height: '4px',
+                    background: 'linear-gradient(to right, rgba(128,128,128,0.3) 0%, rgba(64,64,64,1) 100%)',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '2px'
+                  }} />
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={opacity}
+                    onChange={(e) => handleOpacityChange(parseFloat(e.target.value))}
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      height: '14px',
+                      background: 'transparent',
+                      appearance: 'none',
+                      cursor: 'pointer',
+                      zIndex: 2,
+                      margin: 0,
+                      padding: 0
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                  />
+                </div>
+                <span style={{
+                  fontSize: '9px',
+                  color: '#6b7280',
+                  minWidth: '32px',
+                  textAlign: 'right'
+                }}>
+                  {Math.round(opacity * 100)}%
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+        <style>{`
+          input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            background: white;
+            border: 2px solid #374151;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          }
+          
+          input[type="range"]::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            background: white;
+            border: 2px solid #374151;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            appearance: none;
+          }
+          
+          input[type="range"]::-webkit-slider-track {
+            background: transparent;
+          }
+          
+          input[type="range"]::-moz-range-track {
+            background: transparent;
+          }
+        `}</style>
+      </div>
 
       {/* Quick Actions */}
       <div style={{ 

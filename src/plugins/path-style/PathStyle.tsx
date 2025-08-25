@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { PathStyle, SVGPath } from '../../types';
-import { convertRgbToHex } from '../../utils/color-utils';
+import { convertRgbToHex, parseColorWithOpacity } from '../../utils/color-utils';
 import { isGradientOrPattern } from '../../utils/gradient-utils';
 import { StylePresets } from './StylePresets';
 import { PluginButton } from '../../components/PluginButton';
@@ -41,6 +41,118 @@ export const PathStyleControls: React.FC<PathStyleControlsProps> = ({
 
   const toggleViewMode = () => {
     setViewMode(prev => prev === 'manual' ? 'presets' : 'manual');
+  };
+
+  // Analyze fill opacity state
+  const getFillOpacityState = () => {
+    const hasExplicitOpacity = pathStyle.fillOpacity !== undefined;
+    let hasEmbeddedOpacity = false;
+    let embeddedOpacity = 1;
+    
+    if (typeof pathStyle.fill === 'string') {
+      const parsed = parseColorWithOpacity(pathStyle.fill);
+      if (parsed.opacity !== undefined) {
+        hasEmbeddedOpacity = true;
+        embeddedOpacity = parsed.opacity;
+      }
+    }
+    
+    return {
+      hasExplicitOpacity,
+      hasEmbeddedOpacity,
+      explicitOpacity: pathStyle.fillOpacity || 1,
+      embeddedOpacity,
+      effectiveOpacity: hasEmbeddedOpacity ? embeddedOpacity : (pathStyle.fillOpacity || 1)
+    };
+  };
+
+  // Analyze stroke opacity state
+  const getStrokeOpacityState = () => {
+    const hasExplicitOpacity = pathStyle.strokeOpacity !== undefined;
+    let hasEmbeddedOpacity = false;
+    let embeddedOpacity = 1;
+    
+    if (typeof pathStyle.stroke === 'string') {
+      const parsed = parseColorWithOpacity(pathStyle.stroke);
+      if (parsed.opacity !== undefined) {
+        hasEmbeddedOpacity = true;
+        embeddedOpacity = parsed.opacity;
+      }
+    }
+    
+    return {
+      hasExplicitOpacity,
+      hasEmbeddedOpacity,
+      explicitOpacity: pathStyle.strokeOpacity || 1,
+      embeddedOpacity,
+      effectiveOpacity: hasEmbeddedOpacity ? embeddedOpacity : (pathStyle.strokeOpacity || 1)
+    };
+  };
+
+  // Apply explicit fill opacity changes
+  const applyExplicitFillOpacity = (newOpacity: number) => {
+    const clampedOpacity = Math.max(0, Math.min(1, newOpacity));
+    onStyleChange({ fillOpacity: clampedOpacity });
+  };
+
+  // Apply embedded fill opacity changes (RGBA/HSLA)
+  const applyEmbeddedFillOpacity = (newOpacity: number) => {
+    const clampedOpacity = Math.max(0, Math.min(1, newOpacity));
+    
+    if (typeof pathStyle.fill === 'string') {
+      // Check if it's RGBA format
+      const rgbaMatch = pathStyle.fill.match(/rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9.]+)\s*\)/);
+      if (rgbaMatch) {
+        const r = rgbaMatch[1];
+        const g = rgbaMatch[2];
+        const b = rgbaMatch[3];
+        onStyleChange({ fill: `rgba(${r},${g},${b},${clampedOpacity})` });
+        return;
+      }
+
+      // Check if it's HSLA format
+      const hslaMatch = pathStyle.fill.match(/hsla\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*,\s*([0-9.]+)\s*\)/);
+      if (hslaMatch) {
+        const h = hslaMatch[1];
+        const s = hslaMatch[2];
+        const l = hslaMatch[3];
+        onStyleChange({ fill: `hsla(${h},${s}%,${l}%,${clampedOpacity})` });
+        return;
+      }
+    }
+  };
+
+  // Apply explicit stroke opacity changes
+  const applyExplicitStrokeOpacity = (newOpacity: number) => {
+    const clampedOpacity = Math.max(0, Math.min(1, newOpacity));
+    onStyleChange({ strokeOpacity: clampedOpacity });
+  };
+
+  // Apply embedded stroke opacity changes (RGBA/HSLA)
+  const applyEmbeddedStrokeOpacity = (newOpacity: number) => {
+    const clampedOpacity = Math.max(0, Math.min(1, newOpacity));
+    
+    if (typeof pathStyle.stroke === 'string') {
+      // Check if it's RGBA format
+      const rgbaMatch = pathStyle.stroke.match(/rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9.]+)\s*\)/);
+      if (rgbaMatch) {
+        const r = rgbaMatch[1];
+        const g = rgbaMatch[2];
+        const b = rgbaMatch[3];
+        onStyleChange({ stroke: `rgba(${r},${g},${b},${clampedOpacity})` });
+        return;
+      }
+
+      // Check if it's HSLA format
+      const hslaMatch = pathStyle.stroke.match(/hsla\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*,\s*([0-9.]+)\s*\)/);
+      if (hslaMatch) {
+        const h = hslaMatch[1];
+        const s = hslaMatch[2];
+        const l = hslaMatch[3];
+        onStyleChange({ stroke: `hsla(${h},${s}%,${l}%,${clampedOpacity})` });
+        return;
+      }
+    }
   };
 
   return (
@@ -96,19 +208,87 @@ export const PathStyleControls: React.FC<PathStyleControlsProps> = ({
         <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
           Fill Opacity:
         </div>
-        <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={pathStyle.fillOpacity || 1}
-            onChange={(e) => onStyleChange({ fillOpacity: Number(e.target.value) })}
-            disabled={pathStyle.fill === 'none' || isGradientOrPattern(pathStyle.fill)}
-            style={{ flex: 1 }}
-          />
-          <span style={{ fontSize: '12px', minWidth: '35px' }}>{Math.round((pathStyle.fillOpacity || 1) * 100)}%</span>
-        </div>
+        {(() => {
+          const fillState = getFillOpacityState();
+          
+          // Case 1: Both RGBA and explicit opacity
+          if (fillState.hasEmbeddedOpacity && fillState.hasExplicitOpacity) {
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div>
+                  <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>
+                    RGBA: {Math.round(fillState.embeddedOpacity * 100)}%
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={fillState.embeddedOpacity}
+                    onChange={(e) => applyEmbeddedFillOpacity(Number(e.target.value))}
+                    disabled={pathStyle.fill === 'none' || isGradientOrPattern(pathStyle.fill)}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>
+                    Opacity: {Math.round(fillState.explicitOpacity * 100)}%
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={fillState.explicitOpacity}
+                    onChange={(e) => applyExplicitFillOpacity(Number(e.target.value))}
+                    disabled={pathStyle.fill === 'none' || isGradientOrPattern(pathStyle.fill)}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+            );
+          }
+          // Case 2: Only RGBA
+          else if (fillState.hasEmbeddedOpacity && !fillState.hasExplicitOpacity) {
+            return (
+              <div>
+                <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>
+                  RGBA: {Math.round(fillState.embeddedOpacity * 100)}%
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={fillState.embeddedOpacity}
+                  onChange={(e) => applyEmbeddedFillOpacity(Number(e.target.value))}
+                  disabled={pathStyle.fill === 'none' || isGradientOrPattern(pathStyle.fill)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            );
+          }
+          // Case 3 & 4: Only explicit opacity or none (show explicit opacity slider)
+          else {
+            return (
+              <div>
+                <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>
+                  {Math.round(fillState.explicitOpacity * 100)}%
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={fillState.explicitOpacity}
+                  onChange={(e) => applyExplicitFillOpacity(Number(e.target.value))}
+                  disabled={pathStyle.fill === 'none' || isGradientOrPattern(pathStyle.fill)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            );
+          }
+        })()}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -158,19 +338,87 @@ export const PathStyleControls: React.FC<PathStyleControlsProps> = ({
         <div style={{ fontSize: '12px', color: '#666', fontWeight: '500' }}>
           Stroke Opacity:
         </div>
-        <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={pathStyle.strokeOpacity || 1}
-            onChange={(e) => onStyleChange({ strokeOpacity: Number(e.target.value) })}
-            disabled={pathStyle.stroke === 'none' || isGradientOrPattern(pathStyle.stroke)}
-            style={{ flex: 1 }}
-          />
-          <span style={{ fontSize: '12px', minWidth: '35px' }}>{Math.round((pathStyle.strokeOpacity || 1) * 100)}%</span>
-        </div>
+        {(() => {
+          const strokeState = getStrokeOpacityState();
+          
+          // Case 1: Both RGBA and explicit opacity
+          if (strokeState.hasEmbeddedOpacity && strokeState.hasExplicitOpacity) {
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div>
+                  <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>
+                    RGBA: {Math.round(strokeState.embeddedOpacity * 100)}%
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={strokeState.embeddedOpacity}
+                    onChange={(e) => applyEmbeddedStrokeOpacity(Number(e.target.value))}
+                    disabled={pathStyle.stroke === 'none' || isGradientOrPattern(pathStyle.stroke)}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>
+                    Opacity: {Math.round(strokeState.explicitOpacity * 100)}%
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={strokeState.explicitOpacity}
+                    onChange={(e) => applyExplicitStrokeOpacity(Number(e.target.value))}
+                    disabled={pathStyle.stroke === 'none' || isGradientOrPattern(pathStyle.stroke)}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+            );
+          }
+          // Case 2: Only RGBA
+          else if (strokeState.hasEmbeddedOpacity && !strokeState.hasExplicitOpacity) {
+            return (
+              <div>
+                <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>
+                  RGBA: {Math.round(strokeState.embeddedOpacity * 100)}%
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={strokeState.embeddedOpacity}
+                  onChange={(e) => applyEmbeddedStrokeOpacity(Number(e.target.value))}
+                  disabled={pathStyle.stroke === 'none' || isGradientOrPattern(pathStyle.stroke)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            );
+          }
+          // Case 3 & 4: Only explicit opacity or none (show explicit opacity slider)
+          else {
+            return (
+              <div>
+                <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>
+                  {Math.round(strokeState.explicitOpacity * 100)}%
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={strokeState.explicitOpacity}
+                  onChange={(e) => applyExplicitStrokeOpacity(Number(e.target.value))}
+                  disabled={pathStyle.stroke === 'none' || isGradientOrPattern(pathStyle.stroke)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            );
+          }
+        })()}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

@@ -34,10 +34,12 @@ export interface ToolbarAction {
     getCurrentStrokeDash: () => string;
     getCurrentStrokeLinecap: () => string;
     getCurrentStrokeLinejoin: () => string;
+    getCurrentFillRule?: () => string;
     onStrokeWidthChange: (width: number) => void;
     onStrokeDashChange: (dash: string) => void;
     onStrokeLinecapChange: (linecap: string) => void;
     onStrokeLinejoinChange: (linejoin: string) => void;
+    onFillRuleChange?: (fillRule: string) => void;
   };
   
   // Metadata

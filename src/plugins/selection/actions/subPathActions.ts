@@ -248,6 +248,40 @@ const applySubPathStrokeLinejoin = (linejoin: string) => {
   });
 };
 
+// FillRule functions for subpaths
+const getCommonSubPathFillRule = () => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  if (selectedSubPaths.length === 0) return 'nonzero';
+  
+  const firstSubPath = selectedSubPaths[0];
+  const parentPath = store.paths.find(path => 
+    path.subPaths.some(sp => sp.id === firstSubPath)
+  );
+  
+  const fillRule = parentPath?.style?.fillRule;
+  return typeof fillRule === 'string' ? fillRule : 'nonzero';
+};
+
+const applySubPathFillRule = (fillRule: string) => {
+  const store = useEditorStore.getState();
+  const selectedSubPaths = store.selection.selectedSubPaths;
+  
+  // Save to history before changing fill rule
+  store.pushToHistory();
+  
+  selectedSubPaths.forEach(subPathId => {
+    const parentPath = store.paths.find(path => 
+      path.subPaths.some(sp => sp.id === subPathId)
+    );
+    
+    if (parentPath) {
+      store.updatePathStyle(parentPath.id, { fillRule: fillRule as 'nonzero' | 'evenodd' });
+    }
+  });
+};
+
 // Smooth subpaths - using the new animation system
 const smoothSubPaths = () => {
   const store = useEditorStore.getState();
@@ -808,10 +842,12 @@ export const subPathActions: ToolbarAction[] = [
       getCurrentStrokeDash: getCommonSubPathStrokeDash,
       getCurrentStrokeLinecap: getCommonSubPathStrokeLinecap,
       getCurrentStrokeLinejoin: getCommonSubPathStrokeLinejoin,
+      getCurrentFillRule: getCommonSubPathFillRule,
       onStrokeWidthChange: applySubPathStrokeWidth,
       onStrokeDashChange: applySubPathStrokeDash,
       onStrokeLinecapChange: applySubPathStrokeLinecap,
-      onStrokeLinejoinChange: applySubPathStrokeLinejoin
+      onStrokeLinejoinChange: applySubPathStrokeLinejoin,
+      onFillRuleChange: applySubPathFillRule
     },
     priority: 90,
     tooltip: 'Configure stroke width, dash pattern, line cap, and line join'

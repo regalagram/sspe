@@ -4,6 +4,7 @@ import { PluginButton } from '../../components/PluginButton';
 import { Type, Palette, Circle } from 'lucide-react';
 import { TextElementType, GradientOrPattern, LinearGradient, RadialGradient, Pattern } from '../../types';
 import { getStyleValue, extractGradientsFromPaths } from '../../utils/gradient-utils';
+import { parseColorWithOpacity } from '../../utils/color-utils';
 
 interface TextStyleControlsProps {
   onApplyStyle: (styleUpdates: any) => void;
@@ -70,6 +71,118 @@ export const TextStyleControls: React.FC<TextStyleControlsProps> = ({
 
   const handleSelectChange = (property: string, value: string) => {
     onApplyStyle({ [property]: value });
+  };
+
+  // Analyze fill opacity state
+  const getFillOpacityState = () => {
+    const hasExplicitOpacity = commonFillOpacity !== undefined;
+    let hasEmbeddedOpacity = false;
+    let embeddedOpacity = 1;
+    
+    if (typeof commonFill === 'string') {
+      const parsed = parseColorWithOpacity(commonFill);
+      if (parsed.opacity !== undefined) {
+        hasEmbeddedOpacity = true;
+        embeddedOpacity = parsed.opacity;
+      }
+    }
+    
+    return {
+      hasExplicitOpacity,
+      hasEmbeddedOpacity,
+      explicitOpacity: commonFillOpacity || 1,
+      embeddedOpacity,
+      effectiveOpacity: hasEmbeddedOpacity ? embeddedOpacity : (commonFillOpacity || 1)
+    };
+  };
+
+  // Analyze stroke opacity state
+  const getStrokeOpacityState = () => {
+    const hasExplicitOpacity = commonStrokeOpacity !== undefined;
+    let hasEmbeddedOpacity = false;
+    let embeddedOpacity = 1;
+    
+    if (typeof commonStroke === 'string') {
+      const parsed = parseColorWithOpacity(commonStroke);
+      if (parsed.opacity !== undefined) {
+        hasEmbeddedOpacity = true;
+        embeddedOpacity = parsed.opacity;
+      }
+    }
+    
+    return {
+      hasExplicitOpacity,
+      hasEmbeddedOpacity,
+      explicitOpacity: commonStrokeOpacity || 1,
+      embeddedOpacity,
+      effectiveOpacity: hasEmbeddedOpacity ? embeddedOpacity : (commonStrokeOpacity || 1)
+    };
+  };
+
+  // Apply explicit fill opacity changes
+  const applyExplicitFillOpacity = (newOpacity: number) => {
+    const clampedOpacity = Math.max(0, Math.min(1, newOpacity));
+    onApplyStyle({ fillOpacity: clampedOpacity });
+  };
+
+  // Apply embedded fill opacity changes (RGBA/HSLA)
+  const applyEmbeddedFillOpacity = (newOpacity: number) => {
+    const clampedOpacity = Math.max(0, Math.min(1, newOpacity));
+    
+    if (typeof commonFill === 'string') {
+      // Check if it's RGBA format
+      const rgbaMatch = commonFill.match(/rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9.]+)\s*\)/);
+      if (rgbaMatch) {
+        const r = rgbaMatch[1];
+        const g = rgbaMatch[2];
+        const b = rgbaMatch[3];
+        onApplyStyle({ fill: `rgba(${r},${g},${b},${clampedOpacity})` });
+        return;
+      }
+
+      // Check if it's HSLA format
+      const hslaMatch = commonFill.match(/hsla\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*,\s*([0-9.]+)\s*\)/);
+      if (hslaMatch) {
+        const h = hslaMatch[1];
+        const s = hslaMatch[2];
+        const l = hslaMatch[3];
+        onApplyStyle({ fill: `hsla(${h},${s}%,${l}%,${clampedOpacity})` });
+        return;
+      }
+    }
+  };
+
+  // Apply explicit stroke opacity changes
+  const applyExplicitStrokeOpacity = (newOpacity: number) => {
+    const clampedOpacity = Math.max(0, Math.min(1, newOpacity));
+    onApplyStyle({ strokeOpacity: clampedOpacity });
+  };
+
+  // Apply embedded stroke opacity changes (RGBA/HSLA)
+  const applyEmbeddedStrokeOpacity = (newOpacity: number) => {
+    const clampedOpacity = Math.max(0, Math.min(1, newOpacity));
+    
+    if (typeof commonStroke === 'string') {
+      // Check if it's RGBA format
+      const rgbaMatch = commonStroke.match(/rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([0-9.]+)\s*\)/);
+      if (rgbaMatch) {
+        const r = rgbaMatch[1];
+        const g = rgbaMatch[2];
+        const b = rgbaMatch[3];
+        onApplyStyle({ stroke: `rgba(${r},${g},${b},${clampedOpacity})` });
+        return;
+      }
+
+      // Check if it's HSLA format
+      const hslaMatch = commonStroke.match(/hsla\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*,\s*([0-9.]+)\s*\)/);
+      if (hslaMatch) {
+        const h = hslaMatch[1];
+        const s = hslaMatch[2];
+        const l = hslaMatch[3];
+        onApplyStyle({ stroke: `hsla(${h},${s}%,${l}%,${clampedOpacity})` });
+        return;
+      }
+    }
   };
 
   if (selectedTexts.length === 0) {
@@ -180,17 +293,85 @@ export const TextStyleControls: React.FC<TextStyleControlsProps> = ({
       {/* Fill Opacity */}
       <div>
         <label style={{ fontSize: '12px', color: '#666', marginBottom: '4px', display: 'block' }}>
-          Fill Opacity: {((commonFillOpacity ?? 1) * 100).toFixed(0)}%
+          Fill Opacity:
         </label>
-        <input
-          type="range"
-          min="0"
-          max="1"
-          step="0.1"
-          value={commonFillOpacity ?? 1}
-          onChange={(e) => handleNumberChange('fillOpacity', parseFloat(e.target.value))}
-          style={{ width: '100%' }}
-        />
+        {(() => {
+          const fillState = getFillOpacityState();
+          
+          // Case 1: Both RGBA and explicit opacity
+          if (fillState.hasEmbeddedOpacity && fillState.hasExplicitOpacity) {
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div>
+                  <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>
+                    RGBA: {Math.round(fillState.embeddedOpacity * 100)}%
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={fillState.embeddedOpacity}
+                    onChange={(e) => applyEmbeddedFillOpacity(parseFloat(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>
+                    Opacity: {Math.round(fillState.explicitOpacity * 100)}%
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={fillState.explicitOpacity}
+                    onChange={(e) => applyExplicitFillOpacity(parseFloat(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+            );
+          }
+          // Case 2: Only RGBA
+          else if (fillState.hasEmbeddedOpacity && !fillState.hasExplicitOpacity) {
+            return (
+              <div>
+                <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>
+                  RGBA: {Math.round(fillState.embeddedOpacity * 100)}%
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={fillState.embeddedOpacity}
+                  onChange={(e) => applyEmbeddedFillOpacity(parseFloat(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            );
+          }
+          // Case 3 & 4: Only explicit opacity or none (show explicit opacity slider)
+          else {
+            return (
+              <div>
+                <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>
+                  {Math.round(fillState.explicitOpacity * 100)}%
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={fillState.explicitOpacity}
+                  onChange={(e) => applyExplicitFillOpacity(parseFloat(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            );
+          }
+        })()}
       </div>
 
       {/* Typography Controls */}
@@ -648,20 +829,88 @@ export const TextStyleControls: React.FC<TextStyleControlsProps> = ({
             />
           </div>
 
-          {/* Stroke Opacity */}
+                    {/* Stroke Opacity */}
           <div>
             <label style={{ fontSize: '12px', color: '#666', marginBottom: '4px', display: 'block' }}>
-              Stroke Opacity: {((commonStrokeOpacity ?? 1) * 100).toFixed(0)}%
+              Stroke Opacity:
             </label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.1"
-              value={commonStrokeOpacity ?? 1}
-              onChange={(e) => handleNumberChange('strokeOpacity', parseFloat(e.target.value))}
-              style={{ width: '100%' }}
-            />
+            {(() => {
+              const strokeState = getStrokeOpacityState();
+              
+              // Case 1: Both RGBA and explicit opacity
+              if (strokeState.hasEmbeddedOpacity && strokeState.hasExplicitOpacity) {
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div>
+                      <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>
+                        RGBA: {Math.round(strokeState.embeddedOpacity * 100)}%
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={strokeState.embeddedOpacity}
+                        onChange={(e) => applyEmbeddedStrokeOpacity(parseFloat(e.target.value))}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>
+                        Opacity: {Math.round(strokeState.explicitOpacity * 100)}%
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={strokeState.explicitOpacity}
+                        onChange={(e) => applyExplicitStrokeOpacity(parseFloat(e.target.value))}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                  </div>
+                );
+              }
+              // Case 2: Only RGBA
+              else if (strokeState.hasEmbeddedOpacity && !strokeState.hasExplicitOpacity) {
+                return (
+                  <div>
+                    <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>
+                      RGBA: {Math.round(strokeState.embeddedOpacity * 100)}%
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={strokeState.embeddedOpacity}
+                      onChange={(e) => applyEmbeddedStrokeOpacity(parseFloat(e.target.value))}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                );
+              }
+              // Case 3 & 4: Only explicit opacity or none (show explicit opacity slider)
+              else {
+                return (
+                  <div>
+                    <div style={{ fontSize: '10px', color: '#888', marginBottom: '2px' }}>
+                      {Math.round(strokeState.explicitOpacity * 100)}%
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={strokeState.explicitOpacity}
+                      onChange={(e) => applyExplicitStrokeOpacity(parseFloat(e.target.value))}
+                      style={{ width: '100%' }}
+                    />
+                  </div>
+                );
+              }
+            })()}
           </div>
 
           {/* Stroke Dasharray */}
