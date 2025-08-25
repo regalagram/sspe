@@ -9,12 +9,14 @@ import {
   Filter, 
   Play, 
   PaintBucket, 
-  RotateCcw 
+  RotateCcw,
+  ArrowUp
 } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected, getSelectedElementsBounds } from './commonActions';
 import { createGenericArrangeActions } from '../../../utils/floating-arrange-actions';
+import { createReorderActions, createElementReorderFunctions } from '../../../utils/floating-reorder-actions';
 import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';
 import {
   createDropShadowFilter,
@@ -1111,7 +1113,6 @@ const setupArrangeManagerForUse = () => {
 };
 
 // Create use element-specific arrange actions
-// Create use element-specific arrange actions
 const createUseArrangeActions = () => createGenericArrangeActions(
   'use-elements',
   getUseSelectionCount,
@@ -1150,6 +1151,17 @@ const createUseArrangeActions = () => createGenericArrangeActions(
     }
   }
 );
+
+// Use element reorder functions
+const createUseReorderActions = () => {
+  const { bringToFront, sendToBack } = createElementReorderFunctions('use');
+  
+  return createReorderActions(
+    'use',
+    getUseSelectionCount,
+    { bringToFront, sendToBack }
+  );
+};
 
 // Format copy functions for use elements
 const startUseFormatCopy = () => {
@@ -1206,6 +1218,8 @@ export const useActions: ToolbarAction[] = [
   },
   // Add arrange actions for use/symbol elements
   ...createUseArrangeActions(),
+  // Add reorder actions for use/symbol elements
+  ...createUseReorderActions(),
   {
     id: 'use-fill-color',
     icon: Palette,

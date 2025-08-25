@@ -13,11 +13,13 @@ import {
   Lock,
   RotateCcw,
   Group,
-  PaintBucket
+  PaintBucket,
+  ArrowUp
 } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { createSubPathArrangeActions } from '../../../utils/floating-arrange-actions';
+import { createReorderActions, createElementReorderFunctions } from '../../../utils/floating-reorder-actions';
 import {
   createDropShadowFilter,
   createBlurFilter,
@@ -940,6 +942,22 @@ const areSubPathsFromSamePath = (): boolean => {
   return parentPathIds.size === 1;
 };
 
+// SubPath reorder functions
+const getSubPathSelectionCount = () => {
+  const store = useEditorStore.getState();
+  return store.selection.selectedSubPaths.length;
+};
+
+const createSubPathReorderActions = () => {
+  const { bringToFront, sendToBack } = createElementReorderFunctions('subpath');
+  
+  return createReorderActions(
+    'subpath',
+    getSubPathSelectionCount,
+    { bringToFront, sendToBack }
+  );
+};
+
 export const subPathActions: ToolbarAction[] = [
   {
     id: 'copy-format',
@@ -970,6 +988,8 @@ export const subPathActions: ToolbarAction[] = [
   },
   // Add arrange actions - spread the array to include all arrange options
   ...createSubPathArrangeActions(),
+  // Add reorder actions - spread the array to include reorder options
+  ...createSubPathReorderActions(),
   {
     id: 'subpath-fill-color',
     icon: Palette,

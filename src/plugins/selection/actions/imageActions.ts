@@ -10,12 +10,14 @@ import {
   LineSquiggle, 
   Play, 
   RotateCcw, 
-  PaintBucket 
+  PaintBucket,
+  ArrowUp
 } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected, getSelectedElementsBounds } from './commonActions';
 import { createGenericArrangeActions } from '../../../utils/floating-arrange-actions';
+import { createReorderActions, createElementReorderFunctions } from '../../../utils/floating-reorder-actions';
 import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';
 import {
   createDropShadowFilter,
@@ -422,6 +424,17 @@ const createImageArrangeActions = () => createGenericArrangeActions(
     }
   }
 );
+
+// Image reorder functions
+const createImageReorderActions = () => {
+  const { bringToFront, sendToBack } = createElementReorderFunctions('image');
+  
+  return createReorderActions(
+    'image',
+    getImageSelectionCount,
+    { bringToFront, sendToBack }
+  );
+};
 
 // Get selected images utility function
 const getSelectedImages = () => {
@@ -872,6 +885,8 @@ export const imageActions: ToolbarAction[] = [
   },
   // Add arrange actions for image elements
   ...createImageArrangeActions(),
+  // Add reorder actions for image elements
+  ...createImageReorderActions(),
   {
     id: 'image-stroke-color',
     icon: Brush,

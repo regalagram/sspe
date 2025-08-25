@@ -1,8 +1,9 @@
-import { Copy, Trash2, Lock, Group, PaintBucket } from 'lucide-react';
+import { Copy, Trash2, Lock, Group, PaintBucket, ArrowUp } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected } from './commonActions';
 import { createGenericArrangeActions } from '../../../utils/floating-arrange-actions';
+import { createReorderActions, createElementReorderFunctions } from '../../../utils/floating-reorder-actions';
 import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';
 
 // Check if selected texts are locked
@@ -164,6 +165,17 @@ const createTextArrangeActions = () => createGenericArrangeActions(
   }
 );
 
+// Text reorder functions
+const createTextReorderActions = () => {
+  const { bringToFront, sendToBack } = createElementReorderFunctions('text');
+  
+  return createReorderActions(
+    'text',
+    getTextSelectionCount,
+    { bringToFront, sendToBack }
+  );
+};
+
 
 export const textActions: ToolbarAction[] = [
   {
@@ -195,6 +207,8 @@ export const textActions: ToolbarAction[] = [
   },
   // Add arrange actions for text elements using the new reusable component
   ...createTextArrangeActions(),
+  // Add reorder actions for text elements
+  ...createTextReorderActions(),
   {
     id: 'duplicate-text',
     icon: Copy,

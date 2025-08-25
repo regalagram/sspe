@@ -1,8 +1,9 @@
-import { Copy, Trash2, RotateCcw, Lock, Group } from 'lucide-react';
+import { Copy, Trash2, RotateCcw, Lock, Group, ArrowUp } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected } from './commonActions';
 import { createGenericArrangeActions } from '../../../utils/floating-arrange-actions';
+import { createReorderActions, createElementReorderFunctions } from '../../../utils/floating-reorder-actions';
 import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';
 
 // Clear mixed style
@@ -407,6 +408,17 @@ const createMixedArrangeActions = () => createGenericArrangeActions(
   }
 );
 
+// Mixed selection reorder functions
+const createMixedReorderActions = () => {
+  const { bringToFront, sendToBack } = createElementReorderFunctions('mixed');
+  
+  return createReorderActions(
+    'mixed',
+    getMixedSelectionCount,
+    { bringToFront, sendToBack }
+  );
+};
+
 export const mixedSelectionActions: ToolbarAction[] = [
   {
     id: 'mixed-group',
@@ -419,6 +431,8 @@ export const mixedSelectionActions: ToolbarAction[] = [
   },
   // Add arrange actions for mixed selections
   ...createMixedArrangeActions(),
+  // Add reorder actions for mixed selections
+  ...createMixedReorderActions(),
   {
     id: 'mixed-duplicate',
     icon: Copy,
