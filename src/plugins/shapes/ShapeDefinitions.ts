@@ -49,7 +49,6 @@ const createEllipse = (center: Point, width: number, height: number): Omit<SVGCo
     { command: 'C', x1: cx + ox, y1: cy - ry, x2: cx + rx, y2: cy - oy, x: cx + rx, y: cy },
     { command: 'C', x1: cx + rx, y1: cy + oy, x2: cx + ox, y2: cy + ry, x: cx, y: cy + ry },
     { command: 'C', x1: cx - ox, y1: cy + ry, x2: cx - rx, y2: cy + oy, x: cx - rx, y: cy },
-    { command: 'Z' }
   ];
 };
 

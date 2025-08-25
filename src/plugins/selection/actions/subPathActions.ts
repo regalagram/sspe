@@ -306,6 +306,24 @@ const smoothSubPaths = () => {
   });
 };
 
+// Get simplification parameters from transform plugin settings
+const getSimplificationParams = () => {
+  try {
+    const tolerance = localStorage.getItem('pathSimplification.tolerance');
+    const distance = localStorage.getItem('pathSimplification.distance');
+    
+    return {
+      tolerance: tolerance ? parseFloat(tolerance) : 0.1,
+      distance: distance ? parseInt(distance) : 10
+    };
+  } catch {
+    return {
+      tolerance: 0.1,
+      distance: 10
+    };
+  }
+};
+
 // Simplify subpaths - using the new animation system
 const simplifySubPaths = () => {
   const store = useEditorStore.getState();
@@ -314,8 +332,8 @@ const simplifySubPaths = () => {
   
   if (selectedSubPaths.length === 0) return;
   
-  // Default simplification tolerance
-  const simplifyTolerance = 0.1;
+  // Get current simplification parameters from transform plugin UI
+  const { tolerance: simplifyTolerance, distance: simplifyDistance } = getSimplificationParams();
   
   // Find target subpaths that can be simplified
   const targetSubPaths: any[] = [];
@@ -343,6 +361,7 @@ const simplifySubPaths = () => {
     subPathTransformManager.simplifyWithAnimation(
       subPathCommands,
       simplifyTolerance,
+      simplifyDistance,
       (simplifiedCommands) => {
         // Helper function to update this specific subpath
         const updateSubPath = (newCommands: any[]) => {

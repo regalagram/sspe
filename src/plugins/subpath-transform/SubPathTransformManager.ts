@@ -1,6 +1,6 @@
 import { useEditorStore } from '../../store/editorStore';
 import { generateId } from '../../utils/id-utils';
-import { rdp } from '../../utils/rdp-utils';
+import { simplifySegmentWithPointsOnPath } from '../../utils/path-simplification-utils';
 import { pluginManager } from '../../core/PluginSystem';
 import type { Point, SVGCommand } from '../../types';
 
@@ -376,6 +376,7 @@ export class SubPathTransformManager {
   simplifyWithAnimation(
     originalCommands: SVGCommand[],
     tolerance: number,
+    distance: number,
     onComplete: (simplifiedCommands: SVGCommand[]) => void
   ) {
 
@@ -385,7 +386,7 @@ export class SubPathTransformManager {
 
     if (!svgElement) {
       console.warn('⚠️ SVG element not found via plugin manager for simplify, falling back without animation');
-      const simplifiedCommands = this.applySimplifyAlgorithm(originalCommands, tolerance);
+      const simplifiedCommands = this.applySimplifyAlgorithm(originalCommands, tolerance, distance);
       onComplete(simplifiedCommands);
       return;
     }
@@ -393,7 +394,7 @@ export class SubPathTransformManager {
 
     // Skip animation if already running
     if (svgElement.getAttribute('data-transform-anim-running') === '1') {
-      const simplifiedCommands = this.applySimplifyAlgorithm(originalCommands, tolerance);
+      const simplifiedCommands = this.applySimplifyAlgorithm(originalCommands, tolerance, distance);
       onComplete(simplifiedCommands);
       return;
     }
@@ -412,7 +413,7 @@ export class SubPathTransformManager {
     store.setPointsVisible(false);
 
     const originalPoints = this.commandsToPoints(originalCommands);
-    const simplifiedCommands = this.applySimplifyAlgorithm(originalCommands, tolerance);
+    const simplifiedCommands = this.applySimplifyAlgorithm(originalCommands, tolerance, distance);
     const simplifiedPoints = this.commandsToPoints(simplifiedCommands);
 
 
@@ -709,40 +710,16 @@ export class SubPathTransformManager {
     return normalizedSegment;
   }
 
-  // Apply simplify algorithm using RDP
-  private applySimplifyAlgorithm(commands: SVGCommand[], tolerance: number): SVGCommand[] {
+  // Apply simplify algorithm using points-on-path
+  private applySimplifyAlgorithm(commands: SVGCommand[], tolerance: number, distance: number = 10): SVGCommand[] {
     if (commands.length < 2) return commands;
 
-    const points = this.commandsToPoints(commands);
-    if (points.length < 2) return commands;
+    // Get grid size from store - use 1 if snapToGrid is disabled, otherwise use store value
+    const store = useEditorStore.getState();
+    const gridSize = store.grid.snapToGrid ? (store.grid.size || 1) : 1;
 
-    // Apply RDP simplification
-    const simplifiedPoints = rdp(points, tolerance);
-
-    // Convert back to commands
-    const newCommands: SVGCommand[] = [];
-
-    for (let i = 0; i < simplifiedPoints.length; i++) {
-      const point = simplifiedPoints[i];
-      const command = i === 0 ? 'M' : 'L';
-
-      newCommands.push({
-        id: generateId(),
-        command: command,
-        x: Math.round(point.x),
-        y: Math.round(point.y)
-      });
-    }
-
-    // Preserve Z command if original had it
-    if (commands[commands.length - 1]?.command === 'Z') {
-      newCommands.push({
-        id: generateId(),
-        command: 'Z'
-      });
-    }
-
-    return newCommands;
+    // Use the path simplification utility with configurable parameters
+    return simplifySegmentWithPointsOnPath(commands, tolerance, distance, gridSize);
   }
 }
 

@@ -321,7 +321,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
         // Apply simplification with animation
         const delay = index * 100; // Stagger animations
         setTimeout(() => {
-          subPathTransformManager.simplifyWithAnimation(commands, simplifyTolerance, (simplifiedCommands) => {
+          subPathTransformManager.simplifyWithAnimation(commands, simplifyTolerance, simplifyDistance, (simplifiedCommands) => {
             if (simplifiedCommands.length === 0) return;
 
             // Ensure the subpath ALWAYS starts with M
@@ -344,7 +344,7 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
       // Handle single sub-path with animation
       const commandsToSimplify = [...targetCommands];
       
-      subPathTransformManager.simplifyWithAnimation(commandsToSimplify, simplifyTolerance, (simplifiedCommands) => {
+      subPathTransformManager.simplifyWithAnimation(commandsToSimplify, simplifyTolerance, simplifyDistance, (simplifiedCommands) => {
         if (simplifiedCommands.length === 0) return;
 
         // Create the new commands array for the entire subpath
