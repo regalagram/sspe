@@ -19,6 +19,7 @@ import { SVGElementActions, createSVGElementActions } from './svgElementActions'
 import { AnimationActions, createAnimationActions } from './animationActions';
 import { FormatCopyActions, createFormatCopyActions } from './formatCopyActions';
 import { TextFormatCopyActions, createTextFormatCopyActions } from './textFormatCopyActions';
+import { DeepSelectionActions, createDeepSelectionActions } from './deepSelectionActions';
 import { handleManager } from '../plugins/handles/HandleManager';
 // Combined actions interface
 interface EditorActions extends 
@@ -36,7 +37,8 @@ interface EditorActions extends
   SVGElementActions,
   AnimationActions,
   FormatCopyActions,
-  TextFormatCopyActions {}
+  TextFormatCopyActions,
+  DeepSelectionActions {}
 
 const loadInitialState = (): EditorState => {
   const savedState = loadEditorState();
@@ -55,10 +57,30 @@ const loadInitialState = (): EditorState => {
               { id: 'cmd-4', command: 'L', x: 100, y: 200 },
               { id: 'cmd-5', command: 'Z' }
             ]
+          },
+          {
+            id: 'test-subpath-inner',
+            commands: [
+              { id: 'cmd-inner-1', command: 'M', x: 125, y: 125 },
+              { id: 'cmd-inner-2', command: 'L', x: 175, y: 125 },
+              { id: 'cmd-inner-3', command: 'L', x: 175, y: 175 },
+              { id: 'cmd-inner-4', command: 'L', x: 125, y: 175 },
+              { id: 'cmd-inner-5', command: 'Z' }
+            ]
+          },
+          {
+            id: 'test-subpath-smallest',
+            commands: [
+              { id: 'cmd-small-1', command: 'M', x: 140, y: 140 },
+              { id: 'cmd-small-2', command: 'L', x: 160, y: 140 },
+              { id: 'cmd-small-3', command: 'L', x: 160, y: 160 },
+              { id: 'cmd-small-4', command: 'L', x: 140, y: 160 },
+              { id: 'cmd-small-5', command: 'Z' }
+            ]
           }
         ],
         style: {
-          fill: 'none',
+          fill: 'rgba(0,0,255,0.3)',
           stroke: '#0000ff',
           strokeWidth: 2
         }
@@ -484,6 +506,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     ...createAnimationActions(set, get),
     ...createFormatCopyActions(set, get, api),
     ...createTextFormatCopyActions(set, get, api),
+    ...createDeepSelectionActions(set, get, api),
   }))
 );
 

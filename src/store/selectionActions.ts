@@ -663,6 +663,8 @@ export const createSelectionActions: StateCreator<
           selectedUses: [],
           selectedAnimations: [],
         },
+        // Clear deep selection state only when clearing all selections
+        deepSelection: undefined
       };
     }),
 

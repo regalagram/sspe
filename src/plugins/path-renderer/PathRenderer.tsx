@@ -622,25 +622,35 @@ export const PathRenderer: React.FC = () => {
               );
             })}
 
-            {/* Invisible overlays for interaction, solo para subpaths desbloqueados */}
-            {path.subPaths.map((subPath) => {
-              if (subPath.locked) return null;
-              const dSub = subPathToStringInContext(subPath, path.subPaths);
+            {/* Single path overlay for deep subpath selection */}
+            {(() => {
+              // Only render overlay if path has unlocked subpaths
+              const hasUnlockedSubPaths = path.subPaths.some(sp => !sp.locked);
+              if (!hasUnlockedSubPaths) {
+                return null;
+              }
+
+              // Combined path data for all unlocked subpaths
+              const combinedD = path.subPaths
+                .filter(sp => !sp.locked)
+                .map(subPath => subPathToStringInContext(subPath, path.subPaths))
+                .join(' ');
+
               return (
-        <SubPathWithAnimations
-                  key={`subpath-interact-${subPath.id}`}
-                  subPathId={subPath.id}
-                  d={dSub}
+                <SubPathWithAnimations
+                  key={`path-interact-${path.id}`}
+                  subPathId={`path-overlay-${path.id}`}
+                  d={combinedD}
                   fill="none"
                   stroke="transparent"
                   strokeWidth={12 / viewport.zoom}
                   markerStart={path.style.markerStart}
                   markerMid={path.style.markerMid}
                   markerEnd={path.style.markerEnd}
-                  data-element-type="subpath"
-                  data-element-id={subPath.id}
+                  data-element-type="path-overlay"
+                  data-element-id={path.id}
                   style={{
-          cursor: mode?.current === 'subpath-edit' ? 'default' : 'pointer',
+                    cursor: mode?.current === 'subpath-edit' ? 'default' : 'pointer',
                     pointerEvents: 'all',
                   }}
                   onPointerDown={(e) => {
@@ -653,49 +663,52 @@ export const PathRenderer: React.FC = () => {
                       return; // Don't consume the event, let it bubble up to plugin system
                     }
                     
-                    // Check if this subpath belongs to a group
-                    const parentPath = currentState.paths.find(p => 
-                      p.subPaths.some(sp => sp.id === subPath.id)
+                    // Check if this path belongs to a group
+                    let belongsToGroup = false;
+                    belongsToGroup = currentState.groups.some(group => 
+                      group.children.some(child => child.id === path.id && child.type === 'path')
                     );
                     
-                    let belongsToGroup = false;
-                    if (parentPath) {
-                      belongsToGroup = currentState.groups.some(group => 
-                        group.children.some(child => child.id === parentPath.id && child.type === 'path')
-                      );
+                    // If path belongs to a group, don't stopPropagation - let PointerInteraction handle it
+                    if (!belongsToGroup) {
+                      e.stopPropagation();
                     }
-                    
-                      // If subpath belongs to a group, don't stopPropagation - let PointerInteraction handle it
-                      if (!belongsToGroup) {
-                        e.stopPropagation();
-                      }
                     
                     // Get the SVG element from the path's parent
                     const svgElement = (e.target as SVGPathElement).closest('svg');
                     if (svgElement) {
                       const point = getTransformedPoint(e as React.PointerEvent<SVGElement>, svgElement);
-                      // Si hay otro subpath debajo, seleccionarlo
-                      const foundSubPath = findSubPathAtPoint(path, point, 15);
-                      if (foundSubPath && foundSubPath.id !== subPath.id) {
+                      
+                      // Use deep selection for overlapping subpaths within this path
+                      const selectedSubPathId = currentState.handleDeepSubPathSelection(path, point, 15);
+                      
+                      if (selectedSubPathId) {
                         // If we're in subpath-edit mode, don't change selection on tap
-                        const currentState = useEditorStore.getState();
                         if (currentState.mode?.current === 'subpath-edit') {
                           return; // swallow selection change
                         }
-                        selectSubPathByPoint(path.id, point, e.shiftKey);
+                        
+                        // Preserve current deep selection state before calling selectSubPathMultiple
+                        const currentDeepSelectionState = currentState.deepSelection;
+                        selectSubPathMultiple(selectedSubPathId, e.shiftKey);
+                        
+                        // Restore deep selection state after selection
+                        setTimeout(() => {
+                          const { setDeepSelection } = useEditorStore.getState() as any;
+                          if (setDeepSelection && currentDeepSelectionState) {
+                            useEditorStore.setState({ deepSelection: currentDeepSelectionState });
+                          }
+                        }, 0);
+                        
+                        // Start drag operation for the selected subpath
+                        handleSubPathPointerDown(e, selectedSubPathId);
                         return;
                       }
                     }
-                    // In subpath-edit mode we still want to start drag/edit operations
-                    // but we must avoid changing selection on simple taps. handleSubPathPointerDown
-                    // may call selectSubPathMultiple internally — PathRenderer's handler will
-                    // check the mode and avoid selection (we'll let handleSubPathPointerDown always run
-                    // to keep dragging behavior).
-                    handleSubPathPointerDown(e, subPath.id);
                   }}
                 />
               );
-            })}
+            })()}
           </g>
         );
       })}
@@ -775,19 +788,27 @@ export const PathRenderer: React.FC = () => {
                     );
                   }
                   
-                  // Check if this is a potential drag operation
+                  // Get the SVG element from the path's parent
                   const svgElement = (e.target as SVGPathElement).closest('svg');
                   if (svgElement) {
                     const point = getTransformedPoint(e as React.PointerEvent<SVGElement>, svgElement);
                     
-                    // Try to find if there's a different subpath at this point that should be selected
-                    const foundSubPath = findSubPathAtPoint(path, point, 15);
+                    // Use deep selection for overlapping subpaths within this path
+                    const selectedSubPathId = currentState.handleDeepSubPathSelection(parentPath!, point, 15);
                     
-                    // If we found a different subpath, select it instead of starting drag
-                    if (foundSubPath && foundSubPath.id !== subPath.id) {
-                      e.stopPropagation();
-                      selectSubPathByPoint(path.id, point, e.shiftKey);
-                      return;
+                    if (selectedSubPathId && selectedSubPathId !== subPath.id) {
+                      // Select the subpath returned by deep selection
+                      selectSubPathMultiple(selectedSubPathId, e.shiftKey);
+                      
+                      // Preserve current deep selection state
+                      const currentDeepSelectionState = currentState.deepSelection;
+                      setTimeout(() => {
+                        if (currentDeepSelectionState) {
+                          useEditorStore.setState({ deepSelection: currentDeepSelectionState });
+                        }
+                      }, 0);
+                      
+                      return; // Don't proceed with drag
                     }
                   }
                   

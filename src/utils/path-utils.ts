@@ -142,6 +142,61 @@ export const findSubPathAtPointAdvanced = (
   return closestSubPath;
 };
 
+// Get ALL subpaths at a point sorted by priority (for deep selection)
+export const getAllSubPathsAtPoint = (path: SVGPath, point: Point, tolerance: number = 15): SVGSubPath[] => {
+  const candidates: Array<{
+    subPath: SVGSubPath;
+    distance: number;
+    contourDistance: number;
+    isInside: boolean;
+  }> = [];
+
+  for (const subPath of path.subPaths) {
+    // Skip locked subpaths
+    if (subPath.locked) continue;
+    
+    const contourDistance = getDistanceToSubPathContour(subPath, point);
+    const isInside = isPointInsideSubPath(subPath, point, 'nonzero', path.subPaths);
+    const distance = getDistanceToSubPath(subPath, point, path.subPaths);
+    
+    // Only include subpaths within tolerance or inside
+    if (distance < tolerance || isInside) {
+      candidates.push({
+        subPath,
+        distance,
+        contourDistance,
+        isInside
+      });
+    }
+  }
+
+  // Sort by same priority logic as findSubPathAtPoint
+  candidates.sort((a, b) => {
+    // If both are very close to edge (< 5px), choose the closest
+    if (a.contourDistance < 5 && b.contourDistance < 5) {
+      return a.contourDistance - b.contourDistance;
+    }
+    
+    // If one is close to edge and other is inside, prefer edge
+    if (a.contourDistance < 5 && b.contourDistance >= 5) return -1;
+    if (b.contourDistance < 5 && a.contourDistance >= 5) return 1;
+    
+    // If both are inside, choose the one with smallest contour distance (innermost)
+    if (a.isInside && b.isInside) {
+      return a.contourDistance - b.contourDistance;
+    }
+    
+    // If one is inside and other is not, prefer inside
+    if (a.isInside && !b.isInside) return -1;
+    if (b.isInside && !a.isInside) return 1;
+    
+    // Default: closest distance
+    return a.distance - b.distance;
+  });
+
+  return candidates.map(c => c.subPath);
+};
+
 // Advanced function that prioritizes innermost subpaths for nested cases
 export const findInnermostSubPathAtPoint = (path: SVGPath, point: Point, tolerance: number = 15): SVGSubPath | null => {
   // Get all subpaths that contain the point or are within tolerance

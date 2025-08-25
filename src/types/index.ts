@@ -298,6 +298,13 @@ export interface EditorState {
   ui?: {
     selectionVisible?: boolean;
   };
+  // Deep selection state for overlapping subpaths
+  deepSelection?: {
+    lastClickPoint?: Point;
+    lastClickTime?: number;
+    availableSubPaths?: string[];
+    currentIndex?: number;
+  };
   // Floating toolbar state
   isFloatingToolbarHidden?: boolean;
   floatingToolbarUpdateTimestamp?: number;
