@@ -141,41 +141,25 @@ export const duplicateSelected = () => {
         y: targetTopLeftY - groupBounds.y
       };
       
-      // Duplicate the group WITHOUT any offset first
-      const newGroupId = store.duplicateGroup(groupId);
+      // Duplicate the group WITH the custom offset to position it correctly in one step
+      // Now that we fixed the double movement issue in duplicateGroup, this should work correctly
+      const newGroupId = store.duplicateGroup(groupId, customOffset);
       
       if (newGroupId) {
-        // Get the duplicated group object
-        const newGroup = store.groups.find(g => g.id === newGroupId);
-        
-        if (newGroup) {
-          // Get the bounding box of the newly duplicated group
-          const newGroupBounds = getGroupBoundingBox(newGroup, store.paths, store.texts, store.images, store.groups);
-          
-          // Calculate the actual offset needed to move from current position to target position
-          const actualOffset = {
-            x: targetTopLeftX - newGroupBounds.x,
-            y: targetTopLeftY - newGroupBounds.y
-          };
-          
-          // Move the entire duplicated group to the correct position
-          store.moveGroup(newGroupId, actualOffset);
-          
-          // Select the newly duplicated group
-          useEditorStore.setState(state => ({
-            selection: {
-              ...state.selection,
-              selectedGroups: [newGroupId],
-              selectedPaths: [],
-              selectedSubPaths: [],
-              selectedCommands: [],
-              selectedControlPoints: [],
-              selectedTexts: [],
-              selectedImages: [],
-              selectedUses: []
-            }
-          }));
-        }
+        // Select the newly duplicated group
+        useEditorStore.setState(state => ({
+          selection: {
+            ...state.selection,
+            selectedGroups: [newGroupId],
+            selectedPaths: [],
+            selectedSubPaths: [],
+            selectedCommands: [],
+            selectedControlPoints: [],
+            selectedTexts: [],
+            selectedImages: [],
+            selectedUses: []
+          }
+        }));
       }
     }
     return;
