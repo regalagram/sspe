@@ -56,6 +56,15 @@ export const createDeepSelectionActions: StateCreator<
       currentlySelectedSubPaths.includes(sp.id)
     );
     
+    // If multiple subpaths are selected, disable cycling to allow direct drag
+    if (currentlySelectedSubPaths.length > 1 && selectedSubPathInThisArea) {
+      // Return the currently selected subpath in this area to allow direct drag
+      set({
+        deepSelection: undefined // Clear deep selection state to avoid cycling
+      });
+      return selectedSubPathInThisArea.id;
+    }
+    
     if (isConsecutiveClick && currentDeepSelection.availableSubPaths) {
       // Consecutive click - cycle to next subpath
       const currentIndex = currentDeepSelection.currentIndex || 0;
