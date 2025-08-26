@@ -189,6 +189,7 @@ export const PathRenderer: React.FC = () => {
 
   // Handle pointer down on subpath for dragging (selected or unselected)
   const handleSubPathPointerDown = useCallback((e: React.PointerEvent<SVGElement>, subPathId: string) => {
+    
     const svgElement = (e.target as SVGPathElement).closest('svg');
     if (svgElement) {
       const currentState = useEditorStore.getState();
@@ -216,7 +217,9 @@ export const PathRenderer: React.FC = () => {
         // Just select the subpath and let PointerInteraction handle the group dragging
         const isSubPathSelected = currentState.selection.selectedSubPaths.includes(subPathId);
         if (!isSubPathSelected) {
-          if (shouldPreserveSelection(subPathId, 'subpath', selectionContext)) {
+          const shouldPreserve = shouldPreserveSelection(subPathId, 'subpath', selectionContext);
+          
+          if (shouldPreserve) {
             // Preserve current selection - don't call selectSubPathMultiple
           } else {
             // Normal selection (this will trigger group promotion if needed)

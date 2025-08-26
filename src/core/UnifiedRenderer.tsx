@@ -10,6 +10,7 @@ import { calculateTextBoundsDOM } from '../utils/text-utils';
 import { getSVGPoint } from '../utils/transform-utils';
 import { captureAllSelectedElementsPositions, moveAllCapturedElementsByDelta } from '../utils/drag-utils';
 import { transformManager } from '../plugins/transform/TransformManager';
+import { shouldPreserveSelection } from '../utils/selection-utils';
 
 export interface RenderItem {
   zIndex: number;
@@ -344,10 +345,24 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
                     // Subpath is already selected, start drag immediately
                     startDragOperation(result.selectedSubPathId, point, svgElement);
                   } else {
-                    // New selection - select first, then start drag
-                    selectSubPathMultiple(result.selectedSubPathId, e.shiftKey);
-                    // Start drag operation immediately after selection
-                    startDragOperation(result.selectedSubPathId, point, svgElement);
+                    // Check if we should preserve the current selection
+                    const selectionContext = {
+                      selection: currentState.selection,
+                      groups: currentState.groups,
+                      paths: currentState.paths
+                    };
+                    
+                    const shouldPreserve = shouldPreserveSelection(result.selectedSubPathId, 'subpath', selectionContext);
+                    
+                    if (shouldPreserve) {
+                      // Preserve current selection - just start drag with current selection
+                      startDragOperation(result.selectedSubPathId, point, svgElement);
+                    } else {
+                      // New selection - select first, then start drag
+                      selectSubPathMultiple(result.selectedSubPathId, e.shiftKey);
+                      // Start drag operation immediately after selection
+                      startDragOperation(result.selectedSubPathId, point, svgElement);
+                    }
                   }
                 }
                 
