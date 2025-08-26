@@ -186,17 +186,74 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
         return; // Not enough movement yet
       }
       
-        // Start actual dragging
-        transformManager.setMoving(true);
+      // Start actual dragging
+      transformManager.setMoving(true);
+      
+      // Hide floating toolbar during subpath drag
+      const store = useEditorStore.getState();
+      store.hideFloatingToolbarDuringDrag();
+      
+      // Push to history
+      store.pushToHistory();
+      
+      setDragState(prev => ({ ...prev, dragStarted: true }));
+      
+      // Calculate the total delta from start point to current point
+      // This ensures we don't lose the initial movement that triggered the drag
+      const totalDelta = {
+        x: currentPoint.x - dragState.startPoint.x,
+        y: currentPoint.y - dragState.startPoint.y,
+      };
+      
+      // Apply the initial movement immediately to avoid desync
+      if (dragState.capturedElements) {
+        const hasSubPaths = Object.keys(dragState.capturedElements.subPaths).length > 0;
         
-        // Hide floating toolbar during subpath drag
-        const store = useEditorStore.getState();
-        store.hideFloatingToolbarDuringDrag();
-        
-        // Push to history
-        store.pushToHistory();
-        
-        setDragState(prev => ({ ...prev, dragStarted: true }));
+        if (hasSubPaths && (Math.abs(totalDelta.x) > 0.001 || Math.abs(totalDelta.y) > 0.001)) {
+          let snappedDelta = { ...totalDelta };
+          
+          // Apply sticky guidelines if enabled for initial movement
+          if (enabledFeatures.stickyGuidelinesEnabled && stickyManager && dragState.subPathId) {
+            const targetPoint = {
+              x: dragState.startPoint.x + totalDelta.x,
+              y: dragState.startPoint.y + totalDelta.y
+            };
+            
+            const result = stickyManager.handleCursorDragMovement(
+              targetPoint,
+              dragState.startPoint,
+              dragState.subPathId,
+              'subpath'
+            );
+            
+            if (result.snappedPoint) {
+              snappedDelta = {
+                x: result.snappedPoint.x - dragState.startPoint.x,
+                y: result.snappedPoint.y - dragState.startPoint.y
+              };
+            }
+          }
+          
+          // Apply initial movement
+          const snapToGrid = grid.snapToGrid;
+          const gridSize = grid.size;
+          
+          moveAllCapturedElementsByDelta(
+            dragState.capturedElements,
+            snappedDelta,
+            snapToGrid,
+            gridSize
+          );
+          
+          setDragState(prev => ({
+            ...prev,
+            lastPoint: currentPoint,
+            lastAppliedDelta: snappedDelta,
+          }));
+        }
+      }
+      
+      return; // Exit early after handling initial movement
     }
     
     // Calculate total delta from start point (like in PathRenderer)
