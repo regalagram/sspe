@@ -487,6 +487,43 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
                 } else if (result.selectedSubPathId) {
                   // Direct selection or start drag immediately
                   const currentState = useEditorStore.getState();
+                  
+                  // Check if this subpath belongs to a group
+                  const parentPath = currentState.paths.find(path => 
+                    path.subPaths.some(sp => sp.id === result.selectedSubPathId)
+                  );
+                  
+                  let belongsToGroup = false;
+                  if (parentPath) {
+                    // Check if the parent path is in any group
+                    belongsToGroup = currentState.groups.some(group => 
+                      group.children.some(child => child.id === parentPath.id && child.type === 'path')
+                    );
+                  }
+                  
+                  // If subpath belongs to a group, just select it and don't handle dragging here
+                  // Let PointerInteraction handle the group dragging through event bubbling
+                  if (belongsToGroup) {
+                    const isSubPathSelected = currentState.selection.selectedSubPaths.includes(result.selectedSubPathId);
+                    if (!isSubPathSelected) {
+                      const selectionContext = {
+                        selection: currentState.selection,
+                        groups: currentState.groups,
+                        paths: currentState.paths
+                      };
+                      
+                      const shouldPreserve = shouldPreserveSelection(result.selectedSubPathId, 'subpath', selectionContext);
+                      
+                      if (!shouldPreserve) {
+                        // Normal selection (this will trigger group promotion if needed)
+                        selectSubPathMultiple(result.selectedSubPathId, e.shiftKey);
+                      }
+                    }
+                    // Don't call stopPropagation so the event bubbles up to PointerInteraction
+                    return;
+                  }
+                  
+                  // For subpaths NOT in groups, handle dragging directly
                   const isAlreadySelected = currentState.selection.selectedSubPaths.includes(result.selectedSubPathId);
                   
                   if (isAlreadySelected) {
@@ -514,8 +551,20 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
                   }
                 }
                 
-                // Stop propagation to prevent path-level selection
-                e.stopPropagation();
+                // Only stop propagation if subpath doesn't belong to a group
+                // When it belongs to a group, let the event bubble up to PointerInteraction
+                const currentState = useEditorStore.getState();
+                const parentPath = currentState.paths.find(path => 
+                  path.subPaths.some(sp => sp.id === result.selectedSubPathId)
+                );
+                
+                const belongsToGroup = parentPath && currentState.groups.some(group => 
+                  group.children.some(child => child.id === parentPath.id && child.type === 'path')
+                );
+                
+                if (!belongsToGroup) {
+                  e.stopPropagation();
+                }
               }
             }}
           />
@@ -595,6 +644,43 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
                   } else if (result.selectedSubPathId) {
                     // Direct selection or start drag immediately
                     const currentState = useEditorStore.getState();
+                    
+                    // Check if this subpath belongs to a group
+                    const parentPath = currentState.paths.find(path => 
+                      path.subPaths.some(sp => sp.id === result.selectedSubPathId)
+                    );
+                    
+                    let belongsToGroup = false;
+                    if (parentPath) {
+                      // Check if the parent path is in any group
+                      belongsToGroup = currentState.groups.some(group => 
+                        group.children.some(child => child.id === parentPath.id && child.type === 'path')
+                      );
+                    }
+                    
+                    // If subpath belongs to a group, just select it and don't handle dragging here
+                    // Let PointerInteraction handle the group dragging through event bubbling
+                    if (belongsToGroup) {
+                      const isSubPathSelected = currentState.selection.selectedSubPaths.includes(result.selectedSubPathId);
+                      if (!isSubPathSelected) {
+                        const selectionContext = {
+                          selection: currentState.selection,
+                          groups: currentState.groups,
+                          paths: currentState.paths
+                        };
+                        
+                        const shouldPreserve = shouldPreserveSelection(result.selectedSubPathId, 'subpath', selectionContext);
+                        
+                        if (!shouldPreserve) {
+                          // Normal selection (this will trigger group promotion if needed)
+                          selectSubPathMultiple(result.selectedSubPathId, e.shiftKey);
+                        }
+                      }
+                      // Don't call stopPropagation so the event bubbles up to PointerInteraction
+                      return;
+                    }
+                    
+                    // For subpaths NOT in groups, handle dragging directly
                     const isAlreadySelected = currentState.selection.selectedSubPaths.includes(result.selectedSubPathId);
                     
                     if (isAlreadySelected) {
@@ -609,7 +695,20 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
                   }
                 }
                 
-                e.stopPropagation();
+                // Only stop propagation if subpath doesn't belong to a group
+                // When it belongs to a group, let the event bubble up to PointerInteraction  
+                const currentState = useEditorStore.getState();
+                const parentPath = currentState.paths.find(path => 
+                  path.subPaths.some(sp => sp.id === subPath.id)
+                );
+                
+                const belongsToGroup = parentPath && currentState.groups.some(group => 
+                  group.children.some(child => child.id === parentPath.id && child.type === 'path')
+                );
+                
+                if (!belongsToGroup) {
+                  e.stopPropagation();
+                }
               }}
             />
           </g>
