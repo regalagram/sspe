@@ -10,6 +10,7 @@ import { handleManager } from '../handles/HandleManager';
 import { stickyManager } from '../sticky-guidelines/StickyManager';
 import { stickyPointsManager } from './StickyPointsManager';
 import { ElementType, SelectionContext, isElementSelected, hasMultiSelection, shouldPreserveSelection, logSelectionDebug } from '../../utils/selection-utils';
+import { applyFinalSnapToGrid } from '../../utils/final-snap-utils';
 
 // ================== TYPES & INTERFACES ==================
 
@@ -474,8 +475,8 @@ class DragManager {
         moveAllCapturedElementsByDelta(
           elementsWithoutCommands,
           incrementalDelta,
-          this.config.snapToGrid,
-          this.config.gridSize
+          false, // Don't snap to grid during drag
+          0      // Grid size not needed
         );
       }
 
@@ -671,7 +672,7 @@ class DragManager {
         y: (currentPosition as { x: number; y: number }).y + incrementalDelta.y
       };
 
-      // Apply sticky points and grid snapping based on the disableSticky parameter
+      // Apply sticky points but NOT grid snapping during drag
       if (!disableSticky) {
         // Check for sticky points behavior
         const stickyResult = stickyPointsManager.checkStickyBehavior(commandId, targetPosition);
@@ -679,12 +680,8 @@ class DragManager {
           targetPosition = stickyResult.stickyPosition;
         }
 
-        // Apply grid snapping if enabled - get current grid settings from store
-        const currentGridSettings = this.editorStore.grid;
-        if (currentGridSettings && currentGridSettings.snapToGrid) {
-          const snapped = snapToGrid(targetPosition, currentGridSettings.size);
-          targetPosition = snapped;
-        }
+        // NO grid snapping during drag - only at the end
+        // Grid snapping will be applied when drag ends in endDrag()
       }
 
       this.editorStore.moveCommand(commandId, targetPosition);
@@ -695,6 +692,9 @@ class DragManager {
   this.debugManager.logDragOperation('endDrag called, clearing snapshots', this.elementSnapshots.size);
   this.debugManager.logDragManager('instanceId in endDrag', this.instanceId);
   // endDrag
+
+    // Apply final snap to grid for all moved elements
+    applyFinalSnapToGrid();
 
     // Reset dual point drag state
     this.elementSnapshots.clear();
@@ -923,12 +923,8 @@ class DragManager {
     this.debugManager.logMovement('Delta', delta);
     this.debugManager.logMovement('New position', { x: newX, y: newY });
 
-    // Apply grid snapping if enabled
-    if (this.config.snapToGrid) {
-      const snapped = snapToGrid({ x: newX, y: newY }, this.config.gridSize);
-      newX = snapped.x;
-      newY = snapped.y;
-    }
+    // NO grid snapping during drag - only at the end
+    // Grid snapping will be applied when drag ends in endDrag()
 
     // Update current position
     snapshot.currentPosition = { x: newX, y: newY };

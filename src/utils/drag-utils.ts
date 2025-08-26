@@ -411,14 +411,9 @@ export function moveAllCapturedElementsByDelta(
   isExecuting = true;
 
   try {
-    // Apply grid snapping if enabled
-    let finalDelta = delta;
-    if (enableGridSnapping) {
-      finalDelta = {
-        x: Math.round(delta.x / gridSize) * gridSize,
-        y: Math.round(delta.y / gridSize) * gridSize,
-      };
-    }
+    // NO apply grid snapping during drag - only at the end
+    // Use the original delta for smooth movement during drag
+    const finalDelta = delta;
 
     // Get current store state and methods
     const store = useEditorStore.getState();

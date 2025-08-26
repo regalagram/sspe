@@ -379,16 +379,15 @@ export const PathRenderer: React.FC = () => {
             
             // Only apply movement if there's a meaningful change
             if (Math.abs(incrementalDelta.x) > 0.001 || Math.abs(incrementalDelta.y) > 0.001) {
-              const snapToGrid = grid.snapToGrid;
-              const gridSize = grid.size;
+              // NO snap to grid during drag - only at the end
               
               // Schedule the move operation outside of render cycle to avoid setState during render
               setTimeout(() => {
                 moveAllCapturedElementsByDelta(
                   capturedElements,
                   incrementalDelta,
-                  snapToGrid,
-                  gridSize
+                  false, // Don't snap to grid during drag
+                  0      // Grid size not needed
                 );
               }, 0);
               
@@ -460,8 +459,9 @@ export const PathRenderer: React.FC = () => {
           
           // Only apply movement if there's a meaningful change
           if (Math.abs(incrementalDelta.x) > 0.001 || Math.abs(incrementalDelta.y) > 0.001) {
-            const snapToGrid = grid.snapToGrid;
-            const gridSize = grid.size;
+            // Use fluid movement during drag - no snap to grid until pointer is released
+            const snapToGrid = false;
+            const gridSize = 0;
             
             // Schedule the move operation outside of render cycle to avoid setState during render
             setTimeout(() => {

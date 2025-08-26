@@ -12,6 +12,7 @@ import { captureAllSelectedElementsPositions, moveAllCapturedElementsByDelta } f
 import { transformManager } from '../plugins/transform/TransformManager';
 import { shouldPreserveSelection } from '../utils/selection-utils';
 import { stickyManager } from '../plugins/sticky-guidelines/StickyManager';
+import { applyFinalSnapToGrid } from '../utils/final-snap-utils';
 
 export interface RenderItem {
   zIndex: number;
@@ -234,15 +235,12 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
             }
           }
           
-          // Apply initial movement
-          const snapToGrid = grid.snapToGrid;
-          const gridSize = grid.size;
-          
+          // Apply initial movement - NO snap to grid during drag
           moveAllCapturedElementsByDelta(
             dragState.capturedElements,
             snappedDelta,
-            snapToGrid,
-            gridSize
+            false, // Don't snap to grid during drag
+            0     // Grid size not needed
           );
           
           setDragState(prev => ({
@@ -301,14 +299,12 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
         
         // Only apply movement if there's a meaningful change
         if (Math.abs(incrementalDelta.x) > 0.001 || Math.abs(incrementalDelta.y) > 0.001) {
-          const snapToGrid = grid.snapToGrid;
-          const gridSize = grid.size;
-          
+          // NO snap to grid during drag - only at the end
           moveAllCapturedElementsByDelta(
             dragState.capturedElements,
             incrementalDelta,
-            snapToGrid,
-            gridSize
+            false, // Don't snap to grid during drag
+            0     // Grid size not needed
           );
           
           setDragState(prev => ({
@@ -349,8 +345,10 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
 
     // Handle normal drag end
     if (dragState.isDragging) {
-      // Show floating toolbar after subpath drag
+      // Apply final snap to grid if drag actually started
       if (dragState.dragStarted) {
+        applyFinalSnapToGrid();
+        
         const store = useEditorStore.getState();
         store.showFloatingToolbarAfterDrag();
       }
