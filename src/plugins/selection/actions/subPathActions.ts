@@ -999,7 +999,7 @@ export const subPathActions: ToolbarAction[] = [
       currentColor: getCommonSubPathFillColor(),
       onChange: applySubPathFillColor
     },
-    priority: 100,
+    priority: 990,
     tooltip: 'Change subpath fill color'
   },
   {
@@ -1011,7 +1011,7 @@ export const subPathActions: ToolbarAction[] = [
       currentColor: getCommonSubPathStrokeColor(),
       onChange: applySubPathStrokeColor
     },
-    priority: 95,
+    priority: 980,
     tooltip: 'Change subpath stroke color'
   },
   {
@@ -1037,7 +1037,7 @@ export const subPathActions: ToolbarAction[] = [
       onStrokeLinejoinChange: applySubPathStrokeLinejoin,
       onFillRuleChange: applySubPathFillRule
     },
-    priority: 90,
+    priority: 970,
     tooltip: 'Configure stroke width, dash pattern, line cap, and line join'
   },
   {
@@ -1046,7 +1046,7 @@ export const subPathActions: ToolbarAction[] = [
     label: 'Smooth',
     type: 'button',
     action: smoothSubPaths,
-    priority: 85,
+    priority: 600,
     tooltip: 'Apply smoothing to subpath curves'
   },
   {
@@ -1055,7 +1055,7 @@ export const subPathActions: ToolbarAction[] = [
     label: 'Simplify',
     type: 'button',
     action: simplifySubPaths,
-    priority: 80,
+    priority: 590,
     tooltip: 'Simplify subpath by reducing points'
   },
   {
@@ -1066,7 +1066,7 @@ export const subPathActions: ToolbarAction[] = [
     dropdown: {
       options: subPathFilterOptions
     },
-    priority: 60,
+    priority: 950,
     tooltip: 'Apply filters'
   },
   {
@@ -1077,7 +1077,7 @@ export const subPathActions: ToolbarAction[] = [
     dropdown: {
       options: subPathAnimationOptions
     },
-    priority: 50,
+    priority: 940,
     tooltip: 'Add animations'
   },
   {
@@ -1086,16 +1086,16 @@ export const subPathActions: ToolbarAction[] = [
     label: 'Duplicate',
     type: 'button',
     action: duplicateSubPaths,
-    priority: 20,
+    priority: 80,
     tooltip: 'Duplicate subpath'
   },
   {
     id: 'subpath-clear-style',
     icon: RotateCcw,
-    label: 'Clear Style',
+    label: 'Reset',
     type: 'button',
     action: clearSubPathStyle,
-    priority: 15,
+    priority: 70,
     tooltip: 'Reset subpath to default style'
   },
   {
@@ -1107,7 +1107,7 @@ export const subPathActions: ToolbarAction[] = [
       isActive: areSubPathsLocked,
       onToggle: toggleSubPathLock
     },
-    priority: 12,
+    priority: 60,
     tooltip: 'Toggle subpath lock state'
   },
   {

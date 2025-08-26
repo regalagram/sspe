@@ -829,6 +829,15 @@ const isImageFormatCopyActive = (): boolean => {
   return store.isImageFormatCopyActive();
 };
 
+// Check if image format copy should be visible (only for single image selection)
+const isImageFormatCopyVisible = (): boolean => {
+  const store = useEditorStore.getState();
+  const selectedImages = store.selection.selectedImages;
+  
+  // Only show for exactly one image selected (not multiple)
+  return selectedImages.length === 1;
+};
+
 export const imageActions: ToolbarAction[] = [
   {
     id: 'copy-format-image',
@@ -840,7 +849,8 @@ export const imageActions: ToolbarAction[] = [
       onToggle: startImageFormatCopy
     },
     priority: 1000,
-    tooltip: 'Copy format (styles, filters, effects)'
+    tooltip: 'Copy format (styles, filters, effects)',
+    visible: isImageFormatCopyVisible
   },
   {
     id: 'image-opacity',
@@ -864,7 +874,7 @@ export const imageActions: ToolbarAction[] = [
       quickValues: [0, 25, 50, 75, 100],
       unit: '%'
     },
-    priority: 110,
+    priority: 990,
     tooltip: 'Change image opacity (0-100%)'
   },
   {
@@ -873,7 +883,7 @@ export const imageActions: ToolbarAction[] = [
     label: 'Group',
     type: 'button',
     action: groupSelectedImages,
-    priority: 105,
+    priority: 100,
     tooltip: 'Group selected images',
     visible: () => {
       // Only show when multiple images are selected
@@ -894,7 +904,7 @@ export const imageActions: ToolbarAction[] = [
       currentColor: getCommonImageStrokeColor(),
       onChange: applyImageStrokeColor
     },
-    priority: 95,
+    priority: 980,
     tooltip: 'Change image stroke color'
   },
   {
@@ -920,7 +930,7 @@ export const imageActions: ToolbarAction[] = [
       onStrokeLinejoinChange: applyImageStrokeLinejoin,
       onStrokeOpacityChange: applyImageStrokeOpacity
     },
-    priority: 90,
+    priority: 970,
     tooltip: 'Configure stroke width, dash pattern, line cap, and line join'
   },
   {
@@ -931,7 +941,7 @@ export const imageActions: ToolbarAction[] = [
     dropdown: {
       options: imageFilterOptions
     },
-    priority: 60,
+    priority: 950,
     tooltip: 'Apply filters'
   },
   {
@@ -942,7 +952,7 @@ export const imageActions: ToolbarAction[] = [
     dropdown: {
       options: imageAnimationOptions
     },
-    priority: 50,
+    priority: 940,
     tooltip: 'Add animations'
   },
   {
@@ -951,7 +961,7 @@ export const imageActions: ToolbarAction[] = [
     label: 'Duplicate',
     type: 'button',
     action: duplicateSelected, // Use unified duplicate function
-    priority: 20,
+    priority: 80,
     tooltip: 'Duplicate image'
   },
   {
@@ -960,7 +970,7 @@ export const imageActions: ToolbarAction[] = [
     label: 'Reset',
     type: 'button',
     action: clearImageStyle,
-    priority: 15,
+    priority: 70,
     tooltip: 'Reset image to default style (removes stroke, filters, animations)'
   },
   {
@@ -972,7 +982,7 @@ export const imageActions: ToolbarAction[] = [
       isActive: areImagesLocked,
       onToggle: toggleImageLock
     },
-    priority: 12,
+    priority: 60,
     tooltip: 'Toggle image lock state'
   },
   {

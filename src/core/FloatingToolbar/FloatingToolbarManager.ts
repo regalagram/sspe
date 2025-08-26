@@ -22,7 +22,7 @@ export class FloatingToolbarManager {
       spacing: 4
     },
     mobile: {
-      maxVisibleButtons: 10,
+      maxVisibleButtons: 9,
       buttonSize: 28,
       layout: 'adaptive',
       spacing: 4

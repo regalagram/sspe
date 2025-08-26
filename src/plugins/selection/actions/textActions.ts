@@ -109,9 +109,9 @@ const areTextsCompatibleForFormatCopy = (): boolean => {
   const selectedTexts = store.selection.selectedTexts;
   const selectedTextPaths = store.selection.selectedTextPaths;
   
-  // Must have at least one text selected
+  // Only show for exactly one text selected (not multiple)
   const totalSelected = selectedTexts.length + selectedTextPaths.length;
-  return totalSelected > 0;
+  return totalSelected === 1;
 };
 
 // Text arrange actions helper functions
@@ -227,7 +227,7 @@ export const textActions: ToolbarAction[] = [
       isActive: areTextsLocked,
       onToggle: toggleTextLock
     },
-    priority: 90,
+    priority: 60,
     tooltip: 'Toggle text lock state'
   },
   {

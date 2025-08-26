@@ -56,7 +56,7 @@ export const createReorderActions = (
           },
         ],
       },
-      priority: 14,
+      priority: 930,
       tooltip: 'Reorder elements',
     } as ToolbarAction,
   ];

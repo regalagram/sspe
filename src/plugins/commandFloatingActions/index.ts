@@ -181,7 +181,7 @@ const getTransformActions = (): ToolbarAction[] => [
         transformToCurves();
       }
     },
-    priority: 95,
+    priority: 800,
     get tooltip() {
       if (canTransformToLines()) return 'Convert curves to straight lines (Ctrl+Shift+L)';
       if (canTransformToCurves()) return 'Convert lines to smooth curves (Ctrl+Shift+C)';
@@ -223,7 +223,7 @@ const getTransformActions = (): ToolbarAction[] => [
         }
       });
     },
-    priority: 90,
+    priority: 790,
     tooltip: 'Snap selected points to grid'
   }
 ];

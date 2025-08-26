@@ -1188,6 +1188,15 @@ const isUseFormatCopyActive = (): boolean => {
   return store.isUseFormatCopyActive();
 };
 
+// Check if use format copy should be visible (only for single use selection)
+const isUseFormatCopyVisible = (): boolean => {
+  const store = useEditorStore.getState();
+  const selectedUses = store.selection.selectedUses;
+  
+  // Only show for exactly one use element selected (not multiple)
+  return selectedUses.length === 1;
+};
+
 export const useActions: ToolbarAction[] = [
   {
     id: 'copy-format-use',
@@ -1199,7 +1208,8 @@ export const useActions: ToolbarAction[] = [
       onToggle: startUseFormatCopy
     },
     priority: 1000,
-    tooltip: 'Copy format (styles, filters, effects)'
+    tooltip: 'Copy format (styles, filters, effects)',
+    visible: isUseFormatCopyVisible
   },
   {
     id: 'group-uses',
@@ -1207,7 +1217,7 @@ export const useActions: ToolbarAction[] = [
     label: 'Group',
     type: 'button',
     action: groupSelectedUses,
-    priority: 105,
+    priority: 100,
     tooltip: 'Group selected use elements',
     visible: () => {
       // Only show when multiple use elements are selected
@@ -1228,7 +1238,7 @@ export const useActions: ToolbarAction[] = [
       currentColor: getCommonUseFillColor(),
       onChange: applyUseFillColor
     },
-    priority: 100,
+    priority: 990,
     tooltip: 'Change use element fill color'
   },
   {
@@ -1240,7 +1250,7 @@ export const useActions: ToolbarAction[] = [
       currentColor: getCommonUseStrokeColor(),
       onChange: applyUseStrokeColor
     },
-    priority: 95,
+    priority: 980,
     tooltip: 'Change use element stroke color'
   },
   {
@@ -1264,7 +1274,7 @@ export const useActions: ToolbarAction[] = [
       onStrokeLinecapChange: applyUseStrokeLinecap,
       onStrokeLinejoinChange: applyUseStrokeLinejoin
     },
-    priority: 90,
+    priority: 970,
     tooltip: 'Configure stroke width, dash pattern, line cap, and line join'
   },
   {
@@ -1275,7 +1285,7 @@ export const useActions: ToolbarAction[] = [
     dropdown: {
       options: useFilterOptions
     },
-    priority: 60,
+    priority: 950,
     tooltip: 'Apply filters'
   },
   {
@@ -1286,7 +1296,7 @@ export const useActions: ToolbarAction[] = [
     dropdown: {
       options: useAnimationOptions
     },
-    priority: 50,
+    priority: 940,
     tooltip: 'Add animations'
   },
   {
@@ -1295,7 +1305,7 @@ export const useActions: ToolbarAction[] = [
     label: 'Duplicate',
     type: 'button',
     action: duplicateSelected, // Use unified duplicate function
-    priority: 20,
+    priority: 80,
     tooltip: 'Duplicate use element'
   },
   {
@@ -1304,7 +1314,7 @@ export const useActions: ToolbarAction[] = [
     label: 'Reset',
     type: 'button',
     action: clearUseStyle,
-    priority: 15,
+    priority: 70,
     tooltip: 'Reset use element to default style (removes stroke, filters, animations)'
   },
   {
@@ -1316,7 +1326,7 @@ export const useActions: ToolbarAction[] = [
       isActive: areUsesLocked,
       onToggle: toggleUseLock
     },
-    priority: 12,
+    priority: 60,
     tooltip: 'Toggle use element lock state'
   },
   {

@@ -439,7 +439,7 @@ export const mixedSelectionActions: ToolbarAction[] = [
     label: 'Duplicate All',
     type: 'button',
     action: duplicateSelected,
-    priority: 20,
+    priority: 80,
     tooltip: 'Duplicate all selected elements'
   },
   {
@@ -448,7 +448,7 @@ export const mixedSelectionActions: ToolbarAction[] = [
     label: 'Clear Style',
     type: 'button',
     action: clearMixedStyle,
-    priority: 15,
+    priority: 70,
     tooltip: 'Reset all elements to default style'
   },
   {
@@ -460,7 +460,7 @@ export const mixedSelectionActions: ToolbarAction[] = [
       isActive: isMixedSelectionLocked,
       onToggle: toggleMixedLock
     },
-    priority: 12,
+    priority: 60,
     tooltip: 'Toggle lock state for all selected elements'
   },
   {

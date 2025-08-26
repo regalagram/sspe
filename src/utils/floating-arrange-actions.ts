@@ -129,7 +129,7 @@ export const createSubPathArrangeActions = (): ToolbarAction[] => [
         }
       ]
     },
-    priority: 75,
+    priority: 750,
     tooltip: 'Align and distribute subpaths',
     visible: () => canAlignSubPaths() || canDistributeSubPaths()
   }
@@ -245,7 +245,7 @@ export const createCommandArrangeActions = (): ToolbarAction[] => [
         }
       ]
     },
-    priority: 75,
+    priority: 750,
     tooltip: 'Align and distribute command points',
     visible: () => canAlignCommands() || canDistributeCommands()
   }
@@ -337,7 +337,7 @@ export const createGenericArrangeActions = (
           }
         ]
       },
-      priority: 75,
+      priority: 920,
       tooltip: `Align and distribute ${elementType}`,
       visible: () => canAlign() || canDistribute()
     }

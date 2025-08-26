@@ -9,7 +9,6 @@ import {
   Copy, 
   Trash2,
   LineSquiggle,
-  Edit,
   Brush,
   Filter,
   Play,
@@ -22,7 +21,6 @@ import { calculateSmartDuplicationOffset, getUnifiedSelectionBounds } from '../.
 import { getTextBoundingBox, getImageBoundingBox, getPathBoundingBox, getGroupBoundingBox } from '../../utils/bbox-utils';
 import { BoundingBox } from '../../types';
 import { generateId } from '../../utils/id-utils';
-import { textEditManager } from '../../managers/TextEditManager';
 import {
   createDropShadowFilter,
   createBlurFilter,
@@ -624,15 +622,6 @@ const duplicateTexts = () => {
   }
 };
 
-// Start editing text (same as double-click or F2)
-const editText = () => {
-  const store = useEditorStore.getState();
-  
-  if (store.selection.selectedTexts.length > 0) {
-    const textId = store.selection.selectedTexts[0];
-    textEditManager.startTextEdit(textId);
-  }
-};
 
 // Lock/unlock selected texts
 const toggleTextLock = () => {
@@ -744,7 +733,7 @@ export const textFloatingActions: ToolbarAction[] = [
       options: fontFamilies,
       currentValue: getCurrentFontFamily()
     },
-    priority: 100,
+    priority: 960,
     tooltip: 'Change font family'
   },
   {
@@ -759,7 +748,7 @@ export const textFloatingActions: ToolbarAction[] = [
         applyTextStyle({ fontWeight: isBold ? 'normal' : 'bold' });
       }
     },
-    priority: 80,
+    priority: 920,
     tooltip: 'Toggle bold'
   },
   {
@@ -774,7 +763,7 @@ export const textFloatingActions: ToolbarAction[] = [
         applyTextStyle({ fontStyle: isItalic ? 'normal' : 'italic' });
       }
     },
-    priority: 79,
+    priority: 910,
     tooltip: 'Toggle italic'
   },
   {
@@ -786,8 +775,20 @@ export const textFloatingActions: ToolbarAction[] = [
       currentColor: getCurrentTextColor(),
       onChange: (color: string | any) => applyTextStyle({ fill: color })
     },
-    priority: 70,
+    priority: 990,
     tooltip: 'Change text color'
+  },
+  {
+    id: 'text-stroke-color',
+    icon: Brush,
+    label: 'Stroke Color',
+    type: 'color',
+    color: {
+      currentColor: getCurrentStrokeColor(),
+      onChange: (color: string | any) => applyTextStyle({ stroke: color })
+    },
+    priority: 980,
+    tooltip: 'Change text stroke color'
   },
   {
     id: 'text-stroke-options',
@@ -810,20 +811,8 @@ export const textFloatingActions: ToolbarAction[] = [
       onStrokeLinecapChange: applyStrokeLinecap,
       onStrokeLinejoinChange: applyStrokeLinejoin
     },
-    priority: 65,
+    priority: 970,
     tooltip: 'Configure stroke width, dash pattern, line cap, and line join'
-  },
-  {
-    id: 'text-stroke-color',
-    icon: Brush,
-    label: 'Stroke Color',
-    type: 'color',
-    color: {
-      currentColor: getCurrentStrokeColor(),
-      onChange: (color: string | any) => applyTextStyle({ stroke: color })
-    },
-    priority: 60,
-    tooltip: 'Change text stroke color'
   },
   {
     id: 'text-filters',
@@ -833,7 +822,7 @@ export const textFloatingActions: ToolbarAction[] = [
     dropdown: {
       options: textFilterOptions
     },
-    priority: 55,
+    priority: 950,
     tooltip: 'Apply filters'
   },
   {
@@ -844,29 +833,8 @@ export const textFloatingActions: ToolbarAction[] = [
     dropdown: {
       options: textAnimationOptions
     },
-    priority: 52,
+    priority: 945,
     tooltip: 'Add animations'
-  },
-  {
-    id: 'edit-text',
-    icon: Edit,
-    label: 'Edit Text',
-    type: 'button',
-    action: editText,
-    priority: 50,
-    tooltip: 'Edit text content (double-click/F2)',
-    visible: () => {
-      // Only show when exactly one text is selected and nothing else
-      const store = useEditorStore.getState();
-      const selection = store.selection;
-      return selection.selectedTexts.length === 1 &&
-             selection.selectedPaths.length === 0 &&
-             selection.selectedSubPaths.length === 0 &&
-             selection.selectedCommands.length === 0 &&
-             selection.selectedGroups.length === 0 &&
-             selection.selectedImages.length === 0 &&
-             selection.selectedUses.length === 0;
-    }
   },
   {
     id: 'duplicate-text',
@@ -874,16 +842,16 @@ export const textFloatingActions: ToolbarAction[] = [
     label: 'Duplicate',
     type: 'button',
     action: duplicateTexts,
-    priority: 20,
+    priority: 80,
     tooltip: 'Duplicate text with all styles'
   },
   {
     id: 'clear-text-style',
     icon: RotateCcw,
-    label: 'Clear Style',
+    label: 'Reset',
     type: 'button',
     action: clearTextStyle,
-    priority: 15,
+    priority: 70,
     tooltip: 'Reset text to default style'
   },
   {
@@ -895,7 +863,7 @@ export const textFloatingActions: ToolbarAction[] = [
       isActive: areTextsLocked,
       onToggle: toggleTextLock
     },
-    priority: 12,
+    priority: 60,
     tooltip: 'Toggle text lock state'
   },
   {

@@ -104,7 +104,7 @@ export const textPathActions: ToolbarAction[] = [
       isActive: areTextPathsLocked,
       onToggle: toggleTextPathLock
     },
-    priority: 90,
+    priority: 60,
     tooltip: 'Toggle textPath lock state'
   },
   {

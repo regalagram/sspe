@@ -544,7 +544,7 @@ export const groupActions: ToolbarAction[] = [
     label: 'Ungroup',
     type: 'button',
     action: ungroupSelected,
-    priority: 100,
+    priority: 1000,
     tooltip: 'Ungroup elements'
   },
   // Add align/distribute arrange actions for group elements
@@ -555,7 +555,7 @@ export const groupActions: ToolbarAction[] = [
     label: 'Duplicate',
     type: 'button',
     action: duplicateSelected, // Use unified duplicate function
-    priority: 20,
+    priority: 80,
     tooltip: 'Duplicate group'
   },
   {
@@ -564,7 +564,7 @@ export const groupActions: ToolbarAction[] = [
     label: 'Export SVG',
     type: 'button',
     action: exportGroupSVG,
-    priority: 15,
+    priority: 70,
     tooltip: 'Export group as SVG'
   },
   {
@@ -575,7 +575,7 @@ export const groupActions: ToolbarAction[] = [
     dropdown: {
       options: groupArrangeOptions
     },
-    priority: 14,
+    priority: 740,
     tooltip: 'Arrange group'
   },
   {
@@ -586,7 +586,7 @@ export const groupActions: ToolbarAction[] = [
     dropdown: {
       options: groupLockOptions
     },
-    priority: 13,
+    priority: 930,
     tooltip: 'Set group lock level'
   },
   {
@@ -595,8 +595,25 @@ export const groupActions: ToolbarAction[] = [
     label: 'Recursive Lock',
     type: 'button',
     action: toggleGroupRecursiveLock,
-    priority: 12,
+    priority: 90,
     tooltip: 'Toggle recursive lock for group and all children'
+  },
+  {
+    id: 'group-basic-lock',
+    icon: Lock,
+    label: 'Lock',
+    type: 'button',
+    action: () => {
+      const store = useEditorStore.getState();
+      store.pushToHistory();
+      store.selection.selectedGroups.forEach(groupId => {
+        const group = store.getGroupById(groupId);
+        const shouldLock = !group?.locked;
+        store.setGroupLockLevel(groupId, shouldLock ? 'full' : 'none');
+      });
+    },
+    priority: 60,
+    tooltip: 'Toggle basic group lock'
   },
   {
     id: 'delete-group',
