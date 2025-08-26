@@ -141,17 +141,13 @@ export function captureAllSelectedElementsPositions(): DraggedElementsData {
   
   // First, capture explicitly selected commands
   selection.selectedCommands?.forEach((commandId: string) => {
-    // Skip commands that belong to paths which are children of selected groups
+    // Always capture selected commands for movement, even if they belong to grouped paths
+    // Group movement may not properly handle individual command movements
     let found = false;
     for (const path of paths) {
       for (const subPath of path.subPaths) {
         const command = subPath.commands.find(cmd => cmd.id === commandId);
         if (command) {
-          // if this path is part of a selected group, skip capturing this command
-          if (groupChildPathIds.has(path.id)) {
-            found = true;
-            break;
-          }
           const pos = getCommandPosition(command);
           if (pos) {
             commandPositions[commandId] = { x: pos.x, y: pos.y };
@@ -169,12 +165,10 @@ export function captureAllSelectedElementsPositions(): DraggedElementsData {
     for (const path of paths) {
       const subPath = path.subPaths.find(sp => sp.id === subPathId);
       if (subPath) {
-        // If the path containing this subPath is part of a selected group, skip it
-        if (groupChildPathIds.has(path.id)) {
-          // Skip capturing this subpath because its parent path is inside a selected group
-          break;
-        }
-
+        // Always capture subpaths for movement, even if they belong to groups
+        // Group movement may not properly handle individual subpath movements
+        // so we need to ensure subpaths are captured and moved explicitly
+        
         const commandIds: string[] = [];
         for (const command of subPath.commands) {
           if (!commandPositions[command.id]) {

@@ -424,16 +424,9 @@ export const createGroupActions: StateCreator<
     
     if (pathChildrenIds.length > 0) {
       set((state) => {
-        // Apply grid snapping if enabled
-        let finalDelta = delta;
-        if (state.grid.enabled && state.grid.snapToGrid) {
-          const gridSize = state.grid.size;
-          const snapToGrid = (value: number) => Math.round(value / gridSize) * gridSize;
-          finalDelta = {
-            x: snapToGrid(delta.x),
-            y: snapToGrid(delta.y)
-          };
-        }
+        // Use original delta for fluid movement during drag
+        // Snap-to-grid will be applied later when drag ends
+        const finalDelta = delta;
 
         const newPaths = state.paths.map((path) => {
           if (pathChildrenIds.includes(path.id)) {
