@@ -629,15 +629,15 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
     fontFamily: position.fontFamily,
     fontWeight: textElement.style.fontWeight || 'normal',
     fontStyle: textElement.style.fontStyle || 'normal',
-    color: typeof textElement.style.fill === 'string' ? textElement.style.fill : '#000000',
-    backgroundColor: 'transparent',
-    border: 'none',
-    borderRadius: '0',
+    color: typeof textElement.style.fill === 'string' && textElement.style.fill !== 'none' ? textElement.style.fill : '#000000',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    border: '1px solid rgba(0, 0, 0, 0.2)',
+    borderRadius: '2px',
     outline: 'none',
-    boxShadow: 'none',
-    padding: '0', // No padding for perfect alignment
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+    padding: '2px 4px', // Small padding to compensate for border and improve readability
     zIndex: 99999, // Much higher z-index
-    boxSizing: 'content-box', // Changed from border-box to avoid border affecting position
+    boxSizing: 'border-box', // Use border-box to include padding and border in dimensions
     // Text styling to match SVG text as closely as possible
     textAlign: 'left', // SVG textAnchor will be handled by positioning
     lineHeight: '1', // Exact line height for precise alignment
@@ -740,8 +740,7 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
             resize: 'none',
             overflow: 'hidden',
             // Override specific properties for multiline textarea
-            backgroundColor: 'transparent',
-            border: 'none',
+            // Keep shared background and border for visibility
             // Explicit editable styles and fixes for textarea
             pointerEvents: 'all',
             userSelect: 'text',
@@ -779,17 +778,12 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
             ...sharedStyles,
             // Override specific properties for single-line input
             height: position.height,
-            backgroundColor: 'transparent',
-            border: 'none',
-            outline: 'none',
-            boxShadow: 'none',
+            // Keep background and border from sharedStyles for visibility
             // Ensure font properties match exactly
             fontSize: position.fontSize,
             fontFamily: position.fontFamily,
             lineHeight: '1', // Match SVG text line height
-            padding: '0', // Remove default padding
-            margin: '0', // Remove default margin
-            boxSizing: 'border-box'
+            margin: '0' // Remove default margin
           }}
         />
       )}

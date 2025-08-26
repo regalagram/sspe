@@ -1,6 +1,7 @@
 import React from 'react';
 import { pluginManager } from '../core/PluginSystem';
 import { useEditorStore } from '../store/editorStore';
+import { textEditManager } from '../managers/TextEditManager';
 
 export const usePointerEventHandlers = () => {
   const handlePointerDown = (e: React.PointerEvent<SVGElement>) => {
@@ -58,6 +59,30 @@ export const usePointerEventHandlers = () => {
       }
     } catch (err) {
       // ignore errors selecting
+    }
+    
+    // Check if we should terminate text editing when clicking on empty space
+    // This is especially useful for mobile devices
+    if (textEditManager.isEditing()) {
+      const isTextInput = target.classList.contains('text-edit-overlay-input') || 
+                         target.classList.contains('text-edit-overlay-textarea');
+      const isTextElement = elementType === 'text';
+      const isEditingCurrentText = isTextElement && textEditManager.isTextBeingEdited(elementId || '');
+      
+      // If clicking anywhere other than:
+      // 1. The text editing input/textarea
+      // 2. A text element 
+      // 3. The currently editing text element
+      // Then terminate text editing
+      if (!isTextInput && !isTextElement && !isEditingCurrentText) {
+        // Save the current editing and stop
+        textEditManager.stopTextEdit(true);
+      }
+      // If clicking on a different text element while editing another, also terminate
+      else if (isTextElement && !isEditingCurrentText) {
+        // Save the current editing and stop
+        textEditManager.stopTextEdit(true);
+      }
     }
     
     pluginManager.handlePointerEvent('pointerDown', e, effectiveCommandId, controlPoint);

@@ -475,11 +475,23 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
 const TextElementComponent: React.FC<{ text: any }> = ({ text }) => {
   const { viewport, enabledFeatures } = useEditorStore();
   const animations = useAnimationsForElement(text.id);
-  const { isTextBeingEdited } = useTextEditMode();
+  const { isTextBeingEdited, updateTextContent: updateTextContentLive, stopTextEdit } = useTextEditMode();
   
   const isWireframeMode = enabledFeatures.wireframeEnabled;
   const strokeWidth = 1 / viewport.zoom;
   const isBeingEdited = isTextBeingEdited(text.id);
+
+  // Handle content changes during editing (memoized to prevent TextEditOverlay remount)
+  const handleContentChange = useCallback((content: string | string[]) => {
+    if (typeof content === 'string') {
+      updateTextContentLive(content);
+    }
+  }, [updateTextContentLive]);
+  
+  // Handle finishing editing (memoized to prevent TextEditOverlay remount)
+  const handleFinishEditing = useCallback((save: boolean) => {
+    stopTextEdit(save);
+  }, [stopTextEdit]);
 
   let fillValue = '#000000';
   if (isWireframeMode) {
@@ -505,6 +517,7 @@ const TextElementComponent: React.FC<{ text: any }> = ({ text }) => {
   return (
     <g key={text.id} data-text-id={text.id}>
       <text
+        id={text.id}
         x={text.x}
         y={text.y}
         fontSize={text.style.fontSize}
@@ -525,16 +538,28 @@ const TextElementComponent: React.FC<{ text: any }> = ({ text }) => {
         data-element-type="text"
         data-element-id={text.id}
         style={{
-          pointerEvents: 'all',
+          pointerEvents: text.locked ? 'none' : 'all',
           clipPath: text.style.clipPath,
           mask: text.style.mask,
           filter: text.style.filter,
           cursor: cursorValue,
+          userSelect: isBeingEdited ? 'text' : 'none',
+          opacity: isBeingEdited ? 0 : 1 // Hide during editing to prevent duplication
         }}
       >
         {text.content}
         {animations}
       </text>
+
+      {/* Text Edit Overlay for single-line text */}
+      {isBeingEdited && (
+        <TextEditOverlay
+          textElement={text}
+          viewport={viewport}
+          onContentChange={handleContentChange}
+          onFinishEditing={handleFinishEditing}
+        />
+      )}
     </g>
   );
 };

@@ -2905,6 +2905,32 @@ export function parseCompleteSVG(svgString: string): {
     
     console.log('🎬 Parsed animations:', animations.length, animations);
     
+    // Get document order for z-index assignment
+    // Find all renderable elements in document order (paths, texts, images, uses - not in groups)
+    const renderableElements = svgElement.querySelectorAll('path, text, image, use');
+    const elementOrderMap = new Map<string, number>();
+    let orderIndex = 0;
+    
+    renderableElements.forEach((element) => {
+      // Skip elements that are inside groups - they'll be handled separately
+      const isInGroup = element.closest('g[id]') !== null;
+      if (!isInGroup) {
+        const id = element.getAttribute('id') || element.tagName + '-' + orderIndex;
+        elementOrderMap.set(id, orderIndex);
+        orderIndex++;
+      }
+    });
+    
+    // Also handle elements in groups - they get z-index based on their position within the group
+    const groupElements = svgElement.querySelectorAll('g[id] path, g[id] text, g[id] image, g[id] use');
+    groupElements.forEach((element) => {
+      const id = element.getAttribute('id') || element.tagName + '-' + orderIndex;
+      elementOrderMap.set(id, orderIndex);
+      orderIndex++;
+    });
+    
+    console.log('📊 Element order map:', elementOrderMap);
+    
     // Parse other elements using the modified svgElement (with temp IDs)
     const paths = parseSVGToSubPaths(svgElement.outerHTML);
     const texts = parseTextElements(svgElement);
@@ -2915,6 +2941,23 @@ export function parseCompleteSVG(svgString: string): {
     const gradients = parseGradients(svgElement);
     const filters = parseFilters(svgElement);
     const groups = parseGroups(svgElement, paths, texts);
+    
+    // Assign z-indexes based on document order
+    const assignZIndex = (elements: any[], baseZIndex: number) => {
+      return elements.map(element => {
+        const orderIndex = elementOrderMap.get(element.id);
+        if (orderIndex !== undefined) {
+          return { ...element, zIndex: baseZIndex + orderIndex * 10 };
+        }
+        return element;
+      });
+    };
+    
+    // Assign z-indexes with appropriate spacing to allow for reordering
+    const pathsWithZIndex = assignZIndex(paths, 1000);
+    const textsWithZIndex = assignZIndex(texts, 1000);  
+    const imagesWithZIndex = assignZIndex(images, 1000);
+    const usesWithZIndex = assignZIndex(uses, 1000);
     
     // Auto-generate animation chains based on begin times
     let animationChains = createAutoAnimationChains(animations);
@@ -2940,18 +2983,19 @@ export function parseCompleteSVG(svgString: string): {
       });
     }
     
-    console.log('🖼️ Parsed images:', images.length, images);
+    console.log('🖼️ Parsed images:', imagesWithZIndex.length, imagesWithZIndex);
+    console.log('📊 Z-index assignments completed for import');
     if (animationChains.length > 0) {
       console.log('⛓️ Auto-generated animation chains:', animationChains.length, animationChains);
     }
     
     return {
-      paths,
-      texts,
-      textPaths,
-      images,
+      paths: pathsWithZIndex,
+      texts: textsWithZIndex,
+      textPaths, // TextPaths not yet in z-index system
+      images: imagesWithZIndex,
       symbols,
-      uses,
+      uses: usesWithZIndex,
       gradients,
       filters,
       groups,
