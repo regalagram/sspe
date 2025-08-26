@@ -411,8 +411,8 @@ const loadInitialState = (): EditorState => {
       viewBox: { x: 0, y: 0, width: 800, height: 600 },
     },
     grid: {
-      enabled: true,
-      size: 10,
+      enabled: false,
+      size: 50,
       color: '#e0e0e0',
       opacity: 0.5,
       snapToGrid: false,

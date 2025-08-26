@@ -62,7 +62,7 @@ const loadSavedAccordionVisible = (): boolean => {
     const saved = localStorage.getItem('sspe-accordion-visible');
     if (saved !== null) return saved === 'true';
   } catch {}
-  return true;
+  return false;
 };
 
 // Load saved panel configurations
