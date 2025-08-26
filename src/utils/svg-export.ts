@@ -1,6 +1,7 @@
 import { subPathToString } from './path-utils';
 import { FilterPrimitiveType, BoundingBox } from '../types';
 import { getPathBoundingBox, getTextBoundingBox, getImageBoundingBox, getGroupBoundingBox } from './bbox-utils';
+import { getAllElementsByZIndex, RenderableElement } from './z-index-manager';
 
 /**
  * Calculate the overall viewport that encompasses all visible elements
@@ -1098,47 +1099,47 @@ export const generateSVGCode = (editorState: any): string => {
       });
     });
 
-    // Generate child elements for this group
+    // Generate child elements for this group using z-index order
     const childElements: string[] = [];
     
-    group.children?.forEach((child: any) => {
-      switch (child.type) {
+    // Get child IDs from the group
+    const childIds = group.children?.map((child: any) => child.id) || [];
+    
+    // Filter elements by z-index that belong to this group
+    const groupElements = elementsByZIndex.filter((element: RenderableElement) => 
+      childIds.includes(element.id)
+    );
+    
+    // Render group elements in z-index order
+    groupElements.forEach((element: RenderableElement) => {
+      switch (element.type) {
         case 'path':
-          const path = paths.find((p: any) => p.id === child.id);
-          if (path) {
-            childElements.push(`    ${renderPath(path)}`);
-          }
+          childElements.push(`    ${renderPath(element.element)}`);
           break;
         case 'text':
-          const text = texts.find((t: any) => t.id === child.id);
-          if (text) {
-            childElements.push(`    ${renderText(text)}`);
-          }
-          break;
-        case 'textPath':
-          const textPath = textPaths.find((tp: any) => tp.id === child.id);
-          if (textPath) {
-            childElements.push(`    ${renderTextPath(textPath)}`);
-          }
+          childElements.push(`    ${renderText(element.element)}`);
           break;
         case 'image':
-          const image = images.find((img: any) => img.id === child.id);
-          if (image) {
-            childElements.push(`    ${renderImage(image)}`);
-          }
+          childElements.push(`    ${renderImage(element.element)}`);
           break;
         case 'use':
-          const use = uses.find((u: any) => u.id === child.id);
-          if (use) {
-            childElements.push(`    ${renderUse(use)}`);
-          }
+          childElements.push(`    ${renderUse(element.element)}`);
           break;
-        case 'group':
-          const nestedGroup = groups.find((g: any) => g.id === child.id);
-          if (nestedGroup) {
-            childElements.push(`    ${renderGroup(nestedGroup)}`);
-          }
-          break;
+      }
+    });
+    
+    // Handle textPaths and nested groups separately (not yet in z-index system)
+    group.children?.forEach((child: any) => {
+      if (child.type === 'textPath') {
+        const textPath = textPaths.find((tp: any) => tp.id === child.id);
+        if (textPath) {
+          childElements.push(`    ${renderTextPath(textPath)}`);
+        }
+      } else if (child.type === 'group') {
+        const nestedGroup = groups.find((g: any) => g.id === child.id);
+        if (nestedGroup) {
+          childElements.push(`    ${renderGroup(nestedGroup)}`);
+        }
       }
     });
 
@@ -1159,6 +1160,9 @@ ${childContent}
     }
   };
 
+  // Get all elements sorted by z-index for proper rendering order
+  const elementsByZIndex = getAllElementsByZIndex();
+  
   // Collect elements that are NOT in any group
   const elementsInGroups = new Set<string>();
   groups.forEach((group: any) => {
@@ -1167,32 +1171,77 @@ ${childContent}
     });
   });
 
-  // Filter standalone elements (not in any group)
-  const standalonePaths = paths.filter((path: any) => !elementsInGroups.has(path.id));
-  const standaloneTexts = texts.filter((text: any) => !elementsInGroups.has(text.id));
+  // Create render items that include both standalone elements and groups
+  // Each group gets assigned the minimum z-index of its children for positioning
+  const renderItems: Array<{
+    type: 'element' | 'group';
+    zIndex: number;
+    content: string;
+  }> = [];
+
+  // Add standalone elements
+  const standaloneElements = elementsByZIndex.filter((element: RenderableElement) => 
+    !elementsInGroups.has(element.id)
+  );
+
+  standaloneElements.forEach((element: RenderableElement) => {
+    let content = '';
+    switch (element.type) {
+      case 'path':
+        content = `  ${renderPath(element.element)}`;
+        break;
+      case 'text':
+        content = `  ${renderText(element.element)}`;
+        break;
+      case 'image':
+        content = `  ${renderImage(element.element)}`;
+        break;
+      case 'use':
+        content = `  ${renderUse(element.element)}`;
+        break;
+    }
+    
+    if (content) {
+      renderItems.push({
+        type: 'element',
+        zIndex: element.zIndex,
+        content
+      });
+    }
+  });
+
+  // Add textPath elements separately (not yet in z-index system, render at end)
   const standaloneTextPaths = textPaths.filter((textPath: any) => !elementsInGroups.has(textPath.id));
-  const standaloneImages = images.filter((image: any) => !elementsInGroups.has(image.id));
-  const standaloneUses = uses.filter((use: any) => !elementsInGroups.has(use.id));
+  standaloneTextPaths.forEach((textPath: any) => {
+    renderItems.push({
+      type: 'element',
+      zIndex: Infinity, // Render textPaths at the end
+      content: `  ${renderTextPath(textPath)}`
+    });
+  });
 
-  // Generate element content for standalone elements only
-  const pathElements = standalonePaths.map((path: any) => `  ${renderPath(path)}`).join('\n');
-  const textElements = standaloneTexts.map((text: any) => `  ${renderText(text)}`).join('\n');
-  const textPathElements = standaloneTextPaths.map((textPath: any) => `  ${renderTextPath(textPath)}`).join('\n');
-  const imageElements = standaloneImages.map((image: any) => `  ${renderImage(image)}`).join('\n');
-  const useElements = standaloneUses.map((use: any) => `  ${renderUse(use)}`).join('\n');
-  
-  // Generate group elements
-  const groupElements = groups.map((group: any) => `  ${renderGroup(group)}`).join('\n');
+  // Add groups - each group gets the minimum z-index of its children
+  groups.forEach((group: any) => {
+    const groupChildIds = group.children?.map((child: any) => child.id) || [];
+    const groupChildElements = elementsByZIndex.filter((element: RenderableElement) => 
+      groupChildIds.includes(element.id)
+    );
+    
+    // Find the minimum z-index among group children (this determines where the group renders)
+    const minChildZIndex = groupChildElements.length > 0 
+      ? Math.min(...groupChildElements.map(el => el.zIndex))
+      : 0;
+    
+    renderItems.push({
+      type: 'group',
+      zIndex: minChildZIndex,
+      content: `  ${renderGroup(group)}`
+    });
+  });
 
-  // Combine all elements
-  const allElements = [
-    pathElements,
-    textElements, 
-    textPathElements,
-    imageElements,
-    useElements,
-    groupElements
-  ].filter(Boolean).join('\n');
+  // Sort all render items by z-index and render
+  renderItems.sort((a, b) => a.zIndex - b.zIndex);
+  const allElements = renderItems.map(item => item.content).join('\n');
 
   // Calculate dynamic viewport based on all elements
   const viewport = calculateOverallViewport(editorState);
