@@ -11,6 +11,7 @@ import { getSVGPoint } from '../utils/transform-utils';
 import { captureAllSelectedElementsPositions, moveAllCapturedElementsByDelta } from '../utils/drag-utils';
 import { transformManager } from '../plugins/transform/TransformManager';
 import { shouldPreserveSelection } from '../utils/selection-utils';
+import { stickyManager } from '../plugins/sticky-guidelines/StickyManager';
 
 export interface RenderItem {
   zIndex: number;
@@ -40,8 +41,16 @@ interface PathWithAnimationsProps {
 }
 
 const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
-  const { viewport, enabledFeatures, selectSubPathMultiple, startCyclingDetection, checkMovementAndResolveCycling, finalizeCycling } = useEditorStore();
+  const { viewport, enabledFeatures, selectSubPathMultiple, startCyclingDetection, checkMovementAndResolveCycling, finalizeCycling, grid } = useEditorStore();
   const animations = useAnimationsForElement(props.pathId);
+  
+  // Force re-evaluation when sticky guidelines feature changes
+  useEffect(() => {
+    if (enabledFeatures.stickyGuidelinesEnabled) {
+      // Trigger re-evaluation of component state to ensure sticky guidelines are active
+      setDragState(prevState => ({ ...prevState })); // Force re-render to sync with enabled features
+    }
+  }, [enabledFeatures.stickyGuidelinesEnabled]);
   
   // State for handling subpath dragging
   const [dragState, setDragState] = useState<{
@@ -83,6 +92,32 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
       selectedSubPathId: null,
     });
     
+    // Initialize sticky guidelines with original element bounds
+    if (enabledFeatures.stickyGuidelinesEnabled) {
+      // Get the first element being dragged for initialization
+      let firstElementId: string | undefined;
+      let firstElementType: string | undefined;
+      
+      if (capturedElements && Object.keys(capturedElements.subPaths).length > 0) {
+        firstElementId = Object.keys(capturedElements.subPaths)[0];
+        firstElementType = 'subpath';
+      } else if (capturedElements && Object.keys(capturedElements.images).length > 0) {
+        firstElementId = Object.keys(capturedElements.images)[0];
+        firstElementType = 'image';
+      } else if (capturedElements && Object.keys(capturedElements.texts).length > 0) {
+        firstElementId = Object.keys(capturedElements.texts)[0];
+        firstElementType = 'text';
+      } else if (capturedElements && Object.keys(capturedElements.groups).length > 0) {
+        firstElementId = Object.keys(capturedElements.groups)[0];
+        firstElementType = 'group';
+      } else if (capturedElements && Object.keys(capturedElements.uses).length > 0) {
+        firstElementId = Object.keys(capturedElements.uses)[0];
+        firstElementType = 'use';
+      }
+      
+      stickyManager.startDragOperation(firstElementId, firstElementType);
+    }
+    
     setDragState({
       isDragging: true,
       subPathId,
@@ -93,7 +128,7 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
       capturedElements,
       lastAppliedDelta: { x: 0, y: 0 },
     });
-  }, []);
+  }, [enabledFeatures.stickyGuidelinesEnabled]);
 
   // Handle pointer move for dragging
   const handlePointerMove = useCallback((e: React.PointerEvent<SVGElement>) => {
@@ -164,26 +199,76 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
         setDragState(prev => ({ ...prev, dragStarted: true }));
     }
     
-    // Calculate delta from last point
-    const delta = {
-      x: currentPoint.x - (dragState.lastPoint?.x || dragState.startPoint.x),
-      y: currentPoint.y - (dragState.lastPoint?.y || dragState.startPoint.y),
+    // Calculate total delta from start point (like in PathRenderer)
+    const totalDelta = {
+      x: currentPoint.x - dragState.startPoint.x,
+      y: currentPoint.y - dragState.startPoint.y,
     };
     
-    // Apply movement to captured elements
-    if (dragState.capturedElements && (Math.abs(delta.x) > 0.001 || Math.abs(delta.y) > 0.001)) {
-      moveAllCapturedElementsByDelta(dragState.capturedElements, delta);
+    // Handle sub-path movement with sticky guidelines
+    if (dragState.capturedElements) {
+      const hasSubPaths = Object.keys(dragState.capturedElements.subPaths).length > 0;
       
-      setDragState(prev => ({
-        ...prev,
-        lastPoint: currentPoint,
-        lastAppliedDelta: {
-          x: prev.lastAppliedDelta.x + delta.x,
-          y: prev.lastAppliedDelta.y + delta.y,
+      if (hasSubPaths) {
+        let snappedDelta = { ...totalDelta };
+        
+        // Apply sticky guidelines if enabled - cursor-based for guidelines, incremental for movement
+        if (enabledFeatures.stickyGuidelinesEnabled && stickyManager && dragState.subPathId) {
+          // Always update guidelines with current cursor position for visual feedback
+          const targetPoint = {
+            x: dragState.startPoint.x + totalDelta.x,
+            y: dragState.startPoint.y + totalDelta.y
+          };
+          
+          const result = stickyManager.handleCursorDragMovement(
+            targetPoint,
+            dragState.startPoint,
+            dragState.subPathId,
+            'subpath'
+          );
+          
+          // If snapping occurred, adjust the delta
+          if (result.snappedPoint) {
+            snappedDelta = {
+              x: result.snappedPoint.x - dragState.startPoint.x,
+              y: result.snappedPoint.y - dragState.startPoint.y
+            };
+          }
         }
-      }));
+        
+        // Calculate incremental delta (only apply the difference from last applied delta)
+        const incrementalDelta = {
+          x: snappedDelta.x - dragState.lastAppliedDelta.x,
+          y: snappedDelta.y - dragState.lastAppliedDelta.y
+        };
+        
+        // Only apply movement if there's a meaningful change
+        if (Math.abs(incrementalDelta.x) > 0.001 || Math.abs(incrementalDelta.y) > 0.001) {
+          const snapToGrid = grid.snapToGrid;
+          const gridSize = grid.size;
+          
+          moveAllCapturedElementsByDelta(
+            dragState.capturedElements,
+            incrementalDelta,
+            snapToGrid,
+            gridSize
+          );
+          
+          setDragState(prev => ({
+            ...prev,
+            lastPoint: currentPoint,
+            lastAppliedDelta: snappedDelta,
+          }));
+        } else {
+          // Update last point even if no movement applied
+          setDragState(prev => ({
+            ...prev,
+            lastPoint: currentPoint,
+          }));
+        }
+      }
     }
-  }, [dragState, viewport, cyclingState, selectSubPathMultiple, startDragOperation, checkMovementAndResolveCycling]);
+  }, [dragState, viewport, cyclingState, selectSubPathMultiple, startDragOperation, checkMovementAndResolveCycling, enabledFeatures.stickyGuidelinesEnabled, grid.snapToGrid, grid.size]);
 
   // Handle pointer up to end dragging
   const handlePointerUp = useCallback(() => {
@@ -214,6 +299,12 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
       }
       
       transformManager.setMoving(false);
+      
+      // Clear guidelines when dragging stops
+      if (enabledFeatures.stickyGuidelinesEnabled) {
+        stickyManager.clearGuidelines();
+      }
+      
       setDragState({
         isDragging: false,
         subPathId: null,
@@ -225,7 +316,7 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
         lastAppliedDelta: { x: 0, y: 0 },
       });
     }
-  }, [dragState.isDragging, dragState.dragStarted, cyclingState, finalizeCycling, selectSubPathMultiple]);
+  }, [dragState.isDragging, dragState.dragStarted, cyclingState, finalizeCycling, selectSubPathMultiple, enabledFeatures.stickyGuidelinesEnabled]);
 
   // Set up global pointer move and up handlers when dragging or cycling
   useEffect(() => {
