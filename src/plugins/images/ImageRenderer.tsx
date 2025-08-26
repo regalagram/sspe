@@ -2,6 +2,7 @@ import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { useAnimationsForElement } from '../../components/AnimationRenderer';
 import { getStyleValue } from '../../utils/gradient-utils';
+import { getAllElementsByZIndex } from '../../utils/z-index-manager';
 // Individual Image Element Component that can use hooks
 const ImageElementComponent: React.FC<{ image: any }> = ({ image }) => {
   const { selection, viewport, enabledFeatures } = useEditorStore();
@@ -154,12 +155,18 @@ const ImageElementComponent: React.FC<{ image: any }> = ({ image }) => {
 };
 
 export const ImageRenderer: React.FC = () => {
-  const { images } = useEditorStore();
-  if (images.length === 0) return null;
+  // We don't need images from store, we'll get them ordered by z-index
+  // const { images } = useEditorStore();
+  
+  const imageElements = getAllElementsByZIndex()
+    .filter(({ type }) => type === 'image')
+    .map(({ element }) => element as any);
+  
+  if (imageElements.length === 0) return null;
 
   return (
     <g data-layer="images">
-      {images.map((image) => (
+      {imageElements.map((image) => (
         <ImageElementComponent key={image.id} image={image} />
       ))}
     </g>

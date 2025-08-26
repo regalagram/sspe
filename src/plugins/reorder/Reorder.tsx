@@ -7,7 +7,14 @@ import { reorderManager } from './ReorderManager';
 const ReorderComponent: React.FC = () => {
   const [showPanel, setShowPanel] = useState(false);
   const selection = useEditorStore((state) => state.selection);
-  const hasSelection = selection.selectedSubPaths.length > 0;
+  
+  // Check for any type of selection, not just subpaths
+  const hasSelection = selection.selectedSubPaths.length > 0 ||
+                      selection.selectedPaths.length > 0 ||
+                      selection.selectedTexts.length > 0 ||
+                      selection.selectedImages.length > 0 ||
+                      selection.selectedGroups.length > 0 ||
+                      selection.selectedUses.length > 0;
 
   // Initialize reorder manager with editor store
   useEffect(() => {

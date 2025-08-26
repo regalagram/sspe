@@ -1,5 +1,6 @@
 import { SVGSubPath, SVGPath } from '../../types';
 import { useEditorStore } from '../../store/editorStore';
+import { bringElementsToFront, sendElementsToBack, sendElementsForward, sendElementsBackward } from '../../utils/z-index-manager';
 
 export class ReorderManager {
   private editorStore: any = null;
@@ -98,14 +99,14 @@ export class ReorderManager {
 
   // Bring selected subpaths to front (last in array = rendered on top)
   bringToFront() {
-    console.log('🔝 ReorderManager.bringToFront() called');
     const selectedSubPaths = this.getSelectedSubPaths();
-    console.log('🔝 Selected subpaths:', selectedSubPaths.length);
     if (selectedSubPaths.length === 0) {
-      console.log('🔝 No selected subpaths, returning');
       return;
     }
 
+    // Get editor state
+    const editorState = useEditorStore.getState();
+    
     // Group by parent path
     const pathGroups = new Map<string, string[]>();
     
@@ -119,7 +120,6 @@ export class ReorderManager {
       }
     }
 
-    const editorState = useEditorStore.getState();
     let pathsUpdated = [...editorState.paths];
     const pathsToMoveToFront: string[] = [];
 
@@ -145,25 +145,31 @@ export class ReorderManager {
         path.id === pathId ? { ...path, subPaths: newSubPaths } : path
       );
 
-      // If all subpaths in this path are selected, move the entire path to front
+      // If all subpaths in this path are selected, move the entire path to front using global z-index
       if (subPathIds.length === parentPath.subPaths.length) {
         pathsToMoveToFront.push(pathId);
       }
     }
 
-    // Move entire paths to front if all their subpaths were selected
-    for (const pathId of pathsToMoveToFront) {
-      pathsUpdated = this.movePathInArray(pathsUpdated, pathId, pathsUpdated.length - 1);
-    }
-
+    // First update the subpath order within paths
     editorState.replacePaths(pathsUpdated);
-    editorState.pushToHistory();
+
+    // Then move entire paths to front using global z-index system if needed
+    if (pathsToMoveToFront.length > 0) {
+      bringElementsToFront(pathsToMoveToFront);
+    } else {
+      // If we only moved subpaths within paths, we need to save history
+      editorState.pushToHistory();
+    }
   }
 
   // Bring selected subpaths forward one level
   bringForward() {
     const selectedSubPaths = this.getSelectedSubPaths();
     if (selectedSubPaths.length === 0) return;
+
+    // Get editor state
+    const editorState = useEditorStore.getState();
 
     // Group by parent path
     const pathGroups = new Map<string, string[]>();
@@ -178,7 +184,6 @@ export class ReorderManager {
       }
     }
 
-    const editorState = useEditorStore.getState();
     let pathsUpdated = [...editorState.paths];
 
     // Process each path
@@ -196,13 +201,10 @@ export class ReorderManager {
       });
 
       // If any subpath is at the front and can't move forward within the path,
-      // try to move the entire path forward
+      // try to move the entire path forward using global z-index
       if (anyAtFront) {
-        const pathIndex = this.getPathIndex(pathId);
-        if (pathIndex < pathsUpdated.length - 1) {
-          pathsUpdated = this.movePathInArray(pathsUpdated, pathId, pathIndex + 1);
-          pathMoved = true;
-        }
+        sendElementsForward([pathId]);
+        pathMoved = true;
       }
 
       // Move subpaths forward within the path (if path wasn't moved)
@@ -232,6 +234,9 @@ export class ReorderManager {
     const selectedSubPaths = this.getSelectedSubPaths();
     if (selectedSubPaths.length === 0) return;
 
+    // Get editor state
+    const editorState = useEditorStore.getState();
+
     // Group by parent path
     const pathGroups = new Map<string, string[]>();
     
@@ -245,7 +250,6 @@ export class ReorderManager {
       }
     }
 
-    const editorState = useEditorStore.getState();
     let pathsUpdated = [...editorState.paths];
 
     // Process each path
@@ -263,13 +267,10 @@ export class ReorderManager {
       });
 
       // If any subpath is at the back and can't move backward within the path,
-      // try to move the entire path backward
+      // try to move the entire path backward using global z-index
       if (anyAtBack) {
-        const pathIndex = this.getPathIndex(pathId);
-        if (pathIndex > 0) {
-          pathsUpdated = this.movePathInArray(pathsUpdated, pathId, pathIndex - 1);
-          pathMoved = true;
-        }
+        sendElementsBackward([pathId]);
+        pathMoved = true;
       }
 
       // Move subpaths backward within the path (if path wasn't moved)
@@ -299,6 +300,9 @@ export class ReorderManager {
     const selectedSubPaths = this.getSelectedSubPaths();
     if (selectedSubPaths.length === 0) return;
 
+    // Get editor state
+    const editorState = useEditorStore.getState();
+
     // Group by parent path
     const pathGroups = new Map<string, string[]>();
     
@@ -312,7 +316,6 @@ export class ReorderManager {
       }
     }
 
-    const editorState = useEditorStore.getState();
     let pathsUpdated = [...editorState.paths];
     const pathsToMoveToBack: string[] = [];
 
@@ -338,19 +341,22 @@ export class ReorderManager {
         path.id === pathId ? { ...path, subPaths: newSubPaths } : path
       );
 
-      // If all subpaths in this path are selected, move the entire path to back
+      // If all subpaths in this path are selected, move the entire path to back using global z-index
       if (subPathIds.length === parentPath.subPaths.length) {
         pathsToMoveToBack.push(pathId);
       }
     }
 
-    // Move entire paths to back if all their subpaths were selected
-    for (const pathId of pathsToMoveToBack) {
-      pathsUpdated = this.movePathInArray(pathsUpdated, pathId, 0);
-    }
-
+    // First update the subpath order within paths
     editorState.replacePaths(pathsUpdated);
-    editorState.pushToHistory();
+
+    // Then move entire paths to back using global z-index system if needed
+    if (pathsToMoveToBack.length > 0) {
+      sendElementsToBack(pathsToMoveToBack);
+    } else {
+      // If we only moved subpaths within paths, we need to save history
+      editorState.pushToHistory();
+    }
   }
 
   hasValidSelection(): boolean {

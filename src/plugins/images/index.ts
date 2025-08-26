@@ -1,6 +1,5 @@
 import { Plugin } from '../../core/PluginSystem';
 import { ImageControls } from './ImageControls';
-import { ImageRenderer } from './ImageRenderer';
 
 export const ImagePlugin: Plugin = {
   id: 'images',
@@ -15,12 +14,13 @@ export const ImagePlugin: Plugin = {
       position: 'sidebar',
       order: 20
     },
-    {
-      id: 'image-renderer',
-      component: ImageRenderer,
-      position: 'svg-content',
-      order: 30
-    }
+    // DISABLED: Rendering handled by UnifiedRenderer
+    // {
+    //   id: 'image-renderer',
+    //   component: ImageRenderer,
+    //   position: 'svg-content',
+    //   order: 30
+    // }
   ],
   
   shortcuts: [

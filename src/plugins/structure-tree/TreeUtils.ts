@@ -1,4 +1,5 @@
 import { SVGPath, SVGGroup, TextElementType, SVGImage, SVGSymbol, SVGUse } from '../../types';
+import { getElementZIndex } from '../../utils/z-index-manager';
 
 export interface TreeItem {
   id: string;
@@ -14,6 +15,7 @@ export interface TreeItem {
     childCount?: number;
     style?: any;
     transform?: string;
+    zIndex?: number;
   };
 }
 
@@ -120,7 +122,8 @@ function buildGroupNode(group: SVGGroup, allElements: DocumentElements): TreeIte
     children,
     metadata: {
       childCount: children.length,
-      transform: group.transform
+      transform: group.transform,
+      zIndex: getElementZIndex(group.id)
     }
   };
 }
@@ -169,7 +172,8 @@ function buildPathNode(path: SVGPath): TreeItem {
     children,
     metadata: {
       subPathCount: path.subPaths.length,
-      style: path.style
+      style: path.style,
+      zIndex: getElementZIndex(path.id)
     }
   };
 }
@@ -187,7 +191,8 @@ function buildTextNode(text: TextElementType): TreeItem {
     children: [],
     metadata: {
       style: text.style,
-      transform: text.transform
+      transform: text.transform,
+      zIndex: getElementZIndex(text.id)
     }
   };
 }
@@ -204,7 +209,8 @@ function buildImageNode(image: SVGImage): TreeItem {
     children: [],
     metadata: {
       style: image.style,
-      transform: image.transform
+      transform: image.transform,
+      zIndex: getElementZIndex(image.id)
     }
   };
 }
@@ -273,7 +279,8 @@ function buildUseNode(use: SVGUse): TreeItem {
     children: [],
     metadata: {
       style: use.style,
-      transform: use.transform
+      transform: use.transform,
+      zIndex: getElementZIndex(use.id)
     }
   };
 }

@@ -2,13 +2,12 @@ import React, { useState, PointerEvent } from 'react';
 import { Plugin, PointerEventContext } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { PluginButton } from '../../components/PluginButton';
-import { Copy, RotateCcw } from 'lucide-react';
-import { Pointer, XCircle } from 'lucide-react';
-import { getCommandPosition } from '../../utils/path-utils';
+import { Copy, RotateCcw, Pointer, XCircle } from 'lucide-react';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
 import { toolModeManager } from '../../managers/ToolModeManager';
 import { duplicateSelected, invertSelection } from './actions/commonActions';
+import { getElementZIndex } from '../../utils/z-index-manager';
 
 
 // Rectangle Selection Manager
@@ -624,6 +623,7 @@ const SelectionDetails: React.FC = () => {
         const elementAnimations = getElementAnimations(pathId);
         const elementFilters = getElementFilters(path.style);
         const position = getPositionInfo(path, 'Path');
+        const zIndex = getElementZIndex(pathId);
         
         details.push({
           type: 'Path',
@@ -633,7 +633,8 @@ const SelectionDetails: React.FC = () => {
           animations: elementAnimations,
           filters: elementFilters,
           style: path.style,
-          locked: path.subPaths.some(sp => sp.locked)
+          locked: path.subPaths.some(sp => sp.locked),
+          zIndex
         });
       }
     });
@@ -705,6 +706,7 @@ const SelectionDetails: React.FC = () => {
         const elementAnimations = getElementAnimations(textId);
         const elementFilters = getElementFilters(text.style);
         const position = getPositionInfo(text, 'Text');
+        const zIndex = getElementZIndex(textId);
         
         details.push({
           type: 'Text',
@@ -716,7 +718,8 @@ const SelectionDetails: React.FC = () => {
           style: { fontSize: text.fontSize, fontFamily: text.fontFamily, ...text.style },
           locked: text.locked,
           rotation: text.rotation,
-          transform: text.transform
+          transform: text.transform,
+          zIndex
         });
       }
     });
@@ -750,6 +753,7 @@ const SelectionDetails: React.FC = () => {
       if (image) {
         const elementAnimations = getElementAnimations(imageId);
         const position = getPositionInfo(image, 'Image');
+        const zIndex = getElementZIndex(imageId);
         
         details.push({
           type: 'Image',
@@ -761,7 +765,8 @@ const SelectionDetails: React.FC = () => {
           locked: image.locked,
           transform: image.transform,
           opacity: image.style?.opacity,
-          preserveAspectRatio: image.preserveAspectRatio
+          preserveAspectRatio: image.preserveAspectRatio,
+          zIndex
         });
       }
     });
@@ -772,6 +777,7 @@ const SelectionDetails: React.FC = () => {
       if (use) {
         const elementAnimations = getElementAnimations(useId);
         const position = getPositionInfo(use, 'Use');
+        const zIndex = getElementZIndex(useId);
         
         details.push({
           type: 'Use',
@@ -781,7 +787,8 @@ const SelectionDetails: React.FC = () => {
           animations: elementAnimations,
           href: use.href,
           locked: use.locked,
-          transform: use.transform
+          transform: use.transform,
+          zIndex
         });
       }
     });
@@ -984,6 +991,21 @@ const SelectionDetails: React.FC = () => {
               {detail.position.width && detail.position.height && 
                 ` • ${detail.position.width}×${detail.position.height}px`
               }
+            </div>
+          )}
+          
+          {detail.zIndex !== undefined && (
+            <div style={{ 
+              fontSize: '10px',
+              color: '#28a745',
+              background: '#f0fff4',
+              padding: '2px 4px',
+              borderRadius: '2px',
+              marginBottom: '2px',
+              display: 'inline-block',
+              marginLeft: detail.position ? '4px' : '0'
+            }}>
+              🏗️ z-index: {detail.zIndex}
             </div>
           )}
           

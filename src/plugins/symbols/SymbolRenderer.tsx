@@ -2,6 +2,7 @@ import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { useAnimationsForElement } from '../../components/AnimationRenderer';
 import { isGradientOrPattern } from '../../utils/gradient-utils';
+import { getAllElementsByZIndex } from '../../utils/z-index-manager';
 
 // Helper function to convert gradient/pattern objects to URL references
 const styleValueToCSS = (value: any): string | undefined => {
@@ -312,11 +313,19 @@ export const SymbolRenderer: React.FC = () => {
       )}
 
       {/* Render Use Instances */}
-      {uses.length > 0 && (
+      {getAllElementsByZIndex()
+        .filter(({ type }) => type === 'use')
+        .map(({ element }) => {
+          const use = element as any; // Type assertion since we filtered by 'use'
+          return <UseElementComponent key={use.id} use={use} />;
+        }).length > 0 && (
         <g data-layer="symbol-instances">
-          {uses.map((use) => {
-            return <UseElementComponent key={use.id} use={use} />;
-          })}
+          {getAllElementsByZIndex()
+            .filter(({ type }) => type === 'use')
+            .map(({ element }) => {
+              const use = element as any; // Type assertion since we filtered by 'use'
+              return <UseElementComponent key={use.id} use={use} />;
+            })}
         </g>
       )}
     </>

@@ -11,6 +11,7 @@ import { Point } from '../../types';
 import { captureAllSelectedElementsPositions, moveAllCapturedElementsByDelta, DraggedElementsData } from '../../utils/drag-utils';
 import { useAnimationsForElement } from '../../components/AnimationRenderer';
 import { shouldPreserveSelection } from '../../utils/selection-utils';
+import { getAllElementsByZIndex } from '../../utils/z-index-manager';
 
 // Global path drag manager to handle pointer events from plugin system
 import { PointerEventContext } from '../../core/PluginSystem';
@@ -559,10 +560,13 @@ export const PathRenderer: React.FC = () => {
 
   return (
     <>
-      {paths.map((path) => {
+      {getAllElementsByZIndex()
+        .filter(({ type }) => type === 'path')
+        .map(({ element }) => {
+        const path = element as any; // Type assertion since we filtered by 'path'
         // Check if this path contains a selected subpath and if selection should be hidden
         const selectionVisible = ui?.selectionVisible ?? true;
-        const pathHasSelectedSubPath = path.subPaths.some(subPath => 
+        const pathHasSelectedSubPath = path.subPaths.some((subPath: any) => 
           selection.selectedSubPaths.includes(subPath.id)
         );
         
@@ -605,7 +609,7 @@ export const PathRenderer: React.FC = () => {
             />
 
             {/* Dibujar subpaths lockeados en wireframe con dash */}
-            {isWireframeMode && path.subPaths.map((subPath) => {
+            {isWireframeMode && path.subPaths.map((subPath: any) => {
               if (!subPath.locked) return null;
               const dSub = subPathToStringInContext(subPath, path.subPaths);
               return (
@@ -625,15 +629,15 @@ export const PathRenderer: React.FC = () => {
             {/* Single path overlay for deep subpath selection */}
             {(() => {
               // Only render overlay if path has unlocked subpaths
-              const hasUnlockedSubPaths = path.subPaths.some(sp => !sp.locked);
+              const hasUnlockedSubPaths = path.subPaths.some((sp: any) => !sp.locked);
               if (!hasUnlockedSubPaths) {
                 return null;
               }
 
               // Combined path data for all unlocked subpaths
               const combinedD = path.subPaths
-                .filter(sp => !sp.locked)
-                .map(subPath => subPathToStringInContext(subPath, path.subPaths))
+                .filter((sp: any) => !sp.locked)
+                .map((subPath: any) => subPathToStringInContext(subPath, path.subPaths))
                 .join(' ');
 
               return (
@@ -901,12 +905,13 @@ export const PathRendererPlugin: Plugin = {
   version: '1.0.0',
   enabled: true,
   ui: [
-    {
-      id: 'path-renderer',
-      component: PathRenderer,
-      position: 'svg-content',
-      order: 10, // Render paths in background
-    },
+    // DISABLED: Rendering handled by UnifiedRenderer
+    // {
+    //   id: 'path-renderer',
+    //   component: PathRenderer,
+    //   position: 'svg-content',
+    //   order: 10, // Render paths in background
+    // },
   ],
   // Export pointer handlers so the plugin system can call them
   pointerHandlers: {

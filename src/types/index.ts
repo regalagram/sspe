@@ -26,6 +26,7 @@ export interface SVGPath {
   subPaths: SVGSubPath[];
   style: PathStyle;
   locked?: boolean; // If true, path is locked and unselectable
+  zIndex?: number; // Z-order for global layering across all element types
 }
 
 export interface GradientStop {
@@ -304,6 +305,8 @@ export interface EditorState {
     lastClickTime?: number;
     availableSubPaths?: string[];
     currentIndex?: number;
+    pendingCycling?: boolean;
+    pendingMovementThreshold?: number;
   };
   // Floating toolbar state
   isFloatingToolbarHidden?: boolean;
@@ -440,6 +443,7 @@ export interface TextElement {
   transform?: string;
   style: TextStyle;
   locked?: boolean;
+  zIndex?: number; // Z-order for global layering across all element types
 }
 
 // Multi-line text support
@@ -465,6 +469,7 @@ export interface MultilineTextElement {
   spans: TextSpan[];
   style: TextStyle;
   locked?: boolean;
+  zIndex?: number; // Z-order for global layering across all element types
 }
 
 // TextPath Element Types
@@ -527,6 +532,7 @@ export interface SVGImage {
   transform?: string; // Transformaciones (rotate, scale, etc.)
   style?: Partial<PathStyle>; // Estilos como opacity, filter, etc.
   locked?: boolean; // Si está bloqueado para edición
+  zIndex?: number; // Z-order for global layering across all element types
 }
 
 // Clip paths (SVG <clipPath>)
@@ -830,6 +836,7 @@ export interface SVGUse {
   transform?: string;
   style?: Partial<PathStyle>; // Overrides locales
   locked?: boolean;
+  zIndex?: number; // Z-order for global layering across all element types
 }
 
 // ============================================

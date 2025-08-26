@@ -7,6 +7,7 @@ import { calculateTextBoundsDOM } from '../../utils/text-utils';
 import { useAnimationsForElement } from '../../components/AnimationRenderer';
 import { useTextEditMode } from '../../hooks/useTextEditMode';
 import { TextEditOverlay } from '../../components/TextEditOverlay';
+import { getAllElementsByZIndex } from '../../utils/z-index-manager';
 
 // Individual Text Element Component that can use hooks
 const TextElementComponent: React.FC<{ text: TextElement }> = ({ text }) => {
@@ -310,11 +311,15 @@ const MultilineTextElementComponent: React.FC<{ text: MultilineTextElement }> = 
 };
 
 export const TextRenderer: React.FC = () => {
-  const { texts } = useEditorStore();
+  // We don't need texts from store, we'll get them ordered by z-index
+  // const { texts } = useEditorStore();
 
   return (
     <>
-      {texts.map((text) => {
+      {getAllElementsByZIndex()
+        .filter(({ type }) => type === 'text')
+        .map(({ element }) => {
+        const text = element as any; // Type assertion since we filtered by 'text'
         if (text.type === 'text') {
           return <TextElementComponent key={text.id} text={text} />;
         } else if (text.type === 'multiline-text') {

@@ -425,12 +425,12 @@ const createImageArrangeActions = () => createGenericArrangeActions(
 
 // Image reorder functions
 const createImageReorderActions = () => {
-  const { bringToFront, sendToBack } = createElementReorderFunctions('image');
+  const { bringToFront, sendToBack, sendForward, sendBackward } = createElementReorderFunctions('image');
   
   return createReorderActions(
     'image',
     getImageSelectionCount,
-    { bringToFront, sendToBack }
+    { bringToFront, sendToBack, sendForward, sendBackward }
   );
 };
 

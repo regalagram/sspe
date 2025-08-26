@@ -19,7 +19,7 @@ export const HandlesPlugin: Plugin = {
       id: 'handle-renderer',
       component: HandleRenderer,
       position: 'svg-content',
-      order: 15 // Render on top of regular control points
+      order: 101 // Render above everything else, including selection UI
     }
   ],
 

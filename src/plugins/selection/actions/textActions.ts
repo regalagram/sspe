@@ -167,12 +167,12 @@ const createTextArrangeActions = () => createGenericArrangeActions(
 
 // Text reorder functions
 const createTextReorderActions = () => {
-  const { bringToFront, sendToBack } = createElementReorderFunctions('text');
+  const { bringToFront, sendToBack, sendForward, sendBackward } = createElementReorderFunctions('text');
   
   return createReorderActions(
     'text',
     getTextSelectionCount,
-    { bringToFront, sendToBack }
+    { bringToFront, sendToBack, sendForward, sendBackward }
   );
 };
 

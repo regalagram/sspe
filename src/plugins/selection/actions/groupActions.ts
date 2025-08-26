@@ -5,17 +5,24 @@ import {
   Layers, 
   ArrowUp, 
   ArrowDown, 
+  ChevronUp,
+  ChevronDown,
   Lock, 
   LockKeyhole,
   Ungroup
 } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
-import { ReorderManager } from '../../../plugins/reorder/ReorderManager';
 import { duplicatePath } from '../../../utils/duplicate-utils';
 import { generateId } from '../../../utils/id-utils';
 import { duplicateSelected, deleteSelected } from './commonActions';
 import { createGenericArrangeActions } from '../../../utils/floating-arrange-actions';
+import { 
+  bringGroupsToFront as bringGroupsToFrontReorder,
+  sendGroupsToBack as sendGroupsToBackReorder,
+  sendGroupsForward as sendGroupsForwardReorder,
+  sendGroupsBackward as sendGroupsBackwardReorder
+} from '../../../utils/group-reorder-manager';
 import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';
 
 // Calculate group bounds
@@ -250,10 +257,8 @@ const bringGroupsToFront = () => {
   const store = useEditorStore.getState();
   store.pushToHistory();
   
-  const reorderManager = new ReorderManager();
-  reorderManager.setEditorStore(store);
-  
-  reorderManager.bringToFront();
+  // Use the new group reorder system
+  bringGroupsToFrontReorder();
 };
 
 // Send groups to back
@@ -261,10 +266,26 @@ const sendGroupsToBack = () => {
   const store = useEditorStore.getState();
   store.pushToHistory();
   
-  const reorderManager = new ReorderManager();
-  reorderManager.setEditorStore(store);
+  // Use the new group reorder system
+  sendGroupsToBackReorder();
+};
+
+// Send groups forward
+const sendGroupsForward = () => {
+  const store = useEditorStore.getState();
+  store.pushToHistory();
   
-  reorderManager.sendToBack();
+  // Use the new group reorder system
+  sendGroupsForwardReorder();
+};
+
+// Send groups backward
+const sendGroupsBackward = () => {
+  const store = useEditorStore.getState();
+  store.pushToHistory();
+  
+  // Use the new group reorder system
+  sendGroupsBackwardReorder();
 };
 
 // Group arrange options
@@ -274,6 +295,18 @@ const groupArrangeOptions = [
     label: 'Bring to Front', 
     icon: ArrowUp,
     action: bringGroupsToFront 
+  },
+  { 
+    id: 'group-send-forward', 
+    label: 'Send Forward', 
+    icon: ChevronUp,
+    action: sendGroupsForward 
+  },
+  { 
+    id: 'group-send-backward', 
+    label: 'Send Backward', 
+    icon: ChevronDown,
+    action: sendGroupsBackward 
   },
   { 
     id: 'group-send-back', 

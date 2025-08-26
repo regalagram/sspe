@@ -1,6 +1,5 @@
 import React from 'react';
 import { Plugin, PointerEventContext } from '../../core/PluginSystem';
-import { TextRenderer } from './TextRenderer';
 import { useEditorStore } from '../../store/editorStore';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { getCommandPosition } from '../../utils/path-utils';
@@ -140,12 +139,13 @@ const textRendererPlugin: Plugin = {
   //   onPointerUp: handleTextPointerUp,
   // },
   ui: [
-    {
-      id: 'text-renderer-ui',
-      component: TextRenderer,
-      position: 'svg-content',
-      order: 10
-    }
+    // DISABLED: Rendering handled by UnifiedRenderer
+    // {
+    //   id: 'text-renderer-ui',
+    //   component: TextRenderer,
+    //   position: 'svg-content',
+    //   order: 10
+    // }
   ]
 };
 

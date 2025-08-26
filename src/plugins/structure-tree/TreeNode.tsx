@@ -450,6 +450,26 @@ export const TreeNode: React.FC<TreeNodeProps> = ({
         }} title={item.name}>
           {highlightText(item.name, searchQuery)}
         </span>
+        
+        {/* Z-Index Display */}
+        {item.metadata?.zIndex !== undefined && (
+          <span 
+            style={{
+              fontSize: '10px',
+              fontWeight: 'bold',
+              backgroundColor: '#f3f4f6',
+              color: '#6b7280',
+              padding: '1px 4px',
+              borderRadius: '4px',
+              marginLeft: '4px',
+              minWidth: 'auto',
+              whiteSpace: 'nowrap'
+            }}
+            title={`Z-Index: ${item.metadata.zIndex}`}
+          >
+            {item.metadata.zIndex}
+          </span>
+        )}
       </div>
 
       {/* Children */}

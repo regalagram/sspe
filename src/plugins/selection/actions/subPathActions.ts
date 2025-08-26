@@ -949,12 +949,12 @@ const getSubPathSelectionCount = () => {
 };
 
 const createSubPathReorderActions = () => {
-  const { bringToFront, sendToBack } = createElementReorderFunctions('subpath');
+  const { bringToFront, sendToBack, sendForward, sendBackward } = createElementReorderFunctions('subpath');
   
   return createReorderActions(
     'subpath',
     getSubPathSelectionCount,
-    { bringToFront, sendToBack }
+    { bringToFront, sendToBack, sendForward, sendBackward }
   );
 };
 

@@ -410,12 +410,12 @@ const createMixedArrangeActions = () => createGenericArrangeActions(
 
 // Mixed selection reorder functions
 const createMixedReorderActions = () => {
-  const { bringToFront, sendToBack } = createElementReorderFunctions('mixed');
+  const { bringToFront, sendToBack, sendForward, sendBackward } = createElementReorderFunctions('mixed');
   
   return createReorderActions(
     'mixed',
     getMixedSelectionCount,
-    { bringToFront, sendToBack }
+    { bringToFront, sendToBack, sendForward, sendBackward }
   );
 };
 

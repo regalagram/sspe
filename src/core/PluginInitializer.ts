@@ -43,6 +43,7 @@ import { KeyboardMovementPlugin } from '../plugins/keyboard-movement';
 import { TextPlacementPlugin } from '../plugins/text-placement';
 import { TextEditPlugin } from '../plugins/text-edit';
 import { CommandFloatingActionsPlugin } from '../plugins/commandFloatingActions';
+import { UnifiedRendererPlugin } from '../plugins/unified-renderer';
 import { SpecialPointFloatingActionsPlugin } from '../plugins/specialPointFloatingActions';
 import { StructureTreePlugin } from '../plugins/structure-tree';
 
@@ -59,14 +60,19 @@ export const initializePlugins = (): void => {
   // Register Transform early so it can handle transform handles before PathRenderer
   pluginManager.registerPlugin(Transform);
   
+  // Register unified renderer (replaces individual element renderers)
+  pluginManager.registerPlugin(UnifiedRendererPlugin);
+  
   // Register other core plugins
-  pluginManager.registerPlugin(PathRendererPlugin);
-  pluginManager.registerPlugin(TextRendererPlugin);
+  // NOTE: These plugins now only provide event handlers, rendering is handled by UnifiedRenderer
+  pluginManager.registerPlugin(PathRendererPlugin); // Path drag events only
+  pluginManager.registerPlugin(TextRendererPlugin); // Text drag events only
+  // NOTE: ImagePlugin still registers for controls, but rendering is handled by UnifiedRenderer
   pluginManager.registerPlugin(GroupRendererPlugin);
   pluginManager.registerPlugin(FilterPlugin); // Filter definitions (must be before paths use them)
   pluginManager.registerPlugin(ClippingPlugin); // Clip path and mask definitions (must be before ImagePlugin)
   pluginManager.registerPlugin(MarkerPlugin); // Marker definitions
-  pluginManager.registerPlugin(ImagePlugin); // Image rendering and controls
+  pluginManager.registerPlugin(ImagePlugin); // Image controls only, rendering handled by UnifiedRenderer
   pluginManager.registerPlugin(SymbolPlugin); // Symbol definitions and use instances
   pluginManager.registerPlugin(StickyGuidelinesPlugin);
   pluginManager.registerPlugin(VisualDebugPlugin);

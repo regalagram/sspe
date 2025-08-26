@@ -1,6 +1,5 @@
 import { Plugin } from '../../core/PluginSystem';
 import { SymbolControls } from './SymbolControls';
-import { SymbolRenderer } from './SymbolRenderer';
 import { symbolManager } from './SymbolManager';
 import { useEditorStore } from '../../store/editorStore';
 
@@ -27,12 +26,13 @@ export const SymbolPlugin: Plugin = {
       position: 'sidebar',
       order: 24
     },
-    {
-      id: 'symbol-renderer',
-      component: SymbolRenderer,
-      position: 'svg-content',
-      order: 15
-    }
+    // DISABLED: Use element rendering handled by UnifiedRenderer
+    // {
+    //   id: 'symbol-renderer',
+    //   component: SymbolRenderer,
+    //   position: 'svg-content',
+    //   order: 15
+    // }
   ],
   
   shortcuts: [

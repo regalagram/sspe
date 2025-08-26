@@ -1153,12 +1153,12 @@ const createUseArrangeActions = () => createGenericArrangeActions(
 
 // Use element reorder functions
 const createUseReorderActions = () => {
-  const { bringToFront, sendToBack } = createElementReorderFunctions('use');
+  const { bringToFront, sendToBack, sendForward, sendBackward } = createElementReorderFunctions('use');
   
   return createReorderActions(
     'use',
     getUseSelectionCount,
-    { bringToFront, sendToBack }
+    { bringToFront, sendToBack, sendForward, sendBackward }
   );
 };
 

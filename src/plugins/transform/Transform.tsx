@@ -257,7 +257,8 @@ export const Transform: Plugin = {
     {
       id: 'transform-handles',
       component: TransformPlugin,
-      position: 'svg-content'
+      position: 'svg-content',
+      order: 100 // Always render selection UI on top of everything
     }
   ],
   pointerHandlers: transformPointerHandlers

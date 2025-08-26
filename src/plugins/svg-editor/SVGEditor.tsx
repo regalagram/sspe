@@ -11,6 +11,7 @@ import { SVGDropZone } from '../../components/SVGDropZone';
 import { SVGImportOptions, ImportSettings } from '../../components/SVGImportOptions';
 import { RotateCcw, CheckCircle2, Trash2, Upload, Download } from 'lucide-react';
 import { generateSVGCode as generateUnifiedSVG, downloadSVGFile } from '../../utils/svg-export';
+import { getAllElementsByZIndex, initializeZIndexes } from '../../utils/z-index-manager';
 
 // Utility function to format file size
 const formatFileSize = (bytes: number): string => {
@@ -437,36 +438,7 @@ export const SVGComponent: React.FC = () => {
     });
 
     // Filter standalone elements (not in any group)
-    const standalonePaths = paths.filter(path => !elementsInGroups.has(path.id));
-    const standaloneTexts = texts.filter(text => !elementsInGroups.has(text.id));
     const standaloneTextPaths = textPaths.filter(textPath => !elementsInGroups.has(textPath.id));
-    const standaloneImages = images.filter(image => !elementsInGroups.has(image.id));
-    const standaloneUses = uses.filter(use => !elementsInGroups.has(use.id));
-
-    // Generate standalone path elements
-    const standalonePathElements = standalonePaths.map((path) => {
-      return `  ${renderPath(path)}`;
-    }).join('\n');
-
-    // Generate standalone text elements
-    const textElements = standaloneTexts.map((text) => {
-      return `  ${renderText(text)}`;
-    }).join('\n');
-
-    // Generate standalone textPath elements
-    const textPathElements = standaloneTextPaths.map((textPath) => {
-      return `  ${renderTextPath(textPath)}`;
-    }).join('\n');
-
-    // Generate standalone image elements
-    const imageElements = standaloneImages.map((image) => {
-      return `  ${renderImage(image)}`;
-    }).join('\n');
-
-    // Generate standalone use elements
-    const useElements = standaloneUses.map((use) => {
-      return `  ${renderUse(use)}`;
-    }).join('\n');
 
     // Helper function to recursively render group contents
     const renderGroupContents = (group: any): string => {
@@ -595,6 +567,12 @@ export const SVGComponent: React.FC = () => {
     const usedClipPathIds = new Set<string>();
     const usedMaskIds = new Set<string>();
     const usedFilterIds = new Set<string>();
+
+    // Re-create standalone element lists for dependency tracking
+    const standalonePaths = paths.filter(path => !elementsInGroups.has(path.id));
+    const standaloneTexts = texts.filter(text => !elementsInGroups.has(text.id));
+    const standaloneImages = images.filter(image => !elementsInGroups.has(image.id));
+    const standaloneUses = uses.filter(use => !elementsInGroups.has(use.id));
 
     // Check standalone paths
     standalonePaths.forEach(path => {
@@ -1504,8 +1482,51 @@ export const SVGComponent: React.FC = () => {
       return result;
     }
 
+    // Initialize z-indexes for elements that don't have them
+    initializeZIndexes();
+
+    // Function to render standalone elements ordered by z-index
+    const renderElementsByZIndex = () => {
+      const elementsInGroups = new Set<string>();
+      groups.forEach(group => {
+        group.children.forEach(child => {
+          elementsInGroups.add(child.id);
+        });
+      });
+
+      // Get standalone elements (not in any group) sorted by z-index
+      const allOrderedElements = getAllElementsByZIndex();
+      const standaloneElements = allOrderedElements.filter(el => !elementsInGroups.has(el.id));
+
+      // Render each element according to its type
+      const renderedElements = standaloneElements.map(({ type, element }) => {
+        switch (type) {
+          case 'path':
+            return `  ${renderPath(element as any)}`;
+          case 'text':
+            return `  ${renderText(element as any)}`;
+          case 'image':
+            return `  ${renderImage(element as any)}`;
+          case 'use':
+            return `  ${renderUse(element as any)}`;
+          default:
+            return '';
+        }
+      }).filter(Boolean);
+
+      return renderedElements.join('\n');
+    };
+
+    // Render standalone elements ordered by z-index
+    const standaloneElementsByZIndex = renderElementsByZIndex();
+
+    // Generate standalone textPath elements (these don't have z-index yet)
+    const textPathElements = standaloneTextPaths.map((textPath) => {
+      return `  ${renderTextPath(textPath)}`;
+    }).join('\n');
+
     // Combine all elements for viewBox calculation
-    const baseElements = [standalonePathElements, textElements, textPathElements, imageElements, useElements, groupElements].filter(Boolean).join('\n');
+    const baseElements = [standaloneElementsByZIndex, textPathElements, groupElements].filter(Boolean).join('\n');
     
     // Animations are already injected by renderAnimationsForElement, so use baseElements directly
     const allElements = baseElements;
