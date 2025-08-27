@@ -1,622 +1,125 @@
-# SVG Sub-Path Editor Architecture Guidelines
+# SVG Sub-Path Editor - AI Guidelines
 
-## Quick Context for AI Agent
-- **Application**: SVG Sub-Path Editor with modular plugin architecture
-- **UI System**: Accordion-only sidebar 
-- **State Management**: Zustand with centralized store
-- **Framework**: React + TypeScript
-- **Key Pattern**: Everything is a plugin
+## Core Rules
+- **Everything is a plugin** (no exceptions)
+- **Pointer events only** (`onPointerDown` not `onMouseDown`)
+- **Central Zustand store** (no local state for shared data)
+- **Components in `src/components/`** (never in plugins)
+- **Scale with zoom** (`size / viewport.zoom`)
+- **UnifiedRenderer** for all SVG content
 
-## Core Architecture Rules
-
-### Plugin System (MANDATORY)
-
-Every feature MUST be a plugin following this interface:
-
+## Plugin Template
 ```typescript
-interface Plugin {
-  id: string;
-  name: string;
-  version: string;
-  enabled: boolean;
-  dependencies?: string[];
-  initialize?: (editor: ReturnType<typeof useEditorStore>) => void;
-  destroy?: () => void;
-  onActivate?: () => void;
-  onDeactivate?: () => void;
-  tools?: ToolDefinition[];
-  shortcuts?: ShortcutDefinition[];
-  ui?: UIComponentDefinition[];
-  pointerHandlers?: PointerEventHandler;
-  handleKeyDown?: (e: KeyboardEvent) => boolean;
-  handleKeyUp?: (e: KeyboardEvent) => boolean;
-  floatingActions?: FloatingActionDefinition[]; // NEW: Contextual floating toolbar actions
-}
-```
-
-### UI Component Positions
-Only these positions are valid:
-- `toolbar` - Fixed toolbars (top/bottom)
-- `sidebar` - Accordion panels in sidebar
-- `svg-content` - Inside SVG canvas
-- `statusbar` - Status information
-- `contextmenu` - Context menus
-
-### Directory Structure (STRICT)
-```
-src/
-├── core/               # Core system only
-│   ├── FloatingToolbar/         # NEW: Floating toolbar system
-│   │   ├── FloatingToolbarManager.ts    # Central floating actions manager
-│   │   └── PositioningEngine.ts         # Smart positioning for floating toolbar
-├── plugins/            # One folder per plugin
-│   └── [plugin-name]/
-│       ├── index.ts    # Plugin definition
-│       └── utils/      # Plugin-specific utils only
-├── components/         # All UI components
-│   ├── Toolbar.tsx              # Main toolbar container
-│   ├── ToolbarButton.tsx        # Reusable toolbar button
-│   ├── ToolbarSubmenu.tsx       # Dropdown submenus
-│   ├── WritingToolbar.tsx       # Top writing tools toolbar
-│   ├── AccordionPanel.tsx       # Accordion panels for sidebar
-│   ├── PluginButton.tsx         # Plugin buttons
-│   ├── SVGCommandIcons.tsx      # SVG command icons
-│   ├── SandwichButton.tsx       # Mobile menu toggle
-│   ├── FloatingToolbar/         # NEW: Floating contextual toolbar
-│   │   ├── FloatingToolbarRenderer.tsx   # Main floating toolbar component
-│   │   └── FloatingToolbarButton.tsx     # Individual floating action buttons
-│   └── [component-name].tsx
-├── managers/           # Global managers
-├── store/             # Zustand store
-│   ├── editorStore.ts           # Main editor state
-│   ├── toolbarStore.ts          # Toolbar state management
-│   └── [domain]Actions.ts       # Domain-specific actions
-├── types/             # TypeScript types
-│   ├── floatingToolbar.ts       # NEW: Floating toolbar type definitions
-├── utils/             # Shared utilities
-│   ├── path-utils.ts
-│   ├── id-utils.ts
-│   └── [domain]-utils.ts
-├── hooks/             # Custom React hooks
-│   ├── useCombinedCursor.ts
-│   ├── useEditorStyles.ts
-│   └── [hook-name].ts
-└── styles/            # Global styles
-    └── editor.css
-```
-
-**Directory Rules:**
-- `components/`: ALL React components go here (never inside plugins)
-- `plugins/[name]/`: Only plugin definition + plugin-specific utils
-- `utils/`: Shared utilities used by multiple plugins
-- `styles/`: Global CSS files only
-- `hooks/`: Custom React hooks shared across plugins
-- `store/`: Zustand stores with domain-specific actions
-- `managers/`: Global system managers (ToolModeManager, etc.)
-
-### Pointer Event Management (MANDATORY)
-
-**Always use pointer event management for all input interactions.**
-
-- All event handling must use Pointer events (`PointerEvent`).
-- Do **not** use Mouse, Touch, or Pencil event handlers directly.
-- All plugins, UI components, and logic must be designed for pointer event compatibility.
-- This ensures unified handling for mouse, touch, pen, and other input devices.
-
-**DO NOT** use `onMouseDown`, `onTouchStart`, or any device-specific event. Use only `onPointerDown`, `onPointerMove`, `onPointerUp`, etc.
-
-### Floating Toolbar System (NEW)
-
-**Contextual floating toolbars provide element-specific actions near selections.**
-
-- Automatically appears when elements are selected
-- Context-aware actions based on element type (text, path, group, etc.)
-- Smart positioning to avoid overlapping with selected elements
-- Responsive design for both desktop and mobile
-- Plugin-based action definitions
-
-#### Floating Toolbar Action Types:
-- `button` - Simple action button
-- `toggle` - Toggle state button
-- `dropdown` - Menu with multiple options
-- `color` - Color picker
-- `input` - Text/number input
-
-#### Element Type Support:
-- `text` - Text styling, font controls, alignment
-- `path/subpath` - Fill, stroke, arrange, filters
-- `group` - Group/ungroup, distribute, align
-- `use` - Symbol controls, detach, replace
-- `image` - Opacity, filters, crop
-- `mixed` - Multi-selection operations
-- `command` - Point manipulation, curve controls
-
-## Code Generation Rules
-
-### State Management Pattern
-```typescript
-// ALWAYS use this pattern for store actions
-interface EditorActions {
-  // Atomic, single-responsibility actions
-  selectPath: (pathId: string) => void;
-  updateCommand: (commandId: string, updates: Partial<SVGCommand>) => void;
-  // Never combine multiple operations in one action
-}
-
-// Access store in components
-const Component = () => {
-  const { paths, selectPath } = useEditorStore();
-  // Never use useState for shared data
-};
-```
-
-### Plugin Creation Template
-```typescript
-// File: src/plugins/[plugin-name]/index.ts
-import { Plugin } from '../../core/PluginSystem';
-import { useEditorStore } from '../../store/editorStore';
-import { PluginControls } from './PluginControls';
-import { PluginRenderer } from './PluginRenderer';
-
 export const MyPlugin: Plugin = {
-  id: 'my-plugin',
-  name: 'My Plugin',
+  id: 'my-feature',
+  name: 'My Feature',
   version: '1.0.0',
   enabled: true,
   
-  ui: [
-    {
-      id: 'my-plugin-controls',
-      component: PluginControls,
-      position: 'sidebar',
-      order: 10
-    },
-    {
-      id: 'my-plugin-renderer',
-      component: PluginRenderer,
-      position: 'svg-content',
-      order: 20
-    },
-    {
-      id: 'my-plugin-toolbar',
-      component: PluginToolbar,
-      position: 'toolbar',
-      order: 30
-    }
-  ],
-  
-  shortcuts: [
-    {
-      key: 'p',
-      modifiers: ['ctrl'],
-      description: 'Toggle plugin',
-      action: () => {
-        const store = useEditorStore.getState();
-        store.toggleFeature('my-plugin');
-      }
-    }
-  ],
+  ui: [{
+    id: 'my-controls',
+    component: MyControls,
+    position: 'sidebar'
+  }],
   
   pointerHandlers: {
     onPointerDown: (e, context) => {
-      // Return true to stop propagation
+      // Handle events, return true to stop propagation
       return false;
     }
   },
   
-  // NEW: Define floating actions for this plugin
-  floatingActions: [
-    {
-      elementTypes: ['text'], // Apply to text elements
-      selectionTypes: ['single', 'multiple'], // Single or multiple selection
-      actions: [
-        {
-          id: 'text-bold',
-          icon: Bold,
-          label: 'Bold',
-          type: 'toggle',
-          toggle: {
-            isActive: () => checkIfBold(),
-            onToggle: () => toggleBold()
-          },
-          priority: 80,
-          tooltip: 'Toggle bold'
-        },
-        {
-          id: 'text-color',
-          icon: Palette,
-          label: 'Color',
-          type: 'color',
-          color: {
-            currentColor: getCurrentColor(),
-            onChange: (color) => applyColor(color)
-          },
-          priority: 70,
-          tooltip: 'Change text color'
-        }
-      ],
-      priority: 100
-    }
-  ]
+  floatingActions: [{
+    elementTypes: ['path'],
+    actions: [{
+      id: 'my-action',
+      icon: MyIcon,
+      type: 'button',
+      action: () => doAction(),
+      priority: 80
+    }]
+  }]
 };
 ```
 
-### Floating Toolbar Implementation
-
-#### Creating Floating Actions
-```typescript
-// File: src/plugins/[plugin-name]/FloatingActions.ts
-import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
-import { useEditorStore } from '../../store/editorStore';
-
-// Define actions for specific element types
-export const textFloatingActions: ToolbarAction[] = [
-  {
-    id: 'font-family',
-    icon: Type,
-    label: 'Font Family',
-    type: 'dropdown',
-    dropdown: {
-      options: [
-        { id: 'arial', label: 'Arial', action: () => applyFont('Arial') },
-        { id: 'times', label: 'Times', action: () => applyFont('Times') }
-      ]
-    },
-    priority: 100,
-    tooltip: 'Change font family'
-  },
-  {
-    id: 'delete-text',
-    icon: Trash2,
-    label: 'Delete',
-    type: 'button',
-    action: deleteSelectedTexts,
-    priority: 10,
-    destructive: true,
-    tooltip: 'Delete text'
-  }
-];
-
-// Export the definition
-export const textFloatingActionDefinition: FloatingActionDefinition = {
-  elementTypes: ['text'],
-  selectionTypes: ['single', 'multiple'],
-  actions: textFloatingActions,
-  priority: 100
-};
+## Directory Structure
+```
+src/
+├── core/               # PluginSystem, UnifiedRenderer
+├── plugins/[name]/     # Plugin definition + utils only
+├── components/         # ALL React components
+├── store/             # Zustand stores
+├── hooks/             # React hooks
+└── types/             # TypeScript definitions
 ```
 
-#### Responsive Configuration
+## Rendering Layers
 ```typescript
-// Floating toolbar automatically adapts to screen size
-const config = {
-  desktop: {
-    maxVisibleButtons: 8,
-    buttonSize: 32,
-    layout: 'horizontal'
-  },
-  mobile: {
-    maxVisibleButtons: 6,
-    buttonSize: 44,
-    layout: 'adaptive'
-  }
-};
+enum RenderLayer {
+  BACKGROUND = 0,    // Grid, guides
+  CONTENT = 100,     // SVG paths, shapes
+  SELECTION = 200,   // Selection boxes
+  HANDLES = 300,     # Control points
+  OVERLAYS = 400,    # Edit overlays
+  FLOATING_UI = 500  # Contextual UI
+}
 ```
 
-#### Integration in Plugin
+## SVG Pattern
 ```typescript
-// In plugin index.ts
-import { textFloatingActionDefinition } from './FloatingActions';
-
-export const TextPlugin: Plugin = {
-  id: 'text-style',
-  name: 'Text Style',
-  version: '1.0.0',
-  enabled: true,
-  
-  // Regular UI components
-  ui: [
-    {
-      id: 'text-style-controls',
-      component: TextStyleControls,
-      position: 'sidebar'
-    }
-  ],
-  
-  // NEW: Floating actions
-  floatingActions: [textFloatingActionDefinition]
-};
-```
-
-### Toolbar Implementation
-
-#### Main Toolbar Structure
-The application has two main toolbars:
-- **WritingToolbar** (top): Creation tools, pencil, shapes, curves, styles, delete
-- **Toolbar** (bottom): Undo/redo, zoom, animation controls
-
-#### Toolbar Components
-```typescript
-// ToolbarButton - Reusable button component
-import { ToolbarButton } from '../components/ToolbarButton';
-
-const MyToolbarButton = () => (
-  <ToolbarButton
-    icon={<MyIcon />}
-    label="Tool"
-    onClick={handleClick}
-    active={isActive}
-    title="Tool description"
-  />
-);
-
-// ToolbarSubmenu - Dropdown menus
-import { ToolbarSubmenu } from '../components/ToolbarSubmenu';
-
-const MySubmenu = () => (
-  <ToolbarSubmenu
-    trigger={<ToolbarButton icon={<MenuIcon />} />}
-    isOpen={isSubmenuOpen}
-    onToggle={toggleSubmenu}
-  >
-    <div>Submenu content</div>
-  </ToolbarSubmenu>
-);
-```
-
-#### Toolbar State Management
-```typescript
-// Use toolbar store for persistent states
-import { useToolbarStore } from '../store/toolbarStore';
-
-const MyToolbarComponent = () => {
-  const { 
-    activeCreationTool,
-    setActiveCreationTool,
-    isCreationSubmenuOpen,
-    setCreationSubmenuOpen 
-  } = useToolbarStore();
-  
-  return (
-    <ToolbarButton
-      active={activeCreationTool === 'my-tool'}
-      onClick={() => setActiveCreationTool('my-tool')}
-    />
-  );
-};
-```
-
-### Tool Mode Implementation
-```typescript
-// For exclusive tools (Creation, Pencil, etc.)
-const MyTool: React.FC = () => {
-  const { currentTool, setTool, clearTool } = useToolModeStore();
-  const isActive = currentTool === 'my-tool';
-
-  return (
-    <ToolbarButton
-      icon={<MyIcon />}
-      onClick={() => isActive ? clearTool() : setTool('my-tool')}
-      active={isActive}
-      title="My Tool"
-    />
-  );
-};
-```
-
-### SVG Rendering Patterns
-```typescript
-// ALWAYS scale UI elements inversely to zoom
 const SVGElement: React.FC = () => {
   const { viewport } = useEditorStore();
   
-  const radius = Math.max(6 / viewport.zoom, 2);
-  const strokeWidth = 2 / viewport.zoom;
-  
   return (
-    <circle 
-      r={radius} 
-      strokeWidth={strokeWidth}
-      // Use data attributes for identification
-      data-element-type="control-point"
-      data-element-id={id}
-    />
+    <g data-layer="handles" data-plugin="my-plugin">
+      <circle 
+        r={6 / viewport.zoom}
+        strokeWidth={2 / viewport.zoom}
+        data-element-type="control-point"
+        onPointerDown={handlePointer}
+      />
+    </g>
   );
 };
 ```
 
-### Pointer Event Handling
+## Store Pattern
 ```typescript
-// In plugin pointerHandlers
-pointerHandlers: {
-  onPointerDown: (e: PointerEvent<SVGElement>, context: PointerEventContext) => {
-    const element = e.target as SVGElement;
-    const elementType = element.dataset.elementType;
-    const elementId = element.dataset.elementId;
-    
-    if (elementType === 'my-element') {
-      // Handle event
-      return true; // Stop propagation
-    }
-    return false;
-  }
+// Access state
+const { paths, selection, selectPath } = useEditorStore();
+
+// Atomic actions
+interface EditorActions {
+  selectPath: (pathId: string) => void;
+  updateCommand: (commandId: string, updates: Partial<SVGCommand>) => void;
 }
 ```
 
-## Critical Implementation Rules
-
-### DO ✅
-1. **One plugin = One feature** (no exceptions)
-2. **Use toolbar/sidebar positions** for plugin UI
-3. **Use ToolbarButton component** for consistent styling
-4. **Use toolbar store** for persistent toolbar states
-5. **Use ToolModeManager** for exclusive tools
-6. **Complete TypeScript typing** (no `any`)
-7. **Pure functions** for data transformations
-8. **Central store** as single source of truth
-9. **Separate UI and logic** components
-10. **Scale elements** inversely to zoom
-11. **Use data attributes** for element identification
-12. **Return boolean** from pointer handlers
-13. **Always use pointer event management for all input**
-14. **Define floating actions** for contextual element interactions
-15. **Use FloatingActionDefinition** for element-specific toolbars
-16. **Priority-based action ordering** in floating toolbars
-
-### DON'T ❌
-1. **No business logic** in UI components
-2. **No direct plugin dependencies**
-3. **No useState for shared data**
-4. **No hardcoded sizes** without zoom scaling
-5. **No complex inheritance**
-6. **No local state** for editor data
-7. **No multiple active tools**
-8. **No features outside plugins**
-9. **No imperative APIs**
-10. **No custom button styling** (use ToolbarButton)
-11. **No toolbar state in component state** (use toolbar store)
-12. **Never use Mouse, Touch, or Pencil event handlers** (`onMouseDown`, `onTouchStart`, etc.)
-
-## Common Patterns
-
-### Conditional Rendering
+## Key Types
 ```typescript
-// Show only when relevant
-const Component = () => {
-  const { enabledFeatures, selection } = useEditorStore();
-  const shouldShow = enabledFeatures.has('feature') || selection.selectedItems.length > 0;
-  
-  if (!shouldShow) return null;
-  return <div>...</div>;
-};
-```
-
-### ID Generation
-```typescript
-// Always use this pattern
-export const generateId = (): string => 
-  `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-```
-
-### Utility Functions
-```typescript
-// Pure, reusable, testable
-export const snapToGrid = (point: Point, gridSize: number): Point => ({
-  x: Math.round(point.x / gridSize) * gridSize,
-  y: Math.round(point.y / gridSize) * gridSize
-});
-```
-
-## Plugin Registration
-```typescript
-// In src/core/PluginInitializer.ts
-import { MyPlugin } from '../plugins/shortcuts/MyPlugin';
-
-
-export const initializePlugins = (): void => {
-  // Register base dependencies first
-  pluginManager.registerPlugin(MyPlugin); 
-};
-```
-
-## TypeScript Interfaces
-
-### Core Types
-```typescript
-export type SVGCommandType = 'M' | 'L' | 'C' | 'Z';
-
-export interface Point {
-  x: number;
-  y: number;
-}
-
-export interface SVGCommand {
+interface SVGCommand {
   id: string;
-  command: SVGCommandType;
-  x?: number;
-  y?: number;
-  x1?: number;  // Control point 1 x for curves
-  y1?: number;  // Control point 1 y for curves
-  x2?: number;  // Control point 2 x for curves
-  y2?: number;  // Control point 2 y for curves
+  command: 'M' | 'L' | 'C' | 'Z';
+  x?: number; y?: number;
+  x1?: number; y1?: number; // Control points
+  x2?: number; y2?: number;
 }
 
-export interface SVGSubPath {
-  id: string;
-  commands: SVGCommand[];
-  locked?: boolean; // If true, subpath is locked and unselectable
-}
-
-export interface PathStyle {
-  fill?: string;
-  fillOpacity?: number;
-  stroke?: string;
-  strokeWidth?: number;
-  strokeOpacity?: number;
-  strokeDasharray?: string;
-  strokeLinecap?: 'butt' | 'round' | 'square';
-  strokeLinejoin?: 'miter' | 'round' | 'bevel';
-  fillRule?: 'nonzero' | 'evenodd';
-}
-
-export interface SVGPath {
+interface SVGPath {
   id: string;
   subPaths: SVGSubPath[];
   style: PathStyle;
 }
-
-export interface BoundingBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface ViewportState {
-  zoom: number;
-  pan: Point;
-  viewBox: BoundingBox;
-}
-
-export interface SelectionState {
-  selectedPaths: string[];
-  selectedSubPaths: string[];
-  selectedCommands: string[];
-  selectedControlPoints: string[];
-  selectionBox?: BoundingBox;
-}
 ```
 
-## Language Requirements
-- **All UI text in English** (buttons, labels, messages, tooltips)
-- **No localization needed**
+## Quick Checklist
+1. Create plugin in `src/plugins/[name]/`
+2. Place components in `src/components/`
+3. Use `ToolbarButton` for consistency
+4. Register in PluginInitializer
+5. Use pointer events only
+6. Scale with zoom
+7. Assign proper RenderLayer
+8. Test enable/disable
 
-## Deployment
-```bash
-vercel --prod
-```
-
----
-
-## Quick Reference for AI Agents
-
-When generating code:
-1. Check if feature exists as plugin
-2. Follow exact directory structure
-3. Use provided interfaces
-4. Place all components in src/components
-5. Keep only plugin definition and specific utils in plugin folder
-6. Register in plugin system
-7. Use central store for state
-8. Use toolbar store for toolbar states
-9. Use ToolbarButton for consistent styling
-10. Scale SVG elements with zoom
-11. Handle pointer events properly
-12. Add keyboard shortcuts
-13. Test with enable/disable
-14. Always use pointer event management for all input (never Mouse, Touch, or Pencil events)
-15. **NEW: Define floating actions** for element-specific interactions
-16. **NEW: Use FloatingActionDefinition** for contextual toolbars
-17. **NEW: Set action priorities** for proper ordering
-
-Remember: **Everything is a plugin, no exceptions.**
+**Remember: Everything is a plugin. All SVG through UnifiedRenderer.**
