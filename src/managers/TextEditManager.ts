@@ -5,7 +5,7 @@ import { toolModeManager } from './ToolModeManager';
 export interface TextEditState {
   isEditing: boolean;
   editingTextId: string | null;
-  editingType: 'single' | 'multiline' | null;
+  editingType: 'single' | 'multiline' | 'textPath' | null;
   cursorPosition: number;
   selectionRange: [number, number] | null;
   originalContent: string | string[]; // Backup for escape functionality
@@ -39,9 +39,17 @@ export class TextEditManager {
   startTextEdit(textId: string): boolean {
         
     const store = this.editorStore || useEditorStore.getState();
-    const textElement = store.texts.find((t: TextElementType) => t.id === textId);
     
-                
+    // First try to find in regular texts
+    let textElement = store.texts.find((t: TextElementType) => t.id === textId);
+    let isTextPath = false;
+    
+    // If not found in texts, try textpaths
+    if (!textElement) {
+      textElement = store.textPaths.find((tp: any) => tp.id === textId);
+      isTextPath = true;
+    }
+    
     if (!textElement) {
             return false;
     }
@@ -57,16 +65,24 @@ export class TextEditManager {
     }
 
     // Determine text type and backup content
-    const isMultiline = textElement.type === 'multiline-text';
-        
-    const originalContent = isMultiline 
-      ? (textElement as MultilineTextElement).spans.map(span => span.content)
-      : (textElement as TextElement).content;
+    let editingType: 'single' | 'multiline' | 'textPath';
+    let originalContent: string | string[];
+    
+    if (isTextPath) {
+      editingType = 'textPath';
+      originalContent = textElement.content;
+    } else {
+      const isMultiline = textElement.type === 'multiline-text';
+      editingType = isMultiline ? 'multiline' : 'single';
+      originalContent = isMultiline 
+        ? (textElement as MultilineTextElement).spans.map(span => span.content)
+        : (textElement as TextElement).content;
+    }
     
     this.state = {
       isEditing: true,
       editingTextId: textId,
-      editingType: isMultiline ? 'multiline' : 'single',
+      editingType,
       cursorPosition: 0,
       selectionRange: null,
       originalContent
@@ -75,26 +91,44 @@ export class TextEditManager {
     // Switch to text-edit mode
         toolModeManager.setMode('text-edit', { editingTextId: textId });
     
-    // Ensure the text is selected
-        store.selectText(textId);
+    // Ensure the element is selected
+    if (isTextPath) {
+      store.selectTextPath(textId);
+    } else {
+      store.selectText(textId);
+    }
     
         this.notifyListeners();
         return true;
   }
 
   /**
-   * Stop editing and optionally save changes
+   * Stop text editing
    */
-  stopTextEdit(saveChanges: boolean = true): boolean {
-            
+  stopTextEdit(save: boolean = true, finalContent?: string): void {
     if (!this.state.isEditing) {
-            return false;
+      return;
     }
 
     const store = this.editorStore || useEditorStore.getState();
+
+    // If saving and we have final content, apply it directly
+    if (save && finalContent && this.state.editingTextId) {
+      if (this.state.editingType === 'textPath') {
+        store.updateTextPathContent(this.state.editingTextId, finalContent);
+      } else if (this.state.editingType === 'single') {
+        store.updateTextContent(this.state.editingTextId, finalContent);
+      }
+    }
+
+    // Clear any pending timeout
+    if (this.updateTimeout) {
+      clearTimeout(this.updateTimeout);
+      this.updateTimeout = null;
+    }
     
     // If not saving, restore original content
-    if (!saveChanges && this.state.editingTextId) {
+    if (!save && this.state.editingTextId) {
       if (this.state.editingType === 'single') {
         store.updateTextContent(this.state.editingTextId, this.state.originalContent as string);
       } else if (this.state.editingType === 'multiline') {
@@ -108,6 +142,8 @@ export class TextEditManager {
             }
           });
         }
+      } else if (this.state.editingType === 'textPath') {
+        store.updateTextPathContent(this.state.editingTextId, this.state.originalContent as string);
       }
     }
 
@@ -131,7 +167,6 @@ export class TextEditManager {
     toolModeManager.setMode('select');
     
     this.notifyListeners();
-    return true;
   }
 
   private updateTimeout: NodeJS.Timeout | null = null;
@@ -163,6 +198,8 @@ export class TextEditManager {
         
     if (this.state.editingType === 'single' && typeof content === 'string') {
       store.updateTextContent(this.state.editingTextId, content);
+    } else if (this.state.editingType === 'textPath' && typeof content === 'string') {
+      store.updateTextPathContent(this.state.editingTextId, content);
     } else if (this.state.editingType === 'multiline' && Array.isArray(content)) {
       const textElement = store.texts.find((t: TextElementType) => t.id === this.state.editingTextId);
       if (textElement && textElement.type === 'multiline-text') {
@@ -242,13 +279,18 @@ export class TextEditManager {
   /**
    * Get the currently editing text element
    */
-  getEditingText(): TextElementType | null {
+  getEditingText(): TextElementType | any | null {
     if (!this.state.isEditing || !this.state.editingTextId) {
       return null;
     }
 
     const store = this.editorStore || useEditorStore.getState();
-    return store.texts.find((t: TextElementType) => t.id === this.state.editingTextId) || null;
+    
+    if (this.state.editingType === 'textPath') {
+      return store.textPaths.find((tp: any) => tp.id === this.state.editingTextId) || null;
+    } else {
+      return store.texts.find((t: TextElementType) => t.id === this.state.editingTextId) || null;
+    }
   }
 
   /**

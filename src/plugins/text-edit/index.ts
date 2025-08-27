@@ -73,19 +73,16 @@ export const TextEditPlugin: Plugin = {
     onPointerDown: (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
       const target = e.target as SVGElement;
       const isTextElement = target.tagName === 'text' || target.tagName === 'tspan' || 
+                           target.tagName === 'textPath' || // Add textPath SVG element
                            target.dataset?.elementType === 'text' || 
                            target.dataset?.elementType === 'multiline-text' ||
+                           target.dataset?.elementType === 'textPath' ||
                            (target.tagName === 'rect' && target.dataset?.elementId); // Include rect with element ID
-      
-      // Log when it's relevant (double-click detection or text elements)
-      if (context.isDoubleClick || isTextElement || e.ctrlKey || e.metaKey) {
-              }
       
       // Handle double-click on text elements OR Ctrl+Click as alternative
       const isEditTrigger = context.isDoubleClick || (e.ctrlKey || e.metaKey);
       
       if (isEditTrigger && isTextElement) {
-                
         // Check if we clicked on a text element or its parts
         let textElementId: string | null = null;
         
@@ -99,29 +96,40 @@ export const TextEditPlugin: Plugin = {
           const parentText = target.parentElement;
           if (parentText && parentText.tagName === 'text') {
             textElementId = parentText.id || parentText.dataset.elementId || null;
-                      }
+          }
         }
-        // Method 3: Direct text element by data attributes
-        else if (target.dataset.elementType === 'text' || target.dataset.elementType === 'multiline-text') {
+        // Method 2.5: TextPath element - get parent text element
+        else if (target.tagName === 'textPath') {
+          const parentText = target.parentElement;
+          if (parentText && parentText.tagName === 'text') {
+            textElementId = parentText.id || parentText.dataset.elementId || null;
+          }
+        }
+        // Method 3: Direct text element by data attributes (including textPath)
+        else if (target.dataset.elementType === 'text' || 
+                 target.dataset.elementType === 'multiline-text' ||
+                 target.dataset.elementType === 'textPath') {
           textElementId = target.dataset.elementId || null;
                   }
-        // Method 4: Selection border or other text-related elements
-        else if (target.getAttribute('data-element-type') === 'text' || target.getAttribute('data-element-type') === 'multiline-text') {
+        // Method 4: Selection border or other text-related elements (including textPath)
+        else if (target.getAttribute('data-element-type') === 'text' || 
+                 target.getAttribute('data-element-type') === 'multiline-text' ||
+                 target.getAttribute('data-element-type') === 'textPath') {
           textElementId = target.getAttribute('data-element-id') || null;
-                  }
+        }
         // Method 5: Selection border rect with text element ID in data-element-id
         else if (target.tagName === 'rect' && target.dataset.elementId) {
           // This handles clicks on selection borders around text elements
           const potentialTextId = target.dataset.elementId;
           // Verify this is actually a text element by checking the store
           const store = textEditManager.getEditorStore();
-          if (store && store.texts.find((t: any) => t.id === potentialTextId)) {
+          if (store && (store.texts.find((t: any) => t.id === potentialTextId) || 
+                       store.textPaths.find((tp: any) => tp.id === potentialTextId))) {
             textElementId = potentialTextId;
-                      }
+          }
         }
         
         if (textElementId) {
-                    
           // Start text editing
           const success = textEditManager.startTextEdit(textElementId);
           

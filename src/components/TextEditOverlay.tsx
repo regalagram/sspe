@@ -475,6 +475,32 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
     
   }, [position]);
 
+  // Force visibility and interactivity for text editing inputs
+  useEffect(() => {
+    if (!inputRef.current || !position) return;
+    
+    const input = inputRef.current;
+    
+    // Force visibility and appearance
+    input.style.setProperty('background-color', 'rgba(255, 255, 255, 0.9)', 'important');
+    input.style.setProperty('border', '1px solid rgba(0, 0, 0, 0.2)', 'important');
+    input.style.setProperty('border-radius', '2px', 'important');
+    input.style.setProperty('box-shadow', '0 2px 4px rgba(0, 0, 0, 0.1)', 'important');
+    input.style.setProperty('outline', 'none', 'important');
+    
+    // Ensure text interaction works
+    input.style.setProperty('user-select', 'text', 'important');
+    input.style.setProperty('-webkit-user-select', 'text', 'important');
+    input.style.setProperty('-moz-user-select', 'text', 'important');
+    input.style.setProperty('pointer-events', 'all', 'important');
+    input.style.setProperty('cursor', 'text', 'important');
+    
+    // Ensure proper padding for readability
+    input.style.setProperty('padding', '2px 4px', 'important');
+    input.style.setProperty('margin', '0', 'important');
+    
+  }, [position]);
+
   // Handle iOS zoom prevention dynamically while preserving exact font size
   useEffect(() => {
     if (!inputRef.current || !position) return;
@@ -664,13 +690,16 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
     // Disable mobile-specific touch behaviors that might interfere
     WebkitTapHighlightColor: 'transparent',
     WebkitTouchCallout: 'none',
-    // Ensure precise text selection
+    // Ensure precise text selection - CRITICAL FOR CURSOR FUNCTIONALITY
     WebkitUserSelect: 'text',
     MozUserSelect: 'text',
     userSelect: 'text',
-    // Disable browser autocomplete styles
-    WebkitBoxShadow: 'none',
-    MozBoxShadow: 'none'
+    // Enable pointer events for text interaction
+    pointerEvents: 'all',
+    cursor: 'text',
+    // Disable browser autocomplete styles but keep visibility
+    WebkitBoxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+    MozBoxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
   };
 
   // Use local input state to prevent overwrites during typing
@@ -763,17 +792,31 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
           value={inputValue}
           autoFocus
           tabIndex={1}
+          readOnly={false}
+          disabled={false}
+          spellCheck={false}
+          contentEditable={true}
+          data-testid="single-line-text-editor"
+          placeholder="Editar texto..."
           onChange={(e) => {
-                        handleContentChange(e.target.value);
+            handleContentChange(e.target.value);
           }}
           onKeyDown={(e) => {
-                        handleKeyDown(e);
+            handleKeyDown(e);
           }}
           onInput={(e) => {
-                      }}
+            // Additional input handling if needed
+          }}
           onFocus={() => {
-                      }}
+            // Focus handling if needed
+          }}
           onBlur={handleBlur}
+          onPointerDown={(e) => {
+            e.stopPropagation(); // Prevent event bubbling that might interfere
+          }}
+          onClick={(e) => {
+            e.stopPropagation(); // Prevent event bubbling that might interfere
+          }}
           style={{
             ...sharedStyles,
             // Override specific properties for single-line input

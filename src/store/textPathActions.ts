@@ -95,13 +95,14 @@ export const createTextPathActions: StateCreator<
       renderVersion: state.renderVersion + 1
     })),
 
-  updateTextPathContent: (textPathId, content) =>
+  updateTextPathContent: (textPathId, content) => {
     set((state) => ({
       textPaths: state.textPaths.map(tp => 
         tp.id === textPathId ? { ...tp, content } : tp
       ),
       renderVersion: state.renderVersion + 1
-    })),
+    }));
+  },
 
   updateTextPathPath: (textPathId, pathRef) =>
     set((state) => ({

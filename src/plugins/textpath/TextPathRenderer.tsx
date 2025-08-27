@@ -1,15 +1,32 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { SVGTextPath } from '../../types';
 import { subPathToString } from '../../utils/path-utils';
 import { useAnimationsForElement } from '../../components/AnimationRenderer';
+import { useTextEditMode } from '../../hooks/useTextEditMode';
+import { TextPathEditOverlay } from '../../components/TextPathEditOverlay';
 
 // Individual TextPath component that handles its own hooks
 const TextPathItem: React.FC<{ textPath: SVGTextPath }> = ({ textPath }) => {
-  const { paths, selection, renderVersion } = useEditorStore();
+  const { paths, selection, renderVersion, viewport } = useEditorStore();
+  const { isTextBeingEdited, updateTextContent: updateTextContentLive, stopTextEdit } = useTextEditMode();
   
   // This hook is now called at the component level, not inside a render function
   const animations = useAnimationsForElement(textPath.id);
+  
+  // Check if this textpath is being edited
+  const isBeingEdited = isTextBeingEdited(textPath.id);
+
+  // Handle content changes during editing (memoized to prevent TextPathEditOverlay remount)
+  const handleContentChange = useCallback((content: string) => {
+    updateTextContentLive(content);
+  }, [updateTextContentLive]);
+  
+  // Handle finishing editing (memoized to prevent TextPathEditOverlay remount)
+  const handleFinishEditing = useCallback((save: boolean, finalContent?: string) => {
+    // Pass final content directly to stopTextEdit
+    stopTextEdit(save, finalContent);
+  }, [stopTextEdit]);
 
   // Find the referenced path by path ID (not subPath ID)
   const referencedPath = paths.find(path => path.id === textPath.pathRef);
@@ -104,6 +121,13 @@ const TextPathItem: React.FC<{ textPath: SVGTextPath }> = ({ textPath }) => {
   if (textPath.textLength) textPathAttributes.textLength = textPath.textLength;
   if (textPath.lengthAdjust) textPathAttributes.lengthAdjust = textPath.lengthAdjust;
 
+  let cursorValue = 'pointer';
+  if (textPath.locked) {
+    cursorValue = 'default';
+  } else if (isBeingEdited) {
+    cursorValue = 'text';
+  }
+
   return (
     <g key={`textpath-${textPath.id}-v${renderVersion}`}>
       {/* Hidden path for text to follow */}
@@ -121,8 +145,9 @@ const TextPathItem: React.FC<{ textPath: SVGTextPath }> = ({ textPath }) => {
         data-element-id={textPath.id}
         style={{
           pointerEvents: textPath.locked ? 'none' : 'all',
-          cursor: textPath.locked ? 'default' : 'pointer',
-          userSelect: 'none',
+          cursor: cursorValue,
+          userSelect: isBeingEdited ? 'text' : 'none',
+          opacity: isBeingEdited ? 0 : 1, // Hide during editing to prevent duplication
           clipPath: style.clipPath,
           mask: style.mask,
           filter: style.filter
@@ -135,7 +160,7 @@ const TextPathItem: React.FC<{ textPath: SVGTextPath }> = ({ textPath }) => {
       </text>
 
       {/* Selection indicator */}
-      {isSelected && (
+      {isSelected && !isBeingEdited && (
         <text
           {...textAttributes}
           x={0}
@@ -157,6 +182,16 @@ const TextPathItem: React.FC<{ textPath: SVGTextPath }> = ({ textPath }) => {
             </tspan>
           </textPath>
         </text>
+      )}
+
+      {/* TextPath Edit Overlay */}
+      {isBeingEdited && (
+        <TextPathEditOverlay
+          textPath={textPath}
+          viewport={viewport}
+          onContentChange={handleContentChange}
+          onFinishEditing={handleFinishEditing}
+        />
       )}
     </g>
   );

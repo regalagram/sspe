@@ -226,7 +226,6 @@ export class PluginManager {
       ? target.getAttribute('data-element-type')
       : null;
 
-
     // Detect double-click for pointerDown events
     let isDoubleClick = false;
     let clickCount = 1;
@@ -270,12 +269,18 @@ export class PluginManager {
     
     // Special priority for text-edit plugin on double-clicks
     if (isDoubleClick && eventType === 'pointerDown') {
-            const textEditPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'text-edit');
+      // Check if we're clicking on a textPath element - include both data attribute and tag check
+      const target = e.target as SVGElement;
+      const elementType = target && typeof target.getAttribute === 'function'
+        ? target.getAttribute('data-element-type')
+        : null;
+      const isTextPathClick = elementType === 'textPath' || target.tagName === 'textPath';
+      
+      const textEditPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'text-edit');
       if (textEditPlugin) {
         const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'text-edit');
         pluginsToProcess = [textEditPlugin, ...otherPlugins];
-              } else {
-              }
+      }
     }
     
     if (eventType === 'pointerDown' && (e as PointerEvent<SVGElement>).button === 2) {
@@ -306,6 +311,9 @@ export class PluginManager {
       const isTextRelated = elementType === 'text' || elementType === 'multiline-text' || 
                           (target.tagName === 'tspan' && target.parentElement?.tagName === 'text');
       
+      // Check if we're clicking on a textPath element (either by data attribute or by tag)
+      const isTextPathRelated = elementType === 'textPath' || target.tagName === 'textPath';
+      
       if (isTextRelated && !isDoubleClick) {
         // When single-clicking on text, prioritize pointer-interaction plugin for selection logic
         // But for double-clicks, let text-edit plugin handle it first (already prioritized above)
@@ -314,13 +322,16 @@ export class PluginManager {
         if (pointerInteractionPlugin) {
           pluginsToProcess = [pointerInteractionPlugin, ...otherPlugins];
         }
-      } else if (elementType === 'textPath') {
-        // When clicking on textPath, prioritize pointer-interaction plugin for selection logic
+      } else if (isTextPathRelated && !isDoubleClick) {
+        // When single-clicking on textPath, prioritize pointer-interaction plugin for selection logic
+        // But for double-clicks, let text-edit plugin handle it first (already prioritized above)
         const pointerInteractionPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'pointer-interaction');
         const otherPlugins = pluginsToProcess.filter((p: Plugin) => p.id !== 'pointer-interaction');
         if (pointerInteractionPlugin) {
           pluginsToProcess = [pointerInteractionPlugin, ...otherPlugins];
         }
+      } else if (isTextPathRelated && isDoubleClick) {
+        // Double-click on textPath should NOT re-prioritize pointer-interaction
       } else if (commandId && !elementType) {
         // When clicking on a command (path commands), process PointerInteraction first
         const pointerInteractionPlugin = pluginsToProcess.find((p: Plugin) => p.id === 'pointer-interaction');
@@ -379,15 +390,7 @@ export class PluginManager {
     for (const plugin of pluginsToProcess) {
       if (!plugin.pointerHandlers) continue;
       
-      // Log for double-clicks specifically
-      if (isDoubleClick && eventType === 'pointerDown') {
-              }
-      
       let handled = false;
-      
-      // DEBUG: Log which plugin is being processed for empty space clicks (disabled by default)
-      // if (eventType === 'pointerDown' && !commandId && !elementType) {
-      //         // }
       
       switch (eventType) {
         case 'pointerDown':
@@ -404,15 +407,8 @@ export class PluginManager {
           break;
       }
       
-      // DEBUG: Log if plugin handled the event for empty space clicks
-      if (eventType === 'pointerDown' && !commandId && !elementType && handled) {
-              }
-      
-      if (isDoubleClick && eventType === 'pointerDown') {
-              }
-      
       if (handled) {
-                return true;
+        return true;
       }
     }
     return false;
@@ -563,20 +559,7 @@ export class PluginManager {
     const shortcuts = this.shortcuts.get(key);
 
     // Debug shortcut lookup
-    if (event.key === 'Enter' || event.key === 'F2') {
-      console.log('[PluginSystem] Shortcut lookup:', {
-        searchKey: key,
-        availableShortcuts: Array.from(this.shortcuts.keys()),
-        foundShortcuts: shortcuts ? shortcuts.length : 0,
-        shortcuts: shortcuts?.map(s => ({ key: s.key, plugin: s.plugin, description: s.description }))
-      });
-    }
-
     if (shortcuts && shortcuts.length > 0) {
-      // Debug shortcut execution
-      if (event.key === 'Enter' || event.key === 'F2') {
-              }
-      
       // Si hay varios shortcuts para la misma combinación, priorizar el del modo activo
       let mode: string | undefined = undefined;
       try {

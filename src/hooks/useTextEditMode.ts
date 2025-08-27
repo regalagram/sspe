@@ -15,13 +15,15 @@ export const useTextEditMode = () => {
   return {
     ...textEditState,
     startTextEdit: (textId: string) => textEditManager.startTextEdit(textId),
-    stopTextEdit: (save: boolean = true) => textEditManager.stopTextEdit(save),
+    stopTextEdit: (save: boolean = true, finalContent?: string) => {
+      return textEditManager.stopTextEdit(save, finalContent);
+    },
     isTextBeingEdited: (textId: string) => {
       const result = textEditManager.isTextBeingEdited(textId);
-            return result;
+      return result;
     },
     updateTextContent: (content: string | string[]) => {
-            textEditManager.updateTextContent(content);
+      textEditManager.updateTextContent(content);
     }
   };
 };

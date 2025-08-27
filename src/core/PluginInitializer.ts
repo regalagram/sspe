@@ -47,11 +47,20 @@ import { UnifiedRendererPlugin } from '../plugins/unified-renderer';
 import { SpecialPointFloatingActionsPlugin } from '../plugins/specialPointFloatingActions';
 import { StructureTreePlugin } from '../plugins/structure-tree';
 
+// Prevent multiple initializations
+let pluginsInitialized = false;
+
 /**
  * Initialize all plugins in the correct dependency order
  * Following the modular plugin architecture principle from README.md
  */
 export const initializePlugins = (): void => {
+  if (pluginsInitialized) {
+    return;
+  }
+  
+  pluginsInitialized = true;
+  
   // Register base dependencies first
   pluginManager.registerPlugin(GesturesPlugin); // Gestures for pinch/pan on canvas, MUST be first to handle multi-touch before selection
   pluginManager.registerPlugin(PointerInteractionPlugin); // Required by pencil
