@@ -12,10 +12,12 @@ import {
   Brush,
   Filter,
   Play,
-  RotateCcw
+  RotateCcw,
+  Edit3
 } from 'lucide-react';
 import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { useEditorStore } from '../../store/editorStore';
+import { textEditManager } from '../../managers/TextEditManager';
 import {
   createDropShadowFilter,
   createBlurFilter,
@@ -574,7 +576,53 @@ const clearTextPathStyle = () => {
   });
 };
 
+// Mobile textPath editing function
+const startTextPathEditingMobile = () => {
+  const store = useEditorStore.getState();
+  
+  // Get the first selected textPath
+  if (store.selection.selectedTextPaths.length > 0) {
+    const textPathToEdit = store.selection.selectedTextPaths[0];
+    
+    // Check if mobile
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // Use mobile modal - dispatch global event
+      window.dispatchEvent(new CustomEvent('openMobileTextEdit', {
+        detail: { textId: textPathToEdit }
+      }));
+    } else {
+      // Use desktop overlay system
+      textEditManager.setEditorStore(store);
+      textEditManager.startTextEdit(textPathToEdit);
+    }
+  }
+};
+
+// Check if exactly one textPath is selected for editing
+const isExactlyOneTextPathSelectedForEdit = (): boolean => {
+  const store = useEditorStore.getState();
+  
+  // Don't show edit button if already in text editing mode
+  if (textEditManager.isEditing()) {
+    return false;
+  }
+  
+  return store.selection.selectedTextPaths.length === 1;
+};
+
 export const textPathFloatingActions: ToolbarAction[] = [
+  {
+    id: 'edit-textpath-mobile',
+    icon: Edit3,
+    label: 'Edit',
+    type: 'button',
+    action: startTextPathEditingMobile,
+    priority: 995, // Highest priority to appear first
+    tooltip: 'Edit textPath content',
+    visible: isExactlyOneTextPathSelectedForEdit
+  },
   {
     id: 'textpath-font-family',
     icon: Type,

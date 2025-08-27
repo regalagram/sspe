@@ -1,7 +1,8 @@
-import { Copy, Trash2, Lock, Group, PaintBucket } from 'lucide-react';
+import { Copy, Trash2, Lock, Group, PaintBucket, Edit3 } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected } from './commonActions';
+import { textEditManager } from '../../../managers/TextEditManager';
 import { createGenericArrangeActions } from '../../../utils/floating-arrange-actions';
 import { createReorderActions, createElementReorderFunctions } from '../../../utils/floating-reorder-actions';
 import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';
@@ -176,8 +177,61 @@ const createTextReorderActions = () => {
   );
 };
 
+// Mobile text editing function
+const startTextEditingMobile = () => {
+  const store = useEditorStore.getState();
+  
+  // Get the first selected text
+  let textToEdit: string | null = null;
+  
+  if (store.selection.selectedTexts.length > 0) {
+    textToEdit = store.selection.selectedTexts[0];
+  } else if (store.selection.selectedTextPaths.length > 0) {
+    textToEdit = store.selection.selectedTextPaths[0];
+  }
+  
+  if (textToEdit) {
+    // Check if mobile
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // Use mobile modal - we'll implement this via a global event
+      window.dispatchEvent(new CustomEvent('openMobileTextEdit', {
+        detail: { textId: textToEdit }
+      }));
+    } else {
+      // Use desktop overlay system
+      textEditManager.setEditorStore(store);
+      textEditManager.startTextEdit(textToEdit);
+    }
+  }
+};
+
+// Check if exactly one text is selected for editing
+const isExactlyOneTextSelected = (): boolean => {
+  const store = useEditorStore.getState();
+  const totalSelected = store.selection.selectedTexts.length + store.selection.selectedTextPaths.length;
+  
+  // Don't show edit button if already in text editing mode
+  if (textEditManager.isEditing()) {
+    return false;
+  }
+  
+  return totalSelected === 1;
+};
+
 
 export const textActions: ToolbarAction[] = [
+  {
+    id: 'edit-text',
+    icon: Edit3,
+    label: 'Edit',
+    type: 'button',
+    action: startTextEditingMobile,
+    priority: 950, // High priority to appear prominently
+    tooltip: 'Edit text content',
+    visible: isExactlyOneTextSelected
+  },
   {
     id: 'copy-text-format',
     icon: PaintBucket,

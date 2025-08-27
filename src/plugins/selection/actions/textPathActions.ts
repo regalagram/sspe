@@ -1,7 +1,8 @@
-import { Copy, Trash2, Lock, PaintBucket } from 'lucide-react';
+import { Copy, Trash2, Lock, PaintBucket, Edit3 } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected } from './commonActions';
+import { textEditManager } from '../../../managers/TextEditManager';
 
 // Check if selected textPaths are locked
 const areTextPathsLocked = (): boolean => {
@@ -72,7 +73,53 @@ const areTextPathsCompatibleForFormatCopy = (): boolean => {
   return selectedTextPaths.length > 0;
 };
 
+// Mobile textPath editing function
+const startTextPathEditingMobile = () => {
+  const store = useEditorStore.getState();
+  
+  // Get the first selected textPath
+  if (store.selection.selectedTextPaths.length > 0) {
+    const textPathToEdit = store.selection.selectedTextPaths[0];
+    
+    // Check if mobile
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // Use mobile modal - dispatch global event
+      window.dispatchEvent(new CustomEvent('openMobileTextEdit', {
+        detail: { textId: textPathToEdit }
+      }));
+    } else {
+      // Use desktop overlay system
+      textEditManager.setEditorStore(store);
+      textEditManager.startTextEdit(textPathToEdit);
+    }
+  }
+};
+
+// Check if exactly one textPath is selected for editing
+const isExactlyOneTextPathSelected = (): boolean => {
+  const store = useEditorStore.getState();
+  
+  // Don't show edit button if already in text editing mode
+  if (textEditManager.isEditing()) {
+    return false;
+  }
+  
+  return store.selection.selectedTextPaths.length === 1;
+};
+
 export const textPathActions: ToolbarAction[] = [
+  {
+    id: 'edit-textpath',
+    icon: Edit3,
+    label: 'Edit',
+    type: 'button',
+    action: startTextPathEditingMobile,
+    priority: 950, // High priority to appear prominently
+    tooltip: 'Edit textPath content',
+    visible: isExactlyOneTextPathSelected
+  },
   {
     id: 'copy-textpath-format',
     icon: PaintBucket,

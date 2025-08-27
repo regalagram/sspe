@@ -17,6 +17,8 @@ import { SVGDefinitions } from '../components/SVGDefinitions';
 import { MobileContainer } from '../components/MobileContainer';
 import { Toolbar } from '../components/Toolbar';
 import { FloatingToolbarRenderer } from '../components/FloatingToolbar/FloatingToolbarRenderer';
+import { MobileTextEditModal } from '../components/MobileTextEditModal';
+import { useMobileTextEdit } from '../hooks/useMobileTextEdit';
 import { extractGradientsFromPaths, extractGradientsFromImages } from '../utils/gradient-utils';
 
 // Register plugins immediately during module loading
@@ -28,6 +30,9 @@ export const SvgEditor: React.FC = () => {
   const editorStore = useEditorStore();
   const { isFullscreen, paths, images, gradients: storeGradients, enabledFeatures } = editorStore;
   const svgRef = useRef<SVGSVGElement>(null);
+  
+  // Mobile text editing
+  const { isMobile: isMobileForText, editData, startMobileEdit, handleSave, handleCancel, isModalOpen } = useMobileTextEdit();
   
   // Get panel mode from store
   const { accordionVisible, toggleAccordionVisible, getVisiblePanels } = usePanelModeStore();
@@ -43,6 +48,18 @@ export const SvgEditor: React.FC = () => {
   const [mobileBottomSheetOpen, setMobileBottomSheetOpen] = React.useState(false);
   const [mobileToggleFunction, setMobileToggleFunction] = React.useState<(() => void) | null>(null);
   const [mobilePluginSelectFunction, setMobilePluginSelectFunction] = React.useState<((pluginId: string) => void) | null>(null);
+  
+  // Listen for mobile text edit events
+  React.useEffect(() => {
+    const handleMobileTextEdit = (event: CustomEvent<{ textId: string }>) => {
+      startMobileEdit(event.detail.textId);
+    };
+    
+    window.addEventListener('openMobileTextEdit', handleMobileTextEdit as EventListener);
+    return () => {
+      window.removeEventListener('openMobileTextEdit', handleMobileTextEdit as EventListener);
+    };
+  }, [startMobileEdit]);
 
   // Use refs to prevent callback recreation causing infinite loops
   const mobileToggleFunctionRef = React.useRef<(() => void) | null>(null);
@@ -273,6 +290,18 @@ export const SvgEditor: React.FC = () => {
         
         {/* Floating toolbar for contextual actions */}
         <FloatingToolbarRenderer />
+        
+        {/* Mobile text edit modal */}
+        {editData && (
+          <MobileTextEditModal
+            textId={editData.textId}
+            initialContent={editData.content}
+            isMultiline={editData.isMultiline}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            isVisible={isModalOpen}
+          />
+        )}
       </div>
     );
   }
@@ -291,6 +320,18 @@ export const SvgEditor: React.FC = () => {
       
       {/* Floating toolbar for contextual actions */}
       <FloatingToolbarRenderer />
+      
+      {/* Mobile text edit modal - also available on desktop for consistency */}
+      {editData && (
+        <MobileTextEditModal
+          textId={editData.textId}
+          initialContent={editData.content}
+          isMultiline={editData.isMultiline}
+          onSave={handleSave}
+          onCancel={handleCancel}
+          isVisible={isModalOpen}
+        />
+      )}
       
       {/* Render sidebar as accordion */}
       {accordionVisible && <AccordionSidebar plugins={allPanels} />}
