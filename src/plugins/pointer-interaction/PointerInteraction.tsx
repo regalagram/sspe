@@ -218,16 +218,9 @@ class ElementSelector {
       return;
     }
 
-    const hasMulti = hasMultiSelection(context.selection);
-    if (hasMulti) {
-      // Add to existing multi-selection
-      this.debugManager.logSelection('Adding to existing multi-selection', {});
-      this.addToSelectionWithoutPromotion(elementId, elementType);
-    } else {
-      // Normal single selection
-      this.debugManager.logSelection('Performing normal single selection', {});
-      this.selectSingle(elementId, elementType);
-    }
+    // Normal selection should always replace the current selection, regardless of how many elements are currently selected
+    this.debugManager.logSelection('Performing normal single selection', {});
+    this.selectSingle(elementId, elementType);
   }
 
   private addToSelection(elementId: string, elementType: ElementType): void {

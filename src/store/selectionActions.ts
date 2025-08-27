@@ -98,6 +98,58 @@ const promoteSubPathsToPath = (state: EditorState, pathId: string): EditorState[
   return newSelection;
 };
 
+// Utility function to clear all selections except the specified ones
+export const clearAllSelectionsExcept = (
+  currentSelection: EditorState['selection'], 
+  keep: Partial<EditorState['selection']> = {}
+): EditorState['selection'] => {
+  return {
+    ...currentSelection,
+    selectedPaths: keep.selectedPaths || [],
+    selectedSubPaths: keep.selectedSubPaths || [],
+    selectedCommands: keep.selectedCommands || [],
+    selectedControlPoints: keep.selectedControlPoints || [],
+    selectedTexts: keep.selectedTexts || [],
+    selectedTextSpans: keep.selectedTextSpans || [],
+    selectedTextPaths: keep.selectedTextPaths || [],
+    selectedGroups: keep.selectedGroups || [],
+    selectedImages: keep.selectedImages || [],
+    selectedClipPaths: keep.selectedClipPaths || [],
+    selectedMasks: keep.selectedMasks || [],
+    selectedFilters: keep.selectedFilters || [],
+    selectedMarkers: keep.selectedMarkers || [],
+    selectedSymbols: keep.selectedSymbols || [],
+    selectedUses: keep.selectedUses || [],
+    selectedAnimations: keep.selectedAnimations || [],
+  };
+};
+
+// Utility function to notify TransformManager of selection changes
+export const notifyTransformManager = (newState: EditorState) => {
+  try {
+    setTimeout(() => {
+      transformManager.setEditorStore(newState);
+      transformManager.updateTransformState();
+    }, 0);
+  } catch (err) {
+    // Silently handle transform manager errors
+    console.warn('Failed to update transform state:', err);
+  }
+};
+
+// Utility function to complete selection update with transform notification
+export const completeSelectionUpdate = (state: EditorState, newSelection: EditorState['selection']) => {
+  // Check for traditional group promotion after selection change
+  const promotedSelection = checkAndPromoteToGroup({ ...state, selection: newSelection });
+  
+  const finalState = { selection: promotedSelection };
+  
+  // Notify TransformManager of the selection change
+  notifyTransformManager({ ...state, ...finalState });
+  
+  return finalState;
+};
+
 // Utility function to find which group an element belongs to
 const findGroupContainingElement = (state: EditorState, elementId: string, elementType: string): string | null => {
   for (const group of state.groups) {
@@ -344,28 +396,11 @@ export const createSelectionActions: StateCreator<
         selectedPaths: state.selection.selectedPaths.includes(pathId) 
           ? state.selection.selectedPaths 
           : [...state.selection.selectedPaths, pathId],
-      } : {
-        ...state.selection,
+      } : clearAllSelectionsExcept(state.selection, {
         selectedPaths: [pathId],
-        selectedSubPaths: [],
-        selectedCommands: [],
-        selectedTexts: [],
-        selectedTextSpans: [],
-        selectedGroups: [],
-        selectedImages: [],
-        selectedClipPaths: [],
-        selectedMasks: [],
-        selectedFilters: [],
-        selectedMarkers: [],
-        selectedSymbols: [],
-        selectedUses: [],
-        selectedAnimations: [],
-      };
+      });
       
-      // Check for traditional group promotion after selection change
-      const promotedSelection = checkAndPromoteToGroup({ ...state, selection: newSelection });
-      
-      return { selection: promotedSelection };
+      return completeSelectionUpdate(state, newSelection);
     }),
 
   selectSubPath: (subPathId) =>
@@ -375,47 +410,19 @@ export const createSelectionActions: StateCreator<
         path.subPaths.some(subPath => subPath.id === subPathId && subPath.locked)
       );
       if (isLocked) {
-        return {
-          selection: {
-            ...state.selection,
-            selectedSubPaths: [],
-            selectedPaths: [],
-            selectedCommands: [],
-            selectedTexts: [],
-            selectedTextSpans: [],
-            selectedGroups: [],
-            selectedImages: [],
-            selectedClipPaths: [],
-            selectedMasks: [],
-            selectedFilters: [],
-            selectedMarkers: [],
-            selectedSymbols: [],
-            selectedUses: [],
-          },
+        const lockedState = {
+          selection: clearAllSelectionsExcept(state.selection),
         };
+        // Notify TransformManager of the selection change
+        notifyTransformManager({ ...state, ...lockedState });
+        return lockedState;
       }
       
-      const newSelection = {
-        ...state.selection,
+      const newSelection = clearAllSelectionsExcept(state.selection, {
         selectedSubPaths: [subPathId],
-        selectedPaths: [],
-        selectedCommands: [],
-        selectedTexts: [],
-        selectedTextSpans: [],
-        selectedGroups: [],
-        selectedImages: [],
-        selectedClipPaths: [],
-        selectedMasks: [],
-        selectedFilters: [],
-        selectedMarkers: [],
-        selectedSymbols: [],
-        selectedUses: [],
-      };
+      });
       
-      // Check for traditional group promotion after selection change
-      const promotedSelection = checkAndPromoteToGroup({ ...state, selection: newSelection });
-      
-      return { selection: promotedSelection };
+      return completeSelectionUpdate(state, newSelection);
     }),
 
   selectSubPathMultiple: (subPathId, isShiftPressed = false) =>
@@ -432,63 +439,21 @@ export const createSelectionActions: StateCreator<
       if (isShiftPressed && state.selection.selectedSubPaths.length > 0) {
         const currentSelection = state.selection.selectedSubPaths;
         if (currentSelection.includes(subPathId)) {
-          newSelection = {
-            ...state.selection,
-            selectedSubPaths: currentSelection.filter(id => id !== subPathId),
-            selectedPaths: [],
-            selectedCommands: [],
-            selectedTexts: [],
-            selectedTextSpans: [],
-            selectedGroups: [],
-            selectedImages: [],
-            selectedClipPaths: [],
-            selectedMasks: [],
-            selectedFilters: [],
-            selectedMarkers: [],
-            selectedSymbols: [],
-            selectedUses: [],
-          };
+          newSelection = clearAllSelectionsExcept(state.selection, {
+            selectedSubPaths: currentSelection.filter(id => id !== subPathId)
+          });
         } else {
-          newSelection = {
-            ...state.selection,
-            selectedSubPaths: [...currentSelection, subPathId],
-            selectedPaths: [],
-            selectedCommands: [],
-            selectedTexts: [],
-            selectedTextSpans: [],
-            selectedGroups: [],
-            selectedImages: [],
-            selectedClipPaths: [],
-            selectedMasks: [],
-            selectedFilters: [],
-            selectedMarkers: [],
-            selectedSymbols: [],
-            selectedUses: [],
-          };
+          newSelection = clearAllSelectionsExcept(state.selection, {
+            selectedSubPaths: [...currentSelection, subPathId]
+          });
         }
       } else {
-        newSelection = {
-          ...state.selection,
-          selectedSubPaths: [subPathId],
-          selectedPaths: [],
-          selectedCommands: [],
-          selectedTexts: [],
-          selectedTextSpans: [],
-          selectedGroups: [],
-          selectedImages: [],
-          selectedClipPaths: [],
-          selectedMasks: [],
-          selectedFilters: [],
-          selectedMarkers: [],
-          selectedSymbols: [],
-          selectedUses: [],
-        };
+        newSelection = clearAllSelectionsExcept(state.selection, {
+          selectedSubPaths: [subPathId]
+        });
       }
       
-      // Check for traditional group promotion after selection change
-      const promotedSelection = checkAndPromoteToGroup({ ...state, selection: newSelection });
-      
-      return { selection: promotedSelection };
+      return completeSelectionUpdate(state, newSelection);
     }),
 
   selectCommand: (commandId) =>
@@ -510,87 +475,36 @@ export const createSelectionActions: StateCreator<
       }
       if (isLocked) {
         return {
-          selection: {
-            ...state.selection,
-            selectedCommands: [],
-            selectedPaths: [],
-            selectedSubPaths: [],
-            selectedTexts: [],
-            selectedTextSpans: [],
-            selectedGroups: [],
-            selectedImages: [],
-            selectedClipPaths: [],
-            selectedMasks: [],
-            selectedFilters: [],
-            selectedMarkers: [],
-            selectedSymbols: [],
-            selectedUses: [],
-          },
+          selection: clearAllSelectionsExcept(state.selection),
         };
       }
       
-      const newSelection = {
-        ...state.selection,
+      const newSelection = clearAllSelectionsExcept(state.selection, {
         selectedCommands: [commandId],
-        selectedPaths: [],
-        selectedSubPaths: [],
-        selectedTexts: [],
-        selectedTextSpans: [],
-        selectedGroups: [],
-        selectedImages: [],
-        selectedClipPaths: [],
-        selectedMasks: [],
-        selectedFilters: [],
-        selectedMarkers: [],
-        selectedSymbols: [],
-        selectedUses: [],
-      };
+      });
       
-      // Check for traditional group promotion after selection change
-      const promotedSelection = checkAndPromoteToGroup({ ...state, selection: newSelection });
-      
-      return { selection: promotedSelection };
+      return completeSelectionUpdate(state, newSelection);
     }),
 
   selectMultiple: (ids, type) =>
     set((state) => {
       if (shouldBlockSelectionChange('selectMultiple', { ids, type })) return { selection: { ...state.selection } };
-      const newSelection = { ...state.selection };
+      
+      let newSelection;
+      
       if (type === 'paths') {
-        newSelection.selectedPaths = ids;
-        newSelection.selectedSubPaths = [];
-        newSelection.selectedCommands = [];
-        newSelection.selectedTexts = [];
-        newSelection.selectedTextSpans = [];
-        newSelection.selectedGroups = [];
-        newSelection.selectedImages = [];
-        newSelection.selectedClipPaths = [];
-        newSelection.selectedMasks = [];
-        newSelection.selectedFilters = [];
-        newSelection.selectedMarkers = [];
-        newSelection.selectedSymbols = [];
-        newSelection.selectedUses = [];
-        newSelection.selectedAnimations = [];
+        newSelection = clearAllSelectionsExcept(state.selection, {
+          selectedPaths: ids
+        });
       } else if (type === 'subpaths') {
         const allowed = ids.filter(id =>
           !state.paths.some(path =>
             path.subPaths.some(subPath => subPath.id === id && subPath.locked)
           )
         );
-        newSelection.selectedSubPaths = allowed;
-        newSelection.selectedPaths = [];
-        newSelection.selectedCommands = [];
-        newSelection.selectedTexts = [];
-        newSelection.selectedTextSpans = [];
-        newSelection.selectedGroups = [];
-        newSelection.selectedImages = [];
-        newSelection.selectedClipPaths = [];
-        newSelection.selectedMasks = [];
-        newSelection.selectedFilters = [];
-        newSelection.selectedMarkers = [];
-        newSelection.selectedSymbols = [];
-        newSelection.selectedUses = [];
-        newSelection.selectedAnimations = [];
+        newSelection = clearAllSelectionsExcept(state.selection, {
+          selectedSubPaths: allowed
+        });
       } else if (type === 'commands') {
         const allowed = ids.filter(cmdId => {
           for (const path of state.paths) {
@@ -603,70 +517,34 @@ export const createSelectionActions: StateCreator<
           }
           return false;
         });
-        newSelection.selectedCommands = allowed;
-        newSelection.selectedPaths = [];
-        newSelection.selectedSubPaths = [];
-        newSelection.selectedTexts = [];
-        newSelection.selectedTextSpans = [];
-        newSelection.selectedGroups = [];
-        newSelection.selectedImages = [];
-        newSelection.selectedClipPaths = [];
-        newSelection.selectedMasks = [];
-        newSelection.selectedFilters = [];
-        newSelection.selectedMarkers = [];
-        newSelection.selectedSymbols = [];
-        newSelection.selectedUses = [];
-        newSelection.selectedAnimations = [];
+        newSelection = clearAllSelectionsExcept(state.selection, {
+          selectedCommands: allowed
+        });
       } else if (type === 'animations') {
-        newSelection.selectedAnimations = ids;
-        newSelection.selectedPaths = [];
-        newSelection.selectedSubPaths = [];
-        newSelection.selectedCommands = [];
-        newSelection.selectedTexts = [];
-        newSelection.selectedTextSpans = [];
-        newSelection.selectedGroups = [];
-        newSelection.selectedImages = [];
-        newSelection.selectedClipPaths = [];
-        newSelection.selectedMasks = [];
-        newSelection.selectedFilters = [];
-        newSelection.selectedMarkers = [];
-        newSelection.selectedSymbols = [];
-        newSelection.selectedUses = [];
-        newSelection.selectedAnimations = [];
+        newSelection = clearAllSelectionsExcept(state.selection, {
+          selectedAnimations: ids
+        });
+      } else {
+        // Fallback for unsupported types
+        newSelection = clearAllSelectionsExcept(state.selection);
       }
       
-      // Check for traditional group promotion after selection change
-      const promotedSelection = checkAndPromoteToGroup({ ...state, selection: newSelection });
-      
-      return { selection: promotedSelection };
+      return completeSelectionUpdate(state, newSelection);
     }),
 
   clearSelection: () =>
     set((state) => {
       if (shouldBlockSelectionChange('clearSelection')) return { selection: { ...state.selection } } as any;
-      return {
-        selection: {
-          ...state.selection,
-          selectedPaths: [],
-          selectedSubPaths: [],
-          selectedCommands: [],
-          selectedControlPoints: [],
-          selectedTexts: [],
-          selectedTextSpans: [],
-          selectedTextPaths: [],
-          selectedGroups: [],
-          selectedImages: [],
-          selectedClipPaths: [],
-          selectedMasks: [],
-          selectedFilters: [],
-          selectedMarkers: [],
-          selectedSymbols: [],
-          selectedUses: [],
-          selectedAnimations: [],
-        },
+      const newState = {
+        selection: clearAllSelectionsExcept(state.selection),
         // Clear deep selection state only when clearing all selections
         deepSelection: undefined
       };
+      
+      // Notify TransformManager of the selection change
+      notifyTransformManager({ ...state, ...newState });
+      
+      return newState;
     }),
 
   selectSubPathByPoint: (pathId, point, isShiftPressed = false) => {
@@ -692,27 +570,12 @@ export const createSelectionActions: StateCreator<
         selectedTexts: state.selection.selectedTexts.includes(textId)
           ? state.selection.selectedTexts
           : [...state.selection.selectedTexts, textId],
-      } : {
-        ...state.selection,
+      } : clearAllSelectionsExcept(state.selection, {
         selectedTexts: [textId],
         selectedTextSpans: [],
-        selectedPaths: [],
-        selectedSubPaths: [],
-        selectedCommands: [],
-        selectedGroups: [],
-        selectedImages: [],
-        selectedClipPaths: [],
-        selectedMasks: [],
-        selectedFilters: [],
-        selectedMarkers: [],
-        selectedSymbols: [],
-        selectedUses: [],
-      };
+      });
       
-      // Check for traditional group promotion after selection change
-      const promotedSelection = checkAndPromoteToGroup({ ...state, selection: newSelection });
-      
-      return { selection: promotedSelection };
+      return completeSelectionUpdate(state, newSelection);
     }),
 
   selectTextMultiple: (textId, isShiftPressed = false) =>
@@ -726,50 +589,22 @@ export const createSelectionActions: StateCreator<
       
       if (isShiftPressed) {
         if (currentSelection.includes(textId)) {
-          newSelection = {
-            ...state.selection,
-            selectedTexts: currentSelection.filter(id => id !== textId),
-          };
+          newSelection = clearAllSelectionsExcept(state.selection, {
+            selectedTexts: currentSelection.filter(id => id !== textId)
+          });
         } else {
-          newSelection = {
-            ...state.selection,
-            selectedTexts: [...currentSelection, textId],
-            selectedPaths: [],
-            selectedSubPaths: [],
-            selectedCommands: [],
-            selectedGroups: [],
-            selectedImages: [],
-            selectedClipPaths: [],
-            selectedMasks: [],
-            selectedFilters: [],
-            selectedMarkers: [],
-            selectedSymbols: [],
-            selectedUses: [],
-          };
+          newSelection = clearAllSelectionsExcept(state.selection, {
+            selectedTexts: [...currentSelection, textId]
+          });
         }
       } else {
-        newSelection = {
-          ...state.selection,
+        newSelection = clearAllSelectionsExcept(state.selection, {
           selectedTexts: [textId],
-          selectedTextSpans: [],
-          selectedPaths: [],
-          selectedSubPaths: [],
-          selectedCommands: [],
-          selectedGroups: [],
-          selectedImages: [],
-          selectedClipPaths: [],
-          selectedMasks: [],
-          selectedFilters: [],
-          selectedMarkers: [],
-          selectedSymbols: [],
-          selectedUses: [],
-        };
+          selectedTextSpans: []
+        });
       }
       
-      // Check for traditional group promotion after selection change
-      const promotedSelection = checkAndPromoteToGroup({ ...state, selection: newSelection });
-      
-      return { selection: promotedSelection };
+      return completeSelectionUpdate(state, newSelection);
     }),
 
   selectTextSpan: (textId, spanId) =>
@@ -780,27 +615,12 @@ export const createSelectionActions: StateCreator<
         return state;
       }
       
-      const newSelection = {
-        ...state.selection,
+      const newSelection = clearAllSelectionsExcept(state.selection, {
         selectedTexts: [textId],
         selectedTextSpans: [spanId],
-        selectedPaths: [],
-        selectedSubPaths: [],
-        selectedCommands: [],
-        selectedGroups: [],
-        selectedImages: [],
-        selectedClipPaths: [],
-        selectedMasks: [],
-        selectedFilters: [],
-        selectedMarkers: [],
-        selectedSymbols: [],
-        selectedUses: [],
-      };
+      });
       
-      // Check for traditional group promotion after selection change
-      const promotedSelection = checkAndPromoteToGroup({ ...state, selection: newSelection });
-      
-      return { selection: promotedSelection };
+      return completeSelectionUpdate(state, newSelection);
     }),
 
   selectTextByPoint: (point, isShiftPressed = false) => {
@@ -1185,28 +1005,11 @@ export const createSelectionActions: StateCreator<
         selectedGroups: state.selection.selectedGroups.includes(groupId) 
           ? state.selection.selectedGroups 
           : [...state.selection.selectedGroups, groupId],
-      } : {
-        ...state.selection,
-        selectedPaths: [],
-        selectedSubPaths: [],
-        selectedCommands: [],
-        selectedTexts: [],
-        selectedTextSpans: [],
+      } : clearAllSelectionsExcept(state.selection, {
         selectedGroups: [groupId],
-        selectedImages: [],
-        selectedClipPaths: [],
-        selectedMasks: [],
-        selectedFilters: [],
-        selectedMarkers: [],
-        selectedSymbols: [],
-        selectedUses: [],
-        selectedAnimations: [],
-      };
+      });
       
-      // Check for traditional group promotion after selection change
-      const promotedSelection = checkAndPromoteToGroup({ ...state, selection: newSelection });
-      
-      return { selection: promotedSelection };
+      return completeSelectionUpdate(state, newSelection);
     }),
 
   selectImage: (imageId, addToSelection = false) =>
@@ -1220,27 +1023,11 @@ export const createSelectionActions: StateCreator<
         selectedImages: state.selection.selectedImages.includes(imageId) 
           ? state.selection.selectedImages 
           : [...state.selection.selectedImages, imageId],
-      } : {
-        ...state.selection,
-        selectedPaths: [],
-        selectedSubPaths: [],
-        selectedCommands: [],
-        selectedTexts: [],
-        selectedTextSpans: [],
-        selectedGroups: [],
+      } : clearAllSelectionsExcept(state.selection, {
         selectedImages: [imageId],
-        selectedClipPaths: [],
-        selectedMasks: [],
-        selectedFilters: [],
-        selectedMarkers: [],
-        selectedSymbols: [],
-        selectedUses: [],
-      };
+      });
       
-      // Check for traditional group promotion after selection change
-      const promotedSelection = checkAndPromoteToGroup({ ...state, selection: newSelection });
-      
-      return { selection: promotedSelection };
+      return completeSelectionUpdate(state, newSelection);
     }),
 
   selectUse: (useId, addToSelection = false) =>
@@ -1254,27 +1041,11 @@ export const createSelectionActions: StateCreator<
         selectedUses: state.selection.selectedUses.includes(useId) 
           ? state.selection.selectedUses 
           : [...state.selection.selectedUses, useId],
-      } : {
-        ...state.selection,
-        selectedPaths: [],
-        selectedSubPaths: [],
-        selectedCommands: [],
-        selectedTexts: [],
-        selectedTextSpans: [],
-        selectedGroups: [],
-        selectedImages: [],
-        selectedClipPaths: [],
-        selectedMasks: [],
-        selectedFilters: [],
-        selectedMarkers: [],
-        selectedSymbols: [],
+      } : clearAllSelectionsExcept(state.selection, {
         selectedUses: [useId],
-      };
+      });
       
-      // Check for traditional group promotion after selection change
-      const promotedSelection = checkAndPromoteToGroup({ ...state, selection: newSelection });
-      
-      return { selection: promotedSelection };
+      return completeSelectionUpdate(state, newSelection);
     }),
 
   selectImageByPoint: (point, isShiftPressed = false) => {
@@ -1355,28 +1126,11 @@ export const createSelectionActions: StateCreator<
         selectedAnimations: state.selection.selectedAnimations.includes(animationId) 
           ? state.selection.selectedAnimations 
           : [...state.selection.selectedAnimations, animationId],
-      } : {
-        ...state.selection,
-        selectedPaths: [],
-        selectedSubPaths: [],
-        selectedCommands: [],
-        selectedTexts: [],
-        selectedTextSpans: [],
-        selectedGroups: [],
-        selectedImages: [],
-        selectedClipPaths: [],
-        selectedMasks: [],
-        selectedFilters: [],
-        selectedMarkers: [],
-        selectedSymbols: [],
-        selectedUses: [],
+      } : clearAllSelectionsExcept(state.selection, {
         selectedAnimations: [animationId],
-      };
+      });
       
-      // Check for traditional group promotion after selection change
-      const promotedSelection = checkAndPromoteToGroup({ ...state, selection: newSelection });
-      
-      return { selection: promotedSelection };
+      return completeSelectionUpdate(state, newSelection);
     }),
 
   selectAnimationMultiple: (animationId, isShiftPressed = false) =>
@@ -1386,53 +1140,21 @@ export const createSelectionActions: StateCreator<
       
       if (isShiftPressed) {
         if (currentSelection.includes(animationId)) {
-          newSelection = {
-            ...state.selection,
-            selectedAnimations: currentSelection.filter(id => id !== animationId),
-          };
+          newSelection = clearAllSelectionsExcept(state.selection, {
+            selectedAnimations: currentSelection.filter(id => id !== animationId)
+          });
         } else {
-          newSelection = {
-            ...state.selection,
-            selectedAnimations: [...currentSelection, animationId],
-            selectedPaths: [],
-            selectedSubPaths: [],
-            selectedCommands: [],
-            selectedTexts: [],
-            selectedTextSpans: [],
-            selectedGroups: [],
-            selectedImages: [],
-            selectedClipPaths: [],
-            selectedMasks: [],
-            selectedFilters: [],
-            selectedMarkers: [],
-            selectedSymbols: [],
-            selectedUses: [],
-          };
+          newSelection = clearAllSelectionsExcept(state.selection, {
+            selectedAnimations: [...currentSelection, animationId]
+          });
         }
       } else {
-        newSelection = {
-          ...state.selection,
-          selectedAnimations: [animationId],
-          selectedPaths: [],
-          selectedSubPaths: [],
-          selectedCommands: [],
-          selectedTexts: [],
-          selectedTextSpans: [],
-          selectedGroups: [],
-          selectedImages: [],
-          selectedClipPaths: [],
-          selectedMasks: [],
-          selectedFilters: [],
-          selectedMarkers: [],
-          selectedSymbols: [],
-          selectedUses: [],
-        };
+        newSelection = clearAllSelectionsExcept(state.selection, {
+          selectedAnimations: [animationId]
+        });
       }
       
-      // Check for traditional group promotion after selection change
-      const promotedSelection = checkAndPromoteToGroup({ ...state, selection: newSelection });
-      
-      return { selection: promotedSelection };
+      return completeSelectionUpdate(state, newSelection);
     }),
 
   updateSelectionBox: (box) =>

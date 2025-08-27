@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { EditorState, SVGTextPath, TextStyle, Point } from '../types';
 import { generateId } from '../utils/id-utils';
+import { clearAllSelectionsExcept, notifyTransformManager, completeSelectionUpdate } from './selectionActions';
 
 export interface TextPathActions {
   // Basic CRUD operations
@@ -278,48 +279,27 @@ export const createTextPathActions: StateCreator<
     })),
 
   selectTextPath: (textPathId) =>
-    set((state) => ({
-      selection: {
-        ...state.selection,
+    set((state) => {
+      const newSelection = clearAllSelectionsExcept(state.selection, {
         selectedTextPaths: [textPathId],
-        selectedPaths: [],
-        selectedSubPaths: [],
-        selectedCommands: [],
-        selectedTexts: [],
-        selectedGroups: [],
-        selectedImages: [],
-        selectedUses: [],
-        selectedClipPaths: [],
-        selectedMasks: [],
-        selectedFilters: [],
-        selectedMarkers: [],
-        selectedSymbols: [],
-      },
-    })),
+      });
+      
+      const finalState = completeSelectionUpdate(state, newSelection);
+      return finalState;
+    }),
 
   selectMultipleTextPaths: (textPathIds, addToSelection = false) =>
-    set((state) => ({
-      selection: {
+    set((state) => {
+      const newSelection = addToSelection ? {
         ...state.selection,
-        selectedTextPaths: addToSelection 
-          ? [...new Set([...state.selection.selectedTextPaths, ...textPathIds])]
-          : textPathIds,
-        ...(addToSelection ? {} : {
-          selectedPaths: [],
-          selectedSubPaths: [],
-          selectedCommands: [],
-          selectedTexts: [],
-          selectedGroups: [],
-          selectedImages: [],
-          selectedUses: [],
-          selectedClipPaths: [],
-          selectedMasks: [],
-          selectedFilters: [],
-          selectedMarkers: [],
-          selectedSymbols: [],
-        })
-      },
-    })),
+        selectedTextPaths: [...new Set([...state.selection.selectedTextPaths, ...textPathIds])]
+      } : clearAllSelectionsExcept(state.selection, {
+        selectedTextPaths: textPathIds,
+      });
+      
+      const finalState = completeSelectionUpdate(state, newSelection);
+      return finalState;
+    }),
 
   getTextPathById: (textPathId) => {
     const state = get();
