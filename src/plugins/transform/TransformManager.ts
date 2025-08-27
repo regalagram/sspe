@@ -281,7 +281,7 @@ export class TransformManager {
       }
     }
 
-    // For selected textPaths
+    // For selected textPaths - use a special approach due to browser getBBox issues
     if (selection.selectedTextPaths?.length > 0 && textPaths) {
       for (const textPathId of selection.selectedTextPaths) {
         const textPath = textPaths.find((tp: any) => tp.id === textPathId);
@@ -289,9 +289,12 @@ export class TransformManager {
           // Find the path that this textPath references
           const referencedPath = paths.find((path: any) => path.id === textPath.pathRef);
           if (referencedPath) {
-            // Create a path element for the textPath to follow
+            // For textPath, we'll create a simpler approximation
+            // Since textPath follows the path, we'll use the path bounds as a reasonable approximation
+            // This avoids the browser's problematic getBBox() calculation for text elements with textPath
+            
+            // Create just the path element (no text element to avoid getBBox issues)
             const pathElement = document.createElementNS(svgNS, 'path');
-            pathElement.setAttribute('id', `temp-path-${textPath.pathRef}`);
             
             // Build path data from subPaths
             let pathData = '';
@@ -299,43 +302,12 @@ export class TransformManager {
               pathData += subPathToString(subPath);
             }
             pathElement.setAttribute('d', pathData);
+            pathElement.setAttribute('fill', 'none');
+            pathElement.setAttribute('stroke', 'none');
             
-            // Create textPath element
-            const textElement = document.createElementNS(svgNS, 'text');
-            const textPathElement = document.createElementNS(svgNS, 'textPath');
-            
-            textPathElement.setAttribute('href', `#temp-path-${textPath.pathRef}`);
-            textPathElement.textContent = textPath.content;
-            
-            if (textPath.startOffset !== undefined) {
-              textPathElement.setAttribute('startOffset', textPath.startOffset.toString());
-            }
-            if (textPath.method) {
-              textPathElement.setAttribute('method', textPath.method);
-            }
-            if (textPath.spacing) {
-              textPathElement.setAttribute('spacing', textPath.spacing);
-            }
-            if (textPath.side) {
-              textPathElement.setAttribute('side', textPath.side);
-            }
-            
-            // Apply text styles
-            if (textPath.style?.fontSize) {
-              textElement.setAttribute('font-size', textPath.style.fontSize.toString());
-            }
-            if (textPath.style?.fontFamily) {
-              textElement.setAttribute('font-family', textPath.style.fontFamily);
-            }
-            
-            // Apply transform if present
-            if (textPath.transform) {
-              textElement.setAttribute('transform', textPath.transform);
-            }
-            
-            textElement.appendChild(textPathElement);
+            // Add path to temp SVG - this gives us the path bounds which is a good approximation
+            // for where the textPath will be located
             tempSvg.appendChild(pathElement);
-            tempSvg.appendChild(textElement);
             hasContent = true;
           }
         }

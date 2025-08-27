@@ -92,6 +92,8 @@ const TextPathItem: React.FC<{ textPath: SVGTextPath }> = ({ textPath }) => {
       {/* Text following the path */}
       <text
         {...textAttributes}
+        x={0}
+        y={0}
         transform={textPath.transform}
         data-element-type="textPath"
         data-element-id={textPath.id}
@@ -111,6 +113,8 @@ const TextPathItem: React.FC<{ textPath: SVGTextPath }> = ({ textPath }) => {
       {isSelected && (
         <text
           {...textAttributes}
+          x={0}
+          y={0}
           transform={textPath.transform}
           style={{
             pointerEvents: 'none',
