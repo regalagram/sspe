@@ -222,7 +222,11 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
                 icon: MoreHorizontal,
                 label: 'More actions',
                 type: 'button',
-                action: () => setShowOverflow(!showOverflow),
+                action: () => {
+                  // Close any open submenus when opening/closing the overflow menu
+                  setActiveSubmenuId(null);
+                  setShowOverflow(!showOverflow);
+                },
                 tooltip: 'More actions'
               }}
               size={currentConfig.buttonSize}
