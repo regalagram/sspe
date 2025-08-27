@@ -2,6 +2,7 @@ import {
   Type, 
   Bold, 
   Italic, 
+  Underline,
   Palette, 
   AlignLeft, 
   AlignCenter, 
@@ -131,6 +132,12 @@ const isTextBold = (): boolean => {
 const isTextItalic = (): boolean => {
   const styles = getCurrentTextStyles();
   return styles?.fontStyle === 'italic';
+};
+
+// Check if text is underlined
+const isTextUnderline = (): boolean => {
+  const styles = getCurrentTextStyles();
+  return styles?.textDecoration === 'underline';
 };
 
 // Get current text alignment
@@ -765,6 +772,21 @@ export const textFloatingActions: ToolbarAction[] = [
     },
     priority: 910,
     tooltip: 'Toggle italic'
+  },
+  {
+    id: 'underline',
+    icon: Underline,
+    label: 'Underline',
+    type: 'toggle',
+    toggle: {
+      isActive: isTextUnderline,
+      onToggle: () => {
+        const isUnderline = isTextUnderline();
+        applyTextStyle({ textDecoration: isUnderline ? 'none' : 'underline' });
+      }
+    },
+    priority: 900,
+    tooltip: 'Toggle underline'
   },
   {
     id: 'text-color',
