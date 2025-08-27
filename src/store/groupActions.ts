@@ -681,8 +681,7 @@ export const createGroupActions: StateCreator<
     }
 
     // Use custom offset if provided, otherwise calculate smart offset
-    let offset = customOffset;
-    if (!offset) {
+    const offset = customOffset || (() => {
       const tempSelection = {
         selectedGroups: [groupId],
         selectedPaths: [],
@@ -704,8 +703,8 @@ export const createGroupActions: StateCreator<
         selectedGradients: [],
         selectedGradientStops: [],
       };
-      offset = calculateSmartDuplicationOffset(tempSelection);
-    }
+      return calculateSmartDuplicationOffset(tempSelection);
+    })();
     
     const newGroupId = generateId();
     

@@ -466,6 +466,22 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
               pointerEvents: 'all',
             }}
             onPointerDown={(e) => {
+              // Only handle left pointer button
+              if (e.button !== 0) return;
+              
+              // Check if any format copy mode is active - if so, let plugin system handle it
+              const currentStoreState = useEditorStore.getState();
+              const isAnyFormatCopyActive = (
+                (currentStoreState.isFormatCopyActive && currentStoreState.isFormatCopyActive()) ||
+                (currentStoreState.isTextFormatCopyActive && currentStoreState.isTextFormatCopyActive()) ||
+                (currentStoreState.isImageFormatCopyActive && currentStoreState.isImageFormatCopyActive()) ||
+                (currentStoreState.isUseFormatCopyActive && currentStoreState.isUseFormatCopyActive())
+              );
+              
+              if (isAnyFormatCopyActive) {
+                return; // Don't consume the event, let it bubble up to plugin system
+              }
+              
               // Get the SVG element to calculate the point
               const svgElement = (e.target as SVGPathElement).closest('svg');
               if (svgElement) {
@@ -624,6 +640,19 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
                 filter: `drop-shadow(0 0 ${3 / viewport.zoom}px ${contrastColor})`,
               }}
               onPointerDown={(e) => {
+                // Check if any format copy mode is active - if so, let plugin system handle it
+                const currentStoreState = useEditorStore.getState();
+                const isAnyFormatCopyActive = (
+                  (currentStoreState.isFormatCopyActive && currentStoreState.isFormatCopyActive()) ||
+                  (currentStoreState.isTextFormatCopyActive && currentStoreState.isTextFormatCopyActive()) ||
+                  (currentStoreState.isImageFormatCopyActive && currentStoreState.isImageFormatCopyActive()) ||
+                  (currentStoreState.isUseFormatCopyActive && currentStoreState.isUseFormatCopyActive())
+                );
+                
+                if (isAnyFormatCopyActive) {
+                  return; // Don't consume the event, let it bubble up to plugin system
+                }
+                
                 // Get the SVG element for deep selection check
                 const svgElementForDeepSelection = (e.target as SVGPathElement).closest('svg');
                 if (svgElementForDeepSelection) {
@@ -1372,7 +1401,7 @@ export const UnifiedRenderer: React.FC = () => {
 
   // Filter out null elements and sort by z-index
   const validItems = renderItems.filter(item => item.element !== null);
-  const sortedItems = validItems.toSorted((a, b) => a.zIndex - b.zIndex);
+  const sortedItems = validItems.toSorted((a: RenderItem, b: RenderItem) => a.zIndex - b.zIndex);
 
   return (
     <>
@@ -1444,7 +1473,7 @@ export const UnifiedRenderer: React.FC = () => {
       )}
 
       {/* Render all elements sorted by z-index */}
-      {sortedItems.map((item) => (
+      {sortedItems.map((item: RenderItem) => (
         <g 
           key={item.elementId}
           data-unified-element-id={item.elementId}

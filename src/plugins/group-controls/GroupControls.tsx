@@ -752,8 +752,8 @@ export const GroupControls: React.FC = () => {
                       <div style={{ marginTop: '6px', fontSize: '11px', color: '#388e3c' }}>
                         <span>Agregar path de sub-path seleccionado:</span>
                         <button
-                          title={isGroupLocked(group.id, 'editing') ? 'Grupo bloqueado para edición' : `Agregar path (${subPathToAdd.id}) al grupo`}
-                          onClick={() => !isGroupLocked(group.id, 'editing') && addChildToGroup(group.id, subPathToAdd.id, 'path')}
+                          title={isGroupLocked(group.id, 'editing') ? 'Grupo bloqueado para edición' : `Agregar path (${subPathToAdd?.id}) al grupo`}
+                          onClick={() => !isGroupLocked(group.id, 'editing') && subPathToAdd && addChildToGroup(group.id, subPathToAdd.id, 'path')}
                           disabled={isGroupLocked(group.id, 'editing')}
                           style={{
                             marginLeft: '6px',
@@ -767,7 +767,7 @@ export const GroupControls: React.FC = () => {
                             opacity: isGroupLocked(group.id, 'editing') ? 0.5 : 1
                           }}
                         >
-                          path: {subPathToAdd.id}
+                          path: {subPathToAdd?.id}
                         </button>
                       </div>
                     )}

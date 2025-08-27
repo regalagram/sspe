@@ -80,7 +80,7 @@ export const createCommandActions: StateCreator<
     const commandId = generateId();
     const precision = get().precision;
     if (command.command === 'M') {
-      let pathId = null;
+      let pathId: string | null = null;
       const state = get();
       for (const path of state.paths) {
         for (const subPath of path.subPaths) {

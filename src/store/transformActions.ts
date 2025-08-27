@@ -20,17 +20,16 @@ export const createTransformActions: StateCreator<
   scaleSubPath: (subPathId, scaleX, scaleY, center) => {
     get().pushToHistory();
     set((state) => {
-      let actualCenter = center;
-      if (!actualCenter) {
+      const actualCenter: Point = center || (() => {
         for (const path of state.paths) {
           const subPath = path.subPaths.find(sp => sp.id === subPathId);
           if (subPath) {
-            actualCenter = getSubPathCenter(subPath);
-            break;
+            return getSubPathCenter(subPath);
           }
         }
-      }
-      if (!actualCenter) return state;
+        // Fallback to origin if subPath not found
+        return { x: 0, y: 0 };
+      })();
       return {
         paths: state.paths.map((path) => ({
           ...path,
@@ -48,17 +47,16 @@ export const createTransformActions: StateCreator<
   rotateSubPath: (subPathId, angle, center) => {
     get().pushToHistory();
     set((state) => {
-      let actualCenter = center;
-      if (!actualCenter) {
+      const actualCenter: Point = center || (() => {
         for (const path of state.paths) {
           const subPath = path.subPaths.find(sp => sp.id === subPathId);
           if (subPath) {
-            actualCenter = getSubPathCenter(subPath);
-            break;
+            return getSubPathCenter(subPath);
           }
         }
-      }
-      if (!actualCenter) return state;
+        // Fallback to origin if subPath not found
+        return { x: 0, y: 0 };
+      })();
       return {
         paths: state.paths.map((path) => ({
           ...path,
@@ -90,21 +88,21 @@ export const createTransformActions: StateCreator<
   mirrorSubPathHorizontal: (subPathId, center) => {
     get().pushToHistory();
     set((state) => {
-      let actualCenter = center;
-      if (!actualCenter) {
+      const actualCenter: Point = center || (() => {
         for (const path of state.paths) {
           const subPath = path.subPaths.find(sp => sp.id === subPathId);
           if (subPath) {
-            actualCenter = getSubPathCenter(subPath);
-            break;
+            return getSubPathCenter(subPath);
           }
         }
-      }
+        // Fallback to origin if subPath not found
+        return { x: 0, y: 0 };
+      })();
       return {
         paths: state.paths.map((path) => ({
           ...path,
           subPaths: path.subPaths.map((subPath) =>
-            subPath.id === subPathId && actualCenter
+            subPath.id === subPathId
               ? mirrorSubPathHorizontal(subPath, actualCenter)
               : subPath
           ),
@@ -117,21 +115,21 @@ export const createTransformActions: StateCreator<
   mirrorSubPathVertical: (subPathId, center) => {
     get().pushToHistory();
     set((state) => {
-      let actualCenter = center;
-      if (!actualCenter) {
+      const actualCenter: Point = center || (() => {
         for (const path of state.paths) {
           const subPath = path.subPaths.find(sp => sp.id === subPathId);
           if (subPath) {
-            actualCenter = getSubPathCenter(subPath);
-            break;
+            return getSubPathCenter(subPath);
           }
         }
-      }
+        // Fallback to origin if subPath not found
+        return { x: 0, y: 0 };
+      })();
       return {
         paths: state.paths.map((path) => ({
           ...path,
           subPaths: path.subPaths.map((subPath) =>
-            subPath.id === subPathId && actualCenter
+            subPath.id === subPathId
               ? mirrorSubPathVertical(subPath, actualCenter)
               : subPath
           ),
