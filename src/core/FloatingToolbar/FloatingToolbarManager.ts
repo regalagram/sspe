@@ -120,6 +120,7 @@ export class FloatingToolbarManager {
     const types: Set<ElementType> = new Set();
     
     if (selection.selectedTexts.length > 0) types.add('text');
+    if (selection.selectedTextPaths.length > 0) types.add('textPath');
     if (selection.selectedSubPaths.length > 0) types.add('subpath');
     if (selection.selectedCommands.length > 0) types.add('command');
     if (selection.selectedGroups.length > 0) types.add('group');

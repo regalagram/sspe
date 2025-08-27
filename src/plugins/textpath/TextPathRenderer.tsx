@@ -61,10 +61,32 @@ const TextPathItem: React.FC<{ textPath: SVGTextPath }> = ({ textPath }) => {
   if (style.strokeOpacity !== undefined) textAttributes.strokeOpacity = style.strokeOpacity;
   if (style.fontWeight) textAttributes.fontWeight = style.fontWeight;
   if (style.fontStyle) textAttributes.fontStyle = style.fontStyle;
+  if (style.fontVariant) textAttributes.fontVariant = style.fontVariant;
+  if (style.fontStretch) textAttributes.fontStretch = style.fontStretch;
   if (style.textDecoration) textAttributes.textDecoration = style.textDecoration;
+  if (style.dominantBaseline) textAttributes.dominantBaseline = style.dominantBaseline;
+  if (style.alignmentBaseline) textAttributes.alignmentBaseline = style.alignmentBaseline;
+  if (style.baselineShift) textAttributes.baselineShift = style.baselineShift;
+  if (style.direction) textAttributes.direction = style.direction;
+  if (style.writingMode) textAttributes.writingMode = style.writingMode;
+  if (style.textRendering) textAttributes.textRendering = style.textRendering;
   if (style.letterSpacing) textAttributes.letterSpacing = style.letterSpacing;
   if (style.wordSpacing) textAttributes.wordSpacing = style.wordSpacing;
+  if (style.textLength) textAttributes.textLength = style.textLength;
+  if (style.lengthAdjust) textAttributes.lengthAdjust = style.lengthAdjust;
+  if (style.opacity !== undefined) textAttributes.opacity = style.opacity;
   if (style.filter) textAttributes.filter = style.filter;
+  if (style.clipPath) textAttributes.clipPath = style.clipPath;
+  if (style.mask) textAttributes.mask = style.mask;
+  if (Array.isArray(style.strokeDasharray)) {
+    textAttributes.strokeDasharray = style.strokeDasharray.join(',');
+  } else if (style.strokeDasharray) {
+    textAttributes.strokeDasharray = style.strokeDasharray;
+  }
+  if (style.strokeDashoffset) textAttributes.strokeDashoffset = style.strokeDashoffset;
+  if (style.strokeLinecap) textAttributes.strokeLinecap = style.strokeLinecap;
+  if (style.strokeLinejoin) textAttributes.strokeLinejoin = style.strokeLinejoin;
+  if (style.strokeMiterlimit) textAttributes.strokeMiterlimit = style.strokeMiterlimit;
 
   // Build textPath attributes
   const textPathAttributes: Record<string, any> = {
@@ -100,7 +122,10 @@ const TextPathItem: React.FC<{ textPath: SVGTextPath }> = ({ textPath }) => {
         style={{
           pointerEvents: textPath.locked ? 'none' : 'all',
           cursor: textPath.locked ? 'default' : 'pointer',
-          userSelect: 'none'
+          userSelect: 'none',
+          clipPath: style.clipPath,
+          mask: style.mask,
+          filter: style.filter
         }}
       >
         <textPath {...textPathAttributes}>

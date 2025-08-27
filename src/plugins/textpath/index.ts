@@ -2,6 +2,7 @@ import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { TextPathControls } from './TextPathControls';
 import { TextPathRenderer } from './TextPathRenderer';
+import { textPathFloatingActionDefinition } from './FloatingTextPathActions';
 
 export const TextPathPlugin: Plugin = {
   id: 'textpath',
@@ -71,5 +72,8 @@ export const TextPathPlugin: Plugin = {
       position: 'svg-content',
       order: 25
     }
-  ]
+  ],
+
+  // NEW: Floating actions for textpaths
+  floatingActions: [textPathFloatingActionDefinition]
 };
