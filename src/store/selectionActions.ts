@@ -653,6 +653,7 @@ export const createSelectionActions: StateCreator<
           selectedControlPoints: [],
           selectedTexts: [],
           selectedTextSpans: [],
+          selectedTextPaths: [],
           selectedGroups: [],
           selectedImages: [],
           selectedClipPaths: [],
