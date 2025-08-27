@@ -481,11 +481,11 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
     
     const input = inputRef.current;
     
-    // Force visibility and appearance
-    input.style.setProperty('background-color', 'rgba(255, 255, 255, 0.9)', 'important');
-    input.style.setProperty('border', '1px solid rgba(0, 0, 0, 0.2)', 'important');
-    input.style.setProperty('border-radius', '2px', 'important');
-    input.style.setProperty('box-shadow', '0 2px 4px rgba(0, 0, 0, 0.1)', 'important');
+    // Remove visual styling for perfect alignment
+    input.style.setProperty('background-color', 'transparent', 'important');
+    input.style.setProperty('border', 'none', 'important');
+    input.style.setProperty('border-radius', '0', 'important');
+    input.style.setProperty('box-shadow', 'none', 'important');
     input.style.setProperty('outline', 'none', 'important');
     
     // Ensure text interaction works
@@ -495,8 +495,8 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
     input.style.setProperty('pointer-events', 'all', 'important');
     input.style.setProperty('cursor', 'text', 'important');
     
-    // Ensure proper padding for readability
-    input.style.setProperty('padding', '2px 4px', 'important');
+    // Remove padding for perfect alignment
+    input.style.setProperty('padding', '0', 'important');
     input.style.setProperty('margin', '0', 'important');
     
   }, [position]);
@@ -656,12 +656,12 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
     fontWeight: textElement.style.fontWeight || 'normal',
     fontStyle: textElement.style.fontStyle || 'normal',
     color: typeof textElement.style.fill === 'string' && textElement.style.fill !== 'none' ? textElement.style.fill : '#000000',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    border: '1px solid rgba(0, 0, 0, 0.2)',
-    borderRadius: '2px',
+    backgroundColor: 'transparent',
+    border: 'none',
+    borderRadius: '0',
     outline: 'none',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-    padding: '2px 4px', // Small padding to compensate for border and improve readability
+    boxShadow: 'none',
+    padding: '0', // Remove all padding for perfect text alignment
     zIndex: 99999, // Much higher z-index
     boxSizing: 'border-box', // Use border-box to include padding and border in dimensions
     // Text styling to match SVG text as closely as possible
@@ -697,9 +697,9 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
     // Enable pointer events for text interaction
     pointerEvents: 'all',
     cursor: 'text',
-    // Disable browser autocomplete styles but keep visibility
-    WebkitBoxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-    MozBoxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+    // Disable browser autocomplete styles
+    WebkitBoxShadow: 'none',
+    MozBoxShadow: 'none'
   };
 
   // Use local input state to prevent overwrites during typing
