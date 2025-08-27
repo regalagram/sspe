@@ -565,6 +565,7 @@ const clearTextPathStyle = () => {
     fontWeight: 'normal' as const,
     fontStyle: 'normal' as const,
     textAnchor: 'start' as const,
+    textDecoration: undefined, // Reset underline/overline/line-through
     opacity: undefined,
     fillOpacity: undefined,
     strokeOpacity: undefined
