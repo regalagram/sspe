@@ -35,6 +35,7 @@ export const FileActionsButton: React.FC = () => {
     replaceGroups,
     replaceImages,
     clearAllTexts,
+    clearAllTextPaths,
     clearGradients,
     clearAllSVGElements,
     resetViewportCompletely,
@@ -60,6 +61,7 @@ export const FileActionsButton: React.FC = () => {
   const handleClearAll = () => {
     replacePaths([]);
     clearAllTexts();
+    clearAllTextPaths(); // Also clear textPaths to prevent orphaned references
     clearGradients();
     replaceGroups([]);
     clearAllSVGElements();
@@ -139,6 +141,7 @@ export const FileActionsButton: React.FC = () => {
       // Clear existing content (replace mode)
       replacePaths([]);
       clearAllTexts();
+      clearAllTextPaths(); // Also clear textPaths to prevent orphaned references
       clearGradients();
       replaceGroups([]);
       replaceImages([]);

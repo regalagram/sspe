@@ -38,13 +38,21 @@ export const createPathActions: StateCreator<
   },
 
   removePath: (pathId) =>
-    set((state) => ({
-      paths: state.paths.filter((path) => path.id !== pathId),
-      selection: {
-        ...state.selection,
-        selectedPaths: state.selection.selectedPaths.filter(id => id !== pathId),
-      },
-    })),
+    set((state) => {
+      // Remove all textPaths that reference this path
+      const textPathsToRemove = state.textPaths.filter(tp => tp.pathRef === pathId);
+      const textPathIdsToRemove = textPathsToRemove.map(tp => tp.id);
+      
+      return {
+        paths: state.paths.filter((path) => path.id !== pathId),
+        textPaths: state.textPaths.filter(tp => tp.pathRef !== pathId),
+        selection: {
+          ...state.selection,
+          selectedPaths: state.selection.selectedPaths.filter(id => id !== pathId),
+          selectedTextPaths: state.selection.selectedTextPaths.filter(id => !textPathIdsToRemove.includes(id)),
+        },
+      };
+    }),
 
   addSubPath: (pathId) => {
     const subPathId = generateId();
@@ -68,16 +76,43 @@ export const createPathActions: StateCreator<
   },
 
   removeSubPath: (subPathId) =>
-    set((state) => ({
-      paths: state.paths.map((path) => ({
-        ...path,
-        subPaths: path.subPaths.filter((subPath) => subPath.id !== subPathId),
-      })),
-      selection: {
-        ...state.selection,
-        selectedSubPaths: state.selection.selectedSubPaths.filter(id => id !== subPathId),
-      },
-    })),
+    set((state) => {
+      // Find which path contains this subpath and check if it will have remaining subpaths
+      const parentPath = state.paths.find(path => 
+        path.subPaths.some(subPath => subPath.id === subPathId)
+      );
+      
+      let textPathsToRemove: string[] = [];
+      
+      if (parentPath) {
+        // Check if removing this subpath will leave the path with no subpaths
+        const remainingSubPaths = parentPath.subPaths.filter(subPath => subPath.id !== subPathId);
+        
+        if (remainingSubPaths.length === 0) {
+          // This is the last subpath, so we need to remove associated textPaths
+          const textPathsForThisPath = state.textPaths.filter(tp => tp.pathRef === parentPath.id);
+          textPathsToRemove = textPathsForThisPath.map(tp => tp.id);
+        }
+        // If remainingSubPaths.length > 0, we DON'T remove textPaths because they can move to other subpaths
+      }
+      
+      return {
+        paths: state.paths.map((path) => ({
+          ...path,
+          subPaths: path.subPaths.filter((subPath) => subPath.id !== subPathId),
+        })),
+        textPaths: textPathsToRemove.length > 0 
+          ? state.textPaths.filter(tp => !textPathsToRemove.includes(tp.id))
+          : state.textPaths,
+        selection: {
+          ...state.selection,
+          selectedSubPaths: state.selection.selectedSubPaths.filter(id => id !== subPathId),
+          selectedTextPaths: textPathsToRemove.length > 0
+            ? state.selection.selectedTextPaths.filter(id => !textPathsToRemove.includes(id))
+            : state.selection.selectedTextPaths,
+        },
+      };
+    }),
 
   moveSubPath: (subPathId, delta, skipGroupSync = false, skipGridSnapping = false) => {
     // Skip update if delta is too small to prevent unnecessary re-renders
