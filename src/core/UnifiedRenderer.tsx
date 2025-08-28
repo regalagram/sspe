@@ -1225,41 +1225,7 @@ const UseElementComponent: React.FC<{ useElement: any }> = ({ useElement }) => {
       {/* Include animations as siblings that target the use element */}
       {animations}
       
-      {/* Selection outline */}
-      {isSelected && (() => {
-        // Try to get the symbol to determine proper bounds
-        const symbol = symbols.find(s => useElement.href === `#${s.id}`);
-        let selectionWidth = useElement.width || 100;
-        let selectionHeight = useElement.height || 100;
-        
-        // If the symbol has a viewBox and no explicit width/height on use, use viewBox dimensions
-        if (symbol && symbol.viewBox && !useElement.width && !useElement.height) {
-          const viewBoxMatch = symbol.viewBox.match(/^[\d\s.,-]+$/);
-          if (viewBoxMatch) {
-            const viewBoxParts = symbol.viewBox.split(/[\s,]+/).map(Number);
-            if (viewBoxParts.length === 4) {
-              selectionWidth = viewBoxParts[2]; // width from viewBox
-              selectionHeight = viewBoxParts[3]; // height from viewBox
-            }
-          }
-        }
-        
-        return (
-          <rect
-            x={useElement.x || 0}
-            y={useElement.y || 0}
-            width={selectionWidth}
-            height={selectionHeight}
-            fill="none"
-            stroke="#007ACC"
-            strokeWidth={strokeWidth}
-            strokeDasharray={`${4 / viewport.zoom} ${4 / viewport.zoom}`}
-            pointerEvents="none"
-            data-element-type="use-selection"
-            data-element-id={useElement.id}
-          />
-        );
-      })()}
+      {/* Selection outline removed - handled by TransformManager/TransformHandles */}
     </g>
   );
 };
