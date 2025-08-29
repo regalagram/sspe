@@ -1,25 +1,25 @@
 import { SVGPath, SVGCommand, SVGSubPath, Point, BoundingBox } from "../types";
 import { parsePathData } from "./svg-parser";
 
-export const pathToString = (path: SVGPath): string => {
+export const pathToString = (path: SVGPath, precision: number = 2): string => {
   return path.subPaths
-    .map((subPath) => subPathToString(subPath))
+    .map((subPath) => subPathToString(subPath, precision))
     .join(' ');
 };
 
-export const pathsToString = (paths: SVGPath[]): string => {
+export const pathsToString = (paths: SVGPath[], precision: number = 2): string => {
   return paths
-    .map((path) => pathToString(path))
+    .map((path) => pathToString(path, precision))
     .join(' ');
 };
 
-export const subPathToString = (subPath: SVGSubPath): string => {
+export const subPathToString = (subPath: SVGSubPath, precision: number = 2): string => {
   if (!subPath.commands || subPath.commands.length === 0) {
     return '';
   }
   
   const commands = subPath.commands
-    .map((command) => commandToString(command))
+    .map((command) => commandToString(command, precision))
     .join(' ')
     .trim();
   
@@ -27,9 +27,9 @@ export const subPathToString = (subPath: SVGSubPath): string => {
 };
 
 // Generate subpath string with context - simplified since everything is absolute internally
-export const subPathToStringInContext = (subPath: SVGSubPath, allSubPaths: SVGSubPath[]): string => {
+export const subPathToStringInContext = (subPath: SVGSubPath, allSubPaths: SVGSubPath[], precision: number = 2): string => {
   // Since everything is already absolute internally, just return the regular string
-  return subPathToString(subPath);
+  return subPathToString(subPath, precision);
 };
 
 // Function to find which subpath contains a given point
@@ -515,15 +515,23 @@ export const getContrastColor = (color: string): string => {
   }
 };
 
-export const commandToString = (command: SVGCommand): string => {
+export const commandToString = (command: SVGCommand, precision: number = 2): string => {
   const { id, command: cmd, ...params } = command;
+  
+  // Helper function to format numbers with precision
+  const formatNumber = (value: any): string => {
+    if (typeof value === 'number') {
+      return Number(value.toFixed(precision)).toString();
+    }
+    return value?.toString() || '0';
+  };
   
   switch (cmd) {
     case 'M':
     case 'L':
-      return `${cmd} ${params.x} ${params.y}`;
+      return `${cmd} ${formatNumber(params.x)} ${formatNumber(params.y)}`;
     case 'C':
-      return `${cmd} ${params.x1} ${params.y1} ${params.x2} ${params.y2} ${params.x} ${params.y}`;
+      return `${cmd} ${formatNumber(params.x1)} ${formatNumber(params.y1)} ${formatNumber(params.x2)} ${formatNumber(params.y2)} ${formatNumber(params.x)} ${formatNumber(params.y)}`;
     case 'Z':
       return cmd;
     default:

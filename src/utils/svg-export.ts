@@ -7,7 +7,7 @@ import { getAllElementsByZIndex, RenderableElement } from './z-index-manager';
  * Calculate the overall viewport that encompasses all visible elements
  */
 const calculateOverallViewport = (editorState: any): BoundingBox => {
-  const { paths, texts, images, groups, uses, symbols } = editorState;
+  const { paths, texts, images, groups, uses, symbols, precision } = editorState;
   
   let minX = Infinity;
   let maxX = -Infinity;
@@ -92,10 +92,10 @@ const calculateOverallViewport = (editorState: any): BoundingBox => {
   const paddingY = Math.max(height * 0.1, 20);
 
   return {
-    x: minX - paddingX,
-    y: minY - paddingY,
-    width: width + (paddingX * 2),
-    height: height + (paddingY * 2)
+    x: Number((minX - paddingX).toFixed(precision)),
+    y: Number((minY - paddingY).toFixed(precision)),
+    width: Number((width + (paddingX * 2)).toFixed(precision)),
+    height: Number((height + (paddingY * 2)).toFixed(precision))
   };
 };
 
@@ -434,9 +434,27 @@ export const generateSVGCode = (editorState: any): string => {
     return null;
   };
 
+  // Helper function to format numbers with precision
+  const formatNumber = (value: any): string => {
+    if (typeof value === 'number') {
+      return Number(value.toFixed(precision)).toString();
+    }
+    return value?.toString() || '0';
+  };
+
+  // Helper function to format viewBox with precision
+  const formatViewBox = (viewBox: string): string => {
+    if (!viewBox) return viewBox;
+    const parts = viewBox.trim().split(/\s+/);
+    if (parts.length === 4) {
+      return `${formatNumber(parseFloat(parts[0]))} ${formatNumber(parseFloat(parts[1]))} ${formatNumber(parseFloat(parts[2]))} ${formatNumber(parseFloat(parts[3]))}`;
+    }
+    return viewBox;
+  };
+
   // Helper function to render a single path element
   const renderPath = (path: any) => {
-    const pathData = path.subPaths.map((subPath: any) => subPathToString(subPath)).join(' ');
+    const pathData = path.subPaths.map((subPath: any) => subPathToString(subPath, precision)).join(' ');
     const style = path.style;
     
     const fillValue = convertStyleValue(style.fill);
@@ -447,12 +465,12 @@ export const generateSVGCode = (editorState: any): string => {
       `d="${pathData}"`,
       fillValue !== 'none' ? `fill="${fillValue}"` : 'fill="none"',
       strokeValue !== 'none' ? `stroke="${strokeValue}"` : '',
-      style.strokeWidth ? `stroke-width="${style.strokeWidth}"` : '',
+      style.strokeWidth ? `stroke-width="${formatNumber(style.strokeWidth)}"` : '',
       style.strokeDasharray ? `stroke-dasharray="${style.strokeDasharray}"` : '',
       style.strokeLinecap ? `stroke-linecap="${style.strokeLinecap}"` : '',
       style.strokeLinejoin ? `stroke-linejoin="${style.strokeLinejoin}"` : '',
-      style.fillOpacity !== undefined && style.fillOpacity !== 1 ? `fill-opacity="${style.fillOpacity}"` : '',
-      style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${style.strokeOpacity}"` : '',
+      style.fillOpacity !== undefined && style.fillOpacity !== 1 ? `fill-opacity="${formatNumber(style.fillOpacity)}"` : '',
+      style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${formatNumber(style.strokeOpacity)}"` : '',
       style.markerStart ? `marker-start="${convertStyleValue(style.markerStart)}"` : '',
       style.markerMid ? `marker-mid="${convertStyleValue(style.markerMid)}"` : '',
       style.markerEnd ? `marker-end="${convertStyleValue(style.markerEnd)}"` : '',
@@ -479,19 +497,19 @@ export const generateSVGCode = (editorState: any): string => {
     
     const attributes = [
       `id="${text.id}"`,
-      `x="${text.x}"`,
-      `y="${text.y}"`,
+      `x="${formatNumber(text.x)}"`,
+      `y="${formatNumber(text.y)}"`,
       text.transform ? `transform="${text.transform}"` : '',
-      style.fontSize ? `font-size="${style.fontSize}"` : '',
+      style.fontSize ? `font-size="${formatNumber(style.fontSize)}"` : '',
       style.fontFamily ? `font-family="${style.fontFamily}"` : '',
       style.fontWeight ? `font-weight="${style.fontWeight}"` : '',
       style.fontStyle ? `font-style="${style.fontStyle}"` : '',
       style.textAnchor ? `text-anchor="${style.textAnchor}"` : '',
       textFillValue !== 'none' ? `fill="${textFillValue}"` : '',
       textStrokeValue !== 'none' ? `stroke="${textStrokeValue}"` : '',
-      style.strokeWidth ? `stroke-width="${style.strokeWidth}"` : '',
-      style.fillOpacity !== undefined && style.fillOpacity !== 1 ? `fill-opacity="${style.fillOpacity}"` : '',
-      style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${style.strokeOpacity}"` : '',
+      style.strokeWidth ? `stroke-width="${formatNumber(style.strokeWidth)}"` : '',
+      style.fillOpacity !== undefined && style.fillOpacity !== 1 ? `fill-opacity="${formatNumber(style.fillOpacity)}"` : '',
+      style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${formatNumber(style.strokeOpacity)}"` : '',
       style.filter ? `filter="${convertStyleValue(style.filter)}"` : '',
       style.clipPath ? `clip-path="${convertStyleValue(style.clipPath)}"` : '',
       style.mask ? `mask="${convertStyleValue(style.mask)}"` : '',
@@ -505,8 +523,8 @@ export const generateSVGCode = (editorState: any): string => {
         const spanFillValue = span.style?.fill ? convertStyleValue(span.style.fill) : '';
         
         const spanAttributes = [
-          `x="${text.x}"`,
-          `dy="${index === 0 ? 0 : (style.fontSize || 16) * 1.2}"`,
+          `x="${formatNumber(text.x)}"`,
+          `dy="${index === 0 ? 0 : formatNumber((style.fontSize || 16) * 1.2)}"`,
           spanFillValue && spanFillValue !== textFillValue ? `fill="${spanFillValue}"` : '',
           span.style?.fontWeight && span.style.fontWeight !== style.fontWeight ? `font-weight="${span.style.fontWeight}"` : '',
         ].filter(Boolean).join(' ');
@@ -531,10 +549,10 @@ export const generateSVGCode = (editorState: any): string => {
   // Render image elements
   const renderImage = (image: any) => {
     const attributes = [
-      `x="${image.x}"`,
-      `y="${image.y}"`,
-      `width="${image.width}"`,
-      `height="${image.height}"`,
+      `x="${formatNumber(image.x)}"`,
+      `y="${formatNumber(image.y)}"`,
+      `width="${formatNumber(image.width)}"`,
+      `height="${formatNumber(image.height)}"`,
       `href="${image.href}"`,
       image.preserveAspectRatio ? `preserveAspectRatio="${image.preserveAspectRatio}"` : '',
       image.transform ? `transform="${image.transform}"` : '',
@@ -566,21 +584,21 @@ export const generateSVGCode = (editorState: any): string => {
     
     const attributes = [
       `href="${use.href.startsWith('#') ? use.href : '#' + use.href}"`,
-      `x="${use.x || 0}"`,
-      `y="${use.y || 0}"`,
-      use.width ? `width="${use.width}"` : '',
-      use.height ? `height="${use.height}"` : '',
+      `x="${formatNumber(use.x || 0)}"`,
+      `y="${formatNumber(use.y || 0)}"`,
+      use.width ? `width="${formatNumber(use.width)}"` : '',
+      use.height ? `height="${formatNumber(use.height)}"` : '',
       use.transform ? `transform="${use.transform}"` : '',
       // Add all style properties - be more permissive with conditions
       fillValue !== null ? `fill="${fillValue}"` : '',
       strokeValue !== null ? `stroke="${strokeValue}"` : '',
-      style.strokeWidth !== undefined ? `stroke-width="${style.strokeWidth}"` : '',
+      style.strokeWidth !== undefined ? `stroke-width="${formatNumber(style.strokeWidth)}"` : '',
       style.strokeDasharray ? `stroke-dasharray="${style.strokeDasharray}"` : '',
       style.strokeLinecap ? `stroke-linecap="${style.strokeLinecap}"` : '',
       style.strokeLinejoin ? `stroke-linejoin="${style.strokeLinejoin}"` : '',
       style.fillOpacity !== undefined ? `fill-opacity="${style.fillOpacity}"` : '',
       style.strokeOpacity !== undefined ? `stroke-opacity="${style.strokeOpacity}"` : '',
-      style.opacity !== undefined ? `opacity="${style.opacity}"` : '',
+      style.opacity !== undefined ? `opacity="${formatNumber(style.opacity)}"` : '',
       clipPathValue ? `clip-path="${clipPathValue}"` : '',
       maskValue ? `mask="${maskValue}"` : '',
       filterValue ? `filter="${filterValue}"` : '',
@@ -604,16 +622,16 @@ export const generateSVGCode = (editorState: any): string => {
     
     const textAttributes = [
       `id="${textPath.id}"`,
-      style.fontSize ? `font-size="${style.fontSize}"` : '',
+      style.fontSize ? `font-size="${formatNumber(style.fontSize)}"` : '',
       style.fontFamily ? `font-family="${style.fontFamily}"` : '',
       style.fontWeight ? `font-weight="${style.fontWeight}"` : '',
       style.fontStyle ? `font-style="${style.fontStyle}"` : '',
       style.textAnchor ? `text-anchor="${style.textAnchor}"` : '',
       textFillValue !== 'none' ? `fill="${textFillValue}"` : '',
       textStrokeValue !== 'none' ? `stroke="${textStrokeValue}"` : '',
-      style.strokeWidth ? `stroke-width="${style.strokeWidth}"` : '',
-      style.fillOpacity !== undefined && style.fillOpacity !== 1 ? `fill-opacity="${style.fillOpacity}"` : '',
-      style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${style.strokeOpacity}"` : '',
+      style.strokeWidth ? `stroke-width="${formatNumber(style.strokeWidth)}"` : '',
+      style.fillOpacity !== undefined && style.fillOpacity !== 1 ? `fill-opacity="${formatNumber(style.fillOpacity)}"` : '',
+      style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${formatNumber(style.strokeOpacity)}"` : '',
       textPath.transform ? `transform="${textPath.transform}"` : '',
       style.filter ? `filter="${convertStyleValue(style.filter)}"` : '',
       style.clipPath ? `clip-path="${convertStyleValue(style.clipPath)}"` : '',
@@ -622,11 +640,11 @@ export const generateSVGCode = (editorState: any): string => {
 
     const textPathAttributes = [
       `href="#${textPath.pathRef}"`,
-      textPath.startOffset !== undefined ? `startOffset="${textPath.startOffset}"` : '',
+      textPath.startOffset !== undefined ? `startOffset="${formatNumber(textPath.startOffset)}"` : '',
       textPath.method ? `method="${textPath.method}"` : '',
       textPath.spacing ? `spacing="${textPath.spacing}"` : '',
       textPath.side ? `side="${textPath.side}"` : '',
-      textPath.textLength ? `textLength="${textPath.textLength}"` : '',
+      textPath.textLength ? `textLength="${formatNumber(textPath.textLength)}"` : '',
       textPath.lengthAdjust ? `lengthAdjust="${textPath.lengthAdjust}"` : '',
     ].filter(Boolean).join(' ');
     
@@ -678,9 +696,9 @@ export const generateSVGCode = (editorState: any): string => {
             `attributeName="${animation.attributeName}"`,
             animation.attributeType ? `attributeType="${animation.attributeType}"` : '',
             animation.values ? `values="${animation.values}"` : '',
-            animation.from ? `from="${animation.from}"` : '',
-            animation.to ? `to="${animation.to}"` : '',
-            animation.by ? `by="${animation.by}"` : '',
+            animation.from ? `from="${formatNumber(animation.from)}"` : '',
+            animation.to ? `to="${formatNumber(animation.to)}"` : '',
+            animation.by ? `by="${formatNumber(animation.by)}"` : '',
             getAnimationProperty(animation, 'additive') ? `additive="${getAnimationProperty(animation, 'additive')}"` : '',
             getAnimationProperty(animation, 'accumulate') ? `accumulate="${getAnimationProperty(animation, 'accumulate')}"` : ''
           ].filter(Boolean).join(' ');
@@ -692,22 +710,22 @@ export const generateSVGCode = (editorState: any): string => {
             animation.attributeType ? `attributeType="${animation.attributeType}"` : '',
             `type="${animation.transformType}"`,
             animation.values ? `values="${animation.values}"` : '',
-            animation.from ? `from="${animation.from}"` : '',
-            animation.to ? `to="${animation.to}"` : '',
-            animation.by ? `by="${animation.by}"` : '',
+            animation.from ? `from="${formatNumber(animation.from)}"` : '',
+            animation.to ? `to="${formatNumber(animation.to)}"` : '',
+            animation.by ? `by="${formatNumber(animation.by)}"` : '',
             getAnimationProperty(animation, 'additive') ? `additive="${getAnimationProperty(animation, 'additive')}"` : '',
             getAnimationProperty(animation, 'accumulate') ? `accumulate="${getAnimationProperty(animation, 'accumulate')}"` : ''
           ].filter(Boolean).join(' ');
           return `      <animateTransform ${transformProps} ${commonProps} />`;
           
         case 'animateMotion':
-          return `<animateMotion ${animation.path ? `path="${animation.path}"` : ''} ${animation.rotate ? `rotate="${animation.rotate}"` : ''} ${animation.keyPoints ? `keyPoints="${animation.keyPoints}"` : ''} ${commonProps}>${animation.mpath ? `<mpath href="#${animation.mpath}"/>` : ''}</animateMotion>`;
+          return `<animateMotion ${animation.path ? `path="${animation.path}"` : ''} ${animation.rotate ? `rotate="${formatNumber(animation.rotate)}"` : ''} ${animation.keyPoints ? `keyPoints="${animation.keyPoints}"` : ''} ${commonProps}>${animation.mpath ? `<mpath href="#${animation.mpath}"/>` : ''}</animateMotion>`;
           
         case 'set':
           const setProps = [
             `attributeName="${animation.attributeName}"`,
             animation.attributeType ? `attributeType="${animation.attributeType}"` : '',
-            `to="${animation.to}"`
+            `to="${formatNumber(animation.to)}"`
           ].filter(Boolean).join(' ');
           return `      <set ${setProps} ${commonProps} />`;
           
@@ -883,7 +901,7 @@ export const generateSVGCode = (editorState: any): string => {
             gradient.patternUnits ? `patternUnits="${gradient.patternUnits}"` : 'patternUnits="userSpaceOnUse"',
             gradient.patternContentUnits ? `patternContentUnits="${gradient.patternContentUnits}"` : '',
             gradient.patternTransform ? `patternTransform="${gradient.patternTransform}"` : '',
-            gradient.viewBox ? `viewBox="${gradient.viewBox}"` : '',
+            gradient.viewBox ? `viewBox="${formatViewBox(gradient.viewBox)}"` : '',
             gradient.preserveAspectRatio ? `preserveAspectRatio="${gradient.preserveAspectRatio}"` : ''
           ].filter(Boolean).join(' ');
           
@@ -903,7 +921,7 @@ export const generateSVGCode = (editorState: any): string => {
       const symbolDefs = allSymbols.map((symbol: any) => {
         const symbolAttributes = [
           `id="${symbol.id}"`,
-          symbol.viewBox ? `viewBox="${symbol.viewBox}"` : '',
+          symbol.viewBox ? `viewBox="${formatViewBox(symbol.viewBox)}"` : '',
           symbol.width ? `width="${symbol.width}"` : '',
           symbol.height ? `height="${symbol.height}"` : '',
           symbol.preserveAspectRatio ? `preserveAspectRatio="${symbol.preserveAspectRatio}"` : ''
@@ -999,7 +1017,7 @@ export const generateSVGCode = (editorState: any): string => {
       const markerDefs = allMarkers.map((marker: any) => {
         const markerAttributes = [
           `id="${marker.id}"`,
-          marker.viewBox ? `viewBox="${marker.viewBox}"` : '',
+          marker.viewBox ? `viewBox="${formatViewBox(marker.viewBox)}"` : '',
           marker.refX !== undefined ? `refX="${marker.refX}"` : '',
           marker.refY !== undefined ? `refY="${marker.refY}"` : '',
           marker.markerWidth ? `markerWidth="${marker.markerWidth}"` : '',
@@ -1085,7 +1103,7 @@ export const generateSVGCode = (editorState: any): string => {
       `id="${group.id}"`,
       group.name ? `data-name="${group.name}"` : '',
       group.transform ? `transform="${group.transform}"` : '',
-      style.opacity !== undefined && style.opacity !== 1 ? `opacity="${style.opacity}"` : '',
+      style.opacity !== undefined && style.opacity !== 1 ? `opacity="${formatNumber(style.opacity)}"` : '',
       style.filter ? `filter="${convertStyleValue(style.filter)}"` : '',
       style.clipPath ? `clip-path="${convertStyleValue(style.clipPath)}"` : '',
       style.mask ? `mask="${convertStyleValue(style.mask)}"` : '',
@@ -1249,7 +1267,7 @@ ${childContent}
   // Generate final SVG
   const definitionsSection = generateDefinitions();
   
-  const finalSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}">
+  const finalSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${formatNumber(viewport.x)} ${formatNumber(viewport.y)} ${formatNumber(viewport.width)} ${formatNumber(viewport.height)}">
 ${definitionsSection}${allElements}
 </svg>`;
 
