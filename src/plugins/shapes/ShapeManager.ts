@@ -272,6 +272,9 @@ export class ShapeManager {
 
       // Replace the default M 100,100 command with our shape commands
       replaceSubPathCommands(subPathId, commands);
+
+      // After successfully creating the shape, return to select mode
+      toolModeManager.setMode('select');
           } catch (error) {
       console.error('🔷 ShapeManager: Error inserting shape:', error);
     }
