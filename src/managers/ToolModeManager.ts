@@ -130,7 +130,6 @@ export class ToolModeManager {
 
     // Notificar cambio
     this.notifyListeners();
-
   }
 
   /**

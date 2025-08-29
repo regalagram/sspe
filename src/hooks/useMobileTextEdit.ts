@@ -19,6 +19,7 @@ export const useMobileTextEdit = () => {
 
   // Start editing for any text type
   const startMobileEdit = useCallback((textId: string) => {
+    
     // First, try to find in regular texts
     let textElement = store.texts.find(t => t.id === textId);
     let isTextPath = false;
@@ -42,7 +43,7 @@ export const useMobileTextEdit = () => {
         isTextPath = true;
         content = textPathElement.content;
       } else {
-        console.warn('Text element not found:', textId);
+        console.warn('📱 useMobileTextEdit: Text element not found:', textId);
         return false;
       }
     }
@@ -55,7 +56,7 @@ export const useMobileTextEdit = () => {
     });
 
     return true;
-  }, [store.texts, store.textPaths]);
+  }, [store]);
 
   // Save changes
   const handleSave = useCallback((newContent: string | string[]) => {

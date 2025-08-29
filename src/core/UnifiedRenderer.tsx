@@ -1486,7 +1486,7 @@ export const UnifiedRenderer: React.FC = () => {
 
   // Filter out null elements and sort by z-index
   const validItems = renderItems.filter(item => item.element !== null);
-  const sortedItems = validItems.toSorted((a: RenderItem, b: RenderItem) => a.zIndex - b.zIndex);
+  const sortedItems = [...validItems].sort((a: RenderItem, b: RenderItem) => a.zIndex - b.zIndex);
 
   return (
     <>

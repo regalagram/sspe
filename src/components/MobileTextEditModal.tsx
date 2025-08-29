@@ -23,7 +23,27 @@ export const MobileTextEditModal: React.FC<MobileTextEditModalProps> = ({
     return Array.isArray(initialContent) ? initialContent.join('\n') : initialContent;
   });
   
+  const [backdropClickEnabled, setBackdropClickEnabled] = useState(false);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+
+  // Enable backdrop click after a delay to prevent immediate closure
+  useEffect(() => {
+    if (isVisible) {
+      // Disable backdrop click initially
+      console.log('📱 MobileTextEditModal: Modal opened, disabling backdrop click temporarily');
+      setBackdropClickEnabled(false);
+      
+      // Enable backdrop click after a delay
+      const timer = setTimeout(() => {
+        console.log('📱 MobileTextEditModal: Enabling backdrop click after delay');
+        setBackdropClickEnabled(true);
+      }, 300); // 300ms delay to prevent immediate closure
+      
+      return () => clearTimeout(timer);
+    } else {
+      setBackdropClickEnabled(false);
+    }
+  }, [isVisible]);
 
   // Auto-focus when modal becomes visible
   useEffect(() => {
@@ -52,6 +72,28 @@ export const MobileTextEditModal: React.FC<MobileTextEditModalProps> = ({
   };
 
   // Handle key shortcuts
+  // Handle cancel
+  const handleCancel = () => {
+    console.log('📱 MobileTextEditModal: handleCancel called');
+    onCancel();
+  };
+
+  // Handle backdrop click
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    console.log('📱 MobileTextEditModal: backdrop clicked', { 
+      backdropClickEnabled, 
+      timeStamp: e.timeStamp 
+    });
+    
+    if (!backdropClickEnabled) {
+      console.log('📱 MobileTextEditModal: backdrop click ignored (too early)');
+      return;
+    }
+    
+    e.stopPropagation();
+    onCancel();
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !isMultiline) {
       e.preventDefault();
@@ -67,12 +109,14 @@ export const MobileTextEditModal: React.FC<MobileTextEditModalProps> = ({
 
   if (!isVisible) return null;
 
+  console.log('📱 MobileTextEditModal: Rendering modal', { isVisible, textId });
+
   return (
     <div className="mobile-text-edit-modal">
       {/* Backdrop */}
       <div 
         className="modal-backdrop"
-        onClick={onCancel}
+        onClick={handleBackdropClick}
         style={{
           position: 'fixed',
           top: 0,
@@ -189,7 +233,7 @@ export const MobileTextEditModal: React.FC<MobileTextEditModalProps> = ({
             justifyContent: 'flex-end' 
           }}>
             <button
-              onClick={onCancel}
+              onClick={handleCancel}
               style={{
                 display: 'flex',
                 alignItems: 'center',

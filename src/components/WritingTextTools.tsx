@@ -5,6 +5,7 @@ import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useEditorStore } from '../store/editorStore';
 import { toolModeManager } from '../managers/ToolModeManager';
 import { useMobileDetection } from '../hooks/useMobileDetection';
+import { textEditManager } from '../managers/TextEditManager';
 
 export const WritingTextTools: React.FC = () => {
   const { isMobile } = useMobileDetection();
@@ -58,9 +59,29 @@ export const WritingTextTools: React.FC = () => {
       
       if (pathWithSubpath) {
         // Use the addTextPath action from the store
-        addTextPath(pathWithSubpath.id, 'Text on path', 0);
+        const newTextPathId = addTextPath(pathWithSubpath.id, 'Text on path', 0);
         setIsTextSubmenuOpen(false);
         toolModeManager.setMode('select');
+        
+        // Immediately start text editing after creation
+        if (newTextPathId) {
+          // Check if we're on mobile
+          const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+          
+          // Add a small delay to ensure the text element is fully rendered
+          setTimeout(() => {
+            if (isMobile) {
+              // For mobile, dispatch the mobile text edit event
+              window.dispatchEvent(new CustomEvent('openMobileTextEdit', {
+                detail: { textId: newTextPathId }
+              }));
+            } else {
+              // For desktop, use the text edit manager
+              textEditManager.setEditorStore(useEditorStore.getState());
+              textEditManager.startTextEdit(newTextPathId);
+            }
+          }, 50); // 50ms delay to allow rendering
+        }
       }
     }
   };

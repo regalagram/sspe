@@ -5,6 +5,7 @@ import { PluginButton } from '../../components/PluginButton';
 import { Type, Plus, Copy, Trash2, AlignLeft, AlignCenter, AlignRight, Bold, Italic } from 'lucide-react';
 import { isGradientOrPattern, getStyleValue } from '../../utils/gradient-utils';
 import { convertRgbToHex } from '../../utils/color-utils';
+import { textEditManager } from '../../managers/TextEditManager';
 
 // Helper function for color input
 const colorToHex = (color: string | any): string => {
@@ -53,6 +54,26 @@ export const TextControls: React.FC = () => {
     // Select the new text
     const { selectText } = useEditorStore.getState();
     selectText(textId);
+    
+    // Immediately start text editing after creation
+    if (textId) {
+      // Check if we're on mobile
+      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      // Add a small delay to ensure the text element is fully rendered
+      setTimeout(() => {
+        if (isMobile) {
+          // For mobile, dispatch the mobile text edit event
+          window.dispatchEvent(new CustomEvent('openMobileTextEdit', {
+            detail: { textId: textId }
+          }));
+        } else {
+          // For desktop, use the text edit manager
+          textEditManager.setEditorStore(useEditorStore.getState());
+          textEditManager.startTextEdit(textId);
+        }
+      }, 50); // 50ms delay to allow rendering
+    }
   };
 
   const handleCreateMultilineText = () => {
@@ -64,6 +85,26 @@ export const TextControls: React.FC = () => {
     // Select the new text
     const { selectText } = useEditorStore.getState();
     selectText(textId);
+    
+    // Immediately start text editing after creation
+    if (textId) {
+      // Check if we're on mobile
+      const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      // Add a small delay to ensure the text element is fully rendered
+      setTimeout(() => {
+        if (isMobile) {
+          // For mobile, dispatch the mobile text edit event
+          window.dispatchEvent(new CustomEvent('openMobileTextEdit', {
+            detail: { textId: textId }
+          }));
+        } else {
+          // For desktop, use the text edit manager
+          textEditManager.setEditorStore(useEditorStore.getState());
+          textEditManager.startTextEdit(textId);
+        }
+      }, 50); // 50ms delay to allow rendering
+    }
   };
 
   const handleDuplicateSelected = () => {

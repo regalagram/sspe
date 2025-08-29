@@ -3,6 +3,7 @@ import { PointerEventHandler, PointerEventContext, pluginManager } from '../core
 import { useEditorStore } from '../store/editorStore';
 import { snapToGrid } from '../utils/path-utils';
 import { toolModeManager } from './ToolModeManager';
+import { textEditManager } from './TextEditManager';
 
 interface TextCreationState {
   isCreating: boolean;
@@ -97,10 +98,6 @@ export class TextManager {
 
     this.insertText(finalPoint);
     
-    // Stop text creation after placing text (unlike shapes that continue)
-    this.stopTextCreation();
-    toolModeManager.setMode('select');
-    
     return true;
   };
 
@@ -129,10 +126,57 @@ export class TextManager {
     pushToHistory();
 
     try {
+      let newTextId: string;
+      
       if (this.state.textType === 'single') {
-        addText(point.x, point.y, 'Text');
+        newTextId = addText(point.x, point.y, 'Text');
       } else if (this.state.textType === 'multiline') {
-        addMultilineText(point.x, point.y, ['Line 1', 'Line 2']);
+        newTextId = addMultilineText(point.x, point.y, ['Line 1', 'Line 2']);
+      } else {
+        return;
+      }
+
+      // Immediately start text editing after creation
+      if (newTextId) {
+        // Check if we're on mobile
+        const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        // Stop text creation first
+        this.stopTextCreation();
+        
+        // Add a small delay to ensure the text element is fully rendered
+        // Use requestAnimationFrame instead of setTimeout for better synchronization with rendering
+        requestAnimationFrame(() => {
+          if (isMobile) {
+            // For mobile, dispatch the mobile text edit event
+            window.dispatchEvent(new CustomEvent('openMobileTextEdit', {
+              detail: { textId: newTextId }
+            }));
+            // For mobile, go to select mode after opening modal
+            toolModeManager.setMode('select');
+          } else {
+            // For desktop, use the text edit manager - don't pass store, let it get fresh state
+            const success = textEditManager.startTextEdit(newTextId);
+            
+            if (!success) {
+              // If first attempt fails, try one more time with another frame
+              requestAnimationFrame(() => {
+                const secondSuccess = textEditManager.startTextEdit(newTextId);
+                
+                if (!secondSuccess) {
+                  toolModeManager.setMode('select');
+                }
+              });
+            } else {
+              // Text editing started successfully, keep in text-edit mode
+              // Do NOT change mode - let the text editing continue
+            }
+          }
+        });
+      } else {
+        // If text creation failed, still stop creation and change mode
+        this.stopTextCreation();
+        toolModeManager.setMode('select');
       }
     } catch (error) {
       console.error('📝 TextManager: Error inserting text:', error);

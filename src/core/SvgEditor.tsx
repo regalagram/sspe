@@ -53,6 +53,7 @@ export const SvgEditor: React.FC = () => {
   // Listen for mobile text edit events
   React.useEffect(() => {
     const handleMobileTextEdit = (event: CustomEvent<{ textId: string }>) => {
+      console.log('📱 SvgEditor: Received openMobileTextEdit event', event.detail);
       startMobileEdit(event.detail.textId);
     };
     
@@ -305,16 +306,18 @@ export const SvgEditor: React.FC = () => {
         <TextFloatingToolbar />
         
         {/* Mobile text edit modal */}
-        {editData && (
-          <MobileTextEditModal
-            textId={editData.textId}
-            initialContent={editData.content}
-            isMultiline={editData.isMultiline}
-            onSave={handleSave}
-            onCancel={handleCancel}
-            isVisible={isModalOpen}
-          />
-        )}
+        {(() => {
+          return editData && (
+            <MobileTextEditModal
+              textId={editData.textId}
+              initialContent={editData.content}
+              isMultiline={editData.isMultiline}
+              onSave={handleSave}
+              onCancel={handleCancel}
+              isVisible={isModalOpen}
+            />
+          );
+        })()}
       </div>
     );
   }
@@ -347,16 +350,18 @@ export const SvgEditor: React.FC = () => {
       <TextFloatingToolbar />
       
       {/* Mobile text edit modal - also available on desktop for consistency */}
-      {editData && (
-        <MobileTextEditModal
-          textId={editData.textId}
-          initialContent={editData.content}
-          isMultiline={editData.isMultiline}
-          onSave={handleSave}
-          onCancel={handleCancel}
-          isVisible={isModalOpen}
-        />
-      )}
+      {(() => {
+        return editData && (
+          <MobileTextEditModal
+            textId={editData.textId}
+            initialContent={editData.content}
+            isMultiline={editData.isMultiline}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            isVisible={isModalOpen}
+          />
+        );
+      })()}
       
       {/* Render sidebar as accordion */}
       {accordionVisible && <AccordionSidebar plugins={allPanels} />}

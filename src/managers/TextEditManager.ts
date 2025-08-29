@@ -1,5 +1,5 @@
 import { useEditorStore } from '../store/editorStore';
-import { TextElementType, TextElement, MultilineTextElement } from '../types';
+import { TextElementType, TextElement, MultilineTextElement, SVGTextPath } from '../types';
 import { toolModeManager } from './ToolModeManager';
 
 export interface TextEditState {
@@ -37,11 +37,11 @@ export class TextEditManager {
    * Start editing a text element
    */
   startTextEdit(textId: string): boolean {
-        
-    const store = this.editorStore || useEditorStore.getState();
+    // Always get fresh state from the store
+    const store = useEditorStore.getState();
     
     // First try to find in regular texts
-    let textElement = store.texts.find((t: TextElementType) => t.id === textId);
+    let textElement: TextElementType | SVGTextPath | undefined = store.texts.find((t: TextElementType) => t.id === textId);
     let isTextPath = false;
     
     // If not found in texts, try textpaths
@@ -51,17 +51,16 @@ export class TextEditManager {
     }
     
     if (!textElement) {
-            return false;
+      return false;
     }
     
     if (textElement.locked === true) {
-            return false;
+      return false;
     }
-    
     
     // Stop any current editing
     if (this.state.isEditing) {
-            this.stopTextEdit(false); // Don't save current edit
+      this.stopTextEdit(false); // Don't save current edit
     }
 
     // Determine text type and backup content
@@ -70,7 +69,7 @@ export class TextEditManager {
     
     if (isTextPath) {
       editingType = 'textPath';
-      originalContent = textElement.content;
+      originalContent = (textElement as any).content;
     } else {
       const isMultiline = textElement.type === 'multiline-text';
       editingType = isMultiline ? 'multiline' : 'single';
@@ -89,7 +88,7 @@ export class TextEditManager {
     };
     
     // Switch to text-edit mode
-        toolModeManager.setMode('text-edit', { editingTextId: textId });
+    toolModeManager.setMode('text-edit', { editingTextId: textId });
     
     // Ensure the element is selected
     if (isTextPath) {
@@ -98,8 +97,8 @@ export class TextEditManager {
       store.selectText(textId);
     }
     
-        this.notifyListeners();
-        return true;
+    this.notifyListeners();
+    return true;
   }
 
   /**
