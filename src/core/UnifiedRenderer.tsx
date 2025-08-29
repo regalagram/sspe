@@ -1257,6 +1257,8 @@ const renderPathElement = (path: any, selection: any, viewport: any, enabledFeat
     strokeValue = '#000000';
   } else if (path.style.stroke) {
     strokeValue = getStyleValue(path.style.stroke);
+  } else {
+    strokeValue = "none";
   }
   
   return (
