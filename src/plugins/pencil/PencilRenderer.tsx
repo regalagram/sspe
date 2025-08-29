@@ -6,6 +6,8 @@ export const PencilRenderer: React.FC = () => {
   const { mode } = useEditorStore();
   const [currentPath, setCurrentPath] = React.useState('');
   const [strokeWidth, setStrokeWidth] = React.useState(3);
+  const [strokeColor, setStrokeColor] = React.useState('#6b7280');
+  const [strokeOpacity, setStrokeOpacity] = React.useState(1.0);
   const [isDrawing, setIsDrawing] = React.useState(false);
 
   // Update rendering state periodically while drawing
@@ -20,6 +22,8 @@ export const PencilRenderer: React.FC = () => {
         
         setCurrentPath(pathData);
         setStrokeWidth(settings.strokeWidth);
+        setStrokeColor(settings.strokeColor);
+        setStrokeOpacity(settings.strokeOpacity);
         setIsDrawing(drawing);
       }, 16); // ~60fps updates
     } else {
@@ -41,12 +45,13 @@ export const PencilRenderer: React.FC = () => {
     <g data-pencil-current-stroke="true">
       <path
         d={currentPath}
-        stroke="#000000"
+        stroke={strokeColor}
         strokeWidth={strokeWidth}
+        strokeOpacity={strokeOpacity}
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
-        opacity={isDrawing ? 0.8 : 1}
+        opacity={isDrawing ? strokeOpacity * 0.8 : strokeOpacity}
         pointerEvents="none"
         vectorEffect="non-scaling-stroke"
       />

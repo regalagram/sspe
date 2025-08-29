@@ -27,6 +27,12 @@ export const PencilUI: React.FC = () => {
     pencilManager.updateSettings(newSettings);
   };
 
+  const handleStrokeOpacityChange = (value: number) => {
+    const newSettings = { ...settings, strokeOpacity: value };
+    setSettings(newSettings);
+    pencilManager.updateSettings(newSettings);
+  };
+
   const handlepencilActivate = () => {
     toolModeManager.setMode('pencil');
   };
@@ -102,11 +108,28 @@ export const PencilUI: React.FC = () => {
           </div>
 
           <div className="control-group">
+            <label htmlFor="pencil-stroke-opacity">
+              Opacity: {Math.round(settings.strokeOpacity * 100)}%
+            </label>
+            <input
+              id="pencil-stroke-opacity"
+              type="range"
+              min="0.1"
+              max="1"
+              step="0.1"
+              value={settings.strokeOpacity}
+              onChange={(e) => handleStrokeOpacityChange(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          <div className="control-group">
             <div style={{ fontSize: '11px', color: '#666', lineHeight: '1.3' }}>
               <strong>How it works:</strong><br />
               • Draw freely with your pointer<br />
               • When simplicity {'>'} 0, shows animation from original to simplified path<br />
-              • Higher simplicity = fewer points in final path
+              • Higher simplicity = fewer points in final path<br />
+              • Use floating toolbar above for quick color, width & opacity changes
             </div>
           </div>
         </>
