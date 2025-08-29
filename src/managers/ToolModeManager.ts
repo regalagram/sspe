@@ -222,6 +222,9 @@ export class ToolModeManager {
 
     switch (mode) {
       case 'shapes':
+        // Clear selection when entering shapes mode
+        useEditorStore.getState().clearSelection();
+        
         if (options?.shapeId && this.shapeManager) {
           this.state.shapeId = options.shapeId;
           this.state.metadata = options.metadata;
@@ -230,6 +233,9 @@ export class ToolModeManager {
         break;
 
       case 'curves':
+        // Clear selection when entering curves mode
+        useEditorStore.getState().clearSelection();
+        
         if (this.curvesManager) {
           this.curvesManager.activateExternally();
         } else {
@@ -251,6 +257,9 @@ export class ToolModeManager {
         break;
 
       case 'text':
+        // Clear selection when entering text mode
+        useEditorStore.getState().clearSelection();
+        
         if (options?.textType && this.textManager) {
           this.state.textType = options.textType;
           this.state.metadata = options.metadata;

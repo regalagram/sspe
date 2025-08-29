@@ -16,6 +16,7 @@ import { applyFinalSnapToGrid } from '../utils/final-snap-utils';
 import { toolModeManager } from '../managers/ToolModeManager';
 import { shapeManager } from '../plugins/shapes/ShapeManager';
 import { curvesManager } from '../plugins/curves/CurvesManager';
+import { textManager } from '../managers/TextManager';
 
 export interface RenderItem {
   zIndex: number;
@@ -1336,7 +1337,8 @@ export const UnifiedRenderer: React.FC = () => {
   // State to track manager states and force re-render only when they change
   const [managerStates, setManagerStates] = useState({
     curvesActive: false,
-    shapesActive: false
+    shapesActive: false,
+    textActive: false
   });
   
   useEffect(() => {
@@ -1351,20 +1353,32 @@ export const UnifiedRenderer: React.FC = () => {
       });
     });
     
-    // Check shape manager state periodically, but only update if changed
-    const shapeInterval = setInterval(() => {
+    // Check shape and text manager states periodically, but only update if changed
+    const managersInterval = setInterval(() => {
       const newShapesActive = shapeManager.isInShapeCreationMode();
+      const newTextActive = textManager.isInTextCreationMode();
+      
       setManagerStates(prev => {
+        let hasChanges = false;
+        const newState = { ...prev };
+        
         if (prev.shapesActive !== newShapesActive) {
-          return { ...prev, shapesActive: newShapesActive };
+          newState.shapesActive = newShapesActive;
+          hasChanges = true;
         }
-        return prev;
+        
+        if (prev.textActive !== newTextActive) {
+          newState.textActive = newTextActive;
+          hasChanges = true;
+        }
+        
+        return hasChanges ? newState : prev;
       });
     }, 200); // Check every 200ms
     
     return () => {
       curvesUnsubscribe();
-      clearInterval(shapeInterval);
+      clearInterval(managersInterval);
     };
   }, []);
 
@@ -1380,9 +1394,11 @@ export const UnifiedRenderer: React.FC = () => {
                       managerStates.curvesActive;
   const isShapesMode = toolModeState.activeMode === 'shapes' || 
                       managerStates.shapesActive;
+  const isTextMode = toolModeState.activeMode === 'text' || 
+                    managerStates.textActive;
   
   // Any creation mode that needs overlay
-  const needsOverlay = isPencilMode || isCurvesMode || isShapesMode;
+  const needsOverlay = isPencilMode || isCurvesMode || isShapesMode || isTextMode;
   const { selection, viewport, enabledFeatures, ui, symbols, paths, groups } = useEditorStore();
   
   // Helper function to render symbol child content (from SymbolRenderer)
@@ -1564,18 +1580,21 @@ export const UnifiedRenderer: React.FC = () => {
           style={{ 
             cursor: isPencilMode ? 'crosshair' : 
                    isCurvesMode ? 'crosshair' : 
-                   isShapesMode ? 'crosshair' : 'default',
+                   isShapesMode ? 'crosshair' :
+                   isTextMode ? 'text' : 'default',
             pointerEvents: 'all'
           }}
           className={`creation-mode-overlay ${
             isPencilMode ? 'pencil-mode' : 
             isCurvesMode ? 'curves-mode' : 
-            isShapesMode ? 'shapes-mode' : ''
+            isShapesMode ? 'shapes-mode' :
+            isTextMode ? 'text-mode' : ''
           }`}
           data-testid={`${
             isPencilMode ? 'pencil' : 
             isCurvesMode ? 'curves' : 
-            isShapesMode ? 'shapes' : 'creation'
+            isShapesMode ? 'shapes' :
+            isTextMode ? 'text' : 'creation'
           }-mode-overlay`}
         />
       )}

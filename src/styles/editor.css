@@ -825,13 +825,26 @@ html,body {
   cursor: crosshair !important;
 }
 
+.creation-mode-overlay.text-mode {
+  cursor: text !important;
+}
+
 /* Force cursor on entire SVG when creation overlay is active */
 svg:has(.creation-mode-overlay) {
   cursor: crosshair !important;
 }
 
+svg:has(.creation-mode-overlay.text-mode) {
+  cursor: text !important;
+}
+
 svg:has(.creation-mode-overlay) * {
   cursor: crosshair !important;
+  pointer-events: none !important; /* Disable events on all other elements */
+}
+
+svg:has(.creation-mode-overlay.text-mode) * {
+  cursor: text !important;
   pointer-events: none !important; /* Disable events on all other elements */
 }
 
