@@ -1245,8 +1245,10 @@ const renderPathElement = (path: any, selection: any, viewport: any, enabledFeat
   const isWireframeMode = enabledFeatures.wireframeEnabled;
   const wireframeStrokeWidth = 2 / viewport.zoom;
   
-  let fillValue = 'none';
-  if (!isWireframeMode && path.style.fill) {
+  let fillValue = '#000000'; // SVG default is black
+  if (isWireframeMode) {
+    fillValue = 'none';
+  } else if (path.style.fill) {
     fillValue = getStyleValue(path.style.fill);
   }
 
