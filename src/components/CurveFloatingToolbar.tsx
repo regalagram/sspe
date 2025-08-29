@@ -4,9 +4,9 @@ import { Palette, Minus, Droplets } from 'lucide-react';
 import { useEditorStore } from '../store/editorStore';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { toolModeManager } from '../managers/ToolModeManager';
-import { pencilManager } from '../plugins/pencil/PencilManager';
+import { curvesManager } from '../plugins/curves/CurvesManager';
 
-interface PencilFloatingToolbarProps {}
+interface CurveFloatingToolbarProps {}
 
 // Soft color palette
 const SOFT_COLORS = [
@@ -37,10 +37,10 @@ const OPACITY_OPTIONS = [
   { label: '10%', value: 0.1 }
 ];
 
-export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () => {
+export const CurveFloatingToolbar: React.FC<CurveFloatingToolbarProps> = () => {
   const { isMobile, isTablet } = useMobileDetection();
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
-  const [settings, setSettings] = useState(pencilManager.getSettings());
+  const [settings, setSettings] = useState(curvesManager.getSettings());
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showStrokeWidthPicker, setShowStrokeWidthPicker] = useState(false);
   const [showOpacityPicker, setShowOpacityPicker] = useState(false);
@@ -48,8 +48,8 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
   const isMobileDevice = isMobile || isTablet;
   const toolModeState = toolModeManager.getState();
   
-  // Check if pencil mode is active
-  const isPencilActive = toolModeState.activeMode === 'pencil';
+  // Check if curve mode is active
+  const isCurveActive = toolModeState.activeMode === 'curves';
 
   // Find the SVG container for the portal
   useEffect(() => {
@@ -66,7 +66,7 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
     const handleClickOutside = (event: PointerEvent) => {
       const target = event.target as HTMLElement;
       // Don't close if clicking inside the toolbar
-      if (!target.closest('[data-pencil-toolbar]')) {
+      if (!target.closest('[data-curve-toolbar]')) {
         setShowColorPicker(false);
         setShowStrokeWidthPicker(false);
         setShowOpacityPicker(false);
@@ -79,10 +79,10 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
     }
   }, [showColorPicker, showStrokeWidthPicker, showOpacityPicker]);
 
-  // Update settings when pencil manager settings change
+  // Update settings when curve manager settings change
   useEffect(() => {
     const updateSettings = () => {
-      setSettings(pencilManager.getSettings());
+      setSettings(curvesManager.getSettings());
     };
     
     // Listen for settings changes
@@ -95,7 +95,7 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
   const handleColorChange = (color: string) => {
     const newSettings = { ...settings, strokeColor: color };
     setSettings(newSettings);
-    pencilManager.updateSettings(newSettings);
+    curvesManager.updateSettings(newSettings);
     setShowColorPicker(false);
   };
 
@@ -103,7 +103,7 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
   const handleStrokeWidthChange = (strokeWidth: number) => {
     const newSettings = { ...settings, strokeWidth };
     setSettings(newSettings);
-    pencilManager.updateSettings(newSettings);
+    curvesManager.updateSettings(newSettings);
     setShowStrokeWidthPicker(false);
   };
 
@@ -111,7 +111,7 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
   const handleOpacityChange = (strokeOpacity: number) => {
     const newSettings = { ...settings, strokeOpacity };
     setSettings(newSettings);
-    pencilManager.updateSettings(newSettings);
+    curvesManager.updateSettings(newSettings);
     setShowOpacityPicker(false);
   };
 
@@ -149,8 +149,8 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
     setShowOpacityPicker(!showOpacityPicker);
   };
 
-  // Don't render if pencil mode is not active or no portal container
-  if (!isPencilActive || !portalContainer) {
+  // Don't render if curve mode is not active or no portal container
+  if (!isCurveActive || !portalContainer) {
     return null;
   }
 
@@ -160,7 +160,7 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
   
   return createPortal(
     <div
-      data-pencil-toolbar
+      data-curve-toolbar
       style={{
         position: 'fixed',
         // Use the same positioning as FloatingToolbarRenderer for mobile
@@ -210,7 +210,7 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
         >
           <Palette size={isMobileDevice ? 12 : 13} color="white" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))' }} />
         </button>
-        
+
         {/* Color Picker Dropdown */}
         {showColorPicker && (
           <div
@@ -226,25 +226,25 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
               display: 'grid',
               gridTemplateColumns: 'repeat(4, 1fr)',
               gap: '4px',
-              minWidth: '140px',
+              minWidth: '160px',
               zIndex: 1001
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {SOFT_COLORS.map((color, index) => (
+            {SOFT_COLORS.map((color) => (
               <button
-                key={index}
+                key={color}
                 onClick={() => handleColorChange(color)}
                 style={{
-                  width: '28px',
-                  height: '28px',
-                  border: settings.strokeColor === color ? '2px solid #007acc' : '1px solid rgba(0, 0, 0, 0.1)',
-                  borderRadius: '6px',
+                  width: '32px',
+                  height: '32px',
                   backgroundColor: color,
+                  border: settings.strokeColor === color ? '2px solid #007acc' : '1px solid rgba(0, 0, 0, 0.1)',
+                  borderRadius: '4px',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease'
                 }}
-                title={`Select color ${color}`}
+                title={color}
               />
             ))}
           </div>
@@ -281,7 +281,7 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
             }}
           />
         </button>
-        
+
         {/* Stroke Width Picker Dropdown */}
         {showStrokeWidthPicker && (
           <div
@@ -318,16 +318,14 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
                   transition: 'all 0.2s ease',
                   fontSize: '12px'
                 }}
-                title={`Set stroke width to ${width}px`}
               >
                 <span>{width}px</span>
                 <div
                   style={{
-                    width: '20px',
-                    height: `${width}px`,
+                    width: '24px',
+                    height: `${Math.max(width, 1)}px`,
                     backgroundColor: settings.strokeColor,
-                    borderRadius: '1px',
-                    maxHeight: '8px'
+                    borderRadius: width > 4 ? '2px' : '0px'
                   }}
                 />
               </button>
@@ -361,7 +359,7 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
             <Droplets size={isMobileDevice ? 12 : 13} color={settings.strokeColor} style={{ opacity: settings.strokeOpacity }} />
           </div>
         </button>
-        
+
         {/* Opacity Picker Dropdown */}
         {showOpacityPicker && (
           <div
@@ -398,16 +396,16 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
                   transition: 'all 0.2s ease',
                   fontSize: '12px'
                 }}
-                title={`Set opacity to ${option.label}`}
               >
                 <span>{option.label}</span>
                 <div
                   style={{
                     width: '16px',
-                    height: '4px',
+                    height: '16px',
                     backgroundColor: settings.strokeColor,
-                    borderRadius: '1px',
-                    opacity: option.value
+                    opacity: option.value,
+                    border: '1px solid rgba(0, 0, 0, 0.1)',
+                    borderRadius: '2px'
                   }}
                 />
               </button>

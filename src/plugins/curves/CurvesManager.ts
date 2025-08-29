@@ -29,6 +29,13 @@ export interface CurvePoint {
   selected?: boolean;
 }
 
+export interface CurveSettings {
+  strokeColor: string;
+  strokeWidth: number;
+  strokeOpacity: number;
+  fill: string;
+}
+
 export interface CurveState {
   mode: CurveToolMode;
   isActive: boolean;
@@ -57,6 +64,12 @@ export class CurvesManager {
     points: [],
     isClosingPath: false,
   };
+  private settings: CurveSettings = {
+    strokeColor: '#000000',
+    strokeWidth: 2,
+    strokeOpacity: 1.0,
+    fill: 'none'
+  };
   private lastClickTime: number = 0;
   private lastClickPoint: Point | null = null;
   private doubleClickThreshold: number = 300; // ms
@@ -77,6 +90,16 @@ export class CurvesManager {
 
   getState(): CurveState {
     return this.curveState;
+  }
+
+  // Settings management
+  getSettings(): CurveSettings {
+    return { ...this.settings };
+  }
+
+  updateSettings(newSettings: Partial<CurveSettings>) {
+    this.settings = { ...this.settings, ...newSettings };
+    this.notifyListeners();
   }
 
   // Add listener for state changes
@@ -297,9 +320,10 @@ export class CurvesManager {
         commands: commands,
       }],
       style: {
-        fill: 'none',
-        stroke: '#000000',
-        strokeWidth: 2,
+        fill: this.settings.fill,
+        stroke: this.settings.strokeColor,
+        strokeWidth: this.settings.strokeWidth,
+        strokeOpacity: this.settings.strokeOpacity,
       },
     };
 
