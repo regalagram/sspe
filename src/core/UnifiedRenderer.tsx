@@ -146,7 +146,10 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
         if (result.shouldStartDrag && result.selectedSubPathId) {
           // Make sure the subpath is selected
           const currentState = useEditorStore.getState();
-          if (!currentState.selection.selectedSubPaths.includes(result.selectedSubPathId)) {
+          
+          // If we're in subpath-edit mode, don't change selection during drag
+          const isSubpathEditMode = currentState.mode?.current === 'subpath-edit';
+          if (!isSubpathEditMode && !currentState.selection.selectedSubPaths.includes(result.selectedSubPathId)) {
             selectSubPathMultiple(result.selectedSubPathId, false);
           }
           
@@ -331,7 +334,12 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
       const selectedSubPathId = finalizeCycling();
       
       if (selectedSubPathId) {
-        selectSubPathMultiple(selectedSubPathId, false);
+        // If we're in subpath-edit mode, don't change selection on click
+        const currentState = useEditorStore.getState();
+        const isSubpathEditMode = currentState.mode?.current === 'subpath-edit';
+        if (!isSubpathEditMode) {
+          selectSubPathMultiple(selectedSubPathId, false);
+        }
       }
       
       // Clear cycling state
@@ -492,6 +500,10 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
                 // Use the new cycling detection system
                 const result = startCyclingDetection(props.path, point, 15);
                 
+                // If we're in subpath-edit mode, do NOT change selection on pointer down
+                const stateForModeCheck = useEditorStore.getState();
+                const isSubpathEditMode = stateForModeCheck.mode?.current === 'subpath-edit';
+                
                 if (result.shouldWaitForMovement) {
                   // Set up cycling state to detect if this is a click or drag
                   setCyclingState({
@@ -499,6 +511,11 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
                     selectedSubPathId: result.selectedSubPathId,
                   });
                 } else if (result.selectedSubPathId) {
+                  // If we're in subpath-edit mode, don't change selection
+                  if (isSubpathEditMode) {
+                    return; // swallow selection change
+                  }
+                  
                   // Direct selection or start drag immediately
                   const currentState = useEditorStore.getState();
                   
@@ -529,8 +546,11 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
                       const shouldPreserve = shouldPreserveSelection(result.selectedSubPathId, 'subpath', selectionContext);
                       
                       if (!shouldPreserve) {
-                        // Normal selection (this will trigger group promotion if needed)
-                        selectSubPathMultiple(result.selectedSubPathId, e.shiftKey);
+                        // If we're in subpath-edit mode, don't change selection
+                        if (!isSubpathEditMode) {
+                          // Normal selection (this will trigger group promotion if needed)
+                          selectSubPathMultiple(result.selectedSubPathId, e.shiftKey);
+                        }
                       }
                     }
                     // Don't call stopPropagation so the event bubbles up to PointerInteraction
@@ -651,6 +671,12 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
                 
                 if (isAnyFormatCopyActive) {
                   return; // Don't consume the event, let it bubble up to plugin system
+                }
+                
+                // If we're in subpath-edit mode, don't change selection on tap
+                const isSubpathEditMode = currentStoreState.mode?.current === 'subpath-edit';
+                if (isSubpathEditMode) {
+                  return; // swallow selection change
                 }
                 
                 // Get the SVG element for deep selection check
