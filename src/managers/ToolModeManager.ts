@@ -239,6 +239,9 @@ export class ToolModeManager {
         break;
 
       case 'pencil':
+        // Clear selection when entering pencil mode
+        useEditorStore.getState().clearSelection();
+        
         if (this.pencilManager) {
           this.pencilManager.activateExternally();
         } else {

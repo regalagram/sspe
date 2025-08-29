@@ -33,6 +33,8 @@ export class PencilManager {
 
   activateExternally() {
     const store = useEditorStore.getState();
+    // Clear selection when activating pencil mode
+    store.clearSelection();
     store.setCreateMode('PENCIL');
   }
 
