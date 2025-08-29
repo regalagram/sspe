@@ -4,9 +4,27 @@ import { Palette, Minus, Droplets } from 'lucide-react';
 import { useEditorStore } from '../store/editorStore';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { toolModeManager } from '../managers/ToolModeManager';
+import { pencilManager } from '../plugins/pencil/PencilManager';
 import { curvesManager } from '../plugins/curves/CurvesManager';
 
-interface CurveFloatingToolbarProps {}
+// Types for different drawing tools
+type DrawingToolType = 'pencil' | 'curves';
+
+interface DrawingSettings {
+  strokeColor: string;
+  strokeWidth: number;
+  strokeOpacity: number;
+  fill?: string;
+}
+
+interface Manager {
+  getSettings: () => DrawingSettings;
+  updateSettings: (settings: DrawingSettings) => void;
+}
+
+interface DrawingFloatingToolbarProps {
+  toolType: DrawingToolType;
+}
 
 // Soft color palette
 const SOFT_COLORS = [
@@ -37,19 +55,32 @@ const OPACITY_OPTIONS = [
   { label: '10%', value: 0.1 }
 ];
 
-export const CurveFloatingToolbar: React.FC<CurveFloatingToolbarProps> = () => {
+// Manager mapping
+const MANAGERS: Record<DrawingToolType, Manager> = {
+  pencil: pencilManager,
+  curves: curvesManager
+};
+
+// Tool mode mapping
+const TOOL_MODES: Record<DrawingToolType, string> = {
+  pencil: 'pencil',
+  curves: 'curves'
+};
+
+export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ toolType }) => {
   const { isMobile, isTablet } = useMobileDetection();
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
-  const [settings, setSettings] = useState(curvesManager.getSettings());
+  const [settings, setSettings] = useState(MANAGERS[toolType].getSettings());
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showStrokeWidthPicker, setShowStrokeWidthPicker] = useState(false);
   const [showOpacityPicker, setShowOpacityPicker] = useState(false);
   
   const isMobileDevice = isMobile || isTablet;
   const toolModeState = toolModeManager.getState();
+  const manager = MANAGERS[toolType];
   
-  // Check if curve mode is active
-  const isCurveActive = toolModeState.activeMode === 'curves';
+  // Check if the specific tool mode is active
+  const isToolActive = toolModeState.activeMode === TOOL_MODES[toolType];
 
   // Find the SVG container for the portal
   useEffect(() => {
@@ -66,7 +97,7 @@ export const CurveFloatingToolbar: React.FC<CurveFloatingToolbarProps> = () => {
     const handleClickOutside = (event: PointerEvent) => {
       const target = event.target as HTMLElement;
       // Don't close if clicking inside the toolbar
-      if (!target.closest('[data-curve-toolbar]')) {
+      if (!target.closest(`[data-${toolType}-toolbar]`)) {
         setShowColorPicker(false);
         setShowStrokeWidthPicker(false);
         setShowOpacityPicker(false);
@@ -77,25 +108,25 @@ export const CurveFloatingToolbar: React.FC<CurveFloatingToolbarProps> = () => {
       document.addEventListener('pointerdown', handleClickOutside);
       return () => document.removeEventListener('pointerdown', handleClickOutside);
     }
-  }, [showColorPicker, showStrokeWidthPicker, showOpacityPicker]);
+  }, [showColorPicker, showStrokeWidthPicker, showOpacityPicker, toolType]);
 
-  // Update settings when curve manager settings change
+  // Update settings when manager settings change
   useEffect(() => {
     const updateSettings = () => {
-      setSettings(curvesManager.getSettings());
+      setSettings(manager.getSettings());
     };
     
     // Listen for settings changes
     const interval = setInterval(updateSettings, 100);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [manager]);
 
   // Handle color change
   const handleColorChange = (color: string) => {
     const newSettings = { ...settings, strokeColor: color };
     setSettings(newSettings);
-    curvesManager.updateSettings(newSettings);
+    manager.updateSettings(newSettings);
     setShowColorPicker(false);
   };
 
@@ -103,7 +134,7 @@ export const CurveFloatingToolbar: React.FC<CurveFloatingToolbarProps> = () => {
   const handleStrokeWidthChange = (strokeWidth: number) => {
     const newSettings = { ...settings, strokeWidth };
     setSettings(newSettings);
-    curvesManager.updateSettings(newSettings);
+    manager.updateSettings(newSettings);
     setShowStrokeWidthPicker(false);
   };
 
@@ -111,7 +142,7 @@ export const CurveFloatingToolbar: React.FC<CurveFloatingToolbarProps> = () => {
   const handleOpacityChange = (strokeOpacity: number) => {
     const newSettings = { ...settings, strokeOpacity };
     setSettings(newSettings);
-    curvesManager.updateSettings(newSettings);
+    manager.updateSettings(newSettings);
     setShowOpacityPicker(false);
   };
 
@@ -149,18 +180,17 @@ export const CurveFloatingToolbar: React.FC<CurveFloatingToolbarProps> = () => {
     setShowOpacityPicker(!showOpacityPicker);
   };
 
-  // Don't render if curve mode is not active or no portal container
-  if (!isCurveActive || !portalContainer) {
+  // Don't render if tool mode is not active or no portal container
+  if (!isToolActive || !portalContainer) {
     return null;
   }
 
   // Use the same button sizes as the standard floating toolbar
   const buttonSize = isMobileDevice ? 28 : 32;
-  const spacing = 4;
   
   return createPortal(
     <div
-      data-curve-toolbar
+      {...{[`data-${toolType}-toolbar`]: true}}
       style={{
         position: 'fixed',
         // Use the same positioning as FloatingToolbarRenderer for mobile
@@ -417,3 +447,12 @@ export const CurveFloatingToolbar: React.FC<CurveFloatingToolbarProps> = () => {
     portalContainer
   );
 };
+
+// Convenience components for each tool type
+export const PencilFloatingToolbar: React.FC = () => (
+  <DrawingFloatingToolbar toolType="pencil" />
+);
+
+export const CurveFloatingToolbar: React.FC = () => (
+  <DrawingFloatingToolbar toolType="curves" />
+);
