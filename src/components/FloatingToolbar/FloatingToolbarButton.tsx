@@ -241,6 +241,10 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
               closeSubmenu();
             }}
             actionId={action.id}
+            getCurrentStrokeOpacity={action.color.getCurrentStrokeOpacity}
+            onStrokeOpacityChange={action.color.onStrokeOpacityChange}
+            getCurrentFillOpacity={action.color.getCurrentFillOpacity}
+            onFillOpacityChange={action.color.onFillOpacityChange}
           />
         </div>
       )}
@@ -923,9 +927,21 @@ interface ColorPickerContentProps {
   currentColor: string | any; // Can be string color or GradientOrPattern object
   onChange: (color: string | any) => void; // Can return string color or GradientOrPattern object
   actionId?: string; // Add action ID to determine context
+  getCurrentStrokeOpacity?: () => number;
+  onStrokeOpacityChange?: (opacity: number) => void;
+  getCurrentFillOpacity?: () => number;
+  onFillOpacityChange?: (opacity: number) => void;
 }
 
-const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, onChange, actionId }) => {
+const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ 
+  currentColor, 
+  onChange, 
+  actionId,
+  getCurrentStrokeOpacity,
+  onStrokeOpacityChange,
+  getCurrentFillOpacity,
+  onFillOpacityChange
+}) => {
   const { isMobile, isTablet } = useMobileDetection();
   const isMobileDevice = isMobile || isTablet;
 
@@ -993,8 +1009,17 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
 
   // Get the current opacity value from the selected elements
   const getCurrentOpacity = (): number => {
-    // Determine if we're dealing with fill or stroke based on action ID
+    // Check if we have specific callback functions for stroke/fill opacity
     const isStroke = actionId?.includes('stroke') || false;
+    
+    if (isStroke && getCurrentStrokeOpacity) {
+      return getCurrentStrokeOpacity();
+    } else if (!isStroke && getCurrentFillOpacity) {
+      return getCurrentFillOpacity();
+    }
+    
+    // Fallback to existing behavior for selected elements
+    // Determine if we're dealing with fill or stroke based on action ID
     
     // Check if we're dealing with subpaths specifically
     const isSubpathAction = actionId?.includes('subpath');
@@ -1771,19 +1796,52 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({ currentColor, o
   // Function to handle opacity slider changes
   const handleOpacityChange = (newOpacity: number) => {
     setOpacity(newOpacity);
-    applyOpacityToSelected(newOpacity);
+    
+    // Check if we have specific callback functions for stroke/fill opacity
+    const isStroke = actionId?.includes('stroke') || false;
+    
+    if (isStroke && onStrokeOpacityChange) {
+      onStrokeOpacityChange(newOpacity);
+    } else if (!isStroke && onFillOpacityChange) {
+      onFillOpacityChange(newOpacity);
+    } else {
+      // Fallback to existing behavior for selected elements
+      applyOpacityToSelected(newOpacity);
+    }
   };
 
   // Handle RGBA opacity changes
   const handleRgbaOpacityChange = (newOpacity: number) => {
     setRgbaOpacity(newOpacity);
-    applyEmbeddedOpacity(newOpacity);
+    
+    // Check if we have specific callback functions for stroke/fill opacity
+    const isStroke = actionId?.includes('stroke') || false;
+    
+    if (isStroke && onStrokeOpacityChange) {
+      onStrokeOpacityChange(newOpacity);
+    } else if (!isStroke && onFillOpacityChange) {
+      onFillOpacityChange(newOpacity);
+    } else {
+      // Fallback to existing behavior for selected elements
+      applyEmbeddedOpacity(newOpacity);
+    }
   };
 
   // Handle explicit opacity changes
   const handleExplicitOpacityChange = (newOpacity: number) => {
     setExplicitOpacity(newOpacity);
-    applyExplicitOpacity(newOpacity);
+    
+    // Check if we have specific callback functions for stroke/fill opacity
+    const isStroke = actionId?.includes('stroke') || false;
+    
+    if (isStroke && onStrokeOpacityChange) {
+      onStrokeOpacityChange(newOpacity);
+    } else if (!isStroke && onFillOpacityChange) {
+      onFillOpacityChange(newOpacity);
+    } else {
+      // Fallback to existing behavior for selected elements
+      applyExplicitOpacity(newOpacity);
+    }
   };
 
   // Helper functions to check if current item is selected

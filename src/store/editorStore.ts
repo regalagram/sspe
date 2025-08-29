@@ -22,6 +22,7 @@ import { TextFormatCopyActions, createTextFormatCopyActions } from './textFormat
 import { ImageFormatCopyActions, createImageFormatCopyActions } from './imageFormatCopyActions';
 import { UseFormatCopyActions, createUseFormatCopyActions } from './useFormatCopyActions';
 import { DeepSelectionActions, createDeepSelectionActions } from './deepSelectionActions';
+import { ToolSettingsActions, createToolSettingsActions } from './toolSettingsActions';
 import { handleManager } from '../plugins/handles/HandleManager';
 // Combined actions interface
 interface EditorActions extends 
@@ -42,7 +43,8 @@ interface EditorActions extends
   TextFormatCopyActions,
   ImageFormatCopyActions,
   UseFormatCopyActions,
-  DeepSelectionActions {}
+  DeepSelectionActions,
+  ToolSettingsActions {}
 
 const loadInitialState = (): EditorState => {
   const savedState = loadEditorState();
@@ -446,6 +448,19 @@ const loadInitialState = (): EditorState => {
     renderVersion: 0,
     precision: 2,
     shapeSize: 50,
+    toolSettings: {
+      shared: {
+        strokeColor: '#6b7280',
+        strokeWidth: 3,
+        strokeOpacity: 1.0,
+        strokeDasharray: 'none',
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        fill: '#0078cc',
+        fillOpacity: 0.3,
+        fillRule: 'nonzero'
+      }
+    },
     visualDebugSizes: {
       globalFactor: 0.5,
       commandPointsFactor: 1.0,
@@ -519,6 +534,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     ...createImageFormatCopyActions(set, get, api),
     ...createUseFormatCopyActions(set, get, api),
     ...createDeepSelectionActions(set, get, api),
+    ...createToolSettingsActions(set, get, api),
   }))
 );
 

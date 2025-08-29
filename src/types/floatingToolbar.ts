@@ -22,6 +22,10 @@ export interface ToolbarAction {
   color?: {
     currentColor: string;
     onChange: (color: string) => void;
+    getCurrentStrokeOpacity?: () => number;
+    onStrokeOpacityChange?: (opacity: number) => void;
+    getCurrentFillOpacity?: () => number;
+    onFillOpacityChange?: (opacity: number) => void;
   };
   input?: {
     currentValue: string | number;

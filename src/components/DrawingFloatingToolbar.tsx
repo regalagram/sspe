@@ -86,8 +86,16 @@ const updateManagerSettings = (manager: BaseManager, newSettings: DrawingSetting
 export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ toolType }) => {
   const { isMobile, isTablet } = useMobileDetection();
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
-  const [settings, setSettings] = useState(normalizeSettings(MANAGERS[toolType].getSettings(), toolType));
   const [activeSubmenuId, setActiveSubmenuId] = useState<string | null>(null);
+  
+  // Get settings from store - now shared across all tools
+  const toolSettings = useEditorStore((state) => state.toolSettings?.shared);
+  const updateDrawingSettings = useEditorStore((state) => state.updateDrawingSettings);
+  
+  // Keep legacy methods for compatibility
+  const updatePencilSettings = useEditorStore((state) => state.updatePencilSettings);
+  const updateCurvesSettings = useEditorStore((state) => state.updateCurvesSettings);
+  const updateShapesSettings = useEditorStore((state) => state.updateShapesSettings);
   
   const isMobileDevice = isMobile || isTablet;
   const toolModeState = toolModeManager.getState();
@@ -95,6 +103,17 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
   
   // Check if the specific tool mode is active
   const isToolActive = toolModeState.activeMode === TOOL_MODES[toolType];
+
+  // Update function - now uses shared settings for all tools
+  const updateSettings = (newSettings: Partial<DrawingSettings>) => {
+    // Use the new unified update method
+    updateDrawingSettings(newSettings);
+    
+    // Also update the individual manager to keep them in sync
+    // Merge with current settings to ensure all required properties are present
+    const completeSettings = { ...toolSettings, ...newSettings };
+    updateManagerSettings(manager, completeSettings, toolType);
+  };
 
   // Find the SVG container for the portal
   useEffect(() => {
@@ -106,17 +125,12 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
     }
   }, []);
 
-  // Update settings when manager settings change
+  // Sync store settings with managers on tool activation
   useEffect(() => {
-    const updateSettings = () => {
-      setSettings(normalizeSettings(manager.getSettings(), toolType));
-    };
-    
-    // Listen for settings changes
-    const interval = setInterval(updateSettings, 100);
-    
-    return () => clearInterval(interval);
-  }, [manager, toolType]);
+    if (isToolActive) {
+      updateManagerSettings(manager, toolSettings, toolType);
+    }
+  }, [isToolActive, toolSettings, manager, toolType]);
 
   // Handle submenu toggling - only one submenu can be open at a time
   const handleSubmenuToggle = (actionId: string) => {
@@ -133,6 +147,11 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
   const createToolbarActions = (): ToolbarAction[] => {
     const actions: ToolbarAction[] = [];
 
+    // Early return if toolSettings is not available
+    if (!toolSettings) {
+      return actions;
+    }
+
     // Stroke Color Action (for all tools)
     actions.push({
       id: 'stroke-color',
@@ -141,11 +160,15 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
       tooltip: 'Change stroke color',
       type: 'color',
       color: {
-        currentColor: settings.strokeColor,
+        currentColor: toolSettings.strokeColor,
+        getCurrentStrokeOpacity: () => toolSettings.strokeOpacity || 1.0,
+        onStrokeOpacityChange: (opacity: number) => {
+          const newSettings = { ...toolSettings, strokeOpacity: opacity };
+          updateSettings(newSettings);
+        },
         onChange: (color: string) => {
-          const newSettings = { ...settings, strokeColor: color };
-          setSettings(newSettings);
-          updateManagerSettings(manager, newSettings, toolType);
+          const newSettings = { ...toolSettings, strokeColor: color };
+          updateSettings(newSettings);
         }
       }
     });
@@ -158,48 +181,42 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
       tooltip: 'Configure stroke properties',
       type: 'input',
       input: {
-        currentValue: settings.strokeWidth,
+        currentValue: toolSettings.strokeWidth,
         onChange: (value: string | number) => {
           const width = typeof value === 'number' ? value : parseFloat(value.toString());
           if (!isNaN(width) && width >= 0) {
-            const newSettings = { ...settings, strokeWidth: width };
-            setSettings(newSettings);
-            updateManagerSettings(manager, newSettings, toolType);
+            const newSettings = { ...toolSettings, strokeWidth: width };
+            updateSettings(newSettings);
           }
         },
         type: 'number',
         placeholder: '1'
       },
       strokeOptions: {
-        getCurrentStrokeWidth: () => settings.strokeWidth,
-        getCurrentStrokeDash: () => settings.strokeDasharray || 'none',
-        getCurrentStrokeLinecap: () => settings.strokeLinecap || 'round',
-        getCurrentStrokeLinejoin: () => settings.strokeLinejoin || 'round',
-        getCurrentFillRule: toolType === 'pencil' ? undefined : (() => settings.fillRule || 'nonzero'),
+        getCurrentStrokeWidth: () => toolSettings.strokeWidth,
+        getCurrentStrokeDash: () => toolSettings.strokeDasharray || 'none',
+        getCurrentStrokeLinecap: () => toolSettings.strokeLinecap || 'round',
+        getCurrentStrokeLinejoin: () => toolSettings.strokeLinejoin || 'round',
+        getCurrentFillRule: toolType === 'pencil' ? undefined : (() => toolSettings.fillRule || 'nonzero'),
         onStrokeWidthChange: (width: number) => {
-          const newSettings = { ...settings, strokeWidth: width };
-          setSettings(newSettings);
-          updateManagerSettings(manager, newSettings, toolType);
+          const newSettings = { ...toolSettings, strokeWidth: width };
+          updateSettings(newSettings);
         },
         onStrokeDashChange: (dash: string) => {
-          const newSettings = { ...settings, strokeDasharray: dash };
-          setSettings(newSettings);
-          updateManagerSettings(manager, newSettings, toolType);
+          const newSettings = { ...toolSettings, strokeDasharray: dash };
+          updateSettings(newSettings);
         },
         onStrokeLinecapChange: (linecap: string) => {
-          const newSettings = { ...settings, strokeLinecap: linecap as 'butt' | 'round' | 'square' };
-          setSettings(newSettings);
-          updateManagerSettings(manager, newSettings, toolType);
+          const newSettings = { ...toolSettings, strokeLinecap: linecap as 'butt' | 'round' | 'square' };
+          updateSettings(newSettings);
         },
         onStrokeLinejoinChange: (linejoin: string) => {
-          const newSettings = { ...settings, strokeLinejoin: linejoin as 'miter' | 'round' | 'bevel' };
-          setSettings(newSettings);
-          updateManagerSettings(manager, newSettings, toolType);
+          const newSettings = { ...toolSettings, strokeLinejoin: linejoin as 'miter' | 'round' | 'bevel' };
+          updateSettings(newSettings);
         },
         onFillRuleChange: toolType === 'pencil' ? undefined : ((fillRule: string) => {
-          const newSettings = { ...settings, fillRule: fillRule as 'nonzero' | 'evenodd' };
-          setSettings(newSettings);
-          updateManagerSettings(manager, newSettings, toolType);
+          const newSettings = { ...toolSettings, fillRule: fillRule as 'nonzero' | 'evenodd' };
+          updateSettings(newSettings);
         })
       }
     });
@@ -213,11 +230,15 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
         tooltip: 'Change fill color',
         type: 'color',
         color: {
-          currentColor: settings.fill || '#0078cc',
+          currentColor: toolSettings.fill || '#0078cc',
+          getCurrentFillOpacity: () => toolSettings.fillOpacity || 0.3,
+          onFillOpacityChange: (opacity: number) => {
+            const newSettings = { ...toolSettings, fillOpacity: opacity };
+            updateSettings(newSettings);
+          },
           onChange: (color: string) => {
-            const newSettings = { ...settings, fill: color };
-            setSettings(newSettings);
-            updateManagerSettings(manager, newSettings, toolType);
+            const newSettings = { ...toolSettings, fill: color };
+            updateSettings(newSettings);
           }
         }
       });
@@ -228,6 +249,11 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
 
   // Don't render if tool mode is not active or no portal container
   if (!isToolActive || !portalContainer) {
+    return null;
+  }
+
+  // Don't render if toolSettings is not yet available
+  if (!toolSettings) {
     return null;
   }
 

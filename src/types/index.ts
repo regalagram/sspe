@@ -234,6 +234,24 @@ export interface GridState {
   showLabels: boolean;
 }
 
+// Tool settings interfaces
+export interface DrawingToolSettings {
+  strokeColor: string;
+  strokeWidth: number;
+  strokeOpacity: number;
+  strokeDasharray?: string;
+  strokeLinecap?: 'butt' | 'round' | 'square';
+  strokeLinejoin?: 'miter' | 'round' | 'bevel';
+  fill?: string;
+  fillOpacity?: number;
+  fillRule?: 'nonzero' | 'evenodd';
+}
+
+export interface ToolSettings {
+  // Unified settings shared across all drawing tools
+  shared: DrawingToolSettings;
+}
+
 export interface EditorMode {
   // Added 'subpath-edit' for the new specialized editing mode where subpaths are
   // editable but should not be selected by pointer taps.
@@ -247,6 +265,7 @@ export interface EditorMode {
 
 export interface EditorState {
   shapeSize?: number;
+  toolSettings: ToolSettings; // Tool configuration settings
   paths: SVGPath[];
   texts: TextElementType[];
   textPaths: SVGTextPath[];
