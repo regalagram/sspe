@@ -51,7 +51,7 @@ export const createViewportActions: StateCreator<
       }
       const newViewport = validateViewport({
         ...state.viewport,
-        zoom: Math.max(0.1, Math.min(10, zoom)),
+        zoom: Math.max(0.1, Math.min(20, zoom)),
         pan: newPan,
       });
       const newState = {
@@ -62,12 +62,20 @@ export const createViewportActions: StateCreator<
 
   zoomIn: (center) => {
     const { viewport } = get();
-    get().setZoom(viewport.zoom * 1.2, center);
+    const newZoom = viewport.zoom * 1.2;
+    const clampedZoom = Math.max(0.1, Math.min(newZoom, 20));
+    // Si el zoom llega al límite máximo, no aplicar pan automático
+    const shouldApplyPan = clampedZoom < 20;
+    get().setZoom(clampedZoom, shouldApplyPan ? center : undefined);
   },
 
   zoomOut: (center) => {
     const { viewport } = get();
-    get().setZoom(viewport.zoom / 1.2, center);
+    const newZoom = viewport.zoom / 1.2;
+    const clampedZoom = Math.max(0.1, Math.min(newZoom, 20));
+    // Si el zoom llega al límite mínimo, no aplicar pan automático
+    const shouldApplyPan = clampedZoom > 0.1;
+    get().setZoom(clampedZoom, shouldApplyPan ? center : undefined);
   },
 
   zoomToFit: () => {
@@ -114,7 +122,7 @@ export const createViewportActions: StateCreator<
       console.warn('Invalid zoom calculation:', newZoom);
       return;
     }
-    newZoom = Math.max(0.1, Math.min(newZoom, 10));
+    newZoom = Math.max(0.1, Math.min(newZoom, 20));
     const contentCenterX = bounds.x + bounds.width / 2;
     const contentCenterY = bounds.y + bounds.height / 2;
     if (!isFinite(contentCenterX) || !isFinite(contentCenterY)) {

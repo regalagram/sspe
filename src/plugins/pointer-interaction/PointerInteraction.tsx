@@ -1067,7 +1067,10 @@ class PanZoomManager {
   handleZoom(factor: number, center: Point): void {
     const { setZoom, viewport } = this.editorStore;
     const newZoom = Math.max(0.1, Math.min(viewport.zoom * factor, 20));
-    setZoom(newZoom, center);
+    
+    // Si el nuevo zoom llega al límite máximo, no aplicar pan automático
+    const shouldApplyPan = newZoom < 20;
+    setZoom(newZoom, shouldApplyPan ? center : undefined);
   }
 }
 
