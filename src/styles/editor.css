@@ -804,3 +804,38 @@ html,body {
     stroke-dashoffset: 12;
   }
 }
+
+/* Creation mode overlay styles */
+.creation-mode-overlay {
+  cursor: crosshair !important;
+  pointer-events: all !important;
+  fill: rgba(0, 0, 0, 0.001) !important; /* Almost invisible but still captures events */
+  z-index: 999999 !important;
+}
+
+.creation-mode-overlay.pencil-mode {
+  cursor: crosshair !important;
+}
+
+.creation-mode-overlay.curves-mode {
+  cursor: crosshair !important;
+}
+
+.creation-mode-overlay.shapes-mode {
+  cursor: crosshair !important;
+}
+
+/* Force cursor on entire SVG when creation overlay is active */
+svg:has(.creation-mode-overlay) {
+  cursor: crosshair !important;
+}
+
+svg:has(.creation-mode-overlay) * {
+  cursor: crosshair !important;
+  pointer-events: none !important; /* Disable events on all other elements */
+}
+
+/* But re-enable events on the overlay itself */
+svg:has(.creation-mode-overlay) .creation-mode-overlay {
+  pointer-events: all !important;
+}

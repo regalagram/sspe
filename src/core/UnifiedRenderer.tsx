@@ -13,6 +13,9 @@ import { transformManager } from '../plugins/transform/TransformManager';
 import { shouldPreserveSelection } from '../utils/selection-utils';
 import { stickyManager } from '../plugins/sticky-guidelines/StickyManager';
 import { applyFinalSnapToGrid } from '../utils/final-snap-utils';
+import { toolModeManager } from '../managers/ToolModeManager';
+import { shapeManager } from '../plugins/shapes/ShapeManager';
+import { curvesManager } from '../plugins/curves/CurvesManager';
 
 export interface RenderItem {
   zIndex: number;
@@ -1330,6 +1333,56 @@ const renderUseElement = (useElement: any): React.JSX.Element => {
 };
 
 export const UnifiedRenderer: React.FC = () => {
+  // State to track manager states and force re-render only when they change
+  const [managerStates, setManagerStates] = useState({
+    curvesActive: false,
+    shapesActive: false
+  });
+  
+  useEffect(() => {
+    // Listen to curves manager changes
+    const curvesUnsubscribe = curvesManager.addListener(() => {
+      const newCurvesActive = curvesManager.getState().isActive;
+      setManagerStates(prev => {
+        if (prev.curvesActive !== newCurvesActive) {
+          return { ...prev, curvesActive: newCurvesActive };
+        }
+        return prev;
+      });
+    });
+    
+    // Check shape manager state periodically, but only update if changed
+    const shapeInterval = setInterval(() => {
+      const newShapesActive = shapeManager.isInShapeCreationMode();
+      setManagerStates(prev => {
+        if (prev.shapesActive !== newShapesActive) {
+          return { ...prev, shapesActive: newShapesActive };
+        }
+        return prev;
+      });
+    }, 200); // Check every 200ms
+    
+    return () => {
+      curvesUnsubscribe();
+      clearInterval(shapeInterval);
+    };
+  }, []);
+
+  // Check if we're in modes that need overlays
+  const toolModeState = toolModeManager.getState();
+  const currentMode = useEditorStore(state => state.mode);
+  const currentViewport = useEditorStore(state => state.viewport);
+  
+  const isPencilMode = toolModeState.activeMode === 'pencil' || 
+                      (currentMode.current === 'create' && currentMode.createMode?.commandType === 'PENCIL');
+  const isCurvesMode = toolModeState.activeMode === 'curves' || 
+                      currentMode.current === 'curves' || 
+                      managerStates.curvesActive;
+  const isShapesMode = toolModeState.activeMode === 'shapes' || 
+                      managerStates.shapesActive;
+  
+  // Any creation mode that needs overlay
+  const needsOverlay = isPencilMode || isCurvesMode || isShapesMode;
   const { selection, viewport, enabledFeatures, ui, symbols, paths, groups } = useEditorStore();
   
   // Helper function to render symbol child content (from SymbolRenderer)
@@ -1498,6 +1551,34 @@ export const UnifiedRenderer: React.FC = () => {
           {item.element}
         </g>
       ))}
+
+      {/* Creation mode overlay - renders on top of all content */}
+      {needsOverlay && (
+        <rect
+          x={currentViewport.viewBox.x}
+          y={currentViewport.viewBox.y}
+          width={currentViewport.viewBox.width}
+          height={currentViewport.viewBox.height}
+          fill="rgba(0, 0, 0, 0.001)" // Almost transparent but still has fill to capture events
+          stroke="none"
+          style={{ 
+            cursor: isPencilMode ? 'crosshair' : 
+                   isCurvesMode ? 'crosshair' : 
+                   isShapesMode ? 'crosshair' : 'default',
+            pointerEvents: 'all'
+          }}
+          className={`creation-mode-overlay ${
+            isPencilMode ? 'pencil-mode' : 
+            isCurvesMode ? 'curves-mode' : 
+            isShapesMode ? 'shapes-mode' : ''
+          }`}
+          data-testid={`${
+            isPencilMode ? 'pencil' : 
+            isCurvesMode ? 'curves' : 
+            isShapesMode ? 'shapes' : 'creation'
+          }-mode-overlay`}
+        />
+      )}
     </>
   );
 };
