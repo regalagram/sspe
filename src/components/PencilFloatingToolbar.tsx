@@ -115,59 +115,101 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
     setShowOpacityPicker(false);
   };
 
+  // Handle button interactions for mobile compatibility
+  const handleColorPickerToggle = (e: React.MouseEvent | React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Close other pickers when opening color picker
+    if (!showColorPicker) {
+      setShowStrokeWidthPicker(false);
+      setShowOpacityPicker(false);
+    }
+    setShowColorPicker(!showColorPicker);
+  };
+
+  const handleStrokeWidthPickerToggle = (e: React.MouseEvent | React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Close other pickers when opening stroke width picker
+    if (!showStrokeWidthPicker) {
+      setShowColorPicker(false);
+      setShowOpacityPicker(false);
+    }
+    setShowStrokeWidthPicker(!showStrokeWidthPicker);
+  };
+
+  const handleOpacityPickerToggle = (e: React.MouseEvent | React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Close other pickers when opening opacity picker
+    if (!showOpacityPicker) {
+      setShowColorPicker(false);
+      setShowStrokeWidthPicker(false);
+    }
+    setShowOpacityPicker(!showOpacityPicker);
+  };
+
   // Don't render if pencil mode is not active or no portal container
   if (!isPencilActive || !portalContainer) {
     return null;
   }
 
-  const buttonSize = isMobileDevice ? 36 : 32;
-  const toolbarHeight = buttonSize + 16; // Button + padding
+  // Use the same button sizes as the standard floating toolbar
+  const buttonSize = isMobileDevice ? 28 : 32;
+  const spacing = 4;
   
   return createPortal(
     <div
       data-pencil-toolbar
       style={{
         position: 'fixed',
-        top: '20px',
+        // Use the same positioning as FloatingToolbarRenderer for mobile
+        top: isMobileDevice ? 'env(safe-area-inset-top, 8px)' : '20px',
         left: '50%',
         transform: 'translateX(-50%)',
-        zIndex: 1000,
+        zIndex: isMobileDevice ? 9999 : 40,
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
-        padding: '8px 12px',
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(8px)',
-        borderRadius: '12px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-        border: '1px solid rgba(0, 0, 0, 0.1)',
-        pointerEvents: 'auto'
+        gap: '0px', // Match FloatingToolbarRenderer
+        background: 'white',
+        padding: '0px', // Match FloatingToolbarRenderer
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)', // Match FloatingToolbarRenderer
+        userSelect: 'none',
+        touchAction: 'manipulation',
+        pointerEvents: 'auto',
+        // Mobile-optimized properties to match FloatingToolbarRenderer
+        overflowX: 'visible',
+        overflowY: 'visible',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none',
+        WebkitBackfaceVisibility: 'hidden',
+        backfaceVisibility: 'hidden'
       }}
     >
       {/* Color Picker Button */}
       <div style={{ position: 'relative' }}>
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowColorPicker(!showColorPicker);
-          }}
+          onClick={handleColorPickerToggle}
+          onPointerDown={handleColorPickerToggle}
           style={{
-            width: buttonSize,
-            height: buttonSize,
-            border: 'none',
-            borderRadius: '8px',
-            backgroundColor: settings.strokeColor,
-            cursor: 'pointer',
+            width: `${buttonSize}px`,
+            height: `${buttonSize}px`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-            transition: 'all 0.2s ease',
-            position: 'relative'
+            background: showColorPicker ? '#f3f4f6' : settings.strokeColor,
+            color: 'white',
+            border: 'none',
+            borderRadius: '0px', // Match FloatingToolbarButton
+            cursor: 'pointer',
+            transition: 'all 0.15s ease', // Match FloatingToolbarButton
+            position: 'relative',
+            touchAction: 'manipulation'
           }}
           title="Change stroke color"
         >
-          <Palette size={14} color="white" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))' }} />
+          <Palette size={isMobileDevice ? 12 : 13} color="white" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.5))' }} />
         </button>
         
         {/* Color Picker Dropdown */}
@@ -194,6 +236,10 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
               <button
                 key={index}
                 onClick={() => handleColorChange(color)}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  handleColorChange(color);
+                }}
                 style={{
                   width: '28px',
                   height: '28px',
@@ -213,23 +259,22 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
       {/* Stroke Width Picker Button */}
       <div style={{ position: 'relative' }}>
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowStrokeWidthPicker(!showStrokeWidthPicker);
-          }}
+          onClick={handleStrokeWidthPickerToggle}
+          onPointerDown={handleStrokeWidthPickerToggle}
           style={{
-            width: buttonSize,
-            height: buttonSize,
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-            borderRadius: '8px',
-            backgroundColor: 'white',
-            cursor: 'pointer',
+            width: `${buttonSize}px`,
+            height: `${buttonSize}px`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-            transition: 'all 0.2s ease',
-            position: 'relative'
+            background: showStrokeWidthPicker ? '#f3f4f6' : 'white',
+            color: '#374151',
+            border: 'none',
+            borderRadius: '0px', // Match FloatingToolbarButton
+            cursor: 'pointer',
+            transition: 'all 0.15s ease', // Match FloatingToolbarButton
+            position: 'relative',
+            touchAction: 'manipulation'
           }}
           title={`Change stroke width (current: ${settings.strokeWidth}px)`}
         >
@@ -267,6 +312,10 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
               <button
                 key={width}
                 onClick={() => handleStrokeWidthChange(width)}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  handleStrokeWidthChange(width);
+                }}
                 style={{
                   padding: '8px 12px',
                   border: settings.strokeWidth === width ? '2px solid #007acc' : '1px solid rgba(0, 0, 0, 0.1)',
@@ -300,28 +349,27 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
       {/* Opacity Picker Button */}
       <div style={{ position: 'relative' }}>
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowOpacityPicker(!showOpacityPicker);
-          }}
+          onClick={handleOpacityPickerToggle}
+          onPointerDown={handleOpacityPickerToggle}
           style={{
-            width: buttonSize,
-            height: buttonSize,
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-            borderRadius: '8px',
-            backgroundColor: 'white',
-            cursor: 'pointer',
+            width: `${buttonSize}px`,
+            height: `${buttonSize}px`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-            transition: 'all 0.2s ease',
-            position: 'relative'
+            background: showOpacityPicker ? '#f3f4f6' : 'white',
+            color: '#374151',
+            border: 'none',
+            borderRadius: '0px', // Match FloatingToolbarButton
+            cursor: 'pointer',
+            transition: 'all 0.15s ease', // Match FloatingToolbarButton
+            position: 'relative',
+            touchAction: 'manipulation'
           }}
           title={`Change opacity (current: ${Math.round(settings.strokeOpacity * 100)}%)`}
         >
           <div style={{ position: 'relative' }}>
-            <Droplets size={14} color={settings.strokeColor} style={{ opacity: settings.strokeOpacity }} />
+            <Droplets size={isMobileDevice ? 12 : 13} color={settings.strokeColor} style={{ opacity: settings.strokeOpacity }} />
           </div>
         </button>
         
@@ -349,6 +397,10 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
               <button
                 key={option.value}
                 onClick={() => handleOpacityChange(option.value)}
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  handleOpacityChange(option.value);
+                }}
                 style={{
                   padding: '8px 12px',
                   border: Math.abs(settings.strokeOpacity - option.value) < 0.01 ? '2px solid #007acc' : '1px solid rgba(0, 0, 0, 0.1)',
@@ -377,20 +429,6 @@ export const PencilFloatingToolbar: React.FC<PencilFloatingToolbarProps> = () =>
             ))}
           </div>
         )}
-      </div>
-      
-      {/* Current settings display */}
-      <div
-        style={{
-          padding: '4px 8px',
-          fontSize: '11px',
-          color: '#666',
-          backgroundColor: 'rgba(0, 0, 0, 0.05)',
-          borderRadius: '6px',
-          whiteSpace: 'nowrap'
-        }}
-      >
-        {settings.strokeWidth}px • {Math.round(settings.strokeOpacity * 100)}%
       </div>
     </div>,
     portalContainer

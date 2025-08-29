@@ -2,11 +2,17 @@
 
 ## Core Rules
 - **Everything is a plugin** (no exceptions)
-- **Pointer events only** (`onPointerDown` not `onMouseDown`)
+- **Pointer events only** (`onPointerDown` not `onMouseDown`, `onTouchEnd` or other event types)
 - **Central Zustand store** (no local state for shared data)
 - **Components in `src/components/`** (never in plugins)
 - **Scale with zoom** (`size / viewport.zoom`)
 - **UnifiedRenderer** for all SVG content
+
+## Event Handling Standards
+- Use **pointer events exclusively**: `onPointerDown`, `onPointerMove`, `onPointerUp`
+- Never use mouse events (`onMouseDown`, `onClick`) or touch events (`onTouchStart`, `onTouchEnd`)
+- Pointer events provide unified handling for mouse, touch, and pen inputs
+- Always include `preventDefault()` and `stopPropagation()` when needed
 
 ## Plugin Template
 ```typescript
@@ -122,4 +128,26 @@ interface SVGPath {
 7. Assign proper RenderLayer
 8. Test enable/disable
 
-**Remember: Everything is a plugin. All SVG through UnifiedRenderer.**
+## Floating Toolbars
+### PencilFloatingToolbar
+- Appears only when pencil mode is active
+- Positioned at top center (mobile: respects safe-area-inset-top)
+- Controls: color picker, stroke width, opacity
+- Exclusive menu behavior: only one submenu open at a time
+- Uses pointer events for cross-platform compatibility
+- Renders via portal outside normal DOM hierarchy
+
+### Example Toolbar Implementation
+```typescript
+// Correct approach for toolbar buttons
+<button
+  onClick={handleAction}
+  onPointerDown={handleAction}  // For mobile compatibility
+  style={{
+    touchAction: 'manipulation',  // Prevent zoom on double tap
+    // ... other styles
+  }}
+>
+```
+
+**Remember: Everything is a plugin. All SVG through UnifiedRenderer. Pointer events only.**
