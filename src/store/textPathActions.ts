@@ -69,15 +69,17 @@ export const createTextPathActions: StateCreator<
         // Use values from store if available, otherwise fallback to defaults
         fontFamily: toolSettings?.fontFamily || 'Arial, sans-serif',
         fontSize: toolSettings?.fontSize || 16,
+        fontWeight: 'normal',
+        fontStyle: 'normal',
+        textAnchor: 'start',
         fill: toolSettings?.fill || '#000000',
-        stroke: toolSettings?.strokeColor !== '#6b7280' ? toolSettings?.strokeColor : undefined, // Only apply if not default
-        strokeWidth: toolSettings?.strokeWidth && toolSettings.strokeWidth !== 3 ? toolSettings.strokeWidth : undefined, // Only apply if not default
-        strokeOpacity: toolSettings?.strokeOpacity !== 1.0 ? toolSettings?.strokeOpacity : undefined, // Only apply if not default
-        fillOpacity: toolSettings?.fillOpacity !== 0.3 ? toolSettings?.fillOpacity : undefined, // Only apply if not default
-        strokeDasharray: toolSettings?.strokeDasharray && toolSettings.strokeDasharray !== 'none' ? toolSettings.strokeDasharray : undefined,
-        strokeLinecap: toolSettings?.strokeLinecap && toolSettings.strokeLinecap !== 'round' ? toolSettings.strokeLinecap : undefined,
-        strokeLinejoin: toolSettings?.strokeLinejoin && toolSettings.strokeLinejoin !== 'round' ? toolSettings.strokeLinejoin : undefined,
-        textAnchor: 'start'
+        stroke: toolSettings?.strokeColor || undefined,
+        strokeWidth: toolSettings?.strokeWidth || undefined,
+        strokeOpacity: toolSettings?.strokeOpacity || undefined,
+        strokeDasharray: toolSettings?.strokeDasharray === 'none' ? undefined : toolSettings?.strokeDasharray,
+        strokeLinecap: toolSettings?.strokeLinecap || undefined,
+        strokeLinejoin: toolSettings?.strokeLinejoin || undefined,
+        fillOpacity: toolSettings?.fillOpacity || undefined
       },
       locked: false
     };
