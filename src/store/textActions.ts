@@ -51,6 +51,9 @@ export const createTextActions: StateCreator<
 > = (set, get) => ({
   
   addText: (x: number, y: number, content = 'Text') => {
+    const state = get();
+    const toolSettings = state.toolSettings?.shared;
+    
     const newText: TextElement = {
       id: generateId(),
       type: 'text',
@@ -58,12 +61,19 @@ export const createTextActions: StateCreator<
       x,
       y,
       style: {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: 16,
+        fontFamily: toolSettings?.fontFamily || 'Arial, sans-serif',
+        fontSize: toolSettings?.fontSize || 16,
         fontWeight: 'normal',
         fontStyle: 'normal',
         textAnchor: 'start',
-        fill: '#000000'
+        fill: toolSettings?.fill || '#000000',
+        stroke: toolSettings?.strokeColor || undefined,
+        strokeWidth: toolSettings?.strokeWidth || undefined,
+        strokeOpacity: toolSettings?.strokeOpacity || undefined,
+        strokeDasharray: toolSettings?.strokeDasharray === 'none' ? undefined : toolSettings?.strokeDasharray,
+        strokeLinecap: toolSettings?.strokeLinecap || undefined,
+        strokeLinejoin: toolSettings?.strokeLinejoin || undefined,
+        fillOpacity: toolSettings?.fillOpacity || undefined
       }
     };
     
@@ -75,6 +85,9 @@ export const createTextActions: StateCreator<
   },
 
   addMultilineText: (x: number, y: number, spans = ['Text']) => {
+    const state = get();
+    const toolSettings = state.toolSettings?.shared;
+    
     const textSpans = spans.map((content, index) => ({
       id: generateId(),
       content,
@@ -88,12 +101,19 @@ export const createTextActions: StateCreator<
       y,
       spans: textSpans,
       style: {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: 16,
+        fontFamily: toolSettings?.fontFamily || 'Arial, sans-serif',
+        fontSize: toolSettings?.fontSize || 16,
         fontWeight: 'normal',
         fontStyle: 'normal',
         textAnchor: 'start',
-        fill: '#000000'
+        fill: toolSettings?.fill || '#000000',
+        stroke: toolSettings?.strokeColor || undefined,
+        strokeWidth: toolSettings?.strokeWidth || undefined,
+        strokeOpacity: toolSettings?.strokeOpacity || undefined,
+        strokeDasharray: toolSettings?.strokeDasharray === 'none' ? undefined : toolSettings?.strokeDasharray,
+        strokeLinecap: toolSettings?.strokeLinecap || undefined,
+        strokeLinejoin: toolSettings?.strokeLinejoin || undefined,
+        fillOpacity: toolSettings?.fillOpacity || undefined
       }
     };
     

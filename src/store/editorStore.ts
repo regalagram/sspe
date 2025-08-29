@@ -458,7 +458,9 @@ const loadInitialState = (): EditorState => {
         strokeLinejoin: 'round',
         fill: '#0078cc',
         fillOpacity: 0.3,
-        fillRule: 'nonzero'
+        fillRule: 'nonzero',
+        fontFamily: 'Arial, sans-serif',
+        fontSize: 16
       }
     },
     visualDebugSizes: {

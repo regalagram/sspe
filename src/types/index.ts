@@ -245,6 +245,8 @@ export interface DrawingToolSettings {
   fill?: string;
   fillOpacity?: number;
   fillRule?: 'nonzero' | 'evenodd';
+  fontFamily?: string;
+  fontSize?: number;
 }
 
 export interface ToolSettings {

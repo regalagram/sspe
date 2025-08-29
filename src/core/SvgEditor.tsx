@@ -17,7 +17,7 @@ import { SVGDefinitions } from '../components/SVGDefinitions';
 import { MobileContainer } from '../components/MobileContainer';
 import { Toolbar } from '../components/Toolbar';
 import { FloatingToolbarRenderer } from '../components/FloatingToolbar/FloatingToolbarRenderer';
-import { PencilFloatingToolbar, CurveFloatingToolbar, ShapeFloatingToolbar } from '../components/DrawingFloatingToolbar';
+import { PencilFloatingToolbar, CurveFloatingToolbar, ShapeFloatingToolbar, TextFloatingToolbar } from '../components/DrawingFloatingToolbar';
 import { MobileTextEditModal } from '../components/MobileTextEditModal';
 import { useMobileTextEdit } from '../hooks/useMobileTextEdit';
 import { extractGradientsFromPaths, extractGradientsFromImages } from '../utils/gradient-utils';
@@ -301,6 +301,9 @@ export const SvgEditor: React.FC = () => {
         {/* Shape floating toolbar for shape drawing tools */}
         <ShapeFloatingToolbar />
         
+        {/* Text floating toolbar for text tools */}
+        <TextFloatingToolbar />
+        
         {/* Mobile text edit modal */}
         {editData && (
           <MobileTextEditModal
@@ -339,6 +342,9 @@ export const SvgEditor: React.FC = () => {
       
       {/* Shape floating toolbar for shape drawing tools */}
       <ShapeFloatingToolbar />
+      
+      {/* Text floating toolbar for text tools */}
+      <TextFloatingToolbar />
       
       {/* Mobile text edit modal - also available on desktop for consistency */}
       {editData && (

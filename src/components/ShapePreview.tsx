@@ -5,6 +5,7 @@ import { getShapeById } from '../plugins/shapes/ShapeDefinitions';
 
 export const ShapePreview: React.FC = () => {
   const { viewport } = useEditorStore();
+  const toolSettings = useEditorStore((state) => state.toolSettings?.shared);
   const [, forceUpdate] = useState({});
 
   // Force re-render during drag operations
@@ -53,7 +54,7 @@ export const ShapePreview: React.FC = () => {
   const currentPoint = shapeManager.getDragCurrentPoint();
   const previewSize = shapeManager.getPreviewSize();
 
-  if (!isDragging || !shapeId || !startPoint || !currentPoint) {
+  if (!isDragging || !shapeId || !startPoint || !currentPoint || !toolSettings) {
     return null;
   }
 
@@ -79,17 +80,30 @@ export const ShapePreview: React.FC = () => {
     return '';
   }).join(' ');
 
-  // Scale stroke width with zoom
-  const strokeWidth = Math.max(1 / viewport.zoom, 0.5);
+  // Use toolbar settings for styling - same as final shape will have
+  const fill = toolSettings.fill || '#0078cc';
+  const fillOpacity = toolSettings.fillOpacity || 0.3;
+  const strokeColor = toolSettings.strokeColor || '#6b7280';
+  const strokeWidth = Math.max((toolSettings.strokeWidth || 3) / viewport.zoom, 0.5);
+  const strokeOpacity = toolSettings.strokeOpacity || 1.0;
+  const strokeDasharray = toolSettings.strokeDasharray && toolSettings.strokeDasharray !== 'none' 
+    ? toolSettings.strokeDasharray 
+    : `${4 / viewport.zoom} ${2 / viewport.zoom}`; // Preview dashed style
+  const strokeLinecap = toolSettings.strokeLinecap || 'round';
+  const strokeLinejoin = toolSettings.strokeLinejoin || 'round';
 
   return (
     <g className="shape-preview">
       <path
         d={pathString}
-        fill="rgba(0, 120, 204, 0.2)"
-        stroke="#007acc"
+        fill={fill}
+        fillOpacity={fillOpacity}
+        stroke={strokeColor}
+        strokeOpacity={strokeOpacity}
         strokeWidth={strokeWidth}
-        strokeDasharray={`${4 / viewport.zoom} ${2 / viewport.zoom}`}
+        strokeDasharray={strokeDasharray}
+        strokeLinecap={strokeLinecap}
+        strokeLinejoin={strokeLinejoin}
         pointerEvents="none"
       />
       {/* Show drag line for reference */}

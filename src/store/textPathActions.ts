@@ -52,6 +52,10 @@ export const createTextPathActions: StateCreator<
   TextPathActions
 > = (set, get) => ({
   addTextPath: (pathRef, content = 'Text on path', startOffset = 0) => {
+    // Get current state to access shared tool settings
+    const state = get();
+    const toolSettings = state.toolSettings?.shared;
+    
     const textPath: SVGTextPath = {
       id: generateId(),
       type: 'textPath',
@@ -62,9 +66,17 @@ export const createTextPathActions: StateCreator<
       spacing: 'auto',
       side: 'left',
       style: {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: 16,
-        fill: '#000000',
+        // Use values from store if available, otherwise fallback to defaults
+        fontFamily: toolSettings?.fontFamily || 'Arial, sans-serif',
+        fontSize: toolSettings?.fontSize || 16,
+        fill: toolSettings?.fill || '#000000',
+        stroke: toolSettings?.strokeColor !== '#6b7280' ? toolSettings?.strokeColor : undefined, // Only apply if not default
+        strokeWidth: toolSettings?.strokeWidth && toolSettings.strokeWidth !== 3 ? toolSettings.strokeWidth : undefined, // Only apply if not default
+        strokeOpacity: toolSettings?.strokeOpacity !== 1.0 ? toolSettings?.strokeOpacity : undefined, // Only apply if not default
+        fillOpacity: toolSettings?.fillOpacity !== 0.3 ? toolSettings?.fillOpacity : undefined, // Only apply if not default
+        strokeDasharray: toolSettings?.strokeDasharray && toolSettings.strokeDasharray !== 'none' ? toolSettings.strokeDasharray : undefined,
+        strokeLinecap: toolSettings?.strokeLinecap && toolSettings.strokeLinecap !== 'round' ? toolSettings.strokeLinecap : undefined,
+        strokeLinejoin: toolSettings?.strokeLinejoin && toolSettings.strokeLinejoin !== 'round' ? toolSettings.strokeLinejoin : undefined,
         textAnchor: 'start'
       },
       locked: false
