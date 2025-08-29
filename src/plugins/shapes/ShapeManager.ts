@@ -16,6 +16,18 @@ interface ShapeCreationState {
   previewSize: number;
 }
 
+export interface ShapeSettings {
+  strokeColor: string;
+  strokeWidth: number;
+  strokeOpacity: number;
+  fill: string;
+  fillOpacity: number;
+  strokeDasharray?: string; // Dash pattern
+  strokeLinecap?: 'butt' | 'round' | 'square'; // Line cap style
+  strokeLinejoin?: 'miter' | 'round' | 'bevel'; // Line join style
+  fillRule?: 'nonzero' | 'evenodd'; // Fill rule
+}
+
 export class ShapeManager {
   private state: ShapeCreationState = {
     isCreating: false,
@@ -28,11 +40,31 @@ export class ShapeManager {
     previewSize: 50
   };
 
+  private settings: ShapeSettings = {
+    strokeColor: '#0000ff',
+    strokeWidth: 2,
+    strokeOpacity: 1.0,
+    fill: '#0078cc',
+    fillOpacity: 0.3,
+    strokeDasharray: 'none',
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    fillRule: 'nonzero'
+  };
+
   private editorStore: any = null;
 
   constructor() {
     // Registrar este manager con ToolModeManager
     toolModeManager.setShapeManager(this);
+  }
+
+  getSettings(): ShapeSettings {
+    return { ...this.settings };
+  }
+
+  updateSettings(newSettings: ShapeSettings) {
+    this.settings = { ...newSettings };
   }
 
   setEditorStore(store: any) {
@@ -251,12 +283,15 @@ export class ShapeManager {
       // addPath automatically creates a path with one subpath containing M 100,100
       // We'll replace those commands with our shape commands
       const pathId = addPath({
-        fill: '#0078cc',
-        fillOpacity: 0.3,
-        stroke: '#0000ff',
-        strokeWidth: 2,
-        strokeLinecap: 'round',
-        strokeLinejoin: 'round'
+        fill: this.settings.fill,
+        fillOpacity: this.settings.fillOpacity,
+        stroke: this.settings.strokeColor,
+        strokeWidth: this.settings.strokeWidth,
+        strokeOpacity: this.settings.strokeOpacity,
+        strokeLinecap: this.settings.strokeLinecap || 'round',
+        strokeLinejoin: this.settings.strokeLinejoin || 'round',
+        strokeDasharray: this.settings.strokeDasharray === 'none' ? undefined : this.settings.strokeDasharray,
+        fillRule: this.settings.fillRule || 'nonzero'
       });
 
       

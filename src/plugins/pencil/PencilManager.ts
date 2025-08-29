@@ -11,6 +11,9 @@ export interface PencilSettings {
   strokeWidth: number; // Stroke width for drawing
   strokeColor: string; // Stroke color for drawing
   strokeOpacity: number; // Stroke opacity (0-1)
+  strokeDasharray?: string; // Dash pattern
+  strokeLinecap?: 'butt' | 'round' | 'square'; // Line cap style
+  strokeLinejoin?: 'miter' | 'round' | 'bevel'; // Line join style
 }
 
 export class PencilManager {
@@ -24,7 +27,10 @@ export class PencilManager {
     simplifyEps: 8,
     strokeWidth: 3,
     strokeColor: '#6b7280', // Soft gray color
-    strokeOpacity: 1.0 // Full opacity by default
+    strokeOpacity: 1.0, // Full opacity by default
+    strokeDasharray: 'none',
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round'
   };
 
   setEditorStore(store: any) {
@@ -389,8 +395,9 @@ export class PencilManager {
         stroke: this.settings.strokeColor,
         strokeWidth: this.settings.strokeWidth,
         strokeOpacity: this.settings.strokeOpacity,
-        strokeLinecap: 'round' as const,
-        strokeLinejoin: 'round' as const
+        strokeLinecap: this.settings.strokeLinecap || 'round',
+        strokeLinejoin: this.settings.strokeLinejoin || 'round',
+        strokeDasharray: this.settings.strokeDasharray === 'none' ? undefined : this.settings.strokeDasharray
       }
     };
 
@@ -434,7 +441,11 @@ export class PencilManager {
     animPath.setAttribute('stroke-opacity', String(this.settings.strokeOpacity * 0.8));
     animPath.setAttribute('stroke-width', String(this.settings.strokeWidth));
     animPath.setAttribute('fill', 'none');
-    animPath.setAttribute('stroke-linecap', 'round');
+    animPath.setAttribute('stroke-linecap', this.settings.strokeLinecap || 'round');
+    animPath.setAttribute('stroke-linejoin', this.settings.strokeLinejoin || 'round');
+    if (this.settings.strokeDasharray && this.settings.strokeDasharray !== 'none') {
+      animPath.setAttribute('stroke-dasharray', this.settings.strokeDasharray);
+    }
     animPath.setAttribute('filter', 'url(#pencilAnimGlowFilter)');
     animPath.setAttribute('vector-effect', 'non-scaling-stroke');
     

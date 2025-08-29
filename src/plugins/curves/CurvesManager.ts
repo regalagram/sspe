@@ -34,6 +34,10 @@ export interface CurveSettings {
   strokeWidth: number;
   strokeOpacity: number;
   fill: string;
+  strokeDasharray?: string; // Dash pattern
+  strokeLinecap?: 'butt' | 'round' | 'square'; // Line cap style
+  strokeLinejoin?: 'miter' | 'round' | 'bevel'; // Line join style
+  fillRule?: 'nonzero' | 'evenodd'; // Fill rule
 }
 
 export interface CurveState {
@@ -68,7 +72,11 @@ export class CurvesManager {
     strokeColor: '#000000',
     strokeWidth: 2,
     strokeOpacity: 1.0,
-    fill: 'none'
+    fill: 'none',
+    strokeDasharray: 'none',
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round',
+    fillRule: 'nonzero'
   };
   private lastClickTime: number = 0;
   private lastClickPoint: Point | null = null;
@@ -324,6 +332,10 @@ export class CurvesManager {
         stroke: this.settings.strokeColor,
         strokeWidth: this.settings.strokeWidth,
         strokeOpacity: this.settings.strokeOpacity,
+        strokeLinecap: this.settings.strokeLinecap || 'round',
+        strokeLinejoin: this.settings.strokeLinejoin || 'round',
+        strokeDasharray: this.settings.strokeDasharray === 'none' ? undefined : this.settings.strokeDasharray,
+        fillRule: this.settings.fillRule || 'nonzero'
       },
     };
 
