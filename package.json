@@ -1,6 +1,7 @@
 {
   "name": "svg-sub-path-editor",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "dev": "vite",
