@@ -1,6 +1,7 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { pencilManager } from './PencilManager';
+import { isGradientOrPattern } from '../../utils/gradient-utils';
 
 export const PencilRenderer: React.FC = () => {
   const { mode } = useEditorStore();
@@ -9,6 +10,26 @@ export const PencilRenderer: React.FC = () => {
   const [strokeColor, setStrokeColor] = React.useState('#6b7280');
   const [strokeOpacity, setStrokeOpacity] = React.useState(1.0);
   const [isDrawing, setIsDrawing] = React.useState(false);
+
+  // Helper function to get preview color for gradients/patterns
+  const getPreviewColor = (color: any): string => {
+    if (typeof color === 'string') {
+      return color;
+    }
+    
+    if (isGradientOrPattern(color)) {
+      // For gradients, use the first stop color as preview
+      if (color.type === 'linear' || color.type === 'radial') {
+        return color.stops?.[0]?.color || '#6b7280';
+      }
+      // For patterns, use a neutral preview color
+      if (color.type === 'pattern') {
+        return '#8b5cf6'; // Purple to indicate it's a pattern
+      }
+    }
+    
+    return '#6b7280'; // Fallback color
+  };
 
   // Update rendering state periodically while drawing
   React.useEffect(() => {
@@ -22,7 +43,7 @@ export const PencilRenderer: React.FC = () => {
         
         setCurrentPath(pathData);
         setStrokeWidth(settings.strokeWidth);
-        setStrokeColor(settings.strokeColor);
+        setStrokeColor(getPreviewColor(settings.strokeColor));
         setStrokeOpacity(settings.strokeOpacity);
         setIsDrawing(drawing);
       }, 16); // ~60fps updates

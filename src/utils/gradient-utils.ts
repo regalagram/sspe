@@ -120,3 +120,61 @@ export const extractGradientsFromImages = (images: any[]): GradientOrPattern[] =
   
   return uniqueGradients;
 };
+
+export const extractGradientsFromTexts = (texts: any[]): GradientOrPattern[] => {
+  const gradients: GradientOrPattern[] = [];
+  
+  texts.forEach(text => {
+    if (text.style) {
+      if (isGradientOrPattern(text.style.fill)) {
+        gradients.push(text.style.fill);
+      }
+      if (isGradientOrPattern(text.style.stroke)) {
+        gradients.push(text.style.stroke);
+      }
+    }
+    
+    // Check multiline text spans
+    if (text.type === 'multiline-text' && text.spans) {
+      text.spans.forEach((span: any) => {
+        if (span.style) {
+          if (isGradientOrPattern(span.style.fill)) {
+            gradients.push(span.style.fill);
+          }
+          if (isGradientOrPattern(span.style.stroke)) {
+            gradients.push(span.style.stroke);
+          }
+        }
+      });
+    }
+  });
+  
+  // Remove duplicates by id
+  const uniqueGradients = gradients.filter((gradient, index, self) => 
+    self.findIndex(g => g.id === gradient.id) === index
+  );
+  
+  return uniqueGradients;
+};
+
+export const extractGradientsFromTextPaths = (textPaths: any[]): GradientOrPattern[] => {
+  const gradients: GradientOrPattern[] = [];
+  
+  textPaths.forEach(textPath => {
+    if (textPath.style) {
+      if (isGradientOrPattern(textPath.style.fill)) {
+        gradients.push(textPath.style.fill);
+      }
+      if (isGradientOrPattern(textPath.style.stroke)) {
+        gradients.push(textPath.style.stroke);
+      }
+    }
+  });
+  
+  // Remove duplicates by id
+  const uniqueGradients = gradients.filter((gradient, index, self) => 
+    self.findIndex(g => g.id === gradient.id) === index
+  );
+  
+  return uniqueGradients;
+};

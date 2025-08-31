@@ -20,7 +20,7 @@ import { FloatingToolbarRenderer } from '../components/FloatingToolbar/FloatingT
 import { PencilFloatingToolbar, CurveFloatingToolbar, ShapeFloatingToolbar, TextFloatingToolbar } from '../components/DrawingFloatingToolbar';
 import { MobileTextEditModal } from '../components/MobileTextEditModal';
 import { useMobileTextEdit } from '../hooks/useMobileTextEdit';
-import { extractGradientsFromPaths, extractGradientsFromImages } from '../utils/gradient-utils';
+import { extractGradientsFromPaths, extractGradientsFromImages, extractGradientsFromTexts, extractGradientsFromTextPaths } from '../utils/gradient-utils';
 
 // Register plugins immediately during module loading
 
@@ -29,7 +29,7 @@ initializePlugins();
 
 export const SvgEditor: React.FC = () => {
   const editorStore = useEditorStore();
-  const { isFullscreen, paths, images, gradients: storeGradients, enabledFeatures } = editorStore;
+  const { isFullscreen, paths, images, texts, textPaths, gradients: storeGradients, enabledFeatures } = editorStore;
   const svgRef = useRef<SVGSVGElement>(null);
   
   // Mobile text editing
@@ -205,9 +205,11 @@ export const SvgEditor: React.FC = () => {
   // Mouse event handlers
   const { handlePointerDown, handlePointerMove, handlePointerUp, handleWheel } = usePointerEventHandlers();
 
-  // Extract gradients and patterns from paths and images
+  // Extract gradients and patterns from paths, images, texts, and textPaths
   const pathGradients = extractGradientsFromPaths(paths);
   const imageGradients = extractGradientsFromImages(images);
+  const textGradients = extractGradientsFromTexts(texts);
+  const textPathGradients = extractGradientsFromTextPaths(textPaths);
   
   // Add predefined gradients for text styling with proper normalized coordinates
   const predefinedGradients = [
@@ -241,7 +243,7 @@ export const SvgEditor: React.FC = () => {
   ];
   
   // Deduplicate gradients by id to avoid React key conflicts
-  const allGradientsArray = [...pathGradients, ...imageGradients, ...predefinedGradients, ...storeGradients];
+  const allGradientsArray = [...pathGradients, ...imageGradients, ...textGradients, ...textPathGradients, ...predefinedGradients, ...storeGradients];
   const gradients = allGradientsArray.filter((gradient, index, array) => 
     array.findIndex(g => g.id === gradient.id) === index
   );

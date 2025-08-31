@@ -2,6 +2,7 @@ import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { curvesManager, CurveToolMode } from './CurvesManager';
 import { useMobileDetection, getControlPointSize } from '../../hooks/useMobileDetection';
+import { isGradientOrPattern } from '../../utils/gradient-utils';
 
 export const CurvesRenderer: React.FC = () => {
   const { viewport, visualDebugSizes } = useEditorStore();
@@ -9,6 +10,29 @@ export const CurvesRenderer: React.FC = () => {
   const curveState = curvesManager.getState();
 
   if (!curveState.isActive) return null;
+
+  // Helper function to get preview color for gradients/patterns
+  const getPreviewColor = (color: any): string => {
+    if (typeof color === 'string') {
+      return color;
+    }
+    
+    if (isGradientOrPattern(color)) {
+      // For gradients, use the first stop color as preview
+      if (color.type === 'linear' || color.type === 'radial') {
+        return color.stops?.[0]?.color || '#007acc';
+      }
+      // For patterns, use a purple preview color
+      if (color.type === 'pattern') {
+        return '#8b5cf6'; // Purple to indicate it's a pattern
+      }
+    }
+    
+    return '#007acc'; // Fallback color
+  };
+
+  // Get the current stroke color from the manager settings
+  const currentStrokeColor = getPreviewColor(curvesManager.getSettings().strokeColor);
 
   // Calculate responsive sizes based on the Visual Debug system
   const baseRadius = getControlPointSize(isMobile, isTablet);
@@ -146,7 +170,7 @@ export const CurvesRenderer: React.FC = () => {
         <path
           d={generatePathData(curveState.points)}
           fill="none"
-          stroke="#007acc"
+          stroke={currentStrokeColor}
           strokeWidth={2 / viewport.zoom}
           strokeDasharray="5,5"
           opacity={0.6}
