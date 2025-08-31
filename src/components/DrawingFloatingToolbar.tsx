@@ -62,10 +62,24 @@ const normalizeSettings = (settings: any, toolType: DrawingToolType): DrawingSet
   // Always use the unified color as the primary color source
   const unifiedColor = settings.unifiedColor || settings.strokeColor || settings.fill || '#6b7280';
 
+  // Unified opacity sharing logic:
+  // - For Pencil/Curve: Use strokeOpacity, fallback to fillOpacity if not available
+  // - For Shape/Text: Use fillOpacity, fallback to strokeOpacity if not available
+  let strokeOpacityValue = 1.0;
+  let fillOpacityValue = 1.0;
+
+  if (toolType === 'pencil' || toolType === 'curves') {
+    // For stroke-based tools, prefer strokeOpacity but fallback to fillOpacity
+    strokeOpacityValue = settings.strokeOpacity !== undefined ? settings.strokeOpacity : (settings.fillOpacity || 1.0);
+  } else {
+    // For fill-based tools, prefer fillOpacity but fallback to strokeOpacity
+    fillOpacityValue = settings.fillOpacity !== undefined ? settings.fillOpacity : (settings.strokeOpacity || 1.0);
+  }
+
   const normalized: DrawingSettings = {
     color: unifiedColor,
     strokeWidth: settings.strokeWidth || 2,
-    strokeOpacity: settings.strokeOpacity || 1.0,
+    strokeOpacity: strokeOpacityValue,
     strokeDasharray: settings.strokeDasharray || 'none',
     strokeLinecap: settings.strokeLinecap || 'round',
     strokeLinejoin: settings.strokeLinejoin || 'round'
@@ -73,10 +87,10 @@ const normalizeSettings = (settings: any, toolType: DrawingToolType): DrawingSet
 
   // Add opacity for shapes and text
   if (toolType === 'shapes') {
-    normalized.fillOpacity = settings.fillOpacity || 0.3;
+    normalized.fillOpacity = fillOpacityValue;
     normalized.fillRule = settings.fillRule || 'nonzero';
   } else if (toolType === 'text') {
-    normalized.fillOpacity = settings.fillOpacity || 1.0;
+    normalized.fillOpacity = fillOpacityValue;
     normalized.fontFamily = settings.fontFamily || 'Arial';
     normalized.fontSize = settings.fontSize || 16;
   }
@@ -149,9 +163,19 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
       storeUpdates.fill = newSettings.color; // Keep fill in sync
     }
     
+    // Unified opacity sharing: sync strokeOpacity and fillOpacity
+    if (newSettings.strokeOpacity !== undefined) {
+      storeUpdates.strokeOpacity = newSettings.strokeOpacity;
+      storeUpdates.fillOpacity = newSettings.strokeOpacity; // Sync fill opacity too
+    }
+    if (newSettings.fillOpacity !== undefined) {
+      storeUpdates.fillOpacity = newSettings.fillOpacity;
+      storeUpdates.strokeOpacity = newSettings.fillOpacity; // Sync stroke opacity too
+    }
+    
     // Copy other settings as-is
     Object.keys(newSettings).forEach(key => {
-      if (key !== 'color') {
+      if (key !== 'color' && key !== 'strokeOpacity' && key !== 'fillOpacity') {
         storeUpdates[key] = (newSettings as any)[key];
       }
     });
@@ -210,9 +234,10 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
     const colorLabel = (toolType === 'pencil' || toolType === 'curves') ? 'Stroke Color' : 'Fill Color';
     const colorTooltip = (toolType === 'pencil' || toolType === 'curves') ? 'Change stroke color' : 'Change fill color';
     const colorIcon = (toolType === 'pencil' || toolType === 'curves') ? Brush : Palette;
+    const colorId = (toolType === 'pencil' || toolType === 'curves') ? 'stroke-color' : 'fill-color';
     
     actions.push({
-      id: 'color',
+      id: colorId,
       icon: colorIcon,
       label: colorLabel,
       tooltip: colorTooltip,
