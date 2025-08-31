@@ -201,17 +201,7 @@ export const FileActionsButton: React.FC = () => {
       const updatedImages = updateFilterReferences(newImages);
 
       if (updatedPaths !== newPaths) replacePaths(updatedPaths);
-
-      console.log(`✅ Successfully imported SVG with ${totalElements} elements:`);
-      console.log(`📐 Paths: ${newPaths.length}`);
-      console.log(`📝 Texts: ${newTexts.length}`);
-      console.log(`🔄 TextPaths: ${newTextPaths.length}`);
-      console.log(`🖼️ Images: ${newImages.length}`);
-      console.log(`🎨 Gradients: ${newGradients.length}`);
-      console.log(`✨ Filters: ${newFilters.length}`);
-      console.log(`📦 Groups: ${newGroups.length}`);
-      console.log(`🎬 Animations: ${newAnimations.length}`);
-
+      
     } catch (error) {
       console.error('Error parsing SVG:', error);
       alert(`Error parsing SVG: ${error instanceof Error ? error.message : 'Unknown error'}`);

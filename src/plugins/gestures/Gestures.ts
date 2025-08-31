@@ -1,131 +1,182 @@
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { getDistance, getMidpoint, PointerInfo } from '../../utils/gesture-utils';
+import { ResourceManager, Disposable } from '../../core/ResourceManager';
 
-// Estrategia simple: manejar gestures completamente a través de eventos globales
-// No depender del sistema de plugins para multi-touch
+// Gesture manager class to handle touch gestures with proper cleanup
+class GestureManager implements Disposable {
+  private resourceManager = new ResourceManager();
+  private pointers: Map<number, PointerInfo> = new Map();
+  private initialDistance: number | null = null;
+  private initialMidpoint: { x: number; y: number } | null = null;
+  private initialZoom: number | null = null;
+  private initialPan: { x: number; y: number } | null = null;
+  private isProcessingGesture = false;
+  private _gestureBlocked = false;
 
-let pointers: Map<number, PointerInfo> = new Map();
-let initialDistance: number | null = null;
-let initialMidpoint: { x: number; y: number } | null = null;
-let initialZoom: number | null = null;
-let initialPan: { x: number; y: number } | null = null;
+  constructor() {
+    this.setupEventListeners();
+  }
 
-// Simplificar: solo usar eventos globales directamente
-if (typeof document !== 'undefined') {
-  let isProcessingGesture = false;
-  
-  document.addEventListener('pointerdown', (e) => {
+  get gestureBlocked(): boolean {
+    return this._gestureBlocked;
+  }
+
+  private setupEventListeners(): void {
+    if (typeof document === 'undefined') return;
+
+    this.resourceManager.addEventListener(document, 'pointerdown', this.handlePointerDown, { capture: true });
+    this.resourceManager.addEventListener(document, 'pointermove', this.handlePointerMove, { capture: true });
+    this.resourceManager.addEventListener(document, 'pointerup', this.handlePointerUp, { capture: true });
+    this.resourceManager.addEventListener(document, 'pointercancel', this.handlePointerCancel, { capture: true });
+  }
+
+  private handlePointerDown = (e: PointerEvent) => {
     if (e.pointerType === 'touch') {
       const svg = document.querySelector('.svg-editor svg') as SVGSVGElement;
       if (!svg) return;
       
-      const rect = svg.getBoundingClientRect();
-      const svgPoint = {
-        x: (e.clientX - rect.left) / rect.width * svg.viewBox.baseVal.width,
-        y: (e.clientY - rect.top) / rect.height * svg.viewBox.baseVal.height
-      };
+      this.pointers.set(e.pointerId, { pointerId: e.pointerId, x: e.clientX, y: e.clientY });
       
-      pointers.set(e.pointerId, { pointerId: e.pointerId, x: e.clientX, y: e.clientY });
+      if (this.pointers.size >= 2) {
+        this.isProcessingGesture = true;
+        e.preventDefault();
+        e.stopPropagation();
+        this._gestureBlocked = true;
+      }
+    }
+  };
+
+  private handlePointerMove = (e: PointerEvent) => {
+    if (e.pointerType === 'touch' && this.pointers.has(e.pointerId)) {
+      this.pointers.set(e.pointerId, { pointerId: e.pointerId, x: e.clientX, y: e.clientY });
       
-      // Si hay 2+ dedos, comenzar gesto
-      if (pointers.size >= 2) {
-        isProcessingGesture = true;
+      if (this.pointers.size >= 2 && this.isProcessingGesture) {
         e.preventDefault();
         e.stopPropagation();
         
-        // Bloquear selección
-        if (typeof window !== 'undefined') {
-          (window as any).gestureBlocked = true;
+        const pointersArray = Array.from(this.pointers.values());
+        const currentDistance = getDistance(pointersArray[0], pointersArray[1]);
+        const currentMidpoint = getMidpoint(pointersArray[0], pointersArray[1]);
+        
+        if (this.initialDistance === null) {
+          this.initialDistance = currentDistance;
+          this.initialMidpoint = currentMidpoint;
+          const state = useEditorStore.getState();
+          this.initialZoom = state.viewport?.zoom || 1;
+          this.initialPan = { x: state.viewport?.pan?.x || 0, y: state.viewport?.pan?.y || 0 };
+        } else {
+          const scaleRatio = currentDistance / this.initialDistance;
+          const newZoom = Math.max(0.1, Math.min(10, this.initialZoom! * scaleRatio));
+          
+          const panDelta = {
+            x: (currentMidpoint.x - this.initialMidpoint!.x) * 0.5,
+            y: (currentMidpoint.y - this.initialMidpoint!.y) * 0.5
+          };
+          
+          const newPanX = this.initialPan!.x + panDelta.x;
+          const newPanY = this.initialPan!.y + panDelta.y;
+          
+          // Use the correct viewport update methods
+          const store = useEditorStore.getState();
+          store.setZoom(newZoom);
+          store.setPan({ x: newPanX, y: newPanY });
         }
       }
     }
-  }, { capture: true });
-  
-  document.addEventListener('pointermove', (e) => {
-    if (e.pointerType === 'touch' && pointers.has(e.pointerId)) {
-      pointers.set(e.pointerId, { pointerId: e.pointerId, x: e.clientX, y: e.clientY });
-      
-      if (pointers.size >= 2 && isProcessingGesture) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const pointerArr = Array.from(pointers.values());
-        const twoPointers = [pointerArr[0], pointerArr[1]];
-        
-        const store = useEditorStore.getState();
-        const viewport = store.viewport;
+  };
 
-        const dist = getDistance(twoPointers[0], twoPointers[1]);
-        const midpoint = getMidpoint(twoPointers[0], twoPointers[1]);
-
-        if (initialDistance === null) {
-          initialDistance = dist;
-          initialMidpoint = midpoint;
-          initialZoom = viewport.zoom;
-          initialPan = { ...viewport.pan };
-          return;
-        }
-
-        const zoomFactor = dist / initialDistance;
-        const newZoom = Math.max(0.1, Math.min(initialZoom! * zoomFactor, 20));
-        
-        const dx = midpoint.x - initialMidpoint!.x;
-        const dy = midpoint.y - initialMidpoint!.y;
-        const newPan = { 
-          x: initialPan!.x + dx / viewport.zoom, 
-          y: initialPan!.y + dy / viewport.zoom 
-        };
-        
-        store.setZoom(newZoom);
-        store.setPan(newPan);
-      }
-    }
-  }, { capture: true });
-  
-  document.addEventListener('pointerup', (e) => {
+  private handlePointerUp = (e: PointerEvent) => {
     if (e.pointerType === 'touch') {
-      pointers.delete(e.pointerId);
+      this.pointers.delete(e.pointerId);
       
-      if (pointers.size < 2) {
-        isProcessingGesture = false;
-        initialDistance = null;
-        initialMidpoint = null;
-        initialZoom = null;
-        initialPan = null;
+      if (this.pointers.size < 2) {
+        this.isProcessingGesture = false;
+        this.initialDistance = null;
+        this.initialMidpoint = null;
+        this.initialZoom = null;
+        this.initialPan = null;
         
-        // Desbloquear selección
-        if (typeof window !== 'undefined') {
-          (window as any).gestureBlocked = false;
-        }
+        setTimeout(() => {
+          this._gestureBlocked = false;
+        }, 50);
       }
     }
-  }, { capture: true });
-  
-  document.addEventListener('pointercancel', (e) => {
+  };
+
+  private handlePointerCancel = (e: PointerEvent) => {
     if (e.pointerType === 'touch') {
-      pointers.delete(e.pointerId);
+      this.pointers.delete(e.pointerId);
       
-      if (pointers.size < 2) {
-        isProcessingGesture = false;
-        initialDistance = null;
-        initialMidpoint = null;
-        initialZoom = null;
-        initialPan = null;
+      if (this.pointers.size < 2) {
+        this.isProcessingGesture = false;
+        this.initialDistance = null;
+        this.initialMidpoint = null;
+        this.initialZoom = null;
+        this.initialPan = null;
         
-        if (typeof window !== 'undefined') {
-          (window as any).gestureBlocked = false;
-        }
+        setTimeout(() => {
+          this._gestureBlocked = false;
+        }, 50);
       }
     }
-  }, { capture: true });
+  };
+
+  dispose(): void {
+    this.resourceManager.dispose();
+    this.pointers.clear();
+    this._gestureBlocked = false;
+  }
 }
 
+// Global gesture manager instance - singleton pattern
+let gestureManager: GestureManager | null = null;
+
+// Initialize gesture manager only once
+const getGestureManager = (): GestureManager => {
+  if (!gestureManager) {
+    gestureManager = new GestureManager();
+  }
+  return gestureManager;
+};
+
+// Export for backward compatibility
+export const isGestureBlocked = (): boolean => getGestureManager().gestureBlocked;
+
+// Track if plugin has been initialized
+let isInitialized = false;
+
+// Main plugin export that PluginInitializer expects
 export const GesturesPlugin: Plugin = {
   id: 'gestures',
   name: 'Gestures',
   version: '1.0.0',
   enabled: true,
-  ui: [], // No UI
-  // No pointer handlers - todo se maneja via eventos globales
+
+  initialize: (editorStore) => {
+    // Prevent multiple initializations
+    if (isInitialized) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Gestures plugin already initialized, skipping...');
+      }
+      return;
+    }
+    
+    isInitialized = true;
+    
+    // Initialize gesture manager (will only create once due to singleton)
+    getGestureManager();
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Gestures plugin initialized');
+    }
+  },
+
+  destroy: () => {
+    if (gestureManager) {
+      gestureManager.dispose();
+      gestureManager = null;
+      isInitialized = false;
+    }
+  },
 };

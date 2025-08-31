@@ -1,5 +1,6 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { useEditorStore } from '../store/editorStore';
+import { atomicFormatCopyCheck } from '../store/atomicOperations';
 import { getAllElementsByZIndex, getElementZIndex } from '../utils/z-index-manager';
 import { subPathToString, getContrastColor, findSubPathAtPoint } from '../utils/path-utils';
 import { getStyleValue } from '../utils/gradient-utils';
@@ -483,12 +484,7 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
               
               // Check if any format copy mode is active - if so, let plugin system handle it
               const currentStoreState = useEditorStore.getState();
-              const isAnyFormatCopyActive = (
-                (currentStoreState.isFormatCopyActive && currentStoreState.isFormatCopyActive()) ||
-                (currentStoreState.isTextFormatCopyActive && currentStoreState.isTextFormatCopyActive()) ||
-                (currentStoreState.isImageFormatCopyActive && currentStoreState.isImageFormatCopyActive()) ||
-                (currentStoreState.isUseFormatCopyActive && currentStoreState.isUseFormatCopyActive())
-              );
+              const isAnyFormatCopyActive = atomicFormatCopyCheck(currentStoreState);
               
               if (isAnyFormatCopyActive) {
                 return; // Don't consume the event, let it bubble up to plugin system
@@ -666,12 +662,7 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
               onPointerDown={(e) => {
                 // Check if any format copy mode is active - if so, let plugin system handle it
                 const currentStoreState = useEditorStore.getState();
-                const isAnyFormatCopyActive = (
-                  (currentStoreState.isFormatCopyActive && currentStoreState.isFormatCopyActive()) ||
-                  (currentStoreState.isTextFormatCopyActive && currentStoreState.isTextFormatCopyActive()) ||
-                  (currentStoreState.isImageFormatCopyActive && currentStoreState.isImageFormatCopyActive()) ||
-                  (currentStoreState.isUseFormatCopyActive && currentStoreState.isUseFormatCopyActive())
-                );
+                const isAnyFormatCopyActive = atomicFormatCopyCheck(currentStoreState);
                 
                 if (isAnyFormatCopyActive) {
                   return; // Don't consume the event, let it bubble up to plugin system
@@ -1023,7 +1014,7 @@ const MultilineTextElementComponent: React.FC<{ text: any }> = ({ text }) => {
                 onPointerDown={(e) => {
                   // Check if text format copy mode is active - if so, let plugin system handle it
                   const currentState = useEditorStore.getState();
-                  if (currentState.isTextFormatCopyActive && currentState.isTextFormatCopyActive()) {
+                  if (atomicFormatCopyCheck(currentState)) {
                     return; // Don't consume the event, let it bubble up to plugin system
                   }
                   // Handle normal selection if needed

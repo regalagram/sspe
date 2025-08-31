@@ -14,8 +14,6 @@ export const AnimationTimeline: React.FC = () => {
     calculateChainDelays
   } = useEditorStore();
 
-  console.log('🎬 AnimationTimeline rendering - animations count:', animations.length);
-
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState(0);
   const timelineRef = useRef<HTMLDivElement>(null);

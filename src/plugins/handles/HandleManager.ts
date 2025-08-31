@@ -1,6 +1,9 @@
 import { SVGCommand, Point, ControlPointType, ControlPointInfo, BezierHandleState } from '../../types';
-export class HandleManager {
+import { ResourceManager, Disposable } from '../../core/ResourceManager';
+
+export class HandleManager implements Disposable {
   private editorStore: any;
+  private resourceManager = new ResourceManager();
   private state: BezierHandleState = {
     controlPoints: new Map(),
     isOptionPressed: false,
@@ -17,7 +20,8 @@ export class HandleManager {
   private lastDragTime: number = 0;
   private velocityThreshold: number = 800;
   private snapToGridActive: boolean = false;
-  private alignmentDebounceTimer: any = null;
+  private alignmentDebounceTimer: NodeJS.Timeout | null = null;
+  
   constructor() {
     this.setupKeyboardListeners();
   }
@@ -63,8 +67,8 @@ export class HandleManager {
     this.listeners.forEach(listener => listener());
   }
   private setupKeyboardListeners() {
-    document.addEventListener('keydown', this.handleKeyDown);
-    document.addEventListener('keyup', this.handleKeyUp);
+    this.resourceManager.addEventListener(document, 'keydown', this.handleKeyDown);
+    this.resourceManager.addEventListener(document, 'keyup', this.handleKeyUp);
   }
   private handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Alt' || e.key === 'Option') {
@@ -587,9 +591,10 @@ export class HandleManager {
   }
   private debounceAlignment(callback: () => void, delay: number = 100) {
     if (this.alignmentDebounceTimer) {
-      clearTimeout(this.alignmentDebounceTimer);
+      this.resourceManager.clearTimer(this.alignmentDebounceTimer);
+      this.alignmentDebounceTimer = null;
     }
-    this.alignmentDebounceTimer = setTimeout(callback, delay);
+    this.alignmentDebounceTimer = this.resourceManager.registerTimer(setTimeout(callback, delay));
   }
   private shouldApplyAlignment(velocity: number, currentVector: Point, pairedVector: Point): boolean {
     if (this.isDragTooFast(velocity)) {
@@ -1127,8 +1132,23 @@ export class HandleManager {
     return this.state;
   }
   cleanup() {
-    document.removeEventListener('keydown', this.handleKeyDown);
-    document.removeEventListener('keyup', this.handleKeyUp);
+    this.dispose();
+  }
+
+  dispose() {
+    // Clear alignment debounce timer
+    if (this.alignmentDebounceTimer) {
+      clearTimeout(this.alignmentDebounceTimer);
+      this.alignmentDebounceTimer = null;
+    }
+    
+    // Dispose all managed resources
+    this.resourceManager.dispose();
+    
+    // Clear internal state
+    this.listeners = [];
+    this.dragHistory = [];
+    this.state.controlPoints.clear();
   }
   private smartSnapToGrid(point: Point, anchorPoint: Point): Point {
     if (!this.snapToGridActive || !this.editorStore?.grid) {

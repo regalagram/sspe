@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useEditorStore } from '../store/editorStore';
 import { shapeManager } from '../plugins/shapes/ShapeManager';
 import { getShapeById } from '../plugins/shapes/ShapeDefinitions';
@@ -7,45 +7,58 @@ export const ShapePreview: React.FC = () => {
   const { viewport } = useEditorStore();
   const toolSettings = useEditorStore((state) => state.toolSettings?.shared);
   const [, forceUpdate] = useState({});
+  const rafIdRef = useRef<number | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Force re-render during drag operations
-  useEffect(() => {
-    let animationFrame: number;
+  // Clean animation frame management
+  const startAnimation = () => {
+    if (rafIdRef.current !== null) return; // Already running
     
-    const updatePreview = () => {
+    const animate = () => {
       if (shapeManager.isDragInProgress()) {
         forceUpdate({});
-        animationFrame = requestAnimationFrame(updatePreview);
+        rafIdRef.current = requestAnimationFrame(animate);
+      } else {
+        rafIdRef.current = null;
       }
     };
+    
+    rafIdRef.current = requestAnimationFrame(animate);
+  };
 
-    // Start update loop if drag is in progress
-    if (shapeManager.isDragInProgress()) {
-      animationFrame = requestAnimationFrame(updatePreview);
+  const stopAnimation = () => {
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
+      rafIdRef.current = null;
     }
+  };
 
-    // Check every 16ms (60fps) for drag state changes
-    const interval = setInterval(() => {
+  // Monitor drag state and control animation
+  useEffect(() => {
+    const checkDragState = () => {
       if (shapeManager.isDragInProgress()) {
-        if (!animationFrame) {
-          animationFrame = requestAnimationFrame(updatePreview);
+        if (rafIdRef.current === null) {
+          startAnimation();
         }
       } else {
-        if (animationFrame) {
-          cancelAnimationFrame(animationFrame);
-          animationFrame = 0;
-        }
-        forceUpdate({});
-      }
-    }, 16);
-
-    return () => {
-      clearInterval(interval);
-      if (animationFrame) {
-        cancelAnimationFrame(animationFrame);
+        stopAnimation();
+        forceUpdate({}); // Final update when drag ends
       }
     };
-  }, []);
+
+    // Check drag state immediately
+    checkDragState();
+
+    // Set up interval to monitor drag state changes
+    intervalRef.current = setInterval(checkDragState, 16); // 60fps
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      stopAnimation();
+    };
+  }, []); // Empty dependency array - no need to re-run
 
   // Check if we should show preview
   const isDragging = shapeManager.isDragInProgress();
