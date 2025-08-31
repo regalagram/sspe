@@ -23,11 +23,6 @@ import {
   createBlurFilter,
   createGrayscaleFilter,
   createSepiaFilter,
-  createInvertFilter,
-  createBrightnessFilter,
-  createContrastFilter,
-  createSaturateFilter,
-  createHueRotateFilter,
   createEmbossFilter,
   createGlowFilter,
   createNeonGlowFilter,
@@ -98,12 +93,6 @@ const isTextItalic = (): boolean => {
 const isTextUnderline = (): boolean => {
   const styles = getCurrentTextPathStyles();
   return styles?.textDecoration === 'underline';
-};
-
-// Get current text alignment
-const getCurrentAlignment = (): string => {
-  const styles = getCurrentTextPathStyles();
-  return styles?.textAnchor || 'start';
 };
 
 // Font family options

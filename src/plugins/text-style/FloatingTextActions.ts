@@ -19,47 +19,15 @@ import {
 import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { useEditorStore } from '../../store/editorStore';
 import { calculateSmartDuplicationOffset, getUnifiedSelectionBounds } from '../../utils/duplication-positioning';
-import { getTextBoundingBox, getImageBoundingBox, getPathBoundingBox, getGroupBoundingBox } from '../../utils/bbox-utils';
-import { BoundingBox } from '../../types';
 import { generateId } from '../../utils/id-utils';
 import {
   createDropShadowFilter,
   createBlurFilter,
   createGrayscaleFilter,
   createSepiaFilter,
-  createInvertFilter,
-  createBrightnessFilter,
-  createContrastFilter,
-  createSaturateFilter,
-  createHueRotateFilter,
   createEmbossFilter,
-  createSharpenFilter,
-  createEdgeDetectFilter,
   createGlowFilter,
-  createBevelFilter,
-  createMotionBlurFilter,
-  createNoiseFilter,
-  createWaveDistortionFilter,
-  createPosterizeFilter,
-  createOilPaintingFilter,
-  createWatercolorFilter,
-  createVintageFilter,
-  createChromaticAberrationFilter,
   createNeonGlowFilter,
-  createMosaicFilter,
-  createGlitchFilter,
-  createPixelateFilter,
-  createDancingStrokeFilter,
-  createSmokeFilter,
-  createWavesFilter,
-  createPaperTextureFilter,
-  createZebraFilter,
-  createNetFilter,
-  createDustFilter,
-  createColoredStripesFilter,
-  createColoredSpotsFilter,
-  createColoredFlameFilter,
-  createAdvancedWatercolorFilter,
   formatSVGReference,
   matchesFilterSignature
 } from '../../utils/svg-elements-utils';
@@ -725,11 +693,6 @@ const clearTextStyle = () => {
     store.updateTextStyle(textId, defaultStyle);
   });
 };
-
-// Convert text to path
-const convertTextToPath = () => {
-  // This would need to be implemented in the text plugin
-  };
 
 export const textFloatingActions: ToolbarAction[] = [
   {
