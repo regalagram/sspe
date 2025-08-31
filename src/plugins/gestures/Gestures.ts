@@ -156,9 +156,6 @@ export const GesturesPlugin: Plugin = {
   initialize: (editorStore) => {
     // Prevent multiple initializations
     if (isInitialized) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Gestures plugin already initialized, skipping...');
-      }
       return;
     }
     
@@ -166,10 +163,6 @@ export const GesturesPlugin: Plugin = {
     
     // Initialize gesture manager (will only create once due to singleton)
     getGestureManager();
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Gestures plugin initialized');
-    }
   },
 
   destroy: () => {
