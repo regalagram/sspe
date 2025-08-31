@@ -17,7 +17,7 @@ export const ToolbarCreationTools: React.FC = () => {
     setCreationSubmenuOpen 
   } = useMobileToolbarStore();
 
-  // Match floating toolbar button sizing
+  // Match text toolbar button sizing exactly
   const buttonSize = isMobile ? 28 : 32;
   const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
   const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop

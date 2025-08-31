@@ -21,6 +21,10 @@ export const WritingStyleTools: React.FC = () => {
   const [isStyleSubmenuOpen, setIsStyleSubmenuOpen] = useState(false);
   const { isMobile } = useMobileDetection();
 
+  // Match text toolbar button sizing exactly
+  const buttonSize = isMobile ? 28 : 32;
+  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+
   const hasSelection = selection.selectedPaths.length > 0 || 
                       selection.selectedSubPaths.length > 0 || 
                       selection.selectedCommands.length > 0 ||
@@ -274,8 +278,8 @@ export const WritingStyleTools: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '48px',
-            height: '40px',
+            width: `${buttonSize}px`,
+            height: `${buttonSize}px`,
             background: isStyleSubmenuOpen ? '#e5e7eb' : 'white',
             fontSize: '12px',
             fontWeight: 600,
@@ -288,7 +292,7 @@ export const WritingStyleTools: React.FC = () => {
             position: 'relative',
             opacity: hasSelection ? 1 : 0.5
           }}>
-            <Palette size={isMobile ? 12 : 13} />
+            <Palette size={iconSize} />
           </div>
         }
         isOpen={isStyleSubmenuOpen}
@@ -446,7 +450,7 @@ export const WritingStyleTools: React.FC = () => {
             {popularPatterns.map(pattern => (
               <SubmenuItem
                 key={pattern.id}
-                icon={<Grid3X3 size={isMobile ? 12 : 13} />}
+                icon={<Grid3X3 size={iconSize} />}
                 label={pattern.name}
                 onClick={() => {
                   handleApplyPattern(pattern.id, 'fill');

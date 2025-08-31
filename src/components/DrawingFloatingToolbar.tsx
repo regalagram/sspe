@@ -344,6 +344,7 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
   }
 
   const actions = createToolbarActions();
+  // Match text toolbar button sizing exactly
   const buttonSize = isMobileDevice ? 28 : 32;
   
   return createPortal(
@@ -377,6 +378,7 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
         <FloatingToolbarButton
           key={action.id}
           action={action}
+          size={buttonSize}
           isSubmenuOpen={activeSubmenuId === action.id}
           onSubmenuToggle={() => handleSubmenuToggle(action.id)}
         />

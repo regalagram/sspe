@@ -34,7 +34,8 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
   const isOpacityControl = action.type === 'input' && (action as any).opacityOptions;
   
   const isMobileDevice = isMobile || isTablet;
-  const buttonSize = size || (isMobileDevice ? 44 : 32);
+  // Match text toolbar button sizing exactly - use 28px for mobile consistency
+  const buttonSize = size || (isMobileDevice ? 28 : 32);
   const iconSize = isMobileDevice ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
 
   // Helper function to close submenu

@@ -117,8 +117,8 @@ const MobileToolbarItemWrapper: React.FC<{ children: React.ReactNode }> = ({ chi
   return (
     <div 
       style={{
-        minWidth: '48px',
-        minHeight: '48px',
+        minWidth: '28px',
+        minHeight: '28px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -191,12 +191,12 @@ export const MobileFloatingButton: React.FC<MobileFloatingButtonProps> = ({
 // Mobile-specific button enhancement
 export const useMobileButtonStyle = (isMobile: boolean) => {
   const baseStyle: React.CSSProperties = {
-    minWidth: isMobile ? '48px' : '32px',
-    minHeight: isMobile ? '48px' : '32px',
-    padding: isMobile ? '12px' : '8px',
-    fontSize: isMobile ? '16px' : '14px',
-    borderRadius: isMobile ? '12px' : '6px',
-    border: isMobile ? '2px solid #e5e7eb' : '1px solid #d1d5db',
+    minWidth: isMobile ? '28px' : '32px',
+    minHeight: isMobile ? '28px' : '32px',
+    padding: isMobile ? '4px' : '8px',
+    fontSize: isMobile ? '12px' : '14px',
+    borderRadius: isMobile ? '0px' : '6px',
+    border: isMobile ? 'none' : '1px solid #d1d5db',
     background: '#ffffff',
     cursor: 'pointer',
     display: 'flex',

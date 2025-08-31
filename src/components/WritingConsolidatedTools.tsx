@@ -17,9 +17,10 @@ export const WritingConsolidatedTools: React.FC = () => {
   const [toolModeState, setToolModeState] = useState(toolModeManager.getState());
   const { mode, selection } = useEditorStore();
 
-  // Match floating toolbar button sizing
+  // Match text toolbar button sizing exactly
   const buttonSize = isMobile ? 28 : 32;
-  const iconSize = isMobile ? 12 : 13;
+  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+  const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
 
   // Subscribe to tool mode changes
   useEffect(() => {

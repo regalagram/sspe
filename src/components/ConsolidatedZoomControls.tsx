@@ -28,8 +28,9 @@ export const ConsolidatedZoomControls: React.FC = () => {
     toggleFeature
   } = useEditorStore();
 
-  // Match floating toolbar button sizing
+  // Match text toolbar button sizing exactly
   const buttonSize = isMobile ? 28 : 32;
+  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
 
   const hasSelection = selection.selectedCommands.length > 0 || 
                        selection.selectedPaths.length > 0 || 
@@ -150,7 +151,7 @@ export const ConsolidatedZoomControls: React.FC = () => {
         />
         
         <SubmenuItem
-          icon={<Navigation size={isMobile ? 12 : 13} />}
+          icon={<Navigation size={iconSize} />}
           label={enabledFeatures.stickyGuidelinesEnabled ? "Disable Sticky Guidelines" : "Enable Sticky Guidelines"}
           onClick={() => {
             toggleFeature('stickyGuidelinesEnabled');

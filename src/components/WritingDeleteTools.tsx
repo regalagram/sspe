@@ -3,9 +3,14 @@ import { Trash2 } from 'lucide-react';
 import { ToolbarButton, ToolbarSection } from './ToolbarButton';
 import { useEditorStore } from '../store/editorStore';
 import { executeDelete } from '../plugins/delete/Delete';
+import { useMobileDetection } from '../hooks/useMobileDetection';
 
 export const WritingDeleteTools: React.FC = () => {
   const { selection } = useEditorStore();
+  const { isMobile } = useMobileDetection();
+
+  // Match text toolbar button sizing exactly
+  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
 
   const hasSelection = 
     selection.selectedPaths.length > 0 || 
@@ -24,7 +29,7 @@ export const WritingDeleteTools: React.FC = () => {
   return (
     <ToolbarSection title="Delete">
       <ToolbarButton
-        icon={<Trash2 size={16} />}
+        icon={<Trash2 size={iconSize} />}
         onClick={handleDelete}
         disabled={!hasSelection}
         active={false}
