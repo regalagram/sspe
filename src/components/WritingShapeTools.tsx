@@ -7,6 +7,7 @@ import { toolModeManager } from '../managers/ToolModeManager';
 import { shapeManager } from '../plugins/shapes/ShapeManager';
 import { SHAPE_TEMPLATES } from '../plugins/shapes/ShapeDefinitions';
 import { useMobileDetection } from '../hooks/useMobileDetection';
+import { CONFIG } from '../config/constants';
 
 export const WritingShapeTools: React.FC = () => {
   const { isMobile } = useMobileDetection();
@@ -14,7 +15,7 @@ export const WritingShapeTools: React.FC = () => {
   const [toolModeState, setToolModeState] = useState(toolModeManager.getState());
 
   // Match floating toolbar button sizing
-  const buttonSize = isMobile ? 28 : 32;
+  const buttonSize = isMobile ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
   const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
   const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
 

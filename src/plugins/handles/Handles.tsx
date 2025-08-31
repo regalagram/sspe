@@ -28,8 +28,10 @@ export const HandlesPlugin: Plugin = {
     // Set up the editor store reference
     handleManager.setEditorStore(editorStore);
     
-    // Expose manager for debugging
-    (window as any).handleManager = handleManager;
+    // Expose manager for debugging (development only)
+    if (process.env.NODE_ENV === 'development') {
+      (window as any).handleManager = handleManager;
+    }
     
     // Note: This plugin replaces the default control points renderer
     // The HandleRenderer provides enhanced visual feedback

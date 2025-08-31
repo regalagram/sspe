@@ -7,6 +7,8 @@ import { SVGElementActions } from './svgElementActions';
 import { generateGroupSVG, downloadGroupSVG } from '../utils/group-svg-utils';
 import { duplicatePath } from '../utils/duplicate-utils';
 import { calculateSmartDuplicationOffset } from '../utils/duplication-positioning';
+import { createImmutableAction, TransactionalStateManager } from '../core/ImmutableStore';
+import { produce, Draft } from 'immer';
 
 export interface GroupActions {
   // Group creation and management
@@ -80,8 +82,8 @@ export const createGroupActions: StateCreator<
       }));
     }
     
-    set(state => ({
-      groups: [...state.groups, newGroup]
+    set(state => produce(state, (draft: Draft<EditorState>) => {
+      draft.groups.push(newGroup);
     }));
     
     return newGroup.id;
@@ -154,56 +156,59 @@ export const createGroupActions: StateCreator<
       lockLevel: 'movement-sync'
     };
 
-    set(state => ({
-      groups: [...state.groups, newGroup],
-      selection: {
-        ...state.selection,
-        selectedPaths: [],
-        selectedTexts: [],
-        selectedTextPaths: [],
-        selectedGroups: [newGroup.id],
-        selectedSubPaths: [],
-        selectedImages: [],
-        selectedUses: []
-      }
+    set(state => produce(state, (draft: Draft<EditorState>) => {
+      draft.groups.push(newGroup);
+      
+      // Clear all selections and select the new group
+      draft.selection.selectedPaths = [];
+      draft.selection.selectedTexts = [];
+      draft.selection.selectedTextPaths = [];
+      draft.selection.selectedGroups = [newGroup.id];
+      draft.selection.selectedSubPaths = [];
+      draft.selection.selectedImages = [];
+      draft.selection.selectedUses = [];
     }));
 
     return newGroup.id;
   },
 
   addGroup: (group: SVGGroup) => {
-    set(state => ({
-      groups: [...state.groups, group]
+    set(state => produce(state, (draft: Draft<EditorState>) => {
+      draft.groups.push(group);
     }));
   },
 
   updateGroup: (groupId: string, updates: Partial<Omit<SVGGroup, 'id'>>) => {
-    set(state => ({
-      groups: state.groups.map(group =>
-        group.id === groupId ? { ...group, ...updates } : group
-      )
+    set(state => produce(state, (draft: Draft<EditorState>) => {
+      const groupIndex = draft.groups.findIndex(group => group.id === groupId);
+      if (groupIndex !== -1) {
+        Object.assign(draft.groups[groupIndex], updates);
+      }
     }));
   },
 
   deleteGroup: (groupId: string, deleteChildren: boolean = false) => {
-    set(state => {
-      const group = state.groups.find(g => g.id === groupId);
-      if (!group) return state;
+    set(state => produce(state, (draft: Draft<EditorState>) => {
+      const group = draft.groups.find(g => g.id === groupId);
+      if (!group) return;
       
       // Check if group is locked for editing
       const lockLevel = group.lockLevel || (group.locked ? 'full' : 'none');
       if (lockLevel === 'editing' || lockLevel === 'full') {
-        return state;
+        return;
       }
       
-      let newState = {
-        ...state,
-        groups: state.groups.filter(g => g.id !== groupId),
-        selection: {
-          ...state.selection,
-          selectedGroups: state.selection.selectedGroups.filter(id => id !== groupId)
-        }
-      };
+      // Remove the group itself
+      const groupIndex = draft.groups.findIndex(g => g.id === groupId);
+      if (groupIndex !== -1) {
+        draft.groups.splice(groupIndex, 1);
+      }
+      
+      // Remove from selection
+      const selectedGroupIndex = draft.selection.selectedGroups.indexOf(groupId);
+      if (selectedGroupIndex !== -1) {
+        draft.selection.selectedGroups.splice(selectedGroupIndex, 1);
+      }
       
       // If deleteChildren is true, also delete all child elements
       if (deleteChildren) {
@@ -249,156 +254,194 @@ export const createGroupActions: StateCreator<
         
         const allChildren = collectAllChildren(group, state.groups);
         
-        // Remove all child elements
-        newState.paths = newState.paths.filter(p => !allChildren.paths.includes(p.id));
-        newState.texts = newState.texts.filter(t => !allChildren.texts.includes(t.id));
-        newState.textPaths = newState.textPaths.filter(tp => !allChildren.textPaths.includes(tp.id));
-        newState.groups = newState.groups.filter(g => !allChildren.groups.includes(g.id));
-        newState.images = newState.images.filter(img => !allChildren.images.includes(img.id));
-        newState.uses = newState.uses.filter(u => !allChildren.uses.includes(u.id));
+        // Remove all child elements using splice for immutable updates
+        allChildren.paths.forEach(pathId => {
+          const pathIndex = draft.paths.findIndex(p => p.id === pathId);
+          if (pathIndex !== -1) draft.paths.splice(pathIndex, 1);
+        });
         
-        // Remove from selection
-        newState.selection.selectedPaths = newState.selection.selectedPaths.filter(id => !allChildren.paths.includes(id));
-        newState.selection.selectedTexts = newState.selection.selectedTexts.filter(id => !allChildren.texts.includes(id));
-        newState.selection.selectedTextPaths = newState.selection.selectedTextPaths.filter(id => !allChildren.textPaths.includes(id));
-        newState.selection.selectedGroups = newState.selection.selectedGroups.filter(id => !allChildren.groups.includes(id));
-        newState.selection.selectedImages = newState.selection.selectedImages.filter(id => !allChildren.images.includes(id));
-        newState.selection.selectedUses = newState.selection.selectedUses.filter(id => !allChildren.uses.includes(id));
+        allChildren.texts.forEach(textId => {
+          const textIndex = draft.texts.findIndex(t => t.id === textId);
+          if (textIndex !== -1) draft.texts.splice(textIndex, 1);
+        });
+        
+        allChildren.textPaths.forEach(textPathId => {
+          const textPathIndex = draft.textPaths.findIndex(tp => tp.id === textPathId);
+          if (textPathIndex !== -1) draft.textPaths.splice(textPathIndex, 1);
+        });
+        
+        allChildren.groups.forEach(groupId => {
+          const groupIndex = draft.groups.findIndex(g => g.id === groupId);
+          if (groupIndex !== -1) draft.groups.splice(groupIndex, 1);
+        });
+        
+        allChildren.images.forEach(imageId => {
+          const imageIndex = draft.images.findIndex(img => img.id === imageId);
+          if (imageIndex !== -1) draft.images.splice(imageIndex, 1);
+        });
+        
+        allChildren.uses.forEach(useId => {
+          const useIndex = draft.uses.findIndex(u => u.id === useId);
+          if (useIndex !== -1) draft.uses.splice(useIndex, 1);
+        });
+        
+        // Remove from selections
+        allChildren.paths.forEach(pathId => {
+          const selectionIndex = draft.selection.selectedPaths.indexOf(pathId);
+          if (selectionIndex !== -1) draft.selection.selectedPaths.splice(selectionIndex, 1);
+        });
+        
+        allChildren.texts.forEach(textId => {
+          const selectionIndex = draft.selection.selectedTexts.indexOf(textId);
+          if (selectionIndex !== -1) draft.selection.selectedTexts.splice(selectionIndex, 1);
+        });
+        
+        allChildren.textPaths.forEach(textPathId => {
+          const selectionIndex = draft.selection.selectedTextPaths.indexOf(textPathId);
+          if (selectionIndex !== -1) draft.selection.selectedTextPaths.splice(selectionIndex, 1);
+        });
+        
+        allChildren.groups.forEach(groupId => {
+          const selectionIndex = draft.selection.selectedGroups.indexOf(groupId);
+          if (selectionIndex !== -1) draft.selection.selectedGroups.splice(selectionIndex, 1);
+        });
+        
+        allChildren.images.forEach(imageId => {
+          const selectionIndex = draft.selection.selectedImages.indexOf(imageId);
+          if (selectionIndex !== -1) draft.selection.selectedImages.splice(selectionIndex, 1);
+        });
+        
+        allChildren.uses.forEach(useId => {
+          const selectionIndex = draft.selection.selectedUses.indexOf(useId);
+          if (selectionIndex !== -1) draft.selection.selectedUses.splice(selectionIndex, 1);
+        });
       }
-      
-      return newState;
-    });
+    }));
   },
 
   addChildToGroup: (groupId: string, childId: string, childType: 'path' | 'text' | 'textPath' | 'group' | 'image' | 'clipPath' | 'mask' | 'use') => {
-    set(state => {
-      const group = state.groups.find(g => g.id === groupId);
-      if (!group) return state;
+    set(state => produce(state, (draft: Draft<EditorState>) => {
+      const group = draft.groups.find(g => g.id === groupId);
+      if (!group) return;
       
       // Check if group is locked for editing
       const lockLevel = group.lockLevel || (group.locked ? 'full' : 'none');
       if (lockLevel === 'editing' || lockLevel === 'full') {
-        return state;
+        return;
       }
       
       let exists = false;
       if (childType === 'path') {
-        exists = state.paths.some(p => p.id === childId);
+        exists = draft.paths.some(p => p.id === childId);
       } else if (childType === 'text') {
-        exists = state.texts.some(t => t.id === childId);
+        exists = draft.texts.some(t => t.id === childId);
       } else if (childType === 'textPath') {
-        exists = state.textPaths.some(tp => tp.id === childId);
+        exists = draft.textPaths.some(tp => tp.id === childId);
       } else if (childType === 'group') {
-        exists = state.groups.some(g => g.id === childId);
+        exists = draft.groups.some(g => g.id === childId);
       } else if (childType === 'image') {
-        exists = state.images.some(img => img.id === childId);
+        exists = draft.images.some(img => img.id === childId);
       } else if (childType === 'use') {
-        exists = state.uses.some(u => u.id === childId);
+        exists = draft.uses.some(u => u.id === childId);
       }
       if (!exists) {
         if (typeof window !== 'undefined') {
           alert(`No se puede agregar: el ${childType} con id ${childId} no existe.`);
         }
-        return state;
+        return;
       }
-      return {
-        ...state,
-        groups: state.groups.map(group =>
-          group.id === groupId
-            ? {
-                ...group,
-                children: [...group.children, { type: childType, id: childId }]
-              }
-            : group
-        )
-      };
-    });
+      
+      // Add child to group
+      group.children.push({ type: childType, id: childId });
+    }));
   },
 
   removeChildFromGroup: (groupId: string, childId: string) => {
-    set(state => {
-      const group = state.groups.find(g => g.id === groupId);
-      if (!group) return state;
+    set(state => produce(state, (draft: Draft<EditorState>) => {
+      const group = draft.groups.find(g => g.id === groupId);
+      if (!group) return;
       
       // Check if group is locked for editing
       const lockLevel = group.lockLevel || (group.locked ? 'full' : 'none');
       if (lockLevel === 'editing' || lockLevel === 'full') {
-        return state;
+        return;
       }
       
-      return {
-        ...state,
-        groups: state.groups.map(group =>
-          group.id === groupId
-            ? {
-                ...group,
-                children: group.children.filter(child => child.id !== childId)
-              }
-            : group
-        )
-      };
-    });
+      // Remove child from group
+      const childIndex = group.children.findIndex(child => child.id === childId);
+      if (childIndex !== -1) {
+        group.children.splice(childIndex, 1);
+      }
+    }));
   },
 
   moveChildInGroup: (groupId: string, childId: string, newIndex: number) => {
-    set(state => {
-      const group = state.groups.find(g => g.id === groupId);
-      if (!group) return state;
+    set(state => produce(state, (draft: Draft<EditorState>) => {
+      const group = draft.groups.find(g => g.id === groupId);
+      if (!group) return;
       
       // Check if group is locked for editing
       const lockLevel = group.lockLevel || (group.locked ? 'full' : 'none');
       if (lockLevel === 'editing' || lockLevel === 'full') {
-        return state;
+        return;
       }
       
-      return {
-        ...state,
-        groups: state.groups.map(group => {
-          if (group.id !== groupId) return group;
-          
-          const children = [...group.children];
-          const currentIndex = children.findIndex(child => child.id === childId);
-          if (currentIndex === -1) return group;
-          
-          const [child] = children.splice(currentIndex, 1);
-          children.splice(newIndex, 0, child);
-          
-          return { ...group, children };
-        })
-      };
-    });
+      const currentIndex = group.children.findIndex(child => child.id === childId);
+      if (currentIndex === -1) return;
+      
+      // Move child to new position
+      const [child] = group.children.splice(currentIndex, 1);
+      group.children.splice(newIndex, 0, child);
+    }));
   },
 
   ungroupElements: (groupId: string) => {
     const group = get().getGroupById(groupId);
     if (!group) return;
     
-    set(state => ({
-      groups: state.groups.filter(g => g.id !== groupId),
-      selection: {
-        ...state.selection,
-        selectedGroups: state.selection.selectedGroups.filter(id => id !== groupId),
-        selectedPaths: [
-          ...state.selection.selectedPaths,
-          ...group.children.filter(c => c.type === 'path').map(c => c.id)
-        ],
-        selectedTexts: [
-          ...state.selection.selectedTexts,
-          ...group.children.filter(c => c.type === 'text').map(c => c.id)
-        ],
-        selectedTextPaths: [
-          ...state.selection.selectedTextPaths,
-          ...group.children.filter(c => c.type === 'textPath').map(c => c.id)
-        ],
-        selectedImages: [
-          ...state.selection.selectedImages,
-          ...group.children.filter(c => c.type === 'image').map(c => c.id)
-        ],
-        selectedUses: [
-          ...state.selection.selectedUses,
-          ...group.children.filter(c => c.type === 'use').map(c => c.id)
-        ]
+    set(state => produce(state, (draft: Draft<EditorState>) => {
+      // Remove the group
+      const groupIndex = draft.groups.findIndex(g => g.id === groupId);
+      if (groupIndex !== -1) {
+        draft.groups.splice(groupIndex, 1);
       }
+      
+      // Remove from selected groups
+      const selectedGroupIndex = draft.selection.selectedGroups.indexOf(groupId);
+      if (selectedGroupIndex !== -1) {
+        draft.selection.selectedGroups.splice(selectedGroupIndex, 1);
+      }
+      
+      // Add children to corresponding selections
+      group.children.forEach(child => {
+        switch (child.type) {
+          case 'path':
+            if (!draft.selection.selectedPaths.includes(child.id)) {
+              draft.selection.selectedPaths.push(child.id);
+            }
+            break;
+          case 'text':
+            if (!draft.selection.selectedTexts.includes(child.id)) {
+              draft.selection.selectedTexts.push(child.id);
+            }
+            break;
+          case 'textPath':
+            if (!draft.selection.selectedTextPaths.includes(child.id)) {
+              draft.selection.selectedTextPaths.push(child.id);
+            }
+            break;
+          case 'image':
+            if (!draft.selection.selectedImages.includes(child.id)) {
+              draft.selection.selectedImages.push(child.id);
+            }
+            break;
+          case 'use':
+            if (!draft.selection.selectedUses.includes(child.id)) {
+              draft.selection.selectedUses.push(child.id);
+            }
+            break;
+        }
+      });
     }));
   },
 
@@ -508,10 +551,11 @@ export const createGroupActions: StateCreator<
   },
 
   transformGroup: (groupId: string, transform: string) => {
-    set(state => ({
-      groups: state.groups.map(group =>
-        group.id === groupId ? { ...group, transform } : group
-      )
+    set(state => produce(state, (draft: Draft<EditorState>) => {
+      const group = draft.groups.find(g => g.id === groupId);
+      if (group) {
+        group.transform = transform;
+      }
     }));
   },
 

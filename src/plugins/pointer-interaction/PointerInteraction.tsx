@@ -11,6 +11,7 @@ import { stickyManager } from '../sticky-guidelines/StickyManager';
 import { stickyPointsManager } from './StickyPointsManager';
 import { ElementType, SelectionContext, isElementSelected, hasMultiSelection, shouldPreserveSelection, logSelectionDebug } from '../../utils/selection-utils';
 import { applyFinalSnapToGrid } from '../../utils/final-snap-utils';
+import { isGestureBlocked } from '../gestures/Gestures';
 
 // ================== TYPES & INTERFACES ==================
 
@@ -1393,11 +1394,10 @@ class PointerInteractionManager {
 
   private handleImmediateAreaSelection(e: PointerEvent<SVGElement>, context: PointerEventContext, modifiers: KeyModifiers): void {
     // CRITICAL FIX: Verificar inmediatamente si hay gestos multi-touch activos
-    // @ts-ignore - acceso a variable global para comunicación entre plugins  
-    const isGestureBlocked = window.gestureBlocked || false;
+    const isGestureBlockedNow = isGestureBlocked();
 
     // Si hay gesture bloqueado (multi-touch), abortar inmediatamente la selección
-    if (e.pointerType === 'touch' && isGestureBlocked) {
+    if (e.pointerType === 'touch' && isGestureBlockedNow) {
       return; // Salir sin hacer nada
     }
 

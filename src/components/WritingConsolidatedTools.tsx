@@ -10,6 +10,7 @@ import { curvesManager } from '../plugins/curves/CurvesManager';
 import { creationManager } from '../plugins/creation/CreationManager';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { SVGCommandType, EditorCommandType } from '../types';
+import { CONFIG } from '../config/constants';
 
 export const WritingConsolidatedTools: React.FC = () => {
   const { isMobile } = useMobileDetection();
@@ -18,7 +19,7 @@ export const WritingConsolidatedTools: React.FC = () => {
   const { mode, selection } = useEditorStore();
 
   // Match text toolbar button sizing exactly
-  const buttonSize = isMobile ? 28 : 32;
+  const buttonSize = isMobile ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
   const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
   const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
 

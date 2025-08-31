@@ -350,8 +350,8 @@ export class ToolModeManager {
 // Instancia singleton
 export const toolModeManager = new ToolModeManager();
 
-// Make it globally accessible for debugging and plugin system
-if (typeof window !== 'undefined') {
+// Make it globally accessible for debugging (development only)
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   (window as any).toolModeManager = toolModeManager;
 }
 

@@ -1,0 +1,138 @@
+/**
+ * SSPE CSS Constants
+ * 
+ * This file defines CSS custom properties based on our TypeScript constants.
+ * Import this file in your main CSS to use consistent values across the application.
+ */
+
+:root {
+  /* Z-Index Values */
+  --z-index-paths: 1000;
+  --z-index-texts: 2000;
+  --z-index-images: 3000;
+  --z-index-symbols: 4000;
+  --z-index-groups: 5000;
+  --z-index-handles: 6000;
+  --z-index-floating-toolbar: 9000;
+  --z-index-overlays: 9500;
+  --z-index-modals: 10000;
+
+  /* Toolbar Sizing */
+  --toolbar-button-size-desktop: 32px;
+  --toolbar-button-size-mobile: 28px;
+  --toolbar-icon-size: 20px;
+  --toolbar-padding: 8px;
+  --toolbar-border-radius: 6px;
+
+  /* Touch Targets (WCAG Compliance) */
+  --touch-target-min-size: 44px;
+  --touch-target-recommended-size: 48px;
+  --touch-target-min-spacing: 8px;
+
+  /* Layout */
+  --layout-base-offset: 32px;
+  --layout-sidebar-width: 280px;
+  --layout-toolbar-height: 48px;
+  --layout-panel-padding: 16px;
+  --layout-section-spacing: 24px;
+
+  /* Animation Durations */
+  --animation-duration-fast: 150ms;
+  --animation-duration-normal: 250ms;
+  --animation-duration-slow: 500ms;
+
+  /* Animation Easing */
+  --animation-easing-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --animation-easing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --animation-easing-ease-out: cubic-bezier(0, 0, 0.2, 1);
+
+  /* Colors */
+  --color-primary: #007AFF;
+  --color-secondary: #5856D6;
+  --color-accent: #FF9500;
+  --color-success: #34C759;
+  --color-warning: #FF9500;
+  --color-error: #FF3B30;
+  --color-info: #007AFF;
+  --color-background: #FFFFFF;
+  --color-surface: #F2F2F7;
+  --color-border: #C7C7CC;
+  --color-text-primary: #000000;
+  --color-text-secondary: #8E8E93;
+  --color-text-tertiary: #C7C7CC;
+  --color-selection: #007AFF;
+  --color-hover: rgba(0, 122, 255, 0.1);
+  --color-active: rgba(0, 122, 255, 0.2);
+  --color-focus: rgba(0, 122, 255, 0.3);
+
+  /* Canvas */
+  --canvas-default-width: 800px;
+  --canvas-default-height: 600px;
+  --canvas-grid-size: 20px;
+
+  /* Editor Elements */
+  --path-default-stroke-width: 2px;
+  --path-handle-size: 8px;
+  --text-default-font-size: 16px;
+  --selection-handle-size: 8px;
+  --selection-bounding-box-padding: 4px;
+
+  /* Mobile Safe Areas */
+  --mobile-safe-area-top: 44px;
+  --mobile-safe-area-bottom: 34px;
+  --mobile-safe-area-sides: 0px;
+
+  /* Mobile Breakpoints */
+  --breakpoint-mobile: 768px;
+  --breakpoint-tablet: 1024px;
+  --breakpoint-desktop: 1200px;
+
+  /* Performance Constants */
+  --raf-throttle-ms: 16;
+  --debounce-delay: 300ms;
+  --throttle-delay: 100ms;
+}
+
+/* Responsive Utilities */
+@media (max-width: 767px) {
+  :root {
+    --current-button-size: var(--toolbar-button-size-mobile);
+  }
+}
+
+@media (min-width: 768px) {
+  :root {
+    --current-button-size: var(--toolbar-button-size-desktop);
+  }
+}
+
+/* Touch-safe utilities */
+.touch-safe {
+  min-width: var(--touch-target-min-size);
+  min-height: var(--touch-target-min-size);
+}
+
+.touch-recommended {
+  min-width: var(--touch-target-recommended-size);
+  min-height: var(--touch-target-recommended-size);
+}
+
+/* Z-Index utility classes */
+.z-paths { z-index: var(--z-index-paths); }
+.z-texts { z-index: var(--z-index-texts); }
+.z-images { z-index: var(--z-index-images); }
+.z-symbols { z-index: var(--z-index-symbols); }
+.z-groups { z-index: var(--z-index-groups); }
+.z-handles { z-index: var(--z-index-handles); }
+.z-floating-toolbar { z-index: var(--z-index-floating-toolbar); }
+.z-overlays { z-index: var(--z-index-overlays); }
+.z-modals { z-index: var(--z-index-modals); }
+
+/* Animation utility classes */
+.anim-fast { transition-duration: var(--animation-duration-fast); }
+.anim-normal { transition-duration: var(--animation-duration-normal); }
+.anim-slow { transition-duration: var(--animation-duration-slow); }
+
+.easing-default { transition-timing-function: var(--animation-easing-default); }
+.easing-bounce { transition-timing-function: var(--animation-easing-bounce); }
+.easing-ease-out { transition-timing-function: var(--animation-easing-ease-out); }

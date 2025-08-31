@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import { EditorState } from '../types';
 import { getAllSubPathsAtPoint } from '../utils/path-utils';
+import { CONFIG } from '../config/constants';
 
 export interface DeepSelectionActions {
   // Deep selection for overlapping subpaths within a path
@@ -44,10 +45,10 @@ export const createDeepSelectionActions: StateCreator<
     const currentTime = Date.now();
     const currentDeepSelection = state.deepSelection;
     
-    // Check if this is a consecutive click at the same location (within 1000ms and 20px tolerance)
+    // Check if this is a consecutive click at the same location (within timeout and 20px tolerance)
     const isConsecutiveClick = currentDeepSelection?.lastClickTime &&
       currentDeepSelection?.lastClickPoint &&
-      (currentTime - currentDeepSelection.lastClickTime) < 1000 &&
+      (currentTime - currentDeepSelection.lastClickTime) < CONFIG.PERFORMANCE.DEBOUNCE_DELAY &&
       Math.abs(currentDeepSelection.lastClickPoint.x - point.x) < 20 &&
       Math.abs(currentDeepSelection.lastClickPoint.y - point.y) < 20;
     

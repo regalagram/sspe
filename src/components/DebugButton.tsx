@@ -4,6 +4,7 @@ import { ToolbarSection } from './ToolbarButton';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useEditorStore } from '../store/editorStore';
 import { useMobileDetection } from '../hooks/useMobileDetection';
+import { CONFIG } from '../config/constants';
 
 interface DebugButtonProps {
   onOpenVisualDebugPanel?: () => void;
@@ -14,7 +15,7 @@ export const DebugButton: React.FC<DebugButtonProps> = ({ onOpenVisualDebugPanel
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(false);
   const { enabledFeatures, toggleFeature } = useEditorStore();
 
-  const buttonSize = isMobile ? 28 : 32;
+  const buttonSize = isMobile ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
 
   const handleClearLocalStorage = () => {
     localStorage.clear();

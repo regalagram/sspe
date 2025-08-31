@@ -9,6 +9,7 @@ import { pencilManager } from '../plugins/pencil/PencilManager';
 import { curvesManager } from '../plugins/curves/CurvesManager';
 import { shapeManager } from '../plugins/shapes/ShapeManager';
 import { ToolbarAction } from '../types/floatingToolbar';
+import { CONFIG } from '../config/constants';
 
 // Types for different drawing tools
 type DrawingToolType = 'pencil' | 'curves' | 'shapes' | 'text';
@@ -370,7 +371,7 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
 
   const actions = createToolbarActions();
   // Match text toolbar button sizing exactly
-  const buttonSize = isMobileDevice ? 28 : 32;
+  const buttonSize = isMobileDevice ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
   
   return createPortal(
     <div

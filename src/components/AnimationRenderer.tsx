@@ -1,5 +1,7 @@
 import React from 'react';
 import { useEditorStore } from '../store/editorStore';
+import { animationFrameEmitter } from '../core/EventSystem';
+import { CONFIG } from '../config/constants';
 import { SVGAnimation } from '../types';
 
 // Helper function to ensure chainDelays is always a Map
@@ -23,41 +25,35 @@ const useAnimationTimer = () => {
   }, []);
   
   React.useEffect(() => {
-    let intervalId: number | null = null;
-    
-    if (animationState.isPlaying && animationState.startTime) {
-      intervalId = window.setInterval(() => {
-        const elapsed = (Date.now() - animationState.startTime!) / 1000; // Convert to seconds
-        const newTime = elapsed * animationState.playbackRate;
-        
-        // Control SVG time directly
-        if (svgElementRef.current && typeof svgElementRef.current.setCurrentTime === 'function') {
-          try {
-            svgElementRef.current.setCurrentTime(newTime);
-          } catch (error) {
-            // Fallback if setCurrentTime fails
-          }
-        }
-        
-        // Just update current time - don't handle completion here
-        // Let the main animation system in animationActions.ts handle auto-reset
-        setAnimationTime(newTime);
-      }, 16); // ~60 FPS updates
-    } else if (!animationState.isPlaying && svgElementRef.current) {
-      // When paused, maintain the current SVG time
-      const currentTime = animationState.currentTime || 0;
-      if (typeof svgElementRef.current.setCurrentTime === 'function') {
-        try {
-          svgElementRef.current.setCurrentTime(currentTime);
-        } catch (error) {
-        }
-      }
+    if (!animationState.isPlaying || !animationState.startTime) {
+      animationFrameEmitter.stop();
+      return;
     }
-    
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
+
+    // Start RAF-based animation instead of polling
+    animationFrameEmitter.start();
+
+    const unsubscribe = animationFrameEmitter.on('frame', ({ timestamp }) => {
+      const elapsed = (timestamp - animationState.startTime!) / 1000; // Convert to seconds
+      const newTime = elapsed * animationState.playbackRate;
+      
+      // Control SVG time directly
+      if (svgElementRef.current && typeof svgElementRef.current.setCurrentTime === 'function') {
+        try {
+          svgElementRef.current.setCurrentTime(newTime);
+        } catch (error) {
+          // Fallback if setCurrentTime fails
+        }
       }
+        
+      // Just update current time - don't handle completion here
+      // Let the main animation system in animationActions.ts handle auto-reset
+      setAnimationTime(newTime);
+    });
+
+    return () => {
+      unsubscribe();
+      animationFrameEmitter.stop();
     };
   }, [animationState.isPlaying, animationState.startTime, animationState.playbackRate, animationState.currentTime, setAnimationTime]);
 };
