@@ -32,7 +32,7 @@ import {
 // Color functions
 const getCommonUseFillColor = (): string | any => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   if (selectedUses.length === 0) return '#000000';
   
@@ -77,7 +77,7 @@ const getCommonUseFillColor = (): string | any => {
 // Apply fill color to selected use elements
 const applyUseFillColor = (color: string | any) => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   // Save to history before changing colors
   store.pushToHistory();
@@ -108,7 +108,7 @@ const applyUseFillColor = (color: string | any) => {
 // Get common stroke color for selected use elements
 const getCommonUseStrokeColor = (): string | any => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   if (selectedUses.length === 0) return '#000000';
   
@@ -153,7 +153,7 @@ const getCommonUseStrokeColor = (): string | any => {
 // Apply stroke color to selected use elements
 const applyUseStrokeColor = (color: string | any) => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   // Save to history before changing colors
   store.pushToHistory();
@@ -184,7 +184,7 @@ const applyUseStrokeColor = (color: string | any) => {
 // Get common stroke width for selected use elements
 const getCommonUseStrokeWidth = (): number => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   if (selectedUses.length === 0) return 1;
   
@@ -195,7 +195,7 @@ const getCommonUseStrokeWidth = (): number => {
 // Apply stroke width to selected use elements
 const applyUseStrokeWidth = (strokeWidth: string | number) => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -217,7 +217,7 @@ const applyUseStrokeWidth = (strokeWidth: string | number) => {
 // Get common stroke dash for selected use elements
 const getCommonUseStrokeDash = (): string => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   if (selectedUses.length === 0) return '';
   
@@ -228,7 +228,7 @@ const getCommonUseStrokeDash = (): string => {
 // Apply stroke dash to selected use elements
 const applyUseStrokeDash = (strokeDash: string) => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -248,7 +248,7 @@ const applyUseStrokeDash = (strokeDash: string) => {
 // Get common stroke linecap for selected use elements
 const getCommonUseStrokeLinecap = (): string => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   if (selectedUses.length === 0) return 'butt';
   
@@ -259,7 +259,7 @@ const getCommonUseStrokeLinecap = (): string => {
 // Apply stroke linecap to selected use elements
 const applyUseStrokeLinecap = (strokeLinecap: string) => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -279,7 +279,7 @@ const applyUseStrokeLinecap = (strokeLinecap: string) => {
 // Get common stroke linejoin for selected use elements
 const getCommonUseStrokeLinejoin = (): string => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   if (selectedUses.length === 0) return 'miter';
   
@@ -290,7 +290,7 @@ const getCommonUseStrokeLinejoin = (): string => {
 // Apply stroke linejoin to selected use elements
 const applyUseStrokeLinejoin = (strokeLinejoin: string) => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -310,7 +310,7 @@ const applyUseStrokeLinejoin = (strokeLinejoin: string) => {
 // Clear use element style
 const clearUseStyle = () => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -327,7 +327,7 @@ const clearUseStyle = () => {
 // Get common opacity for selected use elements
 const getCommonUseOpacity = (): number => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   if (selectedUses.length === 0) return 1;
   
@@ -368,7 +368,7 @@ const getCommonUseOpacity = (): number => {
 // Apply opacity to selected use elements (fill opacity)
 const applyUseOpacity = (opacity: number) => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   // Save to history before changing opacity
   store.pushToHistory();
@@ -389,7 +389,7 @@ const applyUseOpacity = (opacity: number) => {
 // Get common stroke opacity for selected use elements
 const getCommonUseStrokeOpacity = (): number => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   if (selectedUses.length === 0) return 1;
   
@@ -430,7 +430,7 @@ const getCommonUseStrokeOpacity = (): number => {
 // Apply stroke opacity to selected use elements
 const applyUseStrokeOpacity = (strokeOpacity: number) => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -457,7 +457,7 @@ const openFilterPanel = async () => {
 // Check if a specific filter is active on selected use elements
 const isUseFilterActive = (filterType: string): boolean => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   if (selectedUses.length === 0) return false;
   
@@ -485,7 +485,7 @@ const isUseFilterActive = (filterType: string): boolean => {
 // Remove specific filter from selected use elements
 const removeUseFilter = (filterType: string) => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   if (selectedUses.length === 0) return;
   
@@ -580,7 +580,7 @@ const useFilterOptions = [
 // Specific filter functions for use elements
 const applyBlurFilterToUses = () => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -612,7 +612,7 @@ const applyBlurFilterToUses = () => {
 
 const applyDropShadowToUses = () => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -644,7 +644,7 @@ const applyDropShadowToUses = () => {
 
 const applyGlowFilterToUses = () => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -676,7 +676,7 @@ const applyGlowFilterToUses = () => {
 
 const applyGrayscaleFilterToUses = () => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -708,7 +708,7 @@ const applyGrayscaleFilterToUses = () => {
 
 const applySepiaFilterToUses = () => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -740,7 +740,7 @@ const applySepiaFilterToUses = () => {
 
 const applyEmbossFilterToUses = () => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -772,7 +772,7 @@ const applyEmbossFilterToUses = () => {
 
 const applyNeonGlowFilterToUses = () => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -812,7 +812,7 @@ const openAnimationPanel = async () => {
 // Check if a specific animation is active on selected use elements
 const isUseAnimationActive = (animationType: string): boolean => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   if (selectedUses.length === 0) return false;
   
@@ -843,7 +843,7 @@ const isUseAnimationActive = (animationType: string): boolean => {
 // Remove specific animation from selected use elements
 const removeUseAnimation = (animationType: string) => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   if (selectedUses.length === 0) return;
   
@@ -919,7 +919,7 @@ const useAnimationOptions = [
 // Specific animation functions for use elements
 const addFadeAnimationToUses = () => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -940,7 +940,7 @@ const addFadeAnimationToUses = () => {
 
 const addScaleAnimationToUses = () => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -962,7 +962,7 @@ const addScaleAnimationToUses = () => {
 
 const addRotateAnimationToUses = () => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -984,7 +984,7 @@ const addRotateAnimationToUses = () => {
 
 const addTranslateAnimationToUses = () => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   store.pushToHistory();
   
@@ -1006,7 +1006,7 @@ const addTranslateAnimationToUses = () => {
 // Check if selected use elements are locked
 const areUsesLocked = (): boolean => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   if (selectedUses.length === 0) return false;
   
@@ -1019,7 +1019,7 @@ const areUsesLocked = (): boolean => {
 // Toggle use element lock
 const toggleUseLock = () => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   if (selectedUses.length === 0) return;
   
@@ -1050,7 +1050,7 @@ const toggleUseLock = () => {
 // Delete selected use elements
 const deleteUses = () => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   selectedUses.forEach(useId => {
     const useIndex = store.uses.findIndex(u => u.id === useId);
@@ -1172,7 +1172,7 @@ const startUseFormatCopy = () => {
     return;
   }
   
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   if (selectedUses.length === 0) return;
   
@@ -1191,7 +1191,7 @@ const isUseFormatCopyActive = (): boolean => {
 // Check if use format copy should be visible (only for single use selection)
 const isUseFormatCopyVisible = (): boolean => {
   const store = useEditorStore.getState();
-  const selectedUses = store.selection.selectedUses;
+  const selectedUses = store.selection.selectedUses || [];
   
   // Only show for exactly one use element selected (not multiple)
   return selectedUses.length === 1;

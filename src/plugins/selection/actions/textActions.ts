@@ -10,7 +10,7 @@ import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';
 // Check if selected texts are locked
 const areTextsLocked = (): boolean => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   
   if (selectedTexts.length === 0) return false;
   
@@ -23,7 +23,7 @@ const areTextsLocked = (): boolean => {
 // Toggle text lock
 const toggleTextLock = () => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   
   if (selectedTexts.length === 0) return;
   
@@ -87,7 +87,7 @@ const startTextFormatCopy = () => {
     return;
   }
   
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   const selectedTextPaths = store.selection.selectedTextPaths;
   
   // Get the first selected text (prefer regular texts over textPaths)
@@ -107,7 +107,7 @@ const startTextFormatCopy = () => {
 // Check if selected texts are compatible for format copying
 const areTextsCompatibleForFormatCopy = (): boolean => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   const selectedTextPaths = store.selection.selectedTextPaths;
   
   // Only show for exactly one text selected (not multiple)

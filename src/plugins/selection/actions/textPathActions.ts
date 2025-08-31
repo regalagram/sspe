@@ -7,7 +7,7 @@ import { textEditManager } from '../../../managers/TextEditManager';
 // Check if selected textPaths are locked
 const areTextPathsLocked = (): boolean => {
   const store = useEditorStore.getState();
-  const selectedTextPaths = store.selection.selectedTextPaths;
+  const selectedTextPaths = store.selection.selectedTextPaths || [];
   
   if (selectedTextPaths.length === 0) return false;
   
@@ -20,7 +20,7 @@ const areTextPathsLocked = (): boolean => {
 // Toggle textPath lock
 const toggleTextPathLock = () => {
   const store = useEditorStore.getState();
-  const selectedTextPaths = store.selection.selectedTextPaths;
+  const selectedTextPaths = store.selection.selectedTextPaths || [];
   
   if (selectedTextPaths.length === 0) return;
   
@@ -57,7 +57,7 @@ const startTextFormatCopy = () => {
     return;
   }
   
-  const selectedTextPaths = store.selection.selectedTextPaths;
+  const selectedTextPaths = store.selection.selectedTextPaths || [];
   
   if (selectedTextPaths.length > 0) {
     store.startTextFormatCopy(selectedTextPaths[0]);
@@ -67,7 +67,7 @@ const startTextFormatCopy = () => {
 // Check if selected textPaths are compatible for format copying
 const areTextPathsCompatibleForFormatCopy = (): boolean => {
   const store = useEditorStore.getState();
-  const selectedTextPaths = store.selection.selectedTextPaths;
+  const selectedTextPaths = store.selection.selectedTextPaths || [];
   
   // Must have at least one textPath selected
   return selectedTextPaths.length > 0;

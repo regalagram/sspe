@@ -661,7 +661,16 @@ export class TransformManager {
 
   // pointer event handlers
   handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
+    console.log('🔥 TRANSFORM MANAGER - handlePointerDown called:', {
+      target: e.target,
+      elementType: (e.target as Element)?.getAttribute?.('data-element-type'),
+      elementId: (e.target as Element)?.getAttribute?.('data-element-id'),
+      hasSelection: this.hasValidSelection(),
+      svgPoint: context.svgPoint
+    });
+    
     if (!this.hasValidSelection()) {
+      console.log('🔥 No valid selection, returning false');
       return false;
     }
 
@@ -686,7 +695,16 @@ export class TransformManager {
   };
 
   handlePointerMove = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
-    if (!this.state.isTransforming) return false;
+    console.log('🔥 TRANSFORM MANAGER - handlePointerMove called:', {
+      isTransforming: this.state.isTransforming,
+      svgPoint: context.svgPoint,
+      mode: this.state.mode
+    });
+    
+    if (!this.state.isTransforming) {
+      console.log('🔥 Not transforming, returning false');
+      return false;
+    }
 
     this.updateTransform(context.svgPoint);
     return true;
@@ -1236,6 +1254,7 @@ export class TransformManager {
         // Calculate the center of the use element for scaling
         const width = initialUse.width || 100;
         const height = initialUse.height || 100;
+        // Use consistent positioning: always use x,y coordinates
         const useCenterX = (initialUse.x || 0) + width / 2;
         const useCenterY = (initialUse.y || 0) + height / 2;
         
@@ -1263,14 +1282,9 @@ export class TransformManager {
         
         const transformString = this.matrixToString(newMatrix);
         
-        // For use elements, we need to also update the dimensions
-        // Scale the width and height while preserving position through transform
-        const newWidth = width * Math.abs(scaleX);
-        const newHeight = height * Math.abs(scaleY);
-        
+        // During live transformation, only use transform matrix to avoid double scaling
+        // Width and height will be updated in endTransform() when finalizing
         updateUse(useId, {
-          width: newWidth,
-          height: newHeight,
           transform: transformString
         });
       } else if (this.state.mode === 'rotate') {
@@ -1280,6 +1294,7 @@ export class TransformManager {
         // Calculate the center of the use element for rotation
         const width = initialUse.width || 100;
         const height = initialUse.height || 100;
+        // Use consistent positioning: always use x,y coordinates
         const useCenterX = (initialUse.x || 0) + width / 2;
         const useCenterY = (initialUse.y || 0) + height / 2;
         
@@ -1315,33 +1330,96 @@ export class TransformManager {
         const deltaX = this.state.currentPoint.x - this.state.dragStart.x;
         const deltaY = this.state.currentPoint.y - this.state.dragStart.y;
         
-        // If the use element has an existing transform, we need to combine it with the movement
+        console.log('🚀 USE ELEMENT MOVEMENT STARTED:');
+        console.log('  📱 State check:', {
+          isMoving: this.state.isMoving,
+          dragStart: this.state.dragStart,
+          currentPoint: this.state.currentPoint,
+          selectedUses: this.editorStore ? this.editorStore.getState().selection.selectedUses : 'no store'
+        });
+        
+        // If the use element has an existing transform, compensate for rotation
         if (initialUse.transform) {
-          // Use matrix-based transformation to preserve existing transforms while adding translation
-          const width = initialUse.width || 100;
-          const height = initialUse.height || 100;
-          const useCenterX = (initialUse.x || 0) + width / 2;
-          const useCenterY = (initialUse.y || 0) + height / 2;
+          console.log('🔍 USE ELEMENT MOVEMENT DEBUG:');
+          console.log('  📋 Initial use element:', {
+            id: useId,
+            transform: initialUse.transform,
+            x: initialUse.x,
+            y: initialUse.y,
+            width: initialUse.width,
+            height: initialUse.height
+          });
           
-          // Create current transformation matrix including existing transform
-          const currentMatrix = this.buildTransformMatrix(
-            useCenterX,
-            useCenterY,
-            1, // base scale X
-            1, // base scale Y
-            0, // base rotation
-            initialUse.transform || ''
-          );
+          // Extract rotation angle from the existing transform
+          const rotationResult = this.extractRotationFromTransform(initialUse.transform);
+          const rotationAngle = rotationResult.angle;
+          console.log('  🔄 Rotation detected:', {
+            fullResult: rotationResult,
+            angle: rotationAngle
+          });
           
-          // Apply translation by modifying the matrix e and f components (translation components)
-          const translatedMatrix: TransformMatrix = {
-            ...currentMatrix,
-            e: currentMatrix.e + deltaX,
-            f: currentMatrix.f + deltaY
-          };
+          console.log('  🖱️ Mouse movement:', {
+            dragStart: this.state.dragStart,
+            currentPoint: this.state.currentPoint,
+            deltaX: deltaX,
+            deltaY: deltaY
+          });
           
-          const transformString = this.matrixToString(translatedMatrix);
-          updateUse(useId, { transform: transformString });
+          // Apply inverse rotation to the mouse movement to compensate for element rotation
+          const compensatedDelta = this.rotatePoint(deltaX, deltaY, -rotationAngle);
+          console.log('  ⚖️ Compensated movement:', {
+            originalDelta: { x: deltaX, y: deltaY },
+            inverseRotationAngle: -rotationAngle,
+            compensatedDelta: compensatedDelta
+          });
+          
+          // Parse the existing transform to preserve its structure
+          const existingParts = this.parseTransformString(initialUse.transform);
+          console.log('  🔧 Transform parsing:', existingParts);
+          
+          // Update only the translate component, preserving rotate and scale
+          let newTransform = initialUse.transform;
+          
+          // Check if there's already a translate component
+          const translateMatch = newTransform.match(/translate\(([^)]+)\)/);
+          if (translateMatch) {
+            // Update existing translate
+            const existingTranslate = translateMatch[1].split(/[,\s]+/).map(Number);
+            const existingX = existingTranslate[0] || 0;
+            const existingY = existingTranslate[1] || 0;
+            
+            console.log('  📍 Existing translate found:', {
+              match: translateMatch[1],
+              parsed: existingTranslate,
+              existingX: existingX,
+              existingY: existingY
+            });
+            
+            const newX = existingX + compensatedDelta.x;
+            const newY = existingY + compensatedDelta.y;
+            
+            console.log('  🎯 New translate values:', {
+              newX: newX,
+              newY: newY,
+              calculation: `${existingX} + ${compensatedDelta.x} = ${newX}, ${existingY} + ${compensatedDelta.y} = ${newY}`
+            });
+            
+            newTransform = newTransform.replace(
+              /translate\([^)]+\)/,
+              `translate(${newX}, ${newY})`
+            );
+          } else {
+            // Add new translate at the beginning
+            console.log('  🆕 No existing translate, adding new one');
+            newTransform = `translate(${compensatedDelta.x}, ${compensatedDelta.y}) ${newTransform}`.trim();
+          }
+          
+          console.log('  ✅ Final transform update:', {
+            oldTransform: initialUse.transform,
+            newTransform: newTransform
+          });
+          
+          updateUse(useId, { transform: newTransform });
         } else {
           // If no existing transform, update x and y position directly for simplicity
           updateUse(useId, {
@@ -2118,6 +2196,56 @@ export class TransformManager {
       e: m1.a * m2.e + m1.c * m2.f + m1.e,
       f: m1.b * m2.e + m1.d * m2.f + m1.f
     };
+  }
+
+
+  // Rotate a point by an angle (in degrees)
+  private rotatePoint(x: number, y: number, angleDegrees: number): { x: number; y: number } {
+    console.log('    🔄 rotatePoint called:', { x, y, angleDegrees });
+    
+    const angleRad = (angleDegrees * Math.PI) / 180;
+    const cos = Math.cos(angleRad);
+    const sin = Math.sin(angleRad);
+    
+    const result = {
+      x: x * cos - y * sin,
+      y: x * sin + y * cos
+    };
+    
+    console.log('    🔄 rotatePoint result:', {
+      angleRad: angleRad,
+      cos: cos,
+      sin: sin,
+      calculation: `x: ${x} * ${cos} - ${y} * ${sin} = ${result.x}`,
+      result: result
+    });
+    
+    return result;
+  }
+
+  // Parse transform string into components (helper function)
+  private parseTransformString(transform: string): any {
+    const parts: any = {};
+    
+    const translateMatch = transform.match(/translate\(([^)]+)\)/);
+    if (translateMatch) {
+      const values = translateMatch[1].split(/[,\s]+/).map(Number);
+      parts.translate = { x: values[0] || 0, y: values[1] || 0 };
+    }
+    
+    const rotateMatch = transform.match(/rotate\(([^)]+)\)/);
+    if (rotateMatch) {
+      const values = rotateMatch[1].split(/[,\s]+/).map(Number);
+      parts.rotate = { angle: values[0] || 0, cx: values[1], cy: values[2] };
+    }
+    
+    const scaleMatch = transform.match(/scale\(([^)]+)\)/);
+    if (scaleMatch) {
+      const values = scaleMatch[1].split(/[,\s]+/).map(Number);
+      parts.scale = { x: values[0] || 1, y: values[1] || values[0] || 1 };
+    }
+    
+    return parts;
   }
 }
 

@@ -38,7 +38,7 @@ import {
 // Apply style to selected textpaths
 const applyTextPathStyle = (styleUpdate: any) => {
   const store = useEditorStore.getState();
-  const selectedTextPaths = store.selection.selectedTextPaths;
+  const selectedTextPaths = store.selection.selectedTextPaths || [];
   
   if (selectedTextPaths.length === 0) return;
   
@@ -52,7 +52,7 @@ const applyTextPathStyle = (styleUpdate: any) => {
 // Get current styles from the first selected textpath
 const getCurrentTextPathStyles = () => {
   const store = useEditorStore.getState();
-  const selectedTextPaths = store.selection.selectedTextPaths;
+  const selectedTextPaths = store.selection.selectedTextPaths || [];
   
   if (selectedTextPaths.length === 0) return null;
   
@@ -199,7 +199,7 @@ const applyStrokeWidth = (width: string | number) => {
 // Generic function to apply filters to textpaths
 const applyFilterToTextPaths = (filterCreatorFn: () => any) => {
   const store = useEditorStore.getState();
-  const selectedTextPaths = store.selection.selectedTextPaths;
+  const selectedTextPaths = store.selection.selectedTextPaths || [];
   
   if (selectedTextPaths.length === 0) return;
   
@@ -242,7 +242,7 @@ const applyNeonGlowFilterToTextPath = () => applyFilterToTextPaths(createNeonGlo
 // Add fade animation to textpaths
 const addFadeAnimationToTextPath = () => {
   const store = useEditorStore.getState();
-  const selectedTextPaths = store.selection.selectedTextPaths;
+  const selectedTextPaths = store.selection.selectedTextPaths || [];
   
   // Save to history before adding animations
   store.pushToHistory();
@@ -265,7 +265,7 @@ const addFadeAnimationToTextPath = () => {
 // Add rotation animation to textpaths
 const addRotateAnimationToTextPath = () => {
   const store = useEditorStore.getState();
-  const selectedTextPaths = store.selection.selectedTextPaths;
+  const selectedTextPaths = store.selection.selectedTextPaths || [];
   
   // Save to history before adding animations
   store.pushToHistory();
@@ -293,7 +293,7 @@ const addRotateAnimationToTextPath = () => {
 // Add scale animation to textpaths
 const addScaleAnimationToTextPath = () => {
   const store = useEditorStore.getState();
-  const selectedTextPaths = store.selection.selectedTextPaths;
+  const selectedTextPaths = store.selection.selectedTextPaths || [];
   
   // Save to history before adding animations
   store.pushToHistory();
@@ -320,7 +320,7 @@ const addScaleAnimationToTextPath = () => {
 // Check if a specific filter is active on selected textpaths
 const isTextPathFilterActive = (filterType: string): boolean => {
   const store = useEditorStore.getState();
-  const selectedTextPaths = store.selection.selectedTextPaths;
+  const selectedTextPaths = store.selection.selectedTextPaths || [];
   
   if (selectedTextPaths.length === 0) return false;
   
@@ -347,7 +347,7 @@ const isTextPathFilterActive = (filterType: string): boolean => {
 // Check if a specific animation is active on selected textpaths
 const isTextPathAnimationActive = (animationType: string): boolean => {
   const store = useEditorStore.getState();
-  const selectedTextPaths = store.selection.selectedTextPaths;
+  const selectedTextPaths = store.selection.selectedTextPaths || [];
   
   if (selectedTextPaths.length === 0) return false;
   
@@ -375,7 +375,7 @@ const isTextPathAnimationActive = (animationType: string): boolean => {
 // Remove specific filter from selected textpaths
 const removeTextPathFilter = (filterType: string) => {
   const store = useEditorStore.getState();
-  const selectedTextPaths = store.selection.selectedTextPaths;
+  const selectedTextPaths = store.selection.selectedTextPaths || [];
   
   if (selectedTextPaths.length === 0) return;
   
@@ -393,7 +393,7 @@ const removeTextPathFilter = (filterType: string) => {
 // Remove specific animation from selected textpaths
 const removeTextPathAnimation = (animationType: string) => {
   const store = useEditorStore.getState();
-  const selectedTextPaths = store.selection.selectedTextPaths;
+  const selectedTextPaths = store.selection.selectedTextPaths || [];
   
   if (selectedTextPaths.length === 0) return;
   
@@ -529,7 +529,7 @@ const textPathFilterOptions = [
 // Delete selected textpaths
 const deleteTextPaths = () => {
   const store = useEditorStore.getState();
-  const selectedTextPaths = store.selection.selectedTextPaths;
+  const selectedTextPaths = store.selection.selectedTextPaths || [];
   
   // Save to history before deleting
   store.pushToHistory();
@@ -545,7 +545,7 @@ const deleteTextPaths = () => {
 // Clear style for selected textpaths - reset to default values
 const clearTextPathStyle = () => {
   const store = useEditorStore.getState();
-  const selectedTextPaths = store.selection.selectedTextPaths;
+  const selectedTextPaths = store.selection.selectedTextPaths || [];
   
   if (selectedTextPaths.length === 0) return;
   

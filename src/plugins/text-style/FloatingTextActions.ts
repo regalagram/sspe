@@ -67,7 +67,7 @@ import {
 // Get current text styles for selected texts
 const getCurrentTextStyles = () => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   
   if (selectedTexts.length === 0) return null;
   
@@ -78,7 +78,7 @@ const getCurrentTextStyles = () => {
 // Apply style to all selected texts
 const applyTextStyle = (styleUpdates: any, saveToHistory: boolean = true) => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   
   if (saveToHistory) {
     store.pushToHistory();
@@ -239,7 +239,7 @@ const applyStrokeWidth = (width: string | number) => {
 // Generic function to apply filters to texts
 const applyFilterToTexts = (filterCreatorFn: () => any) => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   
   if (selectedTexts.length === 0) return;
   
@@ -282,7 +282,7 @@ const applyNeonGlowFilterToText = () => applyFilterToTexts(createNeonGlowFilter)
 // Add fade animation to texts
 const addFadeAnimationToText = () => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   
   // Save to history before adding animations
   store.pushToHistory();
@@ -305,7 +305,7 @@ const addFadeAnimationToText = () => {
 // Add rotation animation to texts
 const addRotateAnimationToText = () => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   
   // Save to history before adding animations
   store.pushToHistory();
@@ -332,7 +332,7 @@ const addRotateAnimationToText = () => {
 // Add scale animation to texts
 const addScaleAnimationToText = () => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   
   // Save to history before adding animations
   store.pushToHistory();
@@ -359,7 +359,7 @@ const addScaleAnimationToText = () => {
 // Check if a specific filter is active on selected texts
 const isTextFilterActive = (filterType: string): boolean => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   
   if (selectedTexts.length === 0) return false;
   
@@ -386,7 +386,7 @@ const isTextFilterActive = (filterType: string): boolean => {
 // Check if a specific animation is active on selected texts
 const isTextAnimationActive = (animationType: string): boolean => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   
   if (selectedTexts.length === 0) return false;
   
@@ -414,7 +414,7 @@ const isTextAnimationActive = (animationType: string): boolean => {
 // Remove specific filter from selected texts
 const removeTextFilter = (filterType: string) => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   
   if (selectedTexts.length === 0) return;
   
@@ -436,7 +436,7 @@ const removeTextFilter = (filterType: string) => {
 // Remove specific animation from selected texts
 const removeTextAnimation = (animationType: string) => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   
   if (selectedTexts.length === 0) return;
   
@@ -576,7 +576,7 @@ const duplicateTexts = () => {
   const store = useEditorStore.getState();
   store.pushToHistory();
   
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   if (selectedTexts.length === 0) return;
   
   // Get the unified bounds of all selected texts
@@ -633,7 +633,7 @@ const duplicateTexts = () => {
 // Lock/unlock selected texts
 const toggleTextLock = () => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   
   if (selectedTexts.length === 0) return;
   
@@ -664,7 +664,7 @@ const toggleTextLock = () => {
 // Check if selected texts are locked
 const areTextsLocked = (): boolean => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   
   if (selectedTexts.length === 0) return false;
   
@@ -678,7 +678,7 @@ const areTextsLocked = (): boolean => {
 // Delete selected texts
 const deleteTexts = () => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   
   // Save to history before deleting
   store.pushToHistory();
@@ -694,7 +694,7 @@ const deleteTexts = () => {
 // Clear style for selected texts - reset to default values
 const clearTextStyle = () => {
   const store = useEditorStore.getState();
-  const selectedTexts = store.selection.selectedTexts;
+  const selectedTexts = store.selection.selectedTexts || [];
   
   if (selectedTexts.length === 0) return;
   

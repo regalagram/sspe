@@ -28,16 +28,11 @@ const UseElementComponent: React.FC<{ use: any }> = ({ use }) => {
   const isWireframeMode = enabledFeatures.wireframeEnabled;
   const strokeWidth = 1 / viewport.zoom;
 
-  // Calculate effective position considering transform
+  // Calculate effective position considering transform and current transformation state
   const getEffectivePosition = () => {
-    if (!use.transform || !use.transform.includes('translate')) {
-      // No translate in transform, use x,y directly
-      return { x: use.x, y: use.y };
-    }
-    
-    // Has translate in transform, the x,y are used for bbox calculations
-    // but for rendering we need to let the transform handle positioning
-    return { x: 0, y: 0 };
+    // Always use x,y coordinates for consistent positioning
+    // The transform matrix will handle any additional transformations
+    return { x: use.x || 0, y: use.y || 0 };
   };
 
   const { x: effectiveX, y: effectiveY } = getEffectivePosition();

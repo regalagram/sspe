@@ -32,7 +32,7 @@ import {
 // Get common opacity for selected images
 const getCommonImageOpacity = (): number => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   if (selectedImages.length === 0) return 1;
   
@@ -44,7 +44,7 @@ const getCommonImageOpacity = (): number => {
 // Apply opacity to selected images
 const applyImageOpacity = (opacity: number) => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   // Save to history before changing opacity
   store.pushToHistory();
@@ -66,7 +66,7 @@ const applyImageOpacity = (opacity: number) => {
 // Get common stroke color for selected images
 const getCommonImageStrokeColor = (): string | any => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   if (selectedImages.length === 0) return '#000000';
   
@@ -84,7 +84,7 @@ const getCommonImageStrokeColor = (): string | any => {
 // Apply stroke color to selected images
 const applyImageStrokeColor = (color: string | any) => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   // Save to history before changing colors
   store.pushToHistory();
@@ -115,7 +115,7 @@ const applyImageStrokeColor = (color: string | any) => {
 // Get common stroke width for selected images
 const getCommonImageStrokeWidth = () => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   if (selectedImages.length === 0) return 1;
   
@@ -126,7 +126,7 @@ const getCommonImageStrokeWidth = () => {
 // Apply stroke width to selected images
 const applyImageStrokeWidth = (width: string | number) => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   const strokeWidth = typeof width === 'number' ? width : parseFloat(width);
   
   if (!isNaN(strokeWidth) && strokeWidth >= 0) {
@@ -150,7 +150,7 @@ const applyImageStrokeWidth = (width: string | number) => {
 // Get common stroke opacity for selected images
 const getCommonImageStrokeOpacity = () => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   if (selectedImages.length === 0) return 1;
   
@@ -161,7 +161,7 @@ const getCommonImageStrokeOpacity = () => {
 // Apply stroke opacity to selected images
 const applyImageStrokeOpacity = (opacity: number) => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   if (opacity >= 0 && opacity <= 1) {
     // Save to history before changing stroke opacity
@@ -184,7 +184,7 @@ const applyImageStrokeOpacity = (opacity: number) => {
 // Simplified stroke dash functions for images
 const getCommonImageStrokeDash = () => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   if (selectedImages.length === 0) return 'none';
   
@@ -195,7 +195,7 @@ const getCommonImageStrokeDash = () => {
 
 const getCommonImageStrokeLinecap = () => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   if (selectedImages.length === 0) return 'butt';
   
@@ -206,7 +206,7 @@ const getCommonImageStrokeLinecap = () => {
 
 const getCommonImageStrokeLinejoin = () => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   if (selectedImages.length === 0) return 'miter';
   
@@ -217,7 +217,7 @@ const getCommonImageStrokeLinejoin = () => {
 
 const applyImageStrokeDash = (dash: string) => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   // Save to history before changing stroke dash
   store.pushToHistory();
@@ -237,7 +237,7 @@ const applyImageStrokeDash = (dash: string) => {
 
 const applyImageStrokeLinecap = (linecap: string) => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   // Save to history before changing stroke linecap
   store.pushToHistory();
@@ -257,7 +257,7 @@ const applyImageStrokeLinecap = (linecap: string) => {
 
 const applyImageStrokeLinejoin = (linejoin: string) => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   // Save to history before changing stroke linejoin
   store.pushToHistory();
@@ -278,7 +278,7 @@ const applyImageStrokeLinejoin = (linejoin: string) => {
 // Check if selected images are locked
 const areImagesLocked = (): boolean => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   if (selectedImages.length === 0) return false;
   
@@ -291,7 +291,7 @@ const areImagesLocked = (): boolean => {
 // Toggle image lock
 const toggleImageLock = () => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   if (selectedImages.length === 0) return;
   
@@ -322,7 +322,7 @@ const toggleImageLock = () => {
 // Delete selected images
 const deleteImages = () => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   selectedImages.forEach(imageId => {
     const imageIndex = store.images.findIndex(img => img.id === imageId);
@@ -760,7 +760,7 @@ const imageAnimationOptions = [
 // Clear style for selected images - reset to default values
 const clearImageStyle = () => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   if (selectedImages.length === 0) return;
   
@@ -813,7 +813,7 @@ const startImageFormatCopy = () => {
     return;
   }
   
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   if (selectedImages.length === 0) return;
   
@@ -832,7 +832,7 @@ const isImageFormatCopyActive = (): boolean => {
 // Check if image format copy should be visible (only for single image selection)
 const isImageFormatCopyVisible = (): boolean => {
   const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages;
+  const selectedImages = store.selection.selectedImages || [];
   
   // Only show for exactly one image selected (not multiple)
   return selectedImages.length === 1;

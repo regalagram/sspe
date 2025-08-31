@@ -153,7 +153,7 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
           
           // If we're in subpath-edit mode, don't change selection during drag
           const isSubpathEditMode = currentState.mode?.current === 'subpath-edit';
-          if (!isSubpathEditMode && !currentState.selection.selectedSubPaths.includes(result.selectedSubPathId)) {
+          if (!isSubpathEditMode && !(currentState.selection.selectedSubPaths?.includes(result.selectedSubPathId) ?? false)) {
             selectSubPathMultiple(result.selectedSubPathId, false);
           }
           
@@ -539,7 +539,7 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
                   // If subpath belongs to a group, just select it and don't handle dragging here
                   // Let PointerInteraction handle the group dragging through event bubbling
                   if (belongsToGroup) {
-                    const isSubPathSelected = currentState.selection.selectedSubPaths.includes(result.selectedSubPathId);
+                    const isSubPathSelected = currentState.selection.selectedSubPaths?.includes(result.selectedSubPathId) ?? false;
                     if (!isSubPathSelected) {
                       const selectionContext = {
                         selection: currentState.selection,
@@ -562,7 +562,7 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
                   }
                   
                   // For subpaths NOT in groups, handle dragging directly
-                  const isAlreadySelected = currentState.selection.selectedSubPaths.includes(result.selectedSubPathId);
+                  const isAlreadySelected = currentState.selection.selectedSubPaths?.includes(result.selectedSubPathId) ?? false;
                   
                   if (isAlreadySelected) {
                     // Subpath is already selected, start drag immediately
@@ -612,7 +612,7 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
       {/* Render selected subpaths with visual feedback */}
       {props.path?.subPaths?.map((subPath: any) => {
         const { selection } = useEditorStore.getState();
-        const isSelected = selection.selectedSubPaths.includes(subPath.id);
+        const isSelected = selection.selectedSubPaths?.includes(subPath.id) ?? false;
         if (!isSelected) return null;
 
         // Use context-aware string generation for proper visual feedback
@@ -718,7 +718,7 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
                     // If subpath belongs to a group, just select it and don't handle dragging here
                     // Let PointerInteraction handle the group dragging through event bubbling
                     if (belongsToGroup) {
-                      const isSubPathSelected = currentState.selection.selectedSubPaths.includes(result.selectedSubPathId);
+                      const isSubPathSelected = currentState.selection.selectedSubPaths?.includes(result.selectedSubPathId) ?? false;
                       if (!isSubPathSelected) {
                         const selectionContext = {
                           selection: currentState.selection,
@@ -738,7 +738,7 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
                     }
                     
                     // For subpaths NOT in groups, handle dragging directly
-                    const isAlreadySelected = currentState.selection.selectedSubPaths.includes(result.selectedSubPathId);
+                    const isAlreadySelected = currentState.selection.selectedSubPaths?.includes(result.selectedSubPathId) ?? false;
                     
                     if (isAlreadySelected) {
                       // Subpath is already selected, start drag immediately
@@ -894,7 +894,7 @@ const MultilineTextElementComponent: React.FC<{ text: any }> = ({ text }) => {
   const animations = useAnimationsForElement(text.id);
   const { isTextBeingEdited, updateTextContent: updateTextContentLive, stopTextEdit } = useTextEditMode();
   
-  const isSelected = selection.selectedTexts.includes(text.id);
+  const isSelected = selection.selectedTexts?.includes(text.id) ?? false;
   const isWireframeMode = enabledFeatures.wireframeEnabled;
   const isBeingEdited = isTextBeingEdited(text.id);
   
@@ -1110,7 +1110,7 @@ const UseElementComponent: React.FC<{ useElement: any }> = ({ useElement }) => {
   const { symbols, selection, viewport, enabledFeatures } = useEditorStore();
   const animations = useAnimationsForElement(useElement.id);
   
-  const isSelected = selection.selectedUses.includes(useElement.id);
+  const isSelected = selection.selectedUses?.includes(useElement.id) ?? false;
   const isWireframeMode = enabledFeatures.wireframeEnabled;
   const strokeWidth = 1 / viewport.zoom;
 
@@ -1129,11 +1129,11 @@ const UseElementComponent: React.FC<{ useElement: any }> = ({ useElement }) => {
     return String(value);
   };
 
-  // Calculate effective position considering transform
+  // Calculate effective position considering transform and current transformation state
   const getEffectivePosition = () => {
     if (!useElement.transform || !useElement.transform.includes('translate')) {
       // No translate in transform, use x,y directly
-      return { x: useElement.x, y: useElement.y };
+      return { x: useElement.x || 0, y: useElement.y || 0 };
     }
     
     // Has translate in transform, the x,y are used for bbox calculations
@@ -1264,7 +1264,7 @@ const UseElementComponent: React.FC<{ useElement: any }> = ({ useElement }) => {
 const renderPathElement = (path: any, selection: any, viewport: any, enabledFeatures: any, ui: any): React.JSX.Element | null => {
   const selectionVisible = ui?.selectionVisible ?? true;
   const pathHasSelectedSubPath = path.subPaths.some((subPath: any) => 
-    selection.selectedSubPaths.includes(subPath.id)
+    selection.selectedSubPaths?.includes(subPath.id) ?? false
   );
   
   if (!selectionVisible && pathHasSelectedSubPath) {
