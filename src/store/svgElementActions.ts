@@ -562,15 +562,8 @@ export const createSVGElementActions: StateCreator<
 
   // Transform actions for use elements
   moveUse: (id, delta) => {
-    console.log('🚨 REAL MOVE USE CALLED:', {
-      id: id,
-      delta: delta,
-      timestamp: Date.now()
-    });
-    
     // Skip update if delta is too small to prevent unnecessary re-renders
     if (Math.abs(delta.x) < 0.001 && Math.abs(delta.y) < 0.001) {
-      console.log('🚨 Delta too small, skipping');
       return;
     }
     
@@ -580,16 +573,6 @@ export const createSVGElementActions: StateCreator<
         return state; // Return unchanged state if use not found
       }
       
-      console.log('🚨 USE ELEMENT FOUND:', {
-        id: id,
-        currentUse: use,
-        oldX: use.x || 0,
-        oldY: use.y || 0,
-        newX: (use.x || 0) + delta.x,
-        newY: (use.y || 0) + delta.y,
-        transform: use.transform
-      });
-      
       // If element has rotation, compensate the delta before applying
       let compensatedDelta = { x: delta.x, y: delta.y };
       if (use.transform && use.transform.includes('rotate')) {
@@ -597,11 +580,6 @@ export const createSVGElementActions: StateCreator<
         const rotateMatch = use.transform.match(/rotate\(([^,)]+)/);
         if (rotateMatch) {
           const rotationAngle = parseFloat(rotateMatch[1]) || 0;
-          console.log('🚨 ROTATION COMPENSATION:', {
-            originalDelta: delta,
-            rotationAngle: rotationAngle,
-            transform: use.transform
-          });
           
           // Apply inverse rotation to the delta to compensate for element rotation
           const angleRad = (-rotationAngle * Math.PI) / 180; // negative for inverse
@@ -612,13 +590,6 @@ export const createSVGElementActions: StateCreator<
             x: delta.x * cos - delta.y * sin,
             y: delta.x * sin + delta.y * cos
           };
-          
-          console.log('🚨 COMPENSATED DELTA:', {
-            angleRad: angleRad,
-            cos: cos,
-            sin: sin,
-            compensatedDelta: compensatedDelta
-          });
         }
       }
       

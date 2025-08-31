@@ -661,16 +661,7 @@ export class TransformManager {
 
   // pointer event handlers
   handlePointerDown = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
-    console.log('🔥 TRANSFORM MANAGER - handlePointerDown called:', {
-      target: e.target,
-      elementType: (e.target as Element)?.getAttribute?.('data-element-type'),
-      elementId: (e.target as Element)?.getAttribute?.('data-element-id'),
-      hasSelection: this.hasValidSelection(),
-      svgPoint: context.svgPoint
-    });
-    
     if (!this.hasValidSelection()) {
-      console.log('🔥 No valid selection, returning false');
       return false;
     }
 
@@ -695,14 +686,7 @@ export class TransformManager {
   };
 
   handlePointerMove = (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
-    console.log('🔥 TRANSFORM MANAGER - handlePointerMove called:', {
-      isTransforming: this.state.isTransforming,
-      svgPoint: context.svgPoint,
-      mode: this.state.mode
-    });
-    
     if (!this.state.isTransforming) {
-      console.log('🔥 Not transforming, returning false');
       return false;
     }
 
@@ -1330,52 +1314,17 @@ export class TransformManager {
         const deltaX = this.state.currentPoint.x - this.state.dragStart.x;
         const deltaY = this.state.currentPoint.y - this.state.dragStart.y;
         
-        console.log('🚀 USE ELEMENT MOVEMENT STARTED:');
-        console.log('  📱 State check:', {
-          isMoving: this.state.isMoving,
-          dragStart: this.state.dragStart,
-          currentPoint: this.state.currentPoint,
-          selectedUses: this.editorStore ? this.editorStore.getState().selection.selectedUses : 'no store'
-        });
-        
         // If the use element has an existing transform, compensate for rotation
         if (initialUse.transform) {
-          console.log('🔍 USE ELEMENT MOVEMENT DEBUG:');
-          console.log('  📋 Initial use element:', {
-            id: useId,
-            transform: initialUse.transform,
-            x: initialUse.x,
-            y: initialUse.y,
-            width: initialUse.width,
-            height: initialUse.height
-          });
-          
           // Extract rotation angle from the existing transform
           const rotationResult = this.extractRotationFromTransform(initialUse.transform);
           const rotationAngle = rotationResult.angle;
-          console.log('  🔄 Rotation detected:', {
-            fullResult: rotationResult,
-            angle: rotationAngle
-          });
-          
-          console.log('  🖱️ Mouse movement:', {
-            dragStart: this.state.dragStart,
-            currentPoint: this.state.currentPoint,
-            deltaX: deltaX,
-            deltaY: deltaY
-          });
           
           // Apply inverse rotation to the mouse movement to compensate for element rotation
           const compensatedDelta = this.rotatePoint(deltaX, deltaY, -rotationAngle);
-          console.log('  ⚖️ Compensated movement:', {
-            originalDelta: { x: deltaX, y: deltaY },
-            inverseRotationAngle: -rotationAngle,
-            compensatedDelta: compensatedDelta
-          });
           
           // Parse the existing transform to preserve its structure
           const existingParts = this.parseTransformString(initialUse.transform);
-          console.log('  🔧 Transform parsing:', existingParts);
           
           // Update only the translate component, preserving rotate and scale
           let newTransform = initialUse.transform;
@@ -1388,21 +1337,8 @@ export class TransformManager {
             const existingX = existingTranslate[0] || 0;
             const existingY = existingTranslate[1] || 0;
             
-            console.log('  📍 Existing translate found:', {
-              match: translateMatch[1],
-              parsed: existingTranslate,
-              existingX: existingX,
-              existingY: existingY
-            });
-            
             const newX = existingX + compensatedDelta.x;
             const newY = existingY + compensatedDelta.y;
-            
-            console.log('  🎯 New translate values:', {
-              newX: newX,
-              newY: newY,
-              calculation: `${existingX} + ${compensatedDelta.x} = ${newX}, ${existingY} + ${compensatedDelta.y} = ${newY}`
-            });
             
             newTransform = newTransform.replace(
               /translate\([^)]+\)/,
@@ -1410,14 +1346,8 @@ export class TransformManager {
             );
           } else {
             // Add new translate at the beginning
-            console.log('  🆕 No existing translate, adding new one');
             newTransform = `translate(${compensatedDelta.x}, ${compensatedDelta.y}) ${newTransform}`.trim();
           }
-          
-          console.log('  ✅ Final transform update:', {
-            oldTransform: initialUse.transform,
-            newTransform: newTransform
-          });
           
           updateUse(useId, { transform: newTransform });
         } else {
@@ -2201,26 +2131,14 @@ export class TransformManager {
 
   // Rotate a point by an angle (in degrees)
   private rotatePoint(x: number, y: number, angleDegrees: number): { x: number; y: number } {
-    console.log('    🔄 rotatePoint called:', { x, y, angleDegrees });
-    
     const angleRad = (angleDegrees * Math.PI) / 180;
     const cos = Math.cos(angleRad);
     const sin = Math.sin(angleRad);
     
-    const result = {
+    return {
       x: x * cos - y * sin,
       y: x * sin + y * cos
     };
-    
-    console.log('    🔄 rotatePoint result:', {
-      angleRad: angleRad,
-      cos: cos,
-      sin: sin,
-      calculation: `x: ${x} * ${cos} - ${y} * ${sin} = ${result.x}`,
-      result: result
-    });
-    
-    return result;
   }
 
   // Parse transform string into components (helper function)
