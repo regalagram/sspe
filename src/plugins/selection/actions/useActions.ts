@@ -17,6 +17,7 @@ import { duplicateSelected, deleteSelected, getSelectedElementsBounds } from './
 import { createGenericArrangeActions } from '../../../utils/floating-arrange-actions';
 import { createReorderActions, createElementReorderFunctions } from '../../../utils/floating-reorder-actions';
 import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';
+import { deepEqual } from '../../../utils/comparison-utils';
 import {
   createDropShadowFilter,
   createBlurFilter,
@@ -48,7 +49,7 @@ const getCommonUseFillColor = (): string | any => {
     
     // Handle gradient/pattern comparison
     if (typeof firstFill === 'object' && typeof elementFill === 'object') {
-      return JSON.stringify(firstFill) === JSON.stringify(elementFill);
+      return deepEqual(firstFill, elementFill);
     }
     
     return elementFill === firstFill;

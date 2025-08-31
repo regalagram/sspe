@@ -1,6 +1,8 @@
 import { StateCreator } from 'zustand';
 import { EditorState, SVGAnimation, SVGAnimate, SVGAnimateMotion, SVGAnimateTransform, SVGSet, AnimationState, AnimationChain, AnimationEvent, FilterPrimitiveType, SVGFilter } from '../types';
 import { generateId } from '../utils/id-utils';
+import { elementRefManager } from '../core/ElementRefManager';
+import { TypedSVGAnimation, removeStyleProperty, isAnimationElement, hasAttributeName } from '../types/animation-types';
 
 export interface AnimationActions {
   // Animation CRUD operations
@@ -311,13 +313,13 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
     
     // Reset all animated elements to their initial state
     const resetAnimatedElements = () => {
-      currentState.animations.forEach((animation: any) => {
+      currentState.animations.forEach((animation: TypedSVGAnimation) => {
         try {
-          const targetElement = document.getElementById(animation.targetElementId);
-          if (targetElement) {
+          const targetElement = elementRefManager.getElementById(animation.targetElementId);
+          if (targetElement && hasAttributeName(animation)) {
             // Remove any animated attribute transformations
             if (animation.attributeName === 'transform') {
-              targetElement.removeAttribute('transform');
+              elementRefManager.removeElementTransform(animation.targetElementId);
             } else if (animation.attributeName === 'opacity') {
               targetElement.removeAttribute('opacity');
             } else if (animation.attributeName) {
@@ -327,7 +329,7 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
             
             // Reset style attributes if they were animated
             if (animation.attributeName && targetElement.style) {
-              (targetElement.style as any).removeProperty(animation.attributeName);
+              removeStyleProperty(targetElement, animation.attributeName);
             }
             
             // For animateTransform, ensure transform is completely reset
@@ -381,13 +383,13 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
     
     // Reset all animated elements to their initial state (same as stopAnimations)
     const resetAnimatedElements = () => {
-      currentState.animations.forEach((animation: any) => {
+      currentState.animations.forEach((animation: TypedSVGAnimation) => {
         try {
-          const targetElement = document.getElementById(animation.targetElementId);
-          if (targetElement) {
+          const targetElement = elementRefManager.getElementById(animation.targetElementId);
+          if (targetElement && hasAttributeName(animation)) {
             // Remove any animated attribute transformations
             if (animation.attributeName === 'transform') {
-              targetElement.removeAttribute('transform');
+              elementRefManager.removeElementTransform(animation.targetElementId);
             } else if (animation.attributeName === 'opacity') {
               targetElement.removeAttribute('opacity');
             } else if (animation.attributeName) {
@@ -397,14 +399,14 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
             
             // Reset style attributes if they were animated
             if (animation.attributeName && targetElement.style) {
-              (targetElement.style as any).removeProperty(animation.attributeName);
+              removeStyleProperty(targetElement, animation.attributeName);
             }
             
             // For animateTransform, ensure transform is completely reset
             if (animation.type === 'animateTransform') {
               targetElement.removeAttribute('transform');
               if (targetElement.style) {
-                (targetElement.style as any).removeProperty('transform');
+                removeStyleProperty(targetElement, 'transform');
               }
             }
             
@@ -412,7 +414,7 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
             if (animation.attributeName && animation.attributeName.includes('filter')) {
               targetElement.removeAttribute('filter');
               if (targetElement.style) {
-                (targetElement.style as any).removeProperty('filter');
+                removeStyleProperty(targetElement, 'filter');
               }
             }
           }
@@ -423,11 +425,11 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
     };
     
     // Stop all SVG animation elements first
-    currentState.animations.forEach((animation: any) => {
+    currentState.animations.forEach((animation: TypedSVGAnimation) => {
       try {
         const animationElement = document.querySelector(`[id*="${animation.id}"]`);
-        if (animationElement && typeof (animationElement as any).endElement === 'function') {
-          (animationElement as any).endElement();
+        if (isAnimationElement(animationElement)) {
+          animationElement.endElement();
         }
       } catch (error) {
         // Ignore errors

@@ -1,4 +1,5 @@
 import { TextElementType, TextElement, MultilineTextElement, ViewportState } from '../types';
+import { elementRefManager } from '../core/ElementRefManager';
 
 export interface TextEditPosition {
   x: number;
@@ -17,8 +18,8 @@ export const calculateTextEditPosition = (
   viewport: ViewportState
 ): TextEditPosition | null => {
   try {
-    // Find the actual SVG text element in the DOM
-    const svgTextElement = document.getElementById(textElement.id);
+    // Find the actual SVG text element using ElementRefManager
+    const svgTextElement = elementRefManager.getElementById(textElement.id);
     if (!svgTextElement) {
       console.warn('calculateTextEditPosition: Could not find SVG text element:', textElement.id);
       return null;

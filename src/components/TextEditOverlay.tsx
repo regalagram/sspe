@@ -4,6 +4,7 @@ import { TextElementType, TextElement, MultilineTextElement, ViewportState } fro
 import { textEditManager } from '../managers/TextEditManager';
 import { useEditorStore } from '../store/editorStore';
 import { calculateTextBoundsDOM } from '../utils/text-utils';
+import { elementRefManager } from '../core/ElementRefManager';
 
 /**
  * Calculate font-specific baseline correction for better HTML/SVG text alignment
@@ -92,8 +93,8 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
   // Calculate the exact position of the text element in screen coordinates (memoized)
   const calculateTextPosition = useMemo((): TextPosition | null => {
     try {
-      // Find the actual SVG text element in the DOM
-      const svgTextElement = document.getElementById(textElement.id);
+      // Find the actual SVG text element using ElementRefManager
+      const svgTextElement = elementRefManager.getElementById(textElement.id);
       if (!svgTextElement) {
         console.warn('TextEditOverlay: Could not find SVG text element:', textElement.id);
         return null;
@@ -335,7 +336,7 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
           
           if (Math.abs(widthChange) > 10) { // Only reposition if significant change
             // Get the visual center of the rotated text (this shouldn't change)
-            const svgTextElement = document.getElementById(textElement.id);
+            const svgTextElement = elementRefManager.getElementById(textElement.id);
             if (svgTextElement) {
               const textRect = svgTextElement.getBoundingClientRect();
               const rotatedCenterX = textRect.x + textRect.width / 2;
@@ -360,7 +361,7 @@ export const TextEditOverlay: React.FC<TextEditOverlayProps> = ({
         
         // For rotated text, also recenter with fallback width
         if (position.rotation && position.rotation !== 0) {
-          const svgTextElement = document.getElementById(textElement.id);
+          const svgTextElement = elementRefManager.getElementById(textElement.id);
           if (svgTextElement) {
             const textRect = svgTextElement.getBoundingClientRect();
             const rotatedCenterX = textRect.x + textRect.width / 2;
