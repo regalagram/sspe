@@ -1043,7 +1043,7 @@ const ImageElementComponent: React.FC<{ image: any }> = ({ image }) => {
   const animations = useAnimationsForElement(image.id);
   
   const isWireframeMode = enabledFeatures.wireframeEnabled;
-  const strokeWidth = 1 / viewport.zoom;
+  const wireframeStrokeWidth = 2 / viewport.zoom;
 
   return (
     <g key={image.id} data-image-id={image.id}>
@@ -1056,7 +1056,8 @@ const ImageElementComponent: React.FC<{ image: any }> = ({ image }) => {
             height={image.height}
             fill="none"
             stroke="#000000"
-            strokeWidth={strokeWidth}
+            strokeWidth={2}
+            vectorEffect="non-scaling-stroke"
             data-element-type="image"
             data-element-id={image.id}
             style={{ 
@@ -1143,109 +1144,65 @@ const UseElementComponent: React.FC<{ useElement: any }> = ({ useElement }) => {
 
   const { x: effectiveX, y: effectiveY } = getEffectivePosition();
 
-  // Try to get precise dimensions from DOM
-  let preciseWidth = useElement.width || 100;
-  let preciseHeight = useElement.height || 100;
-  let preciseX = effectiveX;
-  let preciseY = effectiveY;
-
-  try {
-    const useElementInDOM = document.querySelector(`use[id="${useElement.id}"]`) as SVGUseElement;
-    if (useElementInDOM) {
-      const bbox = useElementInDOM.getBBox();
-      if (bbox.width > 0 && bbox.height > 0) {
-        preciseWidth = bbox.width;
-        preciseHeight = bbox.height;
-        preciseX = bbox.x;
-        preciseY = bbox.y;
+  // Calculate dynamic stroke width based on use element scale
+  const getDynamicStrokeWidth = () => {
+    if (!isWireframeMode) return 1;
+    
+    // Base stroke width
+    let baseStroke = 1;
+    
+    // Check if the element has scale transformation
+    if (useElement.transform) {
+      const scaleMatch = useElement.transform.match(/scale\(([^)]+)\)/);
+      if (scaleMatch) {
+        const scaleValues = scaleMatch[1].split(/[,\s]+/).map(Number);
+        const scaleX = scaleValues[0] || 1;
+        const scaleY = scaleValues[1] || scaleX;
+        // Use the average scale to adjust stroke
+        const avgScale = (scaleX + scaleY) / 2;
+        baseStroke = baseStroke / Math.max(avgScale, 0.1); // Prevent division by zero
       }
     }
-  } catch (error) {
-    // Keep fallback values
-  }
+    
+    // Also check width/height scaling compared to a base size
+    if (useElement.width && useElement.height) {
+      // Assume base size of 100x100, adjust stroke based on actual size
+      const sizeScale = Math.sqrt((useElement.width * useElement.height) / (100 * 100));
+      baseStroke = baseStroke / Math.max(sizeScale, 0.1);
+    }
+    
+    // Apply viewport zoom factor
+    return baseStroke / viewport.zoom;
+  };
+
 
   return (
     <g key={useElement.id} data-use-id={useElement.id}>
-      {/* Red transparent interaction rectangle with precise dimensions */}
-      <rect
-        x={preciseX}
-        y={preciseY}
-        width={preciseWidth}
-        height={preciseHeight}
-        transform={useElement.transform}
-        fill="rgba(255, 0, 0, 0.2)"
-        stroke="red"
-        strokeWidth={1 / viewport.zoom}
-        strokeDasharray={`${2 / viewport.zoom} ${2 / viewport.zoom}`}
-        pointerEvents="all"
-        data-element-type="use"
-        data-element-id={useElement.id}
-        style={{ cursor: 'pointer' }}
-      />
-      
       {/* Render as wireframe or normal use element depending on mode */}
       {isWireframeMode ? (
-        // Wireframe mode: render as outlined rectangle with symbol label
-        <g>
-          <rect
-            x={effectiveX}
-            y={effectiveY}
-            width={useElement.width || 100}
-            height={useElement.height || 100}
-            fill="none"
-            stroke="#000000"
-            strokeWidth={strokeWidth * 2}
-            transform={useElement.transform}
-            pointerEvents="none"
-            data-element-type="use-visual"
-            data-element-id={useElement.id}
-            style={{
-              opacity: useElement.style?.opacity ?? 1,
-            }}
-          />
-          {/* Diagonal lines to indicate it's a symbol instance */}
-          <line
-            x1={effectiveX}
-            y1={effectiveY}
-            x2={effectiveX + (useElement.width || 100)}
-            y2={effectiveY + (useElement.height || 100)}
-            stroke="#000000"
-            strokeWidth={strokeWidth}
-            transform={useElement.transform}
-            style={{
-              opacity: 0.3,
-              pointerEvents: 'none'
-            }}
-          />
-          <line
-            x1={effectiveX + (useElement.width || 100)}
-            y1={effectiveY}
-            x2={effectiveX}
-            y2={effectiveY + (useElement.height || 100)}
-            stroke="#000000"
-            strokeWidth={strokeWidth}
-            transform={useElement.transform}
-            style={{
-              opacity: 0.3,
-              pointerEvents: 'none'
-            }}
-          />
-          {/* Symbol reference label */}
-          <text
-            x={effectiveX + 4}
-            y={effectiveY + 12}
-            fontSize={10 / viewport.zoom}
-            fill="#000000"
-            style={{
-              opacity: 0.7,
-              pointerEvents: 'none',
-              fontFamily: 'monospace'
-            }}
-            transform={useElement.transform}
-          >
-            {useElement.href?.replace('#', '') || 'SYM'}
-          </text>
-        </g>
+        // Wireframe mode: render use element with wireframe styling
+        <use
+          id={useElement.id}
+          href={useElement.href}
+          x={effectiveX}
+          y={effectiveY}
+          width={useElement.width}
+          height={useElement.height}
+          transform={useElement.transform}
+          pointerEvents="all"
+          data-element-type="use"
+          data-element-id={useElement.id}
+          style={{
+            opacity: useElement.style?.opacity ?? 1,
+            clipPath: styleValueToCSS(useElement.style?.clipPath),
+            mask: styleValueToCSS(useElement.style?.mask),
+            filter: styleValueToCSS(useElement.style?.filter),
+            fill: 'none',
+            stroke: '#000000',
+            strokeWidth: getDynamicStrokeWidth(),
+            cursor: 'pointer'
+          }}
+        />
       ) : (
         // Normal mode: render actual use element
         <use
@@ -1269,9 +1226,10 @@ const UseElementComponent: React.FC<{ useElement: any }> = ({ useElement }) => {
             strokeDasharray: useElement.style?.strokeDasharray || 'none',
             strokeLinecap: useElement.style?.strokeLinecap || 'butt',
             strokeLinejoin: useElement.style?.strokeLinejoin || 'miter',
+            cursor: 'pointer'
           }}
-          pointerEvents="none"
-          data-element-type="use-visual"
+          pointerEvents="all"
+          data-element-type="use"
           data-element-id={useElement.id}
         />
       )}
@@ -1320,7 +1278,7 @@ const renderPathElement = (path: any, selection: any, viewport: any, enabledFeat
       d={d}
       fill={fillValue}
       stroke={strokeValue}
-      strokeWidth={isWireframeMode ? wireframeStrokeWidth : (path.style.strokeWidth || 1) / viewport.zoom}
+      strokeWidth={isWireframeMode ? 2 : (path.style.strokeWidth || 1) / viewport.zoom}
       strokeDasharray={isWireframeMode ? undefined : path.style.strokeDasharray}
       strokeLinecap={path.style.strokeLinecap}
       strokeLinejoin={path.style.strokeLinejoin}
