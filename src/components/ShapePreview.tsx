@@ -83,14 +83,6 @@ export const ShapePreview: React.FC = () => {
   // Use toolbar settings for styling - same as final shape will have
   const fill = toolSettings.fill || '#0078cc';
   const fillOpacity = toolSettings.fillOpacity || 0.3;
-  const strokeColor = toolSettings.strokeColor || '#6b7280';
-  const strokeWidth = Math.max((toolSettings.strokeWidth || 3) / viewport.zoom, 0.5);
-  const strokeOpacity = toolSettings.strokeOpacity || 1.0;
-  const strokeDasharray = toolSettings.strokeDasharray && toolSettings.strokeDasharray !== 'none' 
-    ? toolSettings.strokeDasharray 
-    : `${4 / viewport.zoom} ${2 / viewport.zoom}`; // Preview dashed style
-  const strokeLinecap = toolSettings.strokeLinecap || 'round';
-  const strokeLinejoin = toolSettings.strokeLinejoin || 'round';
 
   return (
     <g className="shape-preview">
@@ -98,12 +90,7 @@ export const ShapePreview: React.FC = () => {
         d={pathString}
         fill={fill}
         fillOpacity={fillOpacity}
-        stroke={strokeColor}
-        strokeOpacity={strokeOpacity}
-        strokeWidth={strokeWidth}
-        strokeDasharray={strokeDasharray}
-        strokeLinecap={strokeLinecap}
-        strokeLinejoin={strokeLinejoin}
+        stroke="none"
         pointerEvents="none"
       />
       {/* Show drag line for reference */}

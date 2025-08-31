@@ -66,13 +66,13 @@ export const createTextActions: StateCreator<
         fontWeight: 'normal',
         fontStyle: 'normal',
         textAnchor: 'start',
-        fill: toolSettings?.fill || '#000000',
-        stroke: toolSettings?.strokeColor || undefined,
-        strokeWidth: toolSettings?.strokeWidth || undefined,
-        strokeOpacity: toolSettings?.strokeOpacity || undefined,
-        strokeDasharray: toolSettings?.strokeDasharray === 'none' ? undefined : toolSettings?.strokeDasharray,
-        strokeLinecap: toolSettings?.strokeLinecap || undefined,
-        strokeLinejoin: toolSettings?.strokeLinejoin || undefined,
+        fill: toolSettings?.unifiedColor || toolSettings?.fill || '#000000',
+        stroke: 'none', // Always create with no stroke
+        strokeWidth: undefined,
+        strokeOpacity: undefined,
+        strokeDasharray: undefined,
+        strokeLinecap: undefined,
+        strokeLinejoin: undefined,
         fillOpacity: toolSettings?.fillOpacity || undefined
       }
     };
@@ -106,13 +106,13 @@ export const createTextActions: StateCreator<
         fontWeight: 'normal',
         fontStyle: 'normal',
         textAnchor: 'start',
-        fill: toolSettings?.fill || '#000000',
-        stroke: toolSettings?.strokeColor || undefined,
-        strokeWidth: toolSettings?.strokeWidth || undefined,
-        strokeOpacity: toolSettings?.strokeOpacity || undefined,
-        strokeDasharray: toolSettings?.strokeDasharray === 'none' ? undefined : toolSettings?.strokeDasharray,
-        strokeLinecap: toolSettings?.strokeLinecap || undefined,
-        strokeLinejoin: toolSettings?.strokeLinejoin || undefined,
+        fill: toolSettings?.unifiedColor || toolSettings?.fill || '#000000',
+        stroke: 'none', // Always create with no stroke
+        strokeWidth: undefined,
+        strokeOpacity: undefined,
+        strokeDasharray: undefined,
+        strokeLinecap: undefined,
+        strokeLinejoin: undefined,
         fillOpacity: toolSettings?.fillOpacity || undefined
       }
     };

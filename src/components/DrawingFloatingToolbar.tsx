@@ -14,10 +14,9 @@ import { ToolbarAction } from '../types/floatingToolbar';
 type DrawingToolType = 'pencil' | 'curves' | 'shapes' | 'text';
 
 interface DrawingSettings {
-  strokeColor: string;
+  color: string; // Unified color - used for stroke or fill depending on tool
   strokeWidth: number;
   strokeOpacity: number;
-  fill?: string;
   fillOpacity?: number;
   strokeDasharray?: string;
   strokeLinecap?: 'butt' | 'round' | 'square';
@@ -60,8 +59,11 @@ const TOOL_MODES: Record<DrawingToolType, string> = {
 
 // Helper function to normalize settings across different managers
 const normalizeSettings = (settings: any, toolType: DrawingToolType): DrawingSettings => {
+  // Always use the unified color as the primary color source
+  const unifiedColor = settings.unifiedColor || settings.strokeColor || settings.fill || '#6b7280';
+
   const normalized: DrawingSettings = {
-    strokeColor: settings.strokeColor || '#6b7280',
+    color: unifiedColor,
     strokeWidth: settings.strokeWidth || 2,
     strokeOpacity: settings.strokeOpacity || 1.0,
     strokeDasharray: settings.strokeDasharray || 'none',
@@ -69,13 +71,14 @@ const normalizeSettings = (settings: any, toolType: DrawingToolType): DrawingSet
     strokeLinejoin: settings.strokeLinejoin || 'round'
   };
 
-  // Add fill properties for shapes and curves
-  if (toolType === 'shapes' || toolType === 'curves') {
-    normalized.fill = settings.fill || (toolType === 'shapes' ? '#0078cc' : 'none');
-    if (toolType === 'shapes') {
-      normalized.fillOpacity = settings.fillOpacity || 0.3;
-    }
+  // Add opacity for shapes and text
+  if (toolType === 'shapes') {
+    normalized.fillOpacity = settings.fillOpacity || 0.3;
     normalized.fillRule = settings.fillRule || 'nonzero';
+  } else if (toolType === 'text') {
+    normalized.fillOpacity = settings.fillOpacity || 1.0;
+    normalized.fontFamily = settings.fontFamily || 'Arial';
+    normalized.fontSize = settings.fontSize || 16;
   }
 
   return normalized;
@@ -84,12 +87,33 @@ const normalizeSettings = (settings: any, toolType: DrawingToolType): DrawingSet
 // Helper function to update settings based on tool type
 const updateManagerSettings = (manager: BaseManager, newSettings: DrawingSettings, toolType: DrawingToolType) => {
   if (toolType === 'shapes') {
-    // For shapes, include all properties
-    manager.updateSettings(newSettings);
+    // For shapes, use color as fill and exclude stroke properties
+    const shapeSettings = {
+      fill: newSettings.color,
+      fillOpacity: newSettings.fillOpacity,
+      fillRule: newSettings.fillRule
+    };
+    manager.updateSettings(shapeSettings);
+  } else if (toolType === 'text') {
+    // For text, use color as fill and include font properties
+    const textSettings = {
+      fill: newSettings.color,
+      fillOpacity: newSettings.fillOpacity,
+      fontFamily: newSettings.fontFamily,
+      fontSize: newSettings.fontSize
+    };
+    manager.updateSettings(textSettings);
   } else {
-    // For pencil and curves, exclude fill properties
-    const { fill, fillOpacity, ...restSettings } = newSettings;
-    manager.updateSettings(restSettings);
+    // For pencil and curves, use color as stroke
+    const strokeSettings = {
+      strokeColor: newSettings.color,
+      strokeWidth: newSettings.strokeWidth,
+      strokeOpacity: newSettings.strokeOpacity,
+      strokeDasharray: newSettings.strokeDasharray,
+      strokeLinecap: newSettings.strokeLinecap,
+      strokeLinejoin: newSettings.strokeLinejoin
+    };
+    manager.updateSettings(strokeSettings);
   }
 };
 
@@ -116,12 +140,28 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
 
   // Update function - now uses shared settings for all tools
   const updateSettings = (newSettings: Partial<DrawingSettings>) => {
-    // Use the new unified update method
-    updateDrawingSettings(newSettings);
+    // Always update the unified color and sync to both strokeColor and fill
+    const storeUpdates: any = {};
+    
+    if (newSettings.color) {
+      storeUpdates.unifiedColor = newSettings.color;
+      storeUpdates.strokeColor = newSettings.color; // Keep stroke in sync
+      storeUpdates.fill = newSettings.color; // Keep fill in sync
+    }
+    
+    // Copy other settings as-is
+    Object.keys(newSettings).forEach(key => {
+      if (key !== 'color') {
+        storeUpdates[key] = (newSettings as any)[key];
+      }
+    });
+
+    // Update the store
+    updateDrawingSettings(storeUpdates);
     
     // Also update the individual manager to keep them in sync
-    // Merge with current settings to ensure all required properties are present
-    const completeSettings = { ...toolSettings, ...newSettings };
+    const currentNormalized = normalizeSettings(toolSettings, toolType);
+    const completeSettings = { ...currentNormalized, ...newSettings };
     updateManagerSettings(manager, completeSettings, toolType);
   };
 
@@ -138,7 +178,8 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
   // Sync store settings with managers on tool activation
   useEffect(() => {
     if (isToolActive) {
-      updateManagerSettings(manager, toolSettings, toolType);
+      const normalizedSettings = normalizeSettings(toolSettings, toolType);
+      updateManagerSettings(manager, normalizedSettings, toolType);
     }
   }, [isToolActive, toolSettings, manager, toolType]);
 
@@ -162,91 +203,82 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
       return actions;
     }
 
-    // Text tools have different actions (fill, stroke color, stroke config, font)
-    if (toolType === 'text') {
-      // Fill Color Action (for text)
-      actions.push({
-        id: 'fill-color',
-        icon: Palette,
-        label: 'Fill Color',
-        tooltip: 'Change text fill color',
-        type: 'color',
-        color: {
-          currentColor: toolSettings.fill || '#000000',
-          getCurrentFillOpacity: () => toolSettings.fillOpacity || 1.0,
-          onFillOpacityChange: (opacity: number) => {
-            const newSettings = { ...toolSettings, fillOpacity: opacity };
-            updateSettings(newSettings);
-          },
-          onChange: (color: string) => {
-            const newSettings = { ...toolSettings, fill: color };
-            updateSettings(newSettings);
-          }
-        }
-      });
+    // Get current normalized settings for this tool type
+    const currentSettings = normalizeSettings(toolSettings, toolType);
 
-      // Stroke Color Action (for text)
-      actions.push({
-        id: 'stroke-color',
-        icon: Brush,
-        label: 'Stroke Color',
-        tooltip: 'Change text stroke color',
-        type: 'color',
-        color: {
-          currentColor: toolSettings.strokeColor,
-          getCurrentStrokeOpacity: () => toolSettings.strokeOpacity || 1.0,
+    // Universal Color Action - used for stroke (pencil/curves) or fill (shapes/text)
+    const colorLabel = (toolType === 'pencil' || toolType === 'curves') ? 'Stroke Color' : 'Fill Color';
+    const colorTooltip = (toolType === 'pencil' || toolType === 'curves') ? 'Change stroke color' : 'Change fill color';
+    const colorIcon = (toolType === 'pencil' || toolType === 'curves') ? Brush : Palette;
+    
+    actions.push({
+      id: 'color',
+      icon: colorIcon,
+      label: colorLabel,
+      tooltip: colorTooltip,
+      type: 'color',
+      color: {
+        currentColor: currentSettings.color,
+        ...(toolType === 'pencil' || toolType === 'curves' ? {
+          getCurrentStrokeOpacity: () => currentSettings.strokeOpacity,
           onStrokeOpacityChange: (opacity: number) => {
-            const newSettings = { ...toolSettings, strokeOpacity: opacity };
-            updateSettings(newSettings);
-          },
-          onChange: (color: string) => {
-            const newSettings = { ...toolSettings, strokeColor: color };
-            updateSettings(newSettings);
+            updateSettings({ strokeOpacity: opacity });
           }
+        } : {
+          getCurrentFillOpacity: () => currentSettings.fillOpacity || 1.0,
+          onFillOpacityChange: (opacity: number) => {
+            updateSettings({ fillOpacity: opacity });
+          }
+        }),
+        onChange: (color: string) => {
+          updateSettings({ color });
         }
-      });
+      }
+    });
 
-      // Stroke Options Action (for text)
+    // Stroke options for pencil and curves only
+    if (toolType === 'pencil' || toolType === 'curves') {
       actions.push({
         id: 'stroke-options',
         icon: LineSquiggle,
         label: 'Stroke Options',
-        tooltip: 'Configure stroke settings',
+        tooltip: 'Configure stroke width and style',
         type: 'input',
         input: {
-          currentValue: toolSettings.strokeWidth,
+          currentValue: currentSettings.strokeWidth,
           onChange: (value: string | number) => {
-            const newSettings = { ...toolSettings, strokeWidth: Number(value) };
-            updateSettings(newSettings);
+            const width = typeof value === 'number' ? value : parseFloat(value.toString());
+            if (!isNaN(width) && width >= 0) {
+              updateSettings({ strokeWidth: width });
+            }
           },
           type: 'number',
-          placeholder: '1'
+          placeholder: '2'
         },
         strokeOptions: {
-          getCurrentStrokeWidth: () => toolSettings.strokeWidth,
-          getCurrentStrokeDash: () => toolSettings.strokeDasharray || 'none',
-          getCurrentStrokeLinecap: () => toolSettings.strokeLinecap || 'round',
-          getCurrentStrokeLinejoin: () => toolSettings.strokeLinejoin || 'round',
+          getCurrentStrokeWidth: () => currentSettings.strokeWidth,
+          getCurrentStrokeDash: () => currentSettings.strokeDasharray || 'none',
+          getCurrentStrokeLinecap: () => currentSettings.strokeLinecap || 'round',
+          getCurrentStrokeLinejoin: () => currentSettings.strokeLinejoin || 'round',
           onStrokeWidthChange: (width: number) => {
-            const newSettings = { ...toolSettings, strokeWidth: width };
-            updateSettings(newSettings);
+            updateSettings({ strokeWidth: width });
           },
           onStrokeDashChange: (dash: string) => {
-            const newSettings = { ...toolSettings, strokeDasharray: dash };
-            updateSettings(newSettings);
+            updateSettings({ strokeDasharray: dash });
           },
           onStrokeLinecapChange: (linecap: string) => {
-            const newSettings = { ...toolSettings, strokeLinecap: linecap as 'butt' | 'round' | 'square' };
-            updateSettings(newSettings);
+            updateSettings({ strokeLinecap: linecap as 'butt' | 'round' | 'square' });
           },
           onStrokeLinejoinChange: (linejoin: string) => {
-            const newSettings = { ...toolSettings, strokeLinejoin: linejoin as 'miter' | 'round' | 'bevel' };
-            updateSettings(newSettings);
+            updateSettings({ strokeLinejoin: linejoin as 'miter' | 'round' | 'bevel' });
           }
         }
       });
+    }
 
-      // Font Action (specific to text)
+    // Font options for text only
+    if (toolType === 'text') {
+      // Font Family Action
       actions.push({
         id: 'font-family',
         icon: Type,
@@ -254,49 +286,22 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
         tooltip: 'Change font family',
         type: 'dropdown',
         dropdown: {
-          currentValue: toolSettings.fontFamily || 'Arial',
+          currentValue: currentSettings.fontFamily || 'Arial',
           options: [
-            { id: 'arial', label: 'Arial', action: () => {
-              const newSettings = { ...toolSettings, fontFamily: 'Arial, sans-serif' };
-              updateSettings(newSettings);
-            }},
-            { id: 'helvetica', label: 'Helvetica', action: () => {
-              const newSettings = { ...toolSettings, fontFamily: 'Helvetica, sans-serif' };
-              updateSettings(newSettings);
-            }},
-            { id: 'times', label: 'Times New Roman', action: () => {
-              const newSettings = { ...toolSettings, fontFamily: 'Times New Roman, serif' };
-              updateSettings(newSettings);
-            }},
-            { id: 'georgia', label: 'Georgia', action: () => {
-              const newSettings = { ...toolSettings, fontFamily: 'Georgia, serif' };
-              updateSettings(newSettings);
-            }},
-            { id: 'verdana', label: 'Verdana', action: () => {
-              const newSettings = { ...toolSettings, fontFamily: 'Verdana, sans-serif' };
-              updateSettings(newSettings);
-            }},
-            { id: 'courier', label: 'Courier New', action: () => {
-              const newSettings = { ...toolSettings, fontFamily: 'Courier New, monospace' };
-              updateSettings(newSettings);
-            }},
-            { id: 'monospace', label: 'Monospace', action: () => {
-              const newSettings = { ...toolSettings, fontFamily: 'monospace' };
-              updateSettings(newSettings);
-            }},
-            { id: 'serif', label: 'Serif', action: () => {
-              const newSettings = { ...toolSettings, fontFamily: 'serif' };
-              updateSettings(newSettings);
-            }},
-            { id: 'sans-serif', label: 'Sans-serif', action: () => {
-              const newSettings = { ...toolSettings, fontFamily: 'sans-serif' };
-              updateSettings(newSettings);
-            }}
+            { id: 'arial', label: 'Arial', action: () => updateSettings({ fontFamily: 'Arial, sans-serif' }) },
+            { id: 'helvetica', label: 'Helvetica', action: () => updateSettings({ fontFamily: 'Helvetica, sans-serif' }) },
+            { id: 'times', label: 'Times New Roman', action: () => updateSettings({ fontFamily: 'Times New Roman, serif' }) },
+            { id: 'georgia', label: 'Georgia', action: () => updateSettings({ fontFamily: 'Georgia, serif' }) },
+            { id: 'verdana', label: 'Verdana', action: () => updateSettings({ fontFamily: 'Verdana, sans-serif' }) },
+            { id: 'courier', label: 'Courier New', action: () => updateSettings({ fontFamily: 'Courier New, monospace' }) },
+            { id: 'monospace', label: 'Monospace', action: () => updateSettings({ fontFamily: 'monospace' }) },
+            { id: 'serif', label: 'Serif', action: () => updateSettings({ fontFamily: 'serif' }) },
+            { id: 'sans-serif', label: 'Sans-serif', action: () => updateSettings({ fontFamily: 'sans-serif' }) }
           ]
         }
       });
 
-      // Font Size Action (specific to text)
+      // Font Size Action
       actions.push({
         id: 'font-size',
         icon: Hash,
@@ -304,123 +309,26 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
         tooltip: 'Change font size',
         type: 'input',
         input: {
-          currentValue: toolSettings.fontSize || 16,
+          currentValue: currentSettings.fontSize || 16,
           onChange: (value: string | number) => {
             const size = typeof value === 'number' ? value : parseFloat(value.toString());
             if (!isNaN(size) && size > 0) {
-              const newSettings = { ...toolSettings, fontSize: size };
-              updateSettings(newSettings);
+              updateSettings({ fontSize: size });
             }
           },
           type: 'number',
           placeholder: '16'
         },
         opacityOptions: {
-          getCurrentOpacity: () => toolSettings.fontSize || 16,
+          getCurrentOpacity: () => currentSettings.fontSize || 16,
           onOpacityChange: (size: number) => {
-            const newSettings = { ...toolSettings, fontSize: size };
-            updateSettings(newSettings);
+            updateSettings({ fontSize: size });
           },
           quickValues: [8, 12, 16, 20, 24, 32, 48, 64, 96],
           unit: 'px'
         }
       });
-
-      return actions;
     }
-
-    // Drawing tools actions (pencil, curves, shapes)
-    // Fill Color Action (only for shapes) - Now first for shapes
-    if (toolType === 'shapes') {
-      actions.push({
-        id: 'fill-color',
-        icon: Palette,
-        label: 'Fill Color',
-        tooltip: 'Change fill color',
-        type: 'color',
-        color: {
-          currentColor: toolSettings.fill || '#0078cc',
-          getCurrentFillOpacity: () => toolSettings.fillOpacity || 0.3,
-          onFillOpacityChange: (opacity: number) => {
-            const newSettings = { ...toolSettings, fillOpacity: opacity };
-            updateSettings(newSettings);
-          },
-          onChange: (color: string) => {
-            const newSettings = { ...toolSettings, fill: color };
-            updateSettings(newSettings);
-          }
-        }
-      });
-    }
-
-    // Stroke Color Action (for all drawing tools) - Now second for shapes
-    actions.push({
-      id: 'stroke-color',
-      icon: Brush,
-      label: 'Stroke Color',
-      tooltip: 'Change stroke color',
-      type: 'color',
-      color: {
-        currentColor: toolSettings.strokeColor,
-        getCurrentStrokeOpacity: () => toolSettings.strokeOpacity || 1.0,
-        onStrokeOpacityChange: (opacity: number) => {
-          const newSettings = { ...toolSettings, strokeOpacity: opacity };
-          updateSettings(newSettings);
-        },
-        onChange: (color: string) => {
-          const newSettings = { ...toolSettings, strokeColor: color };
-          updateSettings(newSettings);
-        }
-      }
-    });
-
-    // Stroke Options Action (for all tools) - Now third for shapes
-    actions.push({
-      id: 'stroke-options',
-      icon: LineSquiggle,
-      label: 'Stroke Options',
-      tooltip: 'Configure stroke properties',
-      type: 'input',
-      input: {
-        currentValue: toolSettings.strokeWidth,
-        onChange: (value: string | number) => {
-          const width = typeof value === 'number' ? value : parseFloat(value.toString());
-          if (!isNaN(width) && width >= 0) {
-            const newSettings = { ...toolSettings, strokeWidth: width };
-            updateSettings(newSettings);
-          }
-        },
-        type: 'number',
-        placeholder: '1'
-      },
-      strokeOptions: {
-        getCurrentStrokeWidth: () => toolSettings.strokeWidth,
-        getCurrentStrokeDash: () => toolSettings.strokeDasharray || 'none',
-        getCurrentStrokeLinecap: () => toolSettings.strokeLinecap || 'round',
-        getCurrentStrokeLinejoin: () => toolSettings.strokeLinejoin || 'round',
-        getCurrentFillRule: toolType === 'pencil' ? undefined : (() => toolSettings.fillRule || 'nonzero'),
-        onStrokeWidthChange: (width: number) => {
-          const newSettings = { ...toolSettings, strokeWidth: width };
-          updateSettings(newSettings);
-        },
-        onStrokeDashChange: (dash: string) => {
-          const newSettings = { ...toolSettings, strokeDasharray: dash };
-          updateSettings(newSettings);
-        },
-        onStrokeLinecapChange: (linecap: string) => {
-          const newSettings = { ...toolSettings, strokeLinecap: linecap as 'butt' | 'round' | 'square' };
-          updateSettings(newSettings);
-        },
-        onStrokeLinejoinChange: (linejoin: string) => {
-          const newSettings = { ...toolSettings, strokeLinejoin: linejoin as 'miter' | 'round' | 'bevel' };
-          updateSettings(newSettings);
-        },
-        onFillRuleChange: toolType === 'pencil' ? undefined : ((fillRule: string) => {
-          const newSettings = { ...toolSettings, fillRule: fillRule as 'nonzero' | 'evenodd' };
-          updateSettings(newSettings);
-        })
-      }
-    });
 
     return actions;
   };

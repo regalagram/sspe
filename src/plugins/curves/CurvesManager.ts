@@ -328,14 +328,14 @@ export class CurvesManager {
         commands: commands,
       }],
       style: {
-        fill: this.settings.fill,
-        stroke: this.settings.strokeColor,
-        strokeWidth: this.settings.strokeWidth,
-        strokeOpacity: this.settings.strokeOpacity,
+        fill: 'none',
+        stroke: this.settings.strokeColor || '#6b7280',
+        strokeWidth: this.settings.strokeWidth || 2,
+        strokeOpacity: this.settings.strokeOpacity || 1.0,
         strokeLinecap: this.settings.strokeLinecap || 'round',
         strokeLinejoin: this.settings.strokeLinejoin || 'round',
-        strokeDasharray: this.settings.strokeDasharray === 'none' ? undefined : this.settings.strokeDasharray,
-        fillRule: this.settings.fillRule || 'nonzero'
+        strokeDasharray: this.settings.strokeDasharray || 'none',
+        fillRule: 'nonzero'
       },
     };
 

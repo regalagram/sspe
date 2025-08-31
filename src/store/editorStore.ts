@@ -450,14 +450,15 @@ const loadInitialState = (): EditorState => {
     shapeSize: 50,
     toolSettings: {
       shared: {
-        strokeColor: '#6b7280',
+        unifiedColor: '#6b7280', // Single color used by all tools
+        strokeColor: '#6b7280', // Keep in sync with unified
         strokeWidth: 3,
         strokeOpacity: 1.0,
         strokeDasharray: 'none',
         strokeLinecap: 'round',
         strokeLinejoin: 'round',
-        fill: '#0078cc',
-        fillOpacity: 0.3,
+        fill: '#6b7280', // Keep in sync with unified
+        fillOpacity: 1,
         fillRule: 'nonzero',
         fontFamily: 'Arial, sans-serif',
         fontSize: 16

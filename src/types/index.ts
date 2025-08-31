@@ -236,6 +236,7 @@ export interface GridState {
 
 // Tool settings interfaces
 export interface DrawingToolSettings {
+  unifiedColor?: string; // Single color used by all tools
   strokeColor: string;
   strokeWidth: number;
   strokeOpacity: number;

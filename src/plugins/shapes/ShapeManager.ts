@@ -285,12 +285,12 @@ export class ShapeManager {
       const pathId = addPath({
         fill: this.settings.fill,
         fillOpacity: this.settings.fillOpacity,
-        stroke: this.settings.strokeColor,
-        strokeWidth: this.settings.strokeWidth,
-        strokeOpacity: this.settings.strokeOpacity,
-        strokeLinecap: this.settings.strokeLinecap || 'round',
-        strokeLinejoin: this.settings.strokeLinejoin || 'round',
-        strokeDasharray: this.settings.strokeDasharray === 'none' ? undefined : this.settings.strokeDasharray,
+        stroke: 'none', // Always create shapes with no stroke
+        strokeWidth: undefined,
+        strokeOpacity: undefined,
+        strokeLinecap: undefined,
+        strokeLinejoin: undefined,
+        strokeDasharray: undefined,
         fillRule: this.settings.fillRule || 'nonzero'
       });
 
