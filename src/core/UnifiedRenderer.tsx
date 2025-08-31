@@ -1143,17 +1143,40 @@ const UseElementComponent: React.FC<{ useElement: any }> = ({ useElement }) => {
 
   const { x: effectiveX, y: effectiveY } = getEffectivePosition();
 
+  // Try to get precise dimensions from DOM
+  let preciseWidth = useElement.width || 100;
+  let preciseHeight = useElement.height || 100;
+  let preciseX = effectiveX;
+  let preciseY = effectiveY;
+
+  try {
+    const useElementInDOM = document.querySelector(`use[id="${useElement.id}"]`) as SVGUseElement;
+    if (useElementInDOM) {
+      const bbox = useElementInDOM.getBBox();
+      if (bbox.width > 0 && bbox.height > 0) {
+        preciseWidth = bbox.width;
+        preciseHeight = bbox.height;
+        preciseX = bbox.x;
+        preciseY = bbox.y;
+      }
+    }
+  } catch (error) {
+    // Keep fallback values
+  }
+
   return (
     <g key={useElement.id} data-use-id={useElement.id}>
-      {/* Invisible interaction rectangle for better pointer event detection */}
+      {/* Red transparent interaction rectangle with precise dimensions */}
       <rect
-        x={effectiveX}
-        y={effectiveY}
-        width={useElement.width || 100}
-        height={useElement.height || 100}
+        x={preciseX}
+        y={preciseY}
+        width={preciseWidth}
+        height={preciseHeight}
         transform={useElement.transform}
-        fill="transparent"
-        stroke="none"
+        fill="rgba(255, 0, 0, 0.2)"
+        stroke="red"
+        strokeWidth={1 / viewport.zoom}
+        strokeDasharray={`${2 / viewport.zoom} ${2 / viewport.zoom}`}
         pointerEvents="all"
         data-element-type="use"
         data-element-id={useElement.id}
