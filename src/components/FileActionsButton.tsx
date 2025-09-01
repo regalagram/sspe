@@ -7,6 +7,7 @@ import { generateSVGCode } from '../utils/svg-export';
 import { parseCompleteSVG } from '../utils/svg-parser';
 import { generateId } from '../utils/id-utils';
 import { useMobileDetection } from '../hooks/useMobileDetection';
+import { UI_CONSTANTS } from '../config/constants';
 
 export const FileActionsButton: React.FC = () => {
   const { isMobile } = useMobileDetection();
@@ -276,8 +277,8 @@ export const FileActionsButton: React.FC = () => {
   const hasContent = paths.length > 0 || texts.length > 0 || groups.length > 0 || images.length > 0;
 
   // Match other toolbar buttons sizing
-  const buttonSize = isMobile ? 28 : 32;
-  const iconSize = isMobile ? 12 : 13;
+  const buttonSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE;
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
 
   return (
     <>

@@ -6,7 +6,7 @@ import { useEditorStore } from '../store/editorStore';
 import { createLinearGradient, createRadialGradient, createGradientStop } from '../utils/gradient-utils';
 import { createPatternFromPreset, patternPresets } from '../plugins/gradients/patternPresets';
 import { useMobileDetection } from '../hooks/useMobileDetection';
-import { CONFIG } from '../config/constants';
+import { UI_CONSTANTS } from '../config/constants';
 
 export const WritingStyleTools: React.FC = () => {
   const { 
@@ -23,8 +23,8 @@ export const WritingStyleTools: React.FC = () => {
   const { isMobile } = useMobileDetection();
 
   // Match text toolbar button sizing exactly
-  const buttonSize = isMobile ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
-  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+  const buttonSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE;
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
 
   const hasSelection = selection.selectedPaths.length > 0 || 
                       selection.selectedSubPaths.length > 0 || 

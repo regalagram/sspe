@@ -8,7 +8,7 @@ import { curvesManager } from '../plugins/curves/CurvesManager';
 import { creationManager } from '../plugins/creation/CreationManager';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { SVGCommandType, EditorCommandType } from '../types';
-import { CONFIG } from '../config/constants';
+import { UI_CONSTANTS } from '../config/constants';
 
 export const WritingConsolidatedTools: React.FC = () => {
   const { isMobile } = useMobileDetection();
@@ -17,8 +17,8 @@ export const WritingConsolidatedTools: React.FC = () => {
   const { mode, selection } = useEditorStore();
 
   // Match text toolbar button sizing exactly
-  const buttonSize = isMobile ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
-  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+  const buttonSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE;
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
   const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
 
   // Subscribe to tool mode changes
@@ -192,7 +192,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         {isCreateMode && (
           <>
             <SubmenuItem
-              icon={<X size={isMobile ? 12 : 13} />}
+              icon={<X size={iconSize} />}
               label="Exit Creation Mode"
               onClick={() => {
                 handleExitCreateMode();
@@ -230,7 +230,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         
         {/* Pencil Tool - Simplified */}
         <SubmenuItem
-          icon={<Edit3 size={isMobile ? 12 : 13} />}
+          icon={<Edit3 size={iconSize} />}
           label={isPencilActive ? "Exit Pencil Mode" : "Pencil Tool"}
           onClick={() => {
             handlePencilToggle();
@@ -241,7 +241,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         
         {/* Curve Tool */}
         <SubmenuItem
-          icon={<Spline size={isMobile ? 12 : 13} />}
+          icon={<Spline size={iconSize} />}
           label={isCurveActive ? "Exit Curve Mode" : "Curve Tool"}
           onClick={() => {
             handleCurveToggle();
@@ -263,7 +263,7 @@ export const WritingConsolidatedTools: React.FC = () => {
               Curve Actions
             </div>
             <SubmenuItem
-              icon={<LogOut size={isMobile ? 12 : 13} />}
+              icon={<LogOut size={iconSize} />}
               label="Delete Selected Point"
               onClick={() => {
                 handleDeletePoint();
@@ -271,7 +271,7 @@ export const WritingConsolidatedTools: React.FC = () => {
               }}
             />
             <SubmenuItem
-              icon={<CornerUpRight size={isMobile ? 12 : 13} />}
+              icon={<CornerUpRight size={iconSize} />}
               label="Finish Path"
               onClick={() => {
                 handleFinishPath();
@@ -284,7 +284,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         <div style={{ height: '1px', background: '#e5e7eb', margin: '6px 0' }} />
         {!isSubpathEditMode ? (
           <SubmenuItem
-            icon={<MousePointerClick size={isMobile ? 12 : 13} />}
+            icon={<MousePointerClick size={iconSize} />}
             label="Subpath Edit"
             onClick={() => {
               toggleSubpathEditMode();
@@ -295,7 +295,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         ) : (
           <>
             <SubmenuItem
-              icon={<MousePointerClick size={isMobile ? 12 : 13} />}
+              icon={<MousePointerClick size={iconSize} />}
               label="Exit Subpath Edit"
               onClick={() => {
                 toggleSubpathEditMode();
@@ -307,14 +307,14 @@ export const WritingConsolidatedTools: React.FC = () => {
             <div style={{ height: '1px', background: '#e5e7eb', margin: '4px 0' }} />
 
             <SubmenuItem
-              icon={<Minus size={isMobile ? 12 : 13} />}
+              icon={<Minus size={iconSize} />}
               label={enabledFeatures.subpathShowCommandPoints ? 'Hide Command Points' : 'Show Command Points'}
               onClick={() => toggleFeature('subpathShowCommandPoints')}
               active={!!enabledFeatures.subpathShowCommandPoints}
             />
 
             <SubmenuItem
-              icon={<Plus size={isMobile ? 12 : 13} />}
+              icon={<Plus size={iconSize} />}
               label={enabledFeatures.subpathShowControlPoints ? 'Hide Control Points' : 'Show Control Points'}
               onClick={() => toggleFeature('subpathShowControlPoints')}
               active={!!enabledFeatures.subpathShowControlPoints}

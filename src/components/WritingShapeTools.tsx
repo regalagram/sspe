@@ -6,7 +6,7 @@ import { toolModeManager } from '../core/ToolModeManager';
 import { shapeManager } from '../plugins/shapes/ShapeManager';
 import { SHAPE_TEMPLATES } from '../plugins/shapes/ShapeDefinitions';
 import { useMobileDetection } from '../hooks/useMobileDetection';
-import { CONFIG } from '../config/constants';
+import { UI_CONSTANTS } from '../config/constants';
 
 export const WritingShapeTools: React.FC = () => {
   const { isMobile } = useMobileDetection();
@@ -14,8 +14,8 @@ export const WritingShapeTools: React.FC = () => {
   const [toolModeState, setToolModeState] = useState(toolModeManager.getState());
 
   // Match floating toolbar button sizing
-  const buttonSize = isMobile ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
-  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+  const buttonSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE;
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
   const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
 
   // Subscribe to tool mode changes
@@ -38,7 +38,7 @@ export const WritingShapeTools: React.FC = () => {
 
   // Icon mapping for shapes
   const getShapeIcon = (templateId: string, size?: number): React.ReactElement => {
-    const iconSize = size || (isMobile ? 12 : 13);
+    const iconSize = size || (isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE);
     const iconMap: Record<string, React.ReactElement> = {
       'debug-dot': <Dot size={iconSize} />,
       'rectangle': <Square size={iconSize} strokeWidth={2.5} />,
@@ -105,7 +105,7 @@ export const WritingShapeTools: React.FC = () => {
         {isShapeActive && (
           <>
             <SubmenuItem
-              icon={<X size={isMobile ? 12 : 13} />}
+              icon={<X size={iconSize} />}
               label="Exit Shape Mode"
               onClick={() => {
                 handleExitShapeMode();

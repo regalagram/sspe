@@ -6,6 +6,7 @@ import { useEditorStore } from '../store/editorStore';
 import { toolModeManager } from '../core/ToolModeManager';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { textEditManager } from '../core/TextEditManager';
+import { UI_CONSTANTS } from '../config/constants';
 
 export const WritingTextTools: React.FC = () => {
   const { isMobile } = useMobileDetection();
@@ -13,8 +14,8 @@ export const WritingTextTools: React.FC = () => {
   const [toolModeState, setToolModeState] = useState(toolModeManager.getState());
 
   // Match floating toolbar button sizing
-  const buttonSize = isMobile ? 28 : 32;
-  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+  const buttonSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE;
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
   const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
   
   const { 
@@ -129,7 +130,7 @@ export const WritingTextTools: React.FC = () => {
         {isTextActive && (
           <>
             <SubmenuItem
-              icon={<X size={isMobile ? 12 : 13} />}
+              icon={<X size={iconSize} />}
               label="Exit Text Mode"
               onClick={() => {
                 handleExitTextMode();
@@ -146,21 +147,21 @@ export const WritingTextTools: React.FC = () => {
         )}
 
         <SubmenuItem
-          icon={<Type size={isMobile ? 12 : 13} />}
+          icon={<Type size={iconSize} />}
           label="Add Text"
           onClick={handleAddText}
           active={activeTextType === 'single'}
         />
         
         <SubmenuItem
-          icon={<AlignJustify size={isMobile ? 12 : 13} />}
+          icon={<AlignJustify size={iconSize} />}
           label="Add Multiline Text"
           onClick={handleAddMultilineText}
           active={activeTextType === 'multiline'}
         />
         
         <SubmenuItem
-          icon={<Spline size={isMobile ? 12 : 13} />}
+          icon={<Spline size={iconSize} />}
           label="Add TextPath"
           onClick={handleAddTextPath}
           active={false}

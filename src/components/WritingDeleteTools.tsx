@@ -4,13 +4,14 @@ import { ToolbarButton, ToolbarSection } from './ToolbarButton';
 import { useEditorStore } from '../store/editorStore';
 import { executeDelete } from '../plugins/delete/Delete';
 import { useMobileDetection } from '../hooks/useMobileDetection';
+import { UI_CONSTANTS } from '../config/constants';
 
 export const WritingDeleteTools: React.FC = () => {
   const { selection } = useEditorStore();
   const { isMobile } = useMobileDetection();
 
   // Match text toolbar button sizing exactly
-  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
 
   const hasSelection = 
     selection.selectedPaths.length > 0 || 

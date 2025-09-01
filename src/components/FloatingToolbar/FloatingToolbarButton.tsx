@@ -5,6 +5,7 @@ import { useMobileDetection } from '../../hooks/useMobileDetection';
 import { createLinearGradient, createRadialGradient, createGradientStop } from '../../utils/gradient-utils';
 import { useEditorStore } from '../../store/editorStore';
 import { parseColorWithOpacity } from '../../utils/color-utils';
+import { UI_CONSTANTS } from '../../config/constants';
 
 interface FloatingToolbarButtonProps {
   action: ToolbarAction;
@@ -34,9 +35,9 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
   const isOpacityControl = action.type === 'input' && (action as any).opacityOptions;
   
   const isMobileDevice = isMobile || isTablet;
-  // Match text toolbar button sizing exactly - use 28px for mobile consistency
-  const buttonSize = size || (isMobileDevice ? 28 : 32);
-  const iconSize = isMobileDevice ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+  // Match text toolbar button sizing exactly - use constants for consistency
+  const buttonSize =  isMobileDevice ? UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE;
+  const iconSize = isMobileDevice ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
 
   // Helper function to close submenu
   const closeSubmenu = () => {
@@ -262,6 +263,9 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ option, onSelect }) => {
   const { isMobile, isTablet } = useMobileDetection();
   const isMobileDevice = isMobile || isTablet;
   
+  // Define icon size for this component
+  const iconSize = isMobileDevice ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  
   // Evaluate disabled state - could be boolean or function
   const isDisabled = typeof option.disabled === 'function' ? option.disabled() : !!option.disabled;
   
@@ -297,7 +301,7 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ option, onSelect }) => {
     >
       {option.icon && (
         <div style={{ marginRight: '8px' }}>
-          <option.icon size={isMobileDevice ? 12 : 13} />
+          <option.icon size={iconSize} />
         </div>
       )}
       <span>{option.label}</span>

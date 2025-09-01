@@ -8,6 +8,7 @@ import { useMobileDetection } from '../../hooks/useMobileDetection';
 import { SVGCommandType, EditorCommandType } from '../../types';
 import { toolModeManager } from '../../core/ToolModeManager';
 import { creationManager } from './CreationManager';
+import { UI_CONSTANTS } from '../../config/constants';
 
 export const ToolbarCreationTools: React.FC = () => {
   const { mode } = useEditorStore();
@@ -18,8 +19,8 @@ export const ToolbarCreationTools: React.FC = () => {
   } = useMobileToolbarStore();
 
   // Match text toolbar button sizing exactly
-  const buttonSize = isMobile ? 28 : 32;
-  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+  const buttonSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE;
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
   const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
 
   // Always show toolbar creation tools (removed mobile-only restriction)
@@ -42,42 +43,40 @@ export const ToolbarCreationTools: React.FC = () => {
   const tools = [
     { 
       command: 'M' as const, 
-      icon: <Move size={isMobile ? 12 : 13} />, 
+      icon: <Move size={iconSize} />, 
       label: 'M', 
       title: 'Move To (M)',
       description: 'Start new sub-path'
     },
     { 
       command: 'NEW_PATH' as const, 
-      icon: <Plus size={isMobile ? 12 : 13} />, 
+      icon: <Plus size={iconSize} />, 
       label: 'M+', 
       title: 'New Path (Shift+M)',
       description: 'Create new path'
     },
     { 
       command: 'L' as const, 
-      icon: <Minus size={isMobile ? 12 : 13} />, 
+      icon: <Minus size={iconSize} />, 
       label: 'L', 
       title: 'Line To (L)',
       description: 'Draw line'
     },
     { 
       command: 'C' as const, 
-      icon: <Spline size={isMobile ? 12 : 13} />, 
+      icon: <Spline size={iconSize} />, 
       label: 'C', 
       title: 'Cubic Bezier (C)',
       description: 'Draw curve'
     },
     { 
       command: 'Z' as const, 
-      icon: <X size={isMobile ? 12 : 13} />, 
+      icon: <X size={iconSize} />, 
       label: 'Z', 
       title: 'Close Path (Z)',
       description: 'Close path'
     },
-  ];
-
-  // Get current active tool
+  ];  // Get current active tool
   const getActiveTool = () => {
     if (!isCreateMode || createMode?.commandType === 'PENCIL') return null;
     return tools.find(tool => 
@@ -131,7 +130,7 @@ export const ToolbarCreationTools: React.FC = () => {
         {isCreateMode && (
           <>
             <MobileSubmenuItem
-              icon={<X size={isMobile ? 12 : 13} />}
+              icon={<X size={iconSize} />}
               label="Exit Create Mode"
               onClick={() => handleToolAction(handleExitCreateMode)}
               active={true}

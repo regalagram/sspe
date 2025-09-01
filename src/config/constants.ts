@@ -26,8 +26,10 @@ export const UI_CONSTANTS = {
   // Toolbar Configuration
   TOOLBAR: {
     DESKTOP_BUTTON_SIZE: 32,
-    MOBILE_BUTTON_SIZE: 28,
-    ICON_SIZE: 20,
+    MOBILE_BUTTON_SIZE: 40,
+    DESKTOP_ICON_SIZE: 16,
+    MOBILE_ICON_SIZE: 20,
+    ICON_SIZE: 20, // Legacy - keep for compatibility
     PADDING: 8,
     BORDER_RADIUS: 6,
     MAX_VISIBLE_BUTTONS: {

@@ -4,7 +4,7 @@ import { ToolbarSection } from './ToolbarButton';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useEditorStore } from '../store/editorStore';
 import { useMobileDetection } from '../hooks/useMobileDetection';
-import { CONFIG } from '../config/constants';
+import { UI_CONSTANTS } from '../config/constants';
 
 interface DebugButtonProps {
   onOpenVisualDebugPanel?: () => void;
@@ -15,7 +15,8 @@ export const DebugButton: React.FC<DebugButtonProps> = ({ onOpenVisualDebugPanel
   const [isSubmenuOpen, setIsSubmenuOpen] = useState(false);
   const { enabledFeatures, toggleFeature } = useEditorStore();
 
-  const buttonSize = isMobile ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
+  const buttonSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE;
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
 
   const handleClearLocalStorage = () => {
     localStorage.clear();
@@ -85,48 +86,48 @@ export const DebugButton: React.FC<DebugButtonProps> = ({ onOpenVisualDebugPanel
         </div>
         
         <SubmenuItem
-          icon={<Eye size={isMobile ? 12 : 13} />}
+          icon={<Eye size={iconSize} />}
           label={enabledFeatures.commandPointsEnabled ? "Hide Command Points" : "Show Command Points"}
           onClick={handleToggleCommandPoints}
           active={enabledFeatures.commandPointsEnabled}
         />
         
         <SubmenuItem
-          icon={<Eye size={isMobile ? 12 : 13} />}
+          icon={<Eye size={iconSize} />}
           label={enabledFeatures.controlPointsEnabled ? "Hide Control Points" : "Show Control Points"}
           onClick={handleToggleControlPoints}
           active={enabledFeatures.controlPointsEnabled}
         />
         
         <SubmenuItem
-          icon={<Eye size={isMobile ? 12 : 13} />}
+          icon={<Eye size={iconSize} />}
           label={enabledFeatures.wireframeEnabled ? "Hide Wireframe" : "Show Wireframe"}
           onClick={handleToggleWireframe}
           active={enabledFeatures.wireframeEnabled}
         />
         
         <SubmenuItem
-          icon={<Eye size={isMobile ? 12 : 13} />}
+          icon={<Eye size={iconSize} />}
           label={enabledFeatures.hidePointsInSelect ? "Show Points In Select" : "Hide Points In Select"}
           onClick={handleToggleHidePointsInSelect}
           active={enabledFeatures.hidePointsInSelect}
         />
         
         <SubmenuItem
-          icon={<Eye size={isMobile ? 12 : 13} />}
+          icon={<Eye size={iconSize} />}
           label={enabledFeatures.showGroupsFrame ? "Hide Groups Frame" : "Show Groups Frame"}
           onClick={handleToggleShowGroupsFrame}
           active={enabledFeatures.showGroupsFrame}
         />
         
         <SubmenuItem
-          icon={<Settings size={isMobile ? 12 : 13} />}
+          icon={<Settings size={iconSize} />}
           label="Configuration"
           onClick={handleOpenConfig}
         />
         
         <SubmenuItem
-          icon={<RotateCcw size={isMobile ? 12 : 13} />}
+          icon={<RotateCcw size={iconSize} />}
           label="Delete LocalStorage"
           onClick={handleClearLocalStorage}
         />

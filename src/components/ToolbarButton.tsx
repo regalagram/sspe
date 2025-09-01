@@ -1,5 +1,6 @@
 import React from 'react';
 import { useMobileDetection } from '../hooks/useMobileDetection';
+import { UI_CONSTANTS } from '../config/constants';
 
 interface ToolbarButtonProps {
   icon: React.ReactNode;
@@ -27,12 +28,12 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
 
   const sizes = {
     small: isMobileDevice ? 24 : 24,
-    medium: isMobileDevice ? 28 : 32, // Match floating toolbar: 28px mobile, 32px desktop
+    medium: isMobileDevice ? UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE,
     large: isMobileDevice ? 36 : 40
   };
 
   const buttonSize = sizes[size];
-  const iconSize = isMobileDevice ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+  const iconSize = isMobileDevice ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
   const fontSize = Math.floor(buttonSize * 0.25);
 
   const buttonStyle: React.CSSProperties = {

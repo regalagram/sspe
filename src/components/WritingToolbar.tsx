@@ -4,6 +4,7 @@ import { WritingConsolidatedTools } from './WritingConsolidatedTools';
 import { WritingShapeTools } from './WritingShapeTools';
 import { WritingTextTools } from './WritingTextTools';
 import { useMobileDetection } from '../hooks/useMobileDetection';
+import { UI_CONSTANTS } from '../config/constants';
 
 interface WritingToolbarProps {
   toolbarPlugins?: UIComponentDefinition[];
@@ -44,7 +45,7 @@ export const WritingToolbar: React.FC<WritingToolbarProps> = ({
     justifyContent: 'center',
     padding: '0px',
     gap: '0px',
-    height: isMobileDevice ? '28px' : '32px', // Match button sizes exactly
+    height: isMobileDevice ? `${UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE}px` : `${UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE}px`,
     overflow: 'visible',
     position: 'relative',
     whiteSpace: 'nowrap'

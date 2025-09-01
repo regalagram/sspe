@@ -8,6 +8,7 @@ import { SandwichButton } from './SandwichButton';
 import { WritingConsolidatedTools } from './WritingConsolidatedTools';
 import { WritingShapeTools } from './WritingShapeTools';
 import { WritingTextTools } from './WritingTextTools';
+import { UI_CONSTANTS } from '../config/constants';
 import { FileActionsButton } from './FileActionsButton';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 
@@ -58,7 +59,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     justifyContent: 'center',
     padding: '0px',
     gap: '0px',
-    height: isMobileDevice ? '28px' : '32px', // Match button sizes exactly
+    height: isMobileDevice ? `${UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE}px` : `${UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE}px`,
     overflow: 'visible',
     position: 'relative',
     whiteSpace: 'nowrap'
@@ -191,8 +192,8 @@ export const MobileFloatingButton: React.FC<MobileFloatingButtonProps> = ({
 // Mobile-specific button enhancement
 export const useMobileButtonStyle = (isMobile: boolean) => {
   const baseStyle: React.CSSProperties = {
-    minWidth: isMobile ? '28px' : '32px',
-    minHeight: isMobile ? '28px' : '32px',
+    minWidth: isMobile ? `${UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE}px` : `${UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE}px`,
+    minHeight: isMobile ? `${UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE}px` : `${UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE}px`,
     padding: isMobile ? '4px' : '8px',
     fontSize: isMobile ? '12px' : '14px',
     borderRadius: isMobile ? '0px' : '6px',
