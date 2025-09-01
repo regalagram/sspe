@@ -5,7 +5,7 @@ import { PluginButton } from '../../components/PluginButton';
 import { Type, Plus, Copy, Trash2, AlignLeft, AlignCenter, AlignRight, Bold, Italic } from 'lucide-react';
 import { isGradientOrPattern, getStyleValue } from '../../utils/gradient-utils';
 import { convertRgbToHex } from '../../utils/color-utils';
-import { textEditManager } from '../../managers/TextEditManager';
+import { textEditManager } from '../../core/TextEditManager';
 
 // Helper function for color input
 const colorToHex = (color: string | any): string => {

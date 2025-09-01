@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { textEditManager, TextEditState } from '../managers/TextEditManager';
+import { textEditManager, TextEditState } from '../core/TextEditManager';
 
 export const useTextEditMode = () => {
   const [textEditState, setTextEditState] = useState<TextEditState>(textEditManager.getState());

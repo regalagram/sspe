@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { useEditorStore } from '../../store/editorStore';
-import { textEditManager } from '../../managers/TextEditManager';
+import { textEditManager } from '../../core/TextEditManager';
 import {
   createDropShadowFilter,
   createBlurFilter,

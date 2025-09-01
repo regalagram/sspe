@@ -5,7 +5,7 @@ import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useEditorStore } from '../store/editorStore';
 import { toolModeManager } from '../core/ToolModeManager';
 import { useMobileDetection } from '../hooks/useMobileDetection';
-import { textEditManager } from '../managers/TextEditManager';
+import { textEditManager } from '../core/TextEditManager';
 
 export const WritingTextTools: React.FC = () => {
   const { isMobile } = useMobileDetection();

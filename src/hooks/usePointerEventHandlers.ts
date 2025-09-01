@@ -1,7 +1,7 @@
 import React from 'react';
 import { pluginManager } from '../core/PluginSystem';
 import { useEditorStore } from '../store/editorStore';
-import { textEditManager } from '../managers/TextEditManager';
+import { textEditManager } from '../core/TextEditManager';
 
 export const usePointerEventHandlers = () => {
   const handlePointerDown = (e: React.PointerEvent<SVGElement>) => {
