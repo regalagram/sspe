@@ -1,9 +1,8 @@
 import React from 'react';
-import { Undo2, Redo2, Bug } from 'lucide-react';
+import { Undo2, Redo2 } from 'lucide-react';
 import { MobileToolbarButton, MobileToolbarSection } from '../../components/ToolbarButton';
 import { useEditorHistory } from '../../store/useEditorHistory';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
-import { toggleZundoDebugPanel } from '../../store/useZundoDebugVisibility';
 import { UI_CONSTANTS } from '../../config/constants';
 
 export const ToolbarUndoRedoControls: React.FC = () => {
@@ -33,15 +32,6 @@ export const ToolbarUndoRedoControls: React.FC = () => {
         title="Redo (Ctrl+Y)"
         size="medium"
       />
-      {process.env.NODE_ENV === 'development' && (
-        <MobileToolbarButton
-          icon={<Bug size={iconSize} strokeWidth={strokeWidth} />}
-          onClick={toggleZundoDebugPanel}
-          color="#10b981"
-          title="Toggle Zundo Debug Panel"
-          size="medium"
-        />
-      )}
     </MobileToolbarSection>
   );
 };

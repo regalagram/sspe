@@ -4,7 +4,6 @@ import { temporal } from 'zundo';
 import { EditorState } from '../types';
 import { saveEditorState, loadEditorState, debounce } from '../utils/persistence';
 import { calculateStateDiff, getCurrentDiffConfig } from './diffConfig';
-import { isPerformanceLoggingEnabled } from './useHistoryPerformance';
 
 // Import action creators
 import { ViewportActions, createViewportActions } from './viewportActions';
@@ -585,18 +584,6 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       equality: (pastState, currentState) => {
         // Simple deep comparison for most cases
         return JSON.stringify(pastState) === JSON.stringify(currentState);
-      },
-      
-      // Callback for debugging/monitoring
-      onSave: (pastState, currentState) => {
-        if (process.env.NODE_ENV === 'development' && isPerformanceLoggingEnabled()) {
-          const diffConfig = getCurrentDiffConfig();
-          console.log(`💾 Zundo State Saved (${diffConfig.mode} mode)`, { 
-            mode: diffConfig.mode,
-            pastState, 
-            currentState 
-          });
-        }
       }
     }
   )
