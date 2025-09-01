@@ -1,4 +1,3 @@
-import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { TextPathControls } from './TextPathControls';
 import { TextPathRenderer } from './TextPathRenderer';

@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import ReactDOM from 'react-dom';
 import { TextElementType, TextElement, MultilineTextElement, ViewportState } from '../types';
-import { textEditManager } from '../managers/TextEditManager';
-import { useEditorStore } from '../store/editorStore';
 import { calculateTextBoundsDOM } from '../utils/text-utils';
 import { elementRefManager } from '../core/ElementRefManager';
 

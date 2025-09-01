@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { PathStyle, SVGPath } from '../../types';
+import { PathStyle } from '../../types';
 import { convertRgbToHex, parseColorWithOpacity } from '../../utils/color-utils';
 import { isGradientOrPattern } from '../../utils/gradient-utils';
 import { StylePresets } from './StylePresets';
 import { PluginButton } from '../../components/PluginButton';
-import { Settings, Palette } from 'lucide-react';
 
 // Helper function to convert colors to hex format for color inputs
 const colorToHex = (color: string | any): string => {

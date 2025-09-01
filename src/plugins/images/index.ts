@@ -13,14 +13,7 @@ export const ImagePlugin: Plugin = {
       component: ImageControls,
       position: 'sidebar',
       order: 20
-    },
-    // DISABLED: Rendering handled by UnifiedRenderer
-    // {
-    //   id: 'image-renderer',
-    //   component: ImageRenderer,
-    //   position: 'svg-content',
-    //   order: 30
-    // }
+    }
   ],
   
   shortcuts: [

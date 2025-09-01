@@ -1,33 +1,11 @@
-import { 
-  Copy, 
-  Trash2, 
-  Lock, 
-  Filter, 
-  Group, 
-  Palette, 
-  Brush, 
-  LineSquiggle, 
-  Play, 
-  RotateCcw, 
-  PaintBucket
-} from 'lucide-react';
+import { Copy, Trash2, Lock, Filter, Group, Palette, Brush, LineSquiggle, Play, RotateCcw, PaintBucket } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected, getSelectedElementsBounds } from './commonActions';
 import { createGenericArrangeActions } from '../../../utils/floating-arrange-actions';
 import { createReorderActions, createElementReorderFunctions } from '../../../utils/floating-reorder-actions';
 import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';
-import {
-  createDropShadowFilter,
-  createBlurFilter,
-  createGrayscaleFilter,
-  createSepiaFilter,
-  createEmbossFilter,
-  createGlowFilter,
-  createNeonGlowFilter,
-  formatSVGReference,
-  matchesFilterSignature
-} from '../../../utils/svg-elements-utils';
+import { createDropShadowFilter, createBlurFilter, createGrayscaleFilter, createSepiaFilter, createEmbossFilter, createGlowFilter, createNeonGlowFilter, formatSVGReference, matchesFilterSignature } from '../../../utils/svg-elements-utils';
 
 // Get common opacity for selected images
 const getCommonImageOpacity = (): number => {

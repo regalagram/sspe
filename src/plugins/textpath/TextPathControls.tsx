@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { SVGTextPath } from '../../types';
 import { PluginButton } from '../../components/PluginButton';
 import { Type, Plus, Trash2, Link, RotateCcw, Settings, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 

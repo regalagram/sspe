@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { PathStyle } from '../../types';
 import { getStyleValue } from '../../utils/gradient-utils';
-import { stylePresets, StylePreset, getAllCategories, getCategoryDisplayName, getPresetsByCategory } from './presetData';
-import { Trash2, Palette } from 'lucide-react';
+import { StylePreset, getAllCategories, getCategoryDisplayName, getPresetsByCategory } from './presetData';
+import { Trash2 } from 'lucide-react';
 import { PluginButton } from '../../components/PluginButton';
 
 interface StylePresetsProps {

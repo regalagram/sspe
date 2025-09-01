@@ -1,13 +1,11 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { flushSync } from 'react-dom';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { subPathToString, getContrastColor, subPathToStringInContext, findSubPathAtPoint } from '../../utils/path-utils';
+import { subPathToString, getContrastColor, subPathToStringInContext } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
 import { getStyleValue } from '../../utils/gradient-utils';
 import { stickyManager } from '../sticky-guidelines/StickyManager';
-import { Point } from '../../types';
 import { captureAllSelectedElementsPositions, moveAllCapturedElementsByDelta, DraggedElementsData } from '../../utils/drag-utils';
 import { useAnimationsForElement } from '../../components/AnimationRenderer';
 import { shouldPreserveSelection } from '../../utils/selection-utils';

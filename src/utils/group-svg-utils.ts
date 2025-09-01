@@ -4,7 +4,6 @@
 
 import { SVGGroup, SVGPath, TextElementType, GradientOrPattern, SVGFilter, SVGImage, SVGAnimation, SVGSymbol, SVGUse } from '../types';
 import { subPathToString } from './path-utils';
-import { extractGradientsFromPaths } from './gradient-utils';
 
 /**
  * Generates SVG content for a specific group

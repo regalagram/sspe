@@ -24,6 +24,7 @@ import { UseFormatCopyActions, createUseFormatCopyActions } from './useFormatCop
 import { DeepSelectionActions, createDeepSelectionActions } from './deepSelectionActions';
 import { ToolSettingsActions, createToolSettingsActions } from './toolSettingsActions';
 import { handleManager } from '../plugins/handles/HandleManager';
+
 // Combined actions interface
 interface EditorActions extends 
   ViewportActions, 

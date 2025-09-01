@@ -4,7 +4,7 @@ import { multipleSelectionActions } from './multipleSelectionActions';
 import { groupActions } from './groupActions';
 import { subPathActions } from './subPathActions';
 import { imageActions } from './imageActions';
-import { useActions, symbolActions } from './useActions';
+import { symbolActions } from './useActions';
 import { textActions } from './textActions';
 import { textPathActions } from './textPathActions';
 import { mixedSelectionActions } from './mixedSelectionActions';

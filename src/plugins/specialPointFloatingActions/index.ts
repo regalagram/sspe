@@ -1,21 +1,7 @@
 import { Plugin } from '../../core/PluginSystem';
-import { 
-  FloatingActionDefinition, 
-  ToolbarAction 
-} from '../../types/floatingToolbar';
-import { useEditorStore } from '../../store/editorStore';
-import { 
-  hasExactlyOneSpecialPointSelected,
-  getSpecialPointFromSelection,
-  selectInitialPoint,
-  selectFinalPoint,
-  separateSpecialPoints
-} from '../../utils/special-point-utils';
-import { 
-  ArrowRightFromLine,
-  ArrowLeftFromLine,
-  Split
-} from 'lucide-react';
+import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
+import { hasExactlyOneSpecialPointSelected, getSpecialPointFromSelection, selectInitialPoint, selectFinalPoint, separateSpecialPoints } from '../../utils/special-point-utils';
+import { ArrowRightFromLine, ArrowLeftFromLine, Split } from 'lucide-react';
 
 // Special point actions
 const getSpecialPointActions = (): ToolbarAction[] => [

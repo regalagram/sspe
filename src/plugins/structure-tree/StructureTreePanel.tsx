@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { TreeNode } from './TreeNode';
 import { TreeItem, buildTreeStructure } from './TreeUtils';
-import { RefreshCw, ChevronDown } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import './tree-styles.css';
 
 export const StructureTreePanel: React.FC = () => {

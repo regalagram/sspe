@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit3, Spline, Move, Minus, X, CornerUpRight, LogOut, MousePointerClick } from 'lucide-react';
-import { ToolbarButton, ToolbarSection } from './ToolbarButton';
+import { Plus, Edit3, Spline, Minus, X, CornerUpRight, LogOut, MousePointerClick } from 'lucide-react';
+import { ToolbarSection } from './ToolbarButton';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
-import { useToolbarStore } from '../store/toolbarStore';
 import { useEditorStore } from '../store/editorStore';
 import { toolModeManager } from '../core/ToolModeManager';
-import { pencilManager } from '../plugins/pencil/PencilManager';
 import { curvesManager } from '../plugins/curves/CurvesManager';
 import { creationManager } from '../plugins/creation/CreationManager';
 import { useMobileDetection } from '../hooks/useMobileDetection';

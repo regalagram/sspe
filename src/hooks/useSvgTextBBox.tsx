@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export function useSvgTextBBox(text: string, fontSize: number = 14, fontFamily: string = 'sans-serif') {
   const [bbox, setBBox] = useState<{ width: number, height: number } | null>(null);

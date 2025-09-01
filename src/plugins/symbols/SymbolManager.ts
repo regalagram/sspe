@@ -1,5 +1,4 @@
 import { PointerEvent } from 'react';
-import { useEditorStore } from '../../store/editorStore';
 import { createDefaultUse } from '../../utils/svg-elements-utils';
 import { PointerEventContext } from '../../core/PluginSystem';
 

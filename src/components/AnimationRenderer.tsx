@@ -1,7 +1,6 @@
 import React from 'react';
 import { useEditorStore } from '../store/editorStore';
 import { animationFrameEmitter } from '../core/EventSystem';
-import { CONFIG } from '../config/constants';
 import { SVGAnimation } from '../types';
 
 // Helper function to ensure chainDelays is always a Map

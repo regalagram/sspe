@@ -2,7 +2,7 @@ import React, { useCallback, useState, useEffect } from 'react';
 import { useEditorStore } from '../store/editorStore';
 import { atomicFormatCopyCheck } from '../store/atomicOperations';
 import { getAllElementsByZIndex, getElementZIndex } from '../utils/z-index-manager';
-import { subPathToString, getContrastColor, findSubPathAtPoint } from '../utils/path-utils';
+import { subPathToString, getContrastColor } from '../utils/path-utils';
 import { getStyleValue } from '../utils/gradient-utils';
 import { useAnimationsForElement } from '../components/AnimationRenderer';
 import { useTextEditMode } from '../hooks/useTextEditMode';

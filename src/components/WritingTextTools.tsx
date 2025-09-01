@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Type, ChevronDown, FileText, AlignJustify, Spline, X } from 'lucide-react';
-import { ToolbarButton, ToolbarSection } from './ToolbarButton';
+import { Type, AlignJustify, Spline, X } from 'lucide-react';
+import { ToolbarSection } from './ToolbarButton';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useEditorStore } from '../store/editorStore';
 import { toolModeManager } from '../core/ToolModeManager';

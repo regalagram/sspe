@@ -1,5 +1,4 @@
-import { StateCreator } from 'zustand';
-import { EditorState, SVGAnimation, SVGAnimate, SVGAnimateMotion, SVGAnimateTransform, SVGSet, AnimationState, AnimationChain, AnimationEvent, FilterPrimitiveType, SVGFilter } from '../types';
+import { SVGAnimation, AnimationEvent } from '../types';
 import { generateId } from '../utils/id-utils';
 import { elementRefManager } from '../core/ElementRefManager';
 import { TypedSVGAnimation, removeStyleProperty, isAnimationElement, hasAttributeName } from '../types/animation-types';

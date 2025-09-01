@@ -1,12 +1,6 @@
 import { useEditorStore } from '../store/editorStore';
 import { SVGGroup } from '../types';
-import { 
-  getAllElementsByZIndex, 
-  getMaxZIndex, 
-  getMinZIndex,
-  initializeZIndexes,
-  getElementZIndex
-} from './z-index-manager';
+import { getAllElementsByZIndex, getMaxZIndex, getMinZIndex, initializeZIndexes, getElementZIndex } from './z-index-manager';
 
 /**
  * Get all element IDs that belong to a specific group (including nested groups)

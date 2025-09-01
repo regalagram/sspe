@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, RotateCcw, Plus, FileText } from 'lucide-react';
+import { Settings, RotateCcw, FileText } from 'lucide-react';
 
 export interface ImportSettings {
   mode: 'replace' | 'append';

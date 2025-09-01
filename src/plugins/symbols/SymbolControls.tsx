@@ -4,7 +4,7 @@ import { createDefaultSymbol, createDefaultUse } from '../../utils/svg-elements-
 import { symbolManager } from './SymbolManager';
 import { PluginButton } from '../../components/PluginButton';
 import { ElementPreview } from '../../components/ElementPreview';
-import { Plus, Copy, Trash2, Box, Users, MousePointer2 } from 'lucide-react';
+import { Plus, Box, Users, MousePointer2 } from 'lucide-react';
 
 export const SymbolControls: React.FC = () => {
   const { 

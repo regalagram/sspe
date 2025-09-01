@@ -2,22 +2,7 @@ import React from 'react';
 import { TreeItem } from './TreeUtils';
 import { useEditorStore } from '../../store/editorStore';
 import { recursivelyLockGroup, recursivelyLockPath, recursivelyLockSubPath } from '../selection/ModularFloatingActions';
-import { 
-  ChevronRight, 
-  ChevronDown,
-  Lock, 
-  Unlock,
-  Eye,
-  EyeOff,
-  Type,
-  Image as ImageIcon,
-  Group,
-  Box,
-  MousePointer,
-  Layers,
-  Circle,
-  Trash2
-} from 'lucide-react';
+import { ChevronRight, ChevronDown, Lock, Unlock, Eye, EyeOff, Type, Image as ImageIcon, Group, Box, MousePointer, Layers, Circle, Trash2 } from 'lucide-react';
 
 interface TreeNodeProps {
   item: TreeItem;

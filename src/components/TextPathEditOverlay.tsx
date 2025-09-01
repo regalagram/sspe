@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { useEditorStore } from '../store/editorStore';
 import { ViewportState, SVGTextPath } from '../types';
-import { calculateTextBoundsDOM } from '../utils/text-utils';
 
 // Font-specific baseline corrections to improve text alignment
 const calculateFontBaselineCorrection = (fontFamily: string, fontSize: number): number => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { createDefaultMarker, createArrowMarker, createCustomMarkerWithPath, formatSVGReference, parseSVGReference } from '../../utils/svg-elements-utils';
 import { PluginButton } from '../../components/PluginButton';

@@ -3,7 +3,7 @@ import { EditorState, SVGPath, PathStyle, Point, SVGSubPath, SVGCommand } from '
 import { generateId } from '../utils/id-utils.js';
 import { duplicatePath, duplicateSubPath, duplicateCommand } from '../utils/duplicate-utils';
 import { createNewPath } from '../utils/subpath-utils';
-import { getAllPathsBounds, snapToGrid, getSelectedElementsBounds } from '../utils/path-utils';
+import { snapToGrid } from '../utils/path-utils';
 import { calculateSmartDuplicationOffset } from '../utils/duplication-positioning';
 
 export interface PathActions {

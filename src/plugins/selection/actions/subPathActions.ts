@@ -1,40 +1,9 @@
-import { 
-  Palette, 
-  Brush, 
-  LineSquiggle, 
-  Waves, 
-  Minimize2, 
-  Maximize2,
-  Layers, 
-  Filter, 
-  Play, 
-  Copy, 
-  Trash2,
-  Lock,
-  RotateCcw,
-  Group,
-  PaintBucket,
-  ArrowUp
-} from 'lucide-react';
+import { Palette, Brush, LineSquiggle, Minimize2, Maximize2, Filter, Play, Copy, Trash2, Lock, RotateCcw, Group, PaintBucket } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { createSubPathArrangeActions } from '../../../utils/floating-arrange-actions';
 import { createReorderActions, createElementReorderFunctions } from '../../../utils/floating-reorder-actions';
-import {
-  createDropShadowFilter,
-  createBlurFilter,
-  createGrayscaleFilter,
-  createSepiaFilter,
-  createEmbossFilter,
-  createGlowFilter,
-  createNeonGlowFilter,
-  formatSVGReference,
-  matchesFilterSignature
-} from '../../../utils/svg-elements-utils';
-import { 
-  generateSmoothPath, 
-  simplifySegmentWithPointsOnPath
-} from '../../../utils/path-simplification-utils';
+import { createDropShadowFilter, createBlurFilter, createGrayscaleFilter, createSepiaFilter, createEmbossFilter, createGlowFilter, createNeonGlowFilter, formatSVGReference, matchesFilterSignature } from '../../../utils/svg-elements-utils';
 import { subPathTransformManager } from '../../subpath-transform/SubPathTransformManager';
 
 // Get common fill color for selected subpaths

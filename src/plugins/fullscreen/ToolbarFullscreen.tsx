@@ -6,9 +6,6 @@ import { useMobileDetection } from '../../hooks/useMobileDetection';
 
 export const ToolbarFullscreenControl: React.FC = () => {
   const { isFullscreen, toggleFullscreen } = useEditorStore();
-  const { isMobile } = useMobileDetection();
-
-  // Always show toolbar fullscreen control (removed mobile-only restriction)
 
   const handleToggle = async () => {
     try {

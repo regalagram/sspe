@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { TextElementType, TextElement, MultilineTextElement } from '../../types';
+import { TextElement, MultilineTextElement } from '../../types';
 import { getStyleValue } from '../../utils/gradient-utils';
 import { getContrastColor } from '../../utils/path-utils';
 import { calculateTextBoundsDOM } from '../../utils/text-utils';

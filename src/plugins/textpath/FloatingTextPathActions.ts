@@ -1,34 +1,8 @@
-import { 
-  Type, 
-  Bold, 
-  Italic, 
-  Underline,
-  Palette, 
-  AlignLeft, 
-  AlignCenter, 
-  AlignRight, 
-  Trash2,
-  LineSquiggle,
-  Brush,
-  Filter,
-  Play,
-  RotateCcw,
-  Edit3
-} from 'lucide-react';
+import { Type, Bold, Italic, Underline, Palette, AlignLeft, AlignCenter, AlignRight, Trash2, LineSquiggle, Brush, Filter, Play, RotateCcw, Edit3 } from 'lucide-react';
 import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { useEditorStore } from '../../store/editorStore';
 import { textEditManager } from '../../core/TextEditManager';
-import {
-  createDropShadowFilter,
-  createBlurFilter,
-  createGrayscaleFilter,
-  createSepiaFilter,
-  createEmbossFilter,
-  createGlowFilter,
-  createNeonGlowFilter,
-  formatSVGReference,
-  matchesFilterSignature
-} from '../../utils/svg-elements-utils';
+import { createDropShadowFilter, createBlurFilter, createGrayscaleFilter, createSepiaFilter, createEmbossFilter, createGlowFilter, createNeonGlowFilter, formatSVGReference, matchesFilterSignature } from '../../utils/svg-elements-utils';
 
 // Apply style to selected textpaths
 const applyTextPathStyle = (styleUpdate: any) => {

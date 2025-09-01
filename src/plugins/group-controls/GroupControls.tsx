@@ -2,20 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useSvgTextBBox } from '../../hooks/useSvgTextBBox';
 import { useEditorStore } from '../../store/editorStore';
 import { getTextBoundingBox, getImageBoundingBox } from '../../utils/bbox-utils';
-import { PluginButton } from '../../components/PluginButton';
-import { 
-  Group, 
-  Ungroup, 
-  Eye, 
-  EyeOff, 
-  Lock, 
-  Unlock, 
-  Trash2,
-  Plus,
-  Edit3,
-  Download,
-  ChevronDown
-} from 'lucide-react';
+import { Group, Ungroup, Eye, EyeOff, Lock, Unlock, Trash2, Plus, Edit3, Download, ChevronDown } from 'lucide-react';
 
 export const GroupControls: React.FC = () => {
   const {

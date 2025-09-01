@@ -1,28 +1,11 @@
-import { 
-  Copy, 
-  Trash2, 
-  Download, 
-  Layers, 
-  ArrowUp, 
-  ArrowDown, 
-  ChevronUp,
-  ChevronDown,
-  Lock, 
-  LockKeyhole,
-  Ungroup
-} from 'lucide-react';
+import { Copy, Trash2, Download, Layers, ArrowUp, ArrowDown, ChevronUp, ChevronDown, Lock, LockKeyhole, Ungroup } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicatePath } from '../../../utils/duplicate-utils';
 import { generateId } from '../../../utils/id-utils';
 import { duplicateSelected, deleteSelected } from './commonActions';
 import { createGenericArrangeActions } from '../../../utils/floating-arrange-actions';
-import { 
-  bringGroupsToFront as bringGroupsToFrontReorder,
-  sendGroupsToBack as sendGroupsToBackReorder,
-  sendGroupsForward as sendGroupsForwardReorder,
-  sendGroupsBackward as sendGroupsBackwardReorder
-} from '../../../utils/group-reorder-manager';
+import { bringGroupsToFront as bringGroupsToFrontReorder, sendGroupsToBack as sendGroupsToBackReorder, sendGroupsForward as sendGroupsForwardReorder, sendGroupsBackward as sendGroupsBackwardReorder } from '../../../utils/group-reorder-manager';
 import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';
 
 // Calculate group bounds

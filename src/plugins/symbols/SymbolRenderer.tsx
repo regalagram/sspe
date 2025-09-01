@@ -1,7 +1,6 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { useAnimationsForElement } from '../../components/AnimationRenderer';
-import { isGradientOrPattern } from '../../utils/gradient-utils';
 import { getAllElementsByZIndex } from '../../utils/z-index-manager';
 
 // Helper function to convert gradient/pattern objects to URL references

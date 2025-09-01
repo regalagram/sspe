@@ -3,7 +3,7 @@ import { EditorState, SVGCommand, Point, SVGSubPath } from '../types';
 import { generateId } from '../utils/id-utils.js';
 import { getCommandBoundingBox } from '../utils/bbox-utils';
 import { transformManager } from '../plugins/transform/TransformManager';
-import { getCommandPointPosition, getCommandPointsBounds, calculateCommandMoveDelta, isCommandArrangeable, getUniqueCommandPositions } from '../utils/command-point-utils';
+import { isCommandArrangeable, getUniqueCommandPositions } from '../utils/command-point-utils';
 
 export interface CommandActions {
   addCommand: (subPathId: string, command: Omit<SVGCommand, 'id'>) => string;

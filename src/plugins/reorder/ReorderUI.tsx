@@ -1,26 +1,9 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { 
-  ChevronUp,
-  ChevronDown,
-  ChevronsUp,
-  ChevronsDown
-} from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown } from 'lucide-react';
 import { reorderManager } from './ReorderManager';
-import { 
-  globalBringToFront,
-  globalSendToBack,
-  globalSendForward,
-  globalSendBackward,
-  initializeZIndexes
-} from '../../utils/z-index-manager';
-import {
-  bringGroupsToFront,
-  sendGroupsToBack,
-  sendGroupsForward,
-  sendGroupsBackward,
-  hasGroupSelection
-} from '../../utils/group-reorder-manager';
+import { globalBringToFront, globalSendToBack, globalSendForward, globalSendBackward, initializeZIndexes } from '../../utils/z-index-manager';
+import { bringGroupsToFront, sendGroupsToBack, sendGroupsForward, sendGroupsBackward } from '../../utils/group-reorder-manager';
 import { handleMixedSelectionReorder } from '../../utils/mixed-selection-reorder';
 
 interface ReorderUIProps {

@@ -1,13 +1,6 @@
 import { Point, BoundingBox } from '../../types';
 import { useEditorStore } from '../../store/editorStore';
-import { 
-  getPathBoundingBox, 
-  getTextBoundingBox, 
-  getImageBoundingBox, 
-  getGroupBoundingBox,
-  getBoundingBoxAlignmentPoints,
-  getSubPathBoundingBox
-} from '../../utils/bbox-utils';
+import { getPathBoundingBox, getTextBoundingBox, getImageBoundingBox, getSubPathBoundingBox } from '../../utils/bbox-utils';
 import { calculateTextBoundsDOM } from '../../utils/text-utils';
 
 export interface StickyConfig {

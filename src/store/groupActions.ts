@@ -7,7 +7,6 @@ import { SVGElementActions } from './svgElementActions';
 import { generateGroupSVG, downloadGroupSVG } from '../utils/group-svg-utils';
 import { duplicatePath } from '../utils/duplicate-utils';
 import { calculateSmartDuplicationOffset } from '../utils/duplication-positioning';
-import { createImmutableAction, TransactionalStateManager } from '../core/ImmutableStore';
 import { produce, Draft } from 'immer';
 
 export interface GroupActions {

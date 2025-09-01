@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { EditorState, PathStyle, SVGUse } from '../types';
+import { EditorState, PathStyle } from '../types';
 
 export interface UseFormatCopyState {
   isActive: boolean;

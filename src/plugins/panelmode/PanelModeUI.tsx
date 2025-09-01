@@ -1,9 +1,6 @@
 import React from 'react';
 import { usePanelModeStore } from './PanelManager';
-import { 
-  Eye, 
-  EyeOff, 
-} from 'lucide-react';
+import { Eye, EyeOff, } from 'lucide-react';
 
 export const PanelModeUI: React.FC = () => {
   const { 

@@ -1,14 +1,6 @@
 import { Plugin } from '../../core/PluginSystem';
 import { SelectionPlugin as BaseSelectionPlugin } from './Selection';
-import { 
-  subPathFloatingActionDefinition,
-  pathFloatingActionDefinition, 
-  groupFloatingActionDefinition,
-  mixedSelectionFloatingActionDefinition,
-  imageFloatingActionDefinition,
-  symbolFloatingActionDefinition,
-  textFloatingActionDefinition
-} from './ModularFloatingActions';
+import { subPathFloatingActionDefinition, pathFloatingActionDefinition, groupFloatingActionDefinition, mixedSelectionFloatingActionDefinition, imageFloatingActionDefinition, symbolFloatingActionDefinition, textFloatingActionDefinition } from './ModularFloatingActions';
 
 // Extend the base selection plugin with floating actions
 export const SelectionPlugin: Plugin = {

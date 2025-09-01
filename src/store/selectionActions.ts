@@ -1,7 +1,7 @@
 import { StateCreator } from 'zustand';
 import { EditorState, Point } from '../types';
 import { findSubPathAtPoint } from '../utils/path-utils';
-import { calculateTextBounds, calculateTextBoundsDOM } from '../utils/text-utils';
+import { calculateTextBoundsDOM } from '../utils/text-utils';
 import { transformManager } from '../plugins/transform/TransformManager';
 
 // Utility function to check if all elements of a group are selected

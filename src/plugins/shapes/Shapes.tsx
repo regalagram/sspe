@@ -2,6 +2,7 @@ import { Plugin } from '../../core/PluginSystem';
 import { shapeManager, shapePointerHandlers } from './ShapeManager';
 import { ShapesUI } from './ShapesUI';
 import { ShapePreview } from '../../components/ShapePreview';
+
 export const ShapesPlugin: Plugin = {
   id: 'shapes',
   name: 'Shapes',

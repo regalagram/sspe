@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Palette, PaintBucket, Brush, ChevronDown, Zap, Grid3X3 } from 'lucide-react';
-import { ToolbarButton, ToolbarSection } from './ToolbarButton';
+import { Palette, Grid3X3 } from 'lucide-react';
+import { ToolbarSection } from './ToolbarButton';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useEditorStore } from '../store/editorStore';
 import { createLinearGradient, createRadialGradient, createGradientStop } from '../utils/gradient-utils';

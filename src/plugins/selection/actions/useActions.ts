@@ -1,16 +1,4 @@
-import { 
-  Copy, 
-  Trash2, 
-  Lock, 
-  Group, 
-  Palette, 
-  Brush, 
-  LineSquiggle, 
-  Filter, 
-  Play, 
-  PaintBucket, 
-  RotateCcw
-} from 'lucide-react';
+import { Copy, Trash2, Lock, Group, Palette, Brush, LineSquiggle, Filter, Play, PaintBucket, RotateCcw } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected, getSelectedElementsBounds } from './commonActions';
@@ -18,18 +6,7 @@ import { createGenericArrangeActions } from '../../../utils/floating-arrange-act
 import { createReorderActions, createElementReorderFunctions } from '../../../utils/floating-reorder-actions';
 import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';
 import { deepEqual } from '../../../utils/comparison-utils';
-import {
-  createDropShadowFilter,
-  createBlurFilter,
-  createGrayscaleFilter,
-  createSepiaFilter,
-  createEmbossFilter,
-  createGlowFilter,
-  createNeonGlowFilter,
-  formatSVGReference,
-  matchesFilterSignature
-} from '../../../utils/svg-elements-utils';
-
+import { createDropShadowFilter, createBlurFilter, createGrayscaleFilter, createSepiaFilter, createEmbossFilter, createGlowFilter, createNeonGlowFilter, formatSVGReference, matchesFilterSignature } from '../../../utils/svg-elements-utils';
 // Color functions
 const getCommonUseFillColor = (): string | any => {
   const store = useEditorStore.getState();

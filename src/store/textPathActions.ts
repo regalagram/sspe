@@ -1,7 +1,7 @@
 import { StateCreator } from 'zustand';
 import { EditorState, SVGTextPath, TextStyle, Point } from '../types';
 import { generateId } from '../utils/id-utils';
-import { clearAllSelectionsExcept, notifyTransformManager, completeSelectionUpdate } from './selectionActions';
+import { clearAllSelectionsExcept, completeSelectionUpdate } from './selectionActions';
 
 export interface TextPathActions {
   // Basic CRUD operations

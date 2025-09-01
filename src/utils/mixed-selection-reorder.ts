@@ -1,18 +1,7 @@
 import { useEditorStore } from '../store/editorStore';
 import { reorderManager } from '../plugins/reorder/ReorderManager';
-import { 
-  bringElementsToFront,
-  sendElementsToBack,
-  sendElementsForward,
-  sendElementsBackward,
-  initializeZIndexes
-} from './z-index-manager';
-import {
-  bringGroupsToFront,
-  sendGroupsToBack,
-  sendGroupsForward,
-  sendGroupsBackward
-} from './group-reorder-manager';
+import { bringElementsToFront, sendElementsToBack, sendElementsForward, sendElementsBackward, initializeZIndexes } from './z-index-manager';
+import { bringGroupsToFront, sendGroupsToBack, sendGroupsForward, sendGroupsBackward } from './group-reorder-manager';
 
 /**
  * Handle mixed selection reordering including subpaths

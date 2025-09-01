@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Square, Circle, Triangle, Star, Diamond, Hexagon, ChevronDown, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Heart, Cloud, Dot, X } from 'lucide-react';
-import { ToolbarButton, ToolbarSection } from './ToolbarButton';
+import { ToolbarSection } from './ToolbarButton';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
-import { useEditorStore } from '../store/editorStore';
 import { toolModeManager } from '../core/ToolModeManager';
 import { shapeManager } from '../plugins/shapes/ShapeManager';
 import { SHAPE_TEMPLATES } from '../plugins/shapes/ShapeDefinitions';

@@ -1,14 +1,4 @@
-import { 
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  AlignVerticalJustifyStart,
-  AlignVerticalJustifyCenter,
-  AlignVerticalJustifyEnd,
-  ArrowLeftRight,
-  ArrowUpDown,
-  LayoutGrid
-} from 'lucide-react';
+import { AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, ArrowLeftRight, ArrowUpDown, LayoutGrid } from 'lucide-react';
 import { ToolbarAction } from '../types/floatingToolbar';
 import { useEditorStore } from '../store/editorStore';
 import { arrangeManager } from '../plugins/arrange/ArrangeManager';

@@ -1,4 +1,4 @@
-import { Copy, Trash2, RotateCcw } from 'lucide-react';
+import { Copy, Trash2 } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { BoundingBox } from '../../../types';

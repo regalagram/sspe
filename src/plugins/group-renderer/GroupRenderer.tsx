@@ -1,6 +1,6 @@
 import React from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { SVGGroup, SVGGroupChild, GroupLockLevel } from '../../types';
+import { SVGGroup, SVGGroupChild } from '../../types';
 import { useAnimationsForElement } from '../../components/AnimationRenderer';
 import { calculateTextBoundsDOM } from '../../utils/text-utils';
 import { calculateGlobalViewBox } from '../../utils/viewbox-utils';

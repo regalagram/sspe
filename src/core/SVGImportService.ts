@@ -6,7 +6,7 @@
 
 import { SVGSanitizer, SVGValidationResult, SVGSanitizationConfig } from './SVGSanitizer';
 import { generateId } from '../utils/id-utils';
-import { SVGPath, EditorState, TextElement, SVGGroup } from '../types';
+import { SVGPath, TextElement, SVGGroup } from '../types';
 
 export interface SVGImportOptions {
   sanitizationConfig?: Partial<SVGSanitizationConfig>;

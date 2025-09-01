@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { TextElementType, TextStyle } from '../../types';
+import { TextStyle } from '../../types';
 import { PluginButton } from '../../components/PluginButton';
-import { Type, Plus, Copy, Trash2, AlignLeft, AlignCenter, AlignRight, Bold, Italic } from 'lucide-react';
-import { isGradientOrPattern, getStyleValue } from '../../utils/gradient-utils';
+import { Type, Copy, Trash2, AlignLeft, AlignCenter, AlignRight, Bold, Italic } from 'lucide-react';
+import { isGradientOrPattern } from '../../utils/gradient-utils';
 import { convertRgbToHex } from '../../utils/color-utils';
 import { textEditManager } from '../../core/TextEditManager';
 

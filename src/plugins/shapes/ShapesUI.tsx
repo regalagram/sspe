@@ -4,24 +4,7 @@ import { SHAPE_TEMPLATES, ShapeTemplate } from './ShapeDefinitions';
 import { shapeManager } from './ShapeManager';
 import { toolModeManager } from '../../core/ToolModeManager';
 import { useEditorStore } from '../../store/editorStore';
-import { 
-  Square, 
-  Circle, 
-  Triangle, 
-  Diamond, 
-  Hexagon, 
-  Star, 
-  ArrowRight, 
-  ArrowLeft,
-  ArrowUp,
-  ArrowDown,
-  Heart,
-  Cloud,
-  CheckSquare,
-  LogOut,
-  Plus,
-  Dot
-} from 'lucide-react';
+import { Square, Circle, Triangle, Diamond, Hexagon, Star, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Heart, Cloud, CheckSquare, LogOut, Plus, Dot } from 'lucide-react';
 
 // Icon mapping for Lucide icons
 const iconMap: Record<string, React.ComponentType<{size?: number}>> = {

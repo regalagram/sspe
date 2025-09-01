@@ -1,5 +1,4 @@
 import { Plugin } from '../../core/PluginSystem';
-import { useEditorStore } from '../../store/editorStore';
 import { pencilManager } from './PencilManager';
 import { PencilUI } from './PencilUI';
 import { PencilRenderer } from './PencilRenderer';

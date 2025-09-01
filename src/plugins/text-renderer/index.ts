@@ -2,7 +2,6 @@ import React from 'react';
 import { Plugin, PointerEventContext } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { getSVGPoint } from '../../utils/transform-utils';
-import { getCommandPosition } from '../../utils/path-utils';
 import { transformManager } from '../transform/TransformManager';
 import { captureAllSelectedElementsPositions, moveAllCapturedElementsByDelta, DraggedElementsData } from '../../utils/drag-utils';
 

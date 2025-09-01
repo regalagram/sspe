@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Plus, Move, Minus, Pen, X, ChevronDown, MousePointerClick, Spline } from 'lucide-react';
-import { MobileToolbarButton, MobileToolbarSection } from '../../components/ToolbarButton';
+import React from 'react';
+import { Plus, Move, Minus, X, MousePointerClick, Spline } from 'lucide-react';
+import { MobileToolbarSection } from '../../components/ToolbarButton';
 import { MobileToolbarSubmenu, MobileSubmenuItem } from '../../components/ToolbarSubmenu';
 import { useEditorStore } from '../../store/editorStore';
 import { useMobileToolbarStore } from '../../store/toolbarStore';

@@ -3,7 +3,7 @@ import { UIComponentDefinition } from '../core/PluginSystem';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { BottomSheet } from './BottomSheet';
 import { MobilePluginMenu } from './MobilePluginMenu';
-import { Toolbar, MobileFloatingButton } from './Toolbar';
+import { Toolbar } from './Toolbar';
 
 interface MobileContainerProps {
   sidebarPlugins: UIComponentDefinition[];

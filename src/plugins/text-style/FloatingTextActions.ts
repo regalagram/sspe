@@ -1,36 +1,9 @@
-import { 
-  Type, 
-  Bold, 
-  Italic, 
-  Underline,
-  Palette, 
-  AlignLeft, 
-  AlignCenter, 
-  AlignRight, 
-  Copy, 
-  Trash2,
-  LineSquiggle,
-  Brush,
-  Filter,
-  Play,
-  RotateCcw,
-  Lock
-} from 'lucide-react';
+import { Type, Bold, Italic, Underline, Palette, AlignLeft, AlignCenter, AlignRight, Copy, Trash2, LineSquiggle, Brush, Filter, Play, RotateCcw, Lock } from 'lucide-react';
 import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { useEditorStore } from '../../store/editorStore';
 import { calculateSmartDuplicationOffset, getUnifiedSelectionBounds } from '../../utils/duplication-positioning';
 import { generateId } from '../../utils/id-utils';
-import {
-  createDropShadowFilter,
-  createBlurFilter,
-  createGrayscaleFilter,
-  createSepiaFilter,
-  createEmbossFilter,
-  createGlowFilter,
-  createNeonGlowFilter,
-  formatSVGReference,
-  matchesFilterSignature
-} from '../../utils/svg-elements-utils';
+import { createDropShadowFilter, createBlurFilter, createGrayscaleFilter, createSepiaFilter, createEmbossFilter, createGlowFilter, createNeonGlowFilter, formatSVGReference, matchesFilterSignature } from '../../utils/svg-elements-utils';
 
 // Get current text styles for selected texts
 const getCurrentTextStyles = () => {

@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { PluginButton } from '../../components/PluginButton';
 import { Move, RotateCw, Maximize2, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Waves, Minimize2, FlipHorizontal, FlipVertical } from 'lucide-react';
-import { 
-  areCommandsInSameSubPath
-} from '../../utils/path-simplification-utils';
+import { areCommandsInSameSubPath } from '../../utils/path-simplification-utils';
 import { subPathTransformManager } from './SubPathTransformManager';
 
 // Custom hook for persistent state in localStorage

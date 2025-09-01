@@ -9,7 +9,7 @@ import { transformManager } from '../transform/TransformManager';
 import { handleManager } from '../handles/HandleManager';
 import { stickyManager } from '../sticky-guidelines/StickyManager';
 import { stickyPointsManager } from './StickyPointsManager';
-import { ElementType, SelectionContext, isElementSelected, hasMultiSelection, shouldPreserveSelection, logSelectionDebug } from '../../utils/selection-utils';
+import { ElementType, SelectionContext, isElementSelected, shouldPreserveSelection, logSelectionDebug } from '../../utils/selection-utils';
 import { applyFinalSnapToGrid } from '../../utils/final-snap-utils';
 import { isGestureBlocked } from '../gestures/Gestures';
 import { toolModeManager } from '../../core/ToolModeManager';

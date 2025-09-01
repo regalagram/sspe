@@ -1,6 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Check, X } from 'lucide-react';
-import { useEditorStore } from '../store/editorStore';
 
 interface MobileTextEditModalProps {
   textId: string;

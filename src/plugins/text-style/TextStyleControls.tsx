@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { PluginButton } from '../../components/PluginButton';
-import { Type, Palette, Circle } from 'lucide-react';
+import { Circle } from 'lucide-react';
 import { TextElementType, GradientOrPattern, LinearGradient, RadialGradient, Pattern } from '../../types';
-import { getStyleValue, extractGradientsFromPaths } from '../../utils/gradient-utils';
+import { extractGradientsFromPaths } from '../../utils/gradient-utils';
 import { parseColorWithOpacity } from '../../utils/color-utils';
 
 interface TextStyleControlsProps {

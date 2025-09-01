@@ -1,7 +1,6 @@
 import { Plugin } from '../../core/PluginSystem';
 import { SymbolControls } from './SymbolControls';
 import { symbolManager } from './SymbolManager';
-import { useEditorStore } from '../../store/editorStore';
 
 export const SymbolPlugin: Plugin = {
   id: 'symbols',

@@ -1,18 +1,10 @@
 import { Plugin } from '../../core/PluginSystem';
-import { 
-  FloatingActionDefinition, 
-  ToolbarAction 
-} from '../../types/floatingToolbar';
+import { FloatingActionDefinition, ToolbarAction } from '../../types/floatingToolbar';
 import { SVGCommand } from '../../types';
 import { useEditorStore } from '../../store/editorStore';
 import { getUniqueCommandPositions, isCommandArrangeable } from '../../utils/command-point-utils';
 import { createCommandArrangeActions } from '../../utils/floating-arrange-actions';
-import { 
-  Trash2,
-  Grid3X3,
-  Spline,
-  Minus
-} from 'lucide-react';
+import { Trash2, Grid3X3, Spline, Minus } from 'lucide-react';
 
 // Helper functions for conditional visibility
 const getSelectedCommandsWithContext = () => {
