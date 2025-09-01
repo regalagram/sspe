@@ -21,6 +21,7 @@ import { PencilFloatingToolbar, CurveFloatingToolbar, ShapeFloatingToolbar, Text
 import { MobileTextEditModal } from '../components/MobileTextEditModal';
 import { useMobileTextEdit } from '../hooks/useMobileTextEdit';
 import { extractGradientsFromPaths, extractGradientsFromImages, extractGradientsFromTexts, extractGradientsFromTextPaths } from '../utils/gradient-utils';
+import { ZundoDebugPanel } from '../components/ZundoDebugPanel';
 
 // Register plugins immediately during module loading
 
@@ -366,6 +367,9 @@ export const SvgEditor: React.FC = () => {
       
       {/* Render sidebar as accordion */}
       {accordionVisible && <AccordionSidebar plugins={allPanels} />}
+      
+      {/* Zundo Debug Panel - only in development */}
+      <ZundoDebugPanel />
     </div>
   );
 };

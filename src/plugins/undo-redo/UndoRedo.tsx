@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
+import { useEditorHistory } from '../../store/useEditorHistory';
 import { Undo2, Redo2 } from 'lucide-react';
 import { PluginButton } from '../../components/PluginButton';
 
@@ -40,13 +41,13 @@ export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({
 };
 
 export const UndoRedoComponent: React.FC = () => {
-  const { history, undo, redo } = useEditorStore();
+  const { canUndo, canRedo, undo, redo } = useEditorHistory();
   
   return (
     <div>
       <UndoRedoControls
-        canUndo={history.canUndo}
-        canRedo={history.canRedo}
+        canUndo={canUndo}
+        canRedo={canRedo}
         onUndo={undo}
         onRedo={redo}
       />

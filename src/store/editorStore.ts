@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { temporal } from 'zundo';
 import { EditorState } from '../types';
 import { saveEditorState, loadEditorState, debounce } from '../utils/persistence';
+import { calculateStateDiff, getCurrentDiffConfig } from './diffConfig';
 
 // Import action creators
 import { ViewportActions, createViewportActions } from './viewportActions';
@@ -518,28 +520,85 @@ const loadInitialState = (): EditorState => {
 const initialState = loadInitialState();
 
 export const useEditorStore = create<EditorState & EditorActions>()(
-  subscribeWithSelector((set, get, api) => ({
-    ...initialState,
-    ...createViewportActions(set, get, api),
-    ...createSelectionActions(set, get, api),
-    ...createPathActions(set, get, api),
-    ...createCommandActions(set, get, api),
-    ...createUIStateActions(set, get, api),
-    ...createHistoryActions(set, get, api),
-    ...createTransformActions(set, get, api),
-    ...createTextActions(set, get, api),
-    ...createTextPathActions(set, get, api),
-    ...createGradientActions(set, get, api),
-    ...createGroupActions(set, get, api),
-    ...createSVGElementActions(set, get, api),
-    ...createAnimationActions(set, get),
-    ...createFormatCopyActions(set, get, api),
-    ...createTextFormatCopyActions(set, get, api),
-    ...createImageFormatCopyActions(set, get, api),
-    ...createUseFormatCopyActions(set, get, api),
-    ...createDeepSelectionActions(set, get, api),
-    ...createToolSettingsActions(set, get, api),
-  }))
+  temporal(
+    subscribeWithSelector((set, get, api) => ({
+      ...initialState,
+      ...createViewportActions(set, get, api),
+      ...createSelectionActions(set, get, api),
+      ...createPathActions(set, get, api),
+      ...createCommandActions(set, get, api),
+      ...createUIStateActions(set, get, api),
+      ...createHistoryActions(set, get, api),
+      ...createTransformActions(set, get, api),
+      ...createTextActions(set, get, api),
+      ...createTextPathActions(set, get, api),
+      ...createGradientActions(set, get, api),
+      ...createGroupActions(set, get, api),
+      ...createSVGElementActions(set, get, api),
+      ...createAnimationActions(set, get),
+      ...createFormatCopyActions(set, get, api),
+      ...createTextFormatCopyActions(set, get, api),
+      ...createImageFormatCopyActions(set, get, api),
+      ...createUseFormatCopyActions(set, get, api),
+      ...createDeepSelectionActions(set, get, api),
+      ...createToolSettingsActions(set, get, api),
+    })),
+    {
+      // Zundo configuration
+      limit: 50, // Maintain current limit
+      
+      // Exclude non-essential fields from history tracking
+      partialize: (state) => {
+        const { 
+          history, 
+          renderVersion, 
+          floatingToolbarUpdateTimestamp,
+          deepSelection,
+          isSpecialPointSeparationAnimating,
+          ...historicalState 
+        } = state;
+        return historicalState;
+      },
+      
+      // Para optimización real de memoria, usaremos la estrategia 'partialize' 
+      // en lugar de 'diff' para excluir campos innecesarios
+      // La función diff de Zundo no está diseñada para almacenar estados parciales
+      // diff: undefined, // Removemos la función diff problemática
+      
+      // Cool-off period to prevent excessive history entries during rapid changes
+      handleSet: (handleSet) => {
+        // Debounce with 300ms delay for smooth interactions
+        let timeoutId: NodeJS.Timeout | null = null;
+        return (partial, replace) => {
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+          timeoutId = setTimeout(() => {
+            handleSet(partial, replace);
+            timeoutId = null;
+          }, 300);
+        };
+      },
+      
+      // Prevent unchanged states from being stored
+      equality: (pastState, currentState) => {
+        // Simple deep comparison for most cases
+        return JSON.stringify(pastState) === JSON.stringify(currentState);
+      },
+      
+      // Callback for debugging/monitoring
+      onSave: (pastState, currentState) => {
+        if (process.env.NODE_ENV === 'development') {
+          const diffConfig = getCurrentDiffConfig();
+          console.log(`💾 Zundo State Saved (${diffConfig.mode} mode)`, { 
+            mode: diffConfig.mode,
+            pastState, 
+            currentState 
+          });
+        }
+      }
+    }
+  )
 );
 
 // Auto-save functionality
