@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useHistoryDebug } from '../store/useEditorHistory';
-import { useHistoryPerformanceMonitor, useHistoryOptimizationTips } from '../store/useHistoryPerformance';
+import { useHistoryPerformanceMonitor, useHistoryOptimizationTips, setPerformanceLogging, isPerformanceLoggingEnabled, generatePerformanceReport } from '../store/useHistoryPerformance';
 import { useHistoryDebugActions } from '../store/useHistoryDebugActions';
 import { useDiffConfig } from '../store/diffConfig';
 import { useZundoDebugVisibility } from '../store/useZundoDebugVisibility';
+import { useMemoryInfo } from '../hooks/useMemoryInfo';
+import { useEditorStore } from '../store/editorStore';
 
 interface Position {
   x: number;
@@ -11,6 +13,15 @@ interface Position {
 }
 
 export const ZundoDebugPanel: React.FC = () => {
+  // Función auxiliar para formatear bytes
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return (bytes / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i];
+  };
+
   // TODOS LOS HOOKS DEBEN IR AL INICIO DEL COMPONENTE
   const { 
     pastStatesCount, 
@@ -26,7 +37,21 @@ export const ZundoDebugPanel: React.FC = () => {
   const { clearHistory, toggleTracking, forceHistoryEntry, simulateHeavyOperation, inspectDiffMode } = useHistoryDebugActions();
   const { config: diffConfig, toggleDiffMode } = useDiffConfig();
   const { visible } = useZundoDebugVisibility();
+  const { memoryInfo, forceGarbageCollection, updateMemoryInfo, getDetailedMemoryAnalysis } = useMemoryInfo();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [performanceLogsEnabled, setPerformanceLogsEnabled] = useState(isPerformanceLoggingEnabled());
+
+  // Función para manejar el toggle de performance logs
+  const handleTogglePerformanceLogs = () => {
+    const newState = !performanceLogsEnabled;
+    setPerformanceLogsEnabled(newState);
+    setPerformanceLogging(newState);
+  };
+
+  // Función para generar reporte manual de performance
+  const handleManualPerformanceReport = () => {
+    generatePerformanceReport(pastStates, futureStates, useEditorStore.getState());
+  };
 
   // Estados para hacer el panel movible
   const [position, setPosition] = useState<Position>({ x: 20, y: 20 });
@@ -239,9 +264,69 @@ export const ZundoDebugPanel: React.FC = () => {
         )}
       </div>
 
+      {/* Performance Logs Configuration */}
+      <div style={{ marginBottom: '12px' }}>
+        <div style={{ color: '#d1d5db', marginBottom: '4px' }}>🔍 Performance Logs</div>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px',
+          fontSize: '10px'
+        }}>
+          <span style={{ color: '#9ca3af' }}>Console:</span>
+          <button 
+            onClick={handleTogglePerformanceLogs}
+            style={{
+              background: performanceLogsEnabled 
+                ? 'rgba(239, 68, 68, 0.2)' 
+                : 'rgba(75, 85, 99, 0.2)',
+              border: `1px solid ${performanceLogsEnabled ? '#ef4444' : '#6b7280'}`,
+              color: performanceLogsEnabled ? '#f87171' : '#9ca3af',
+              cursor: 'pointer',
+              fontSize: '9px',
+              padding: '2px 6px',
+              borderRadius: '3px',
+              fontWeight: 'bold'
+            }}
+          >
+            {performanceLogsEnabled ? 'ON' : 'OFF'}
+          </button>
+          <span style={{ 
+            color: '#6b7280', 
+            fontSize: '8px',
+            maxWidth: '180px'
+          }}>
+            {performanceLogsEnabled 
+              ? '🔊 Performance warnings in console' 
+              : '🔇 Performance logs silenced'}
+          </span>
+        </div>
+        
+        {/* Performance logs info when expanded */}
+        {isExpanded && (
+          <div style={{
+            marginTop: '6px',
+            padding: '6px',
+            background: 'rgba(75, 85, 99, 0.3)',
+            borderRadius: '4px',
+            fontSize: '8px',
+            color: '#9ca3af'
+          }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '3px', color: '#d1d5db' }}>
+              🎛️ Console Logging:
+            </div>
+            <div>• <span style={{ color: '#f87171' }}>ON</span>: Performance warnings printed to console</div>
+            <div>• <span style={{ color: '#9ca3af' }}>OFF</span>: Silent mode, only visual indicators</div>
+            <div style={{ marginTop: '4px', color: '#fbbf24' }}>
+              💡 Reports still available via button clicks
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Memoria */}
       <div style={{ marginBottom: '12px' }}>
-        <div style={{ color: '#d1d5db', marginBottom: '4px' }}>💾 Memoria</div>
+        <div style={{ color: '#d1d5db', marginBottom: '4px' }}>💾 Memoria Zundo</div>
         <div style={{ fontSize: '10px' }}>
           <div>Total: <span style={{ color: memoryColor, fontWeight: 'bold' }}>
             {memory.formatted.totalHistorySize}
@@ -284,6 +369,259 @@ export const ZundoDebugPanel: React.FC = () => {
         </div>
       </div>
 
+      {/* Memoria del Sistema */}
+      <div style={{ marginBottom: '12px' }}>
+        <div style={{ 
+          color: '#d1d5db', 
+          marginBottom: '4px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <span>🖥️ Memoria Sistema</span>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            {memoryInfo.available && (
+              <button
+                onClick={() => {
+                  const success = forceGarbageCollection();
+                  if (!success) {
+                    console.warn('Garbage Collection no está disponible. Para habilitarlo en Chrome, inicia con --js-flags="--expose-gc"');
+                  }
+                }}
+                style={{
+                  background: 'rgba(34, 197, 94, 0.2)',
+                  border: '1px solid #22c55e',
+                  color: '#4ade80',
+                  cursor: 'pointer',
+                  fontSize: '8px',
+                  padding: '2px 6px',
+                  borderRadius: '3px',
+                  fontWeight: 'bold'
+                }}
+                title="Forzar Garbage Collection (requiere Chrome con --js-flags='--expose-gc')"
+              >
+                🗑️ GC
+              </button>
+            )}
+            <button
+              onClick={getDetailedMemoryAnalysis}
+              style={{
+                background: 'rgba(139, 92, 246, 0.2)',
+                border: '1px solid #8b5cf6',
+                color: '#a78bfa',
+                cursor: 'pointer',
+                fontSize: '8px',
+                padding: '2px 6px',
+                borderRadius: '3px',
+                fontWeight: 'bold'
+              }}
+              title="Análisis detallado en consola"
+            >
+              🔍 Analizar
+            </button>
+          </div>
+        </div>
+        
+        {memoryInfo.available ? (
+          <>
+            <div style={{ fontSize: '10px' }}>
+              <div>JS Heap: <span style={{ 
+                color: memoryInfo.percentage > 80 ? '#ef4444' : 
+                       memoryInfo.percentage > 60 ? '#fbbf24' : '#4ade80',
+                fontWeight: 'bold' 
+              }}>
+                {memoryInfo.formatted.used}
+              </span></div>
+              <div>Total Heap: <span style={{ color: '#60a5fa' }}>
+                {memoryInfo.formatted.total}
+              </span></div>
+              <div>Límite: <span style={{ color: '#a78bfa' }}>
+                {memoryInfo.formatted.limit}
+              </span></div>
+              {isExpanded && (
+                <div style={{ 
+                  fontSize: '9px', 
+                  color: '#9ca3af', 
+                  marginTop: '4px',
+                  fontStyle: 'italic'
+                }}>
+                  ⚠️ Chrome muestra ~{Math.round(memoryInfo.usedJSHeapSize! * 3.5 / 1024 / 1024)}MB total
+                  <br />
+                  (incluye DOM, cache, overhead)
+                </div>
+              )}
+            </div>
+            
+            {/* Barra de progreso de memoria del sistema */}
+            <div style={{ 
+              marginTop: '6px',
+              background: '#374151',
+              height: '6px',
+              borderRadius: '3px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                width: `${Math.min(memoryInfo.percentage, 100)}%`,
+                height: '100%',
+                background: memoryInfo.percentage > 80 ? '#ef4444' : 
+                           memoryInfo.percentage > 60 ? '#fbbf24' : '#4ade80',
+                transition: 'all 0.3s ease'
+              }} />
+            </div>
+            <div style={{ 
+              fontSize: '9px', 
+              color: '#9ca3af', 
+              marginTop: '2px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span>{memoryInfo.percentage.toFixed(1)}% del límite total</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{
+                  color: memoryInfo.trend.trend === 'increasing' ? '#ef4444' :
+                         memoryInfo.trend.trend === 'decreasing' ? '#4ade80' : '#9ca3af'
+                }}>
+                  {memoryInfo.trend.trend === 'increasing' ? '↗️' :
+                   memoryInfo.trend.trend === 'decreasing' ? '↘️' : '➡️'}
+                </span>
+                <span style={{ fontSize: '8px', fontStyle: 'italic' }}>
+                  actualiza cada 3s
+                </span>
+              </div>
+            </div>
+            
+            {/* Desglose detallado */}
+            {isExpanded && (
+              <div style={{
+                marginTop: '8px',
+                padding: '6px',
+                background: 'rgba(75, 85, 99, 0.3)',
+                borderRadius: '4px',
+                fontSize: '9px'
+              }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#d1d5db' }}>
+                  📊 Desglose de Memoria:
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+                  <div>
+                    <div style={{ color: '#fbbf24' }}>🏗️ DOM:</div>
+                    <div style={{ color: '#9ca3af', fontSize: '8px', paddingLeft: '8px' }}>
+                      Nodos: {memoryInfo.breakdown.domNodes.toLocaleString()}
+                    </div>
+                    <div style={{ color: '#9ca3af', fontSize: '8px', paddingLeft: '8px' }}>
+                      Est. Tamaño: {memoryInfo.formatted.domSize}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#34d399' }}>⚡ Eventos:</div>
+                    <div style={{ color: '#9ca3af', fontSize: '8px', paddingLeft: '8px' }}>
+                      Listeners: {memoryInfo.breakdown.jsEventListeners}
+                    </div>
+                    <div style={{ color: '#9ca3af', fontSize: '8px', paddingLeft: '8px' }}>
+                      Est. Tamaño: {memoryInfo.formatted.listenersSize}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#60a5fa' }}>📄 Docs:</div>
+                    <div style={{ color: '#9ca3af', fontSize: '8px', paddingLeft: '8px' }}>
+                      Documentos: {memoryInfo.breakdown.documents}
+                    </div>
+                    <div style={{ color: '#9ca3af', fontSize: '8px', paddingLeft: '8px' }}>
+                      Frames: {memoryInfo.breakdown.frames}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ color: '#a78bfa' }}>📈 Tendencia:</div>
+                    <div style={{ color: '#9ca3af', fontSize: '8px', paddingLeft: '8px' }}>
+                      {memoryInfo.trend.growthRate > 0 ? '+' : ''}{formatBytes(Math.abs(memoryInfo.trend.growthRate))}/s
+                    </div>
+                    <div style={{ 
+                      color: memoryInfo.trend.trend === 'increasing' ? '#ef4444' :
+                             memoryInfo.trend.trend === 'decreasing' ? '#4ade80' : '#9ca3af',
+                      fontSize: '8px', 
+                      paddingLeft: '8px',
+                      textTransform: 'capitalize'
+                    }}>
+                      {memoryInfo.trend.trend === 'increasing' ? 'Creciendo' :
+                       memoryInfo.trend.trend === 'decreasing' ? 'Decreciendo' : 'Estable'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Recomendaciones de memoria */}
+            {memoryInfo.recommendations.length > 0 && (
+              <div style={{
+                marginTop: '6px',
+                padding: '4px',
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid #3b82f6',
+                borderRadius: '3px',
+                fontSize: '8px',
+                color: '#93c5fd'
+              }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>💡 Recomendaciones:</div>
+                {memoryInfo.recommendations.slice(0, isExpanded ? undefined : 2).map((rec, index) => (
+                  <div key={index} style={{ marginBottom: '1px' }}>• {rec}</div>
+                ))}
+                {!isExpanded && memoryInfo.recommendations.length > 2 && (
+                  <div style={{ fontStyle: 'italic', color: '#6b7280' }}>
+                    ... y {memoryInfo.recommendations.length - 2} más (expandir para ver)
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Advertencia de memoria alta */}
+            {memoryInfo.percentage > 85 && (
+              <div style={{
+                marginTop: '4px',
+                padding: '4px',
+                background: 'rgba(239, 68, 68, 0.15)',
+                border: '1px solid #ef4444',
+                borderRadius: '3px',
+                fontSize: '8px',
+                color: '#fecaca',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}>
+                <span>⚠️</span>
+                <span>Memoria del sistema alta. Considera ejecutar GC.</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={{ 
+            fontSize: '9px', 
+            color: '#6b7280',
+            fontStyle: 'italic'
+          }}>
+            <div>Información JS no disponible en este navegador</div>
+            <div style={{ fontSize: '8px', marginTop: '4px' }}>
+              (Solo Chrome/Edge con performance.memory)
+            </div>
+            
+            {/* Mostrar información básica disponible */}
+            <div style={{
+              marginTop: '6px',
+              padding: '4px',
+              background: 'rgba(75, 85, 99, 0.3)',
+              borderRadius: '3px'
+            }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '2px', color: '#d1d5db' }}>
+                📊 Info Disponible:
+              </div>
+              <div>DOM Nodes: {memoryInfo.breakdown.domNodes}</div>
+              <div>Event Listeners: {memoryInfo.breakdown.jsEventListeners}</div>
+              <div>Est. DOM Size: {memoryInfo.formatted.domSize}</div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Controles de Debug */}
       {isExpanded && (
         <div style={{ marginBottom: '12px' }}>
@@ -303,6 +641,42 @@ export const ZundoDebugPanel: React.FC = () => {
             </button>
             <button onClick={inspectDiffMode} style={buttonStyle}>
               Inspect Diff
+            </button>
+            <button 
+              onClick={handleManualPerformanceReport}
+              style={{
+                ...buttonStyle,
+                background: 'rgba(147, 51, 234, 0.2)',
+                border: '1px solid #8b5cf6',
+                color: '#a78bfa'
+              }}
+              title="Generar reporte de performance en consola (siempre activo)"
+            >
+              Performance Report
+            </button>
+            <button 
+              onClick={updateMemoryInfo} 
+              style={{
+                ...buttonStyle,
+                background: 'rgba(34, 197, 94, 0.2)',
+                border: '1px solid #22c55e',
+                color: '#4ade80'
+              }}
+              title="Actualizar información de memoria del sistema"
+            >
+              Refresh Memory
+            </button>
+            <button 
+              onClick={getDetailedMemoryAnalysis} 
+              style={{
+                ...buttonStyle,
+                background: 'rgba(139, 92, 246, 0.2)',
+                border: '1px solid #8b5cf6',
+                color: '#a78bfa'
+              }}
+              title="Análisis completo de memoria en consola"
+            >
+              Deep Analysis
             </button>
           </div>
         </div>

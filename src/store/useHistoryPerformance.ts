@@ -3,6 +3,15 @@ import { useHistoryDebug } from './useEditorHistory';
 import { getCurrentDiffConfig } from './diffConfig';
 import { useEditorStore } from './editorStore';
 
+// Estado global para controlar los logs de performance
+let performanceLoggingEnabled = false;
+
+export const setPerformanceLogging = (enabled: boolean) => {
+  performanceLoggingEnabled = enabled;
+};
+
+export const isPerformanceLoggingEnabled = () => performanceLoggingEnabled;
+
 interface MemoryMetrics {
   currentStateSize: number;
   totalStatesSize: number;
@@ -255,8 +264,8 @@ export const useHistoryPerformanceMonitor = () => {
     
     metricsRef.current = newMetrics;
     
-    // Logging detallado si hay problemas
-    if (newMetrics.warnings.length > 0) {
+    // Logging detallado si hay problemas Y si está habilitado
+    if (newMetrics.warnings.length > 0 && performanceLoggingEnabled) {
       console.group('🔍 Zundo Performance Monitor');
       console.warn('Advertencias detectadas:', newMetrics.warnings);
       console.log('Métricas actuales:', {
@@ -325,5 +334,30 @@ export const useHistoryOptimizationTips = () => {
   }
   
   return tips;
+};
+
+/**
+ * Función para generar reportes manuales de performance (ignora el flag de logging)
+ * Útil para reportes on-demand desde botones del debug panel
+ */
+export const generatePerformanceReport = (pastStates: any[], futureStates: any[], currentState: any) => {
+  const metrics = calculateMemoryMetrics(pastStates, futureStates, currentState, 0);
+  
+  console.group('🔍 Manual Performance Report');
+  console.log('Métricas actuales:', {
+    totalMemory: `${(metrics.totalStatesSize / (1024 * 1024)).toFixed(2)}MB`,
+    avgStateSize: `${(metrics.avgStateSize / 1024).toFixed(1)}KB`,
+    stateCount: pastStates.length + futureStates.length + 1,
+    performanceScore: `${metrics.performanceScore.toFixed(1)}/100`,
+    warnings: metrics.warnings
+  });
+  
+  if (metrics.memoryLeakDiagnostic.detected) {
+    console.error('⚠️ Memory Leak Diagnostic:', metrics.memoryLeakDiagnostic);
+  }
+  
+  console.groupEnd();
+  
+  return metrics;
 };
 
