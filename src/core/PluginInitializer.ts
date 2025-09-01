@@ -10,7 +10,6 @@ import { SelectionPlugin } from '../plugins/selection';
 import { SVGPlugin } from '../plugins/svg-editor/SVGEditor';
 import { SubPathListPlugin } from '../plugins/subpath-list/SubPathList';
 import { PointerInteractionPlugin } from '../plugins/pointer-interaction/PointerInteraction';
-import { PathRendererPlugin } from '../plugins/path-renderer/PathRenderer';
 import { CommandPlugin } from '../plugins/command/Command';
 import { VisualDebugPlugin } from '../plugins/visual-debug/VisualDebug';
 import { SubPathTransformPlugin } from '../plugins/subpath-transform/SubPathTransform';
@@ -26,7 +25,6 @@ import { HandlesPlugin } from '../plugins/handles/Handles';
 import { CurvesPlugin } from '../plugins/curves/Curves';
 import { GesturesPlugin } from '../plugins/gestures/Gestures';
 import { GradientPlugin } from '../plugins/gradients';
-import { TextRendererPlugin } from '../plugins/text-renderer';
 import { TextControlsPlugin } from '../plugins/text-controls';
 import { TextStylePlugin } from '../plugins/text-style';
 import { GroupRendererPlugin } from '../plugins/group-renderer';
@@ -73,10 +71,6 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(UnifiedRendererPlugin);
   
   // Register other core plugins
-  // NOTE: These plugins now only provide event handlers, rendering is handled by UnifiedRenderer
-  pluginManager.registerPlugin(PathRendererPlugin); // Path drag events only
-  pluginManager.registerPlugin(TextRendererPlugin); // Text drag events only
-  // NOTE: ImagePlugin still registers for controls, but rendering is handled by UnifiedRenderer
   pluginManager.registerPlugin(GroupRendererPlugin);
   pluginManager.registerPlugin(FilterPlugin); // Filter definitions (must be before paths use them)
   pluginManager.registerPlugin(ClippingPlugin); // Clip path and mask definitions (must be before ImagePlugin)

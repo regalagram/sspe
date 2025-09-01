@@ -7,8 +7,7 @@ export const TextStylePlugin: Plugin = {
   name: 'Text Style',
   version: '1.0.0',
   enabled: true,
-  dependencies: ['text-renderer'],
-
+  
   ui: [
     {
       id: 'text-style-controls',
