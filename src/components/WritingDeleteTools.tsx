@@ -12,6 +12,7 @@ export const WritingDeleteTools: React.FC = () => {
 
   // Match text toolbar button sizing exactly
   const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
 
   const hasSelection = 
     selection.selectedPaths.length > 0 || 
@@ -30,7 +31,7 @@ export const WritingDeleteTools: React.FC = () => {
   return (
     <ToolbarSection title="Delete">
       <ToolbarButton
-        icon={<Trash2 size={iconSize} />}
+        icon={<Trash2 size={iconSize} strokeWidth={strokeWidth} />}
         onClick={handleDelete}
         disabled={!hasSelection}
         active={false}

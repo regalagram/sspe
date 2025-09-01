@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, FileText, AlertCircle } from 'lucide-react';
+import { useMobileDetection } from '../hooks/useMobileDetection';
+import { UI_CONSTANTS } from '../config/constants';
 
 interface SVGDropZoneProps {
   onFileUpload: (file: File) => void;
@@ -14,6 +16,10 @@ export const SVGDropZone: React.FC<SVGDropZoneProps> = ({
   disabled = false,
   className = ''
 }) => {
+  const { isMobile } = useMobileDetection();
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
+  
   const [isDragOver, setIsDragOver] = useState(false);
   const [dragError, setDragError] = useState<string | null>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
@@ -173,17 +179,17 @@ export const SVGDropZone: React.FC<SVGDropZoneProps> = ({
     >
       {dragError ? (
         <>
-          <AlertCircle size={32} style={iconStyle} />
+          <AlertCircle size={iconSize} strokeWidth={strokeWidth} style={iconStyle} />
           <p style={textStyle}>{dragError}</p>
         </>
       ) : isDragOver ? (
         <>
-          <FileText size={32} style={iconStyle} />
+          <FileText size={iconSize} strokeWidth={strokeWidth} style={iconStyle} />
           <p style={textStyle}>Drop SVG file or code here</p>
         </>
       ) : (
         <>
-          <Upload size={32} style={iconStyle} />
+          <Upload size={iconSize} strokeWidth={strokeWidth} style={iconStyle} />
           <p style={textStyle}>Drag & drop SVG files or code here</p>
           <p style={hintStyle}>or click to browse files</p>
         </>

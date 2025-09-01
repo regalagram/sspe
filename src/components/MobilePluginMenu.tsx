@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { ChevronRight, ArrowLeft, Settings, Palette, Layers, Zap, Play } from 'lucide-react';
 import { UIComponentDefinition } from '../core/PluginSystem';
 import { usePanelModeStore } from '../plugins/panelmode/PanelManager';
+import { useMobileDetection } from '../hooks/useMobileDetection';
+import { UI_CONSTANTS } from '../config/constants';
 
 interface MobilePluginMenuProps {
   plugins: UIComponentDefinition[];
@@ -25,6 +27,10 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
   onBack,
   selectedPlugin
 }) => {
+  const { isMobile } = useMobileDetection();
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
+  
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const { getVisiblePanels } = usePanelModeStore();
   
@@ -40,7 +46,7 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
     {
       id: 'core-tools',
       name: 'Core Tools',
-      icon: <Settings size={20} />,
+      icon: <Settings size={iconSize} strokeWidth={strokeWidth} />,
       color: '#3b82f6',
       plugins: [],
       orders: [0, 1, 2, 3, 4, 5, 6, 10] // selection, curves, grid, command, creation, delete, guidelines, path-renderer, etc.
@@ -48,7 +54,7 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
     {
       id: 'styling',
       name: 'Styling & Effects',
-      icon: <Palette size={20} />,
+      icon: <Palette size={iconSize} strokeWidth={strokeWidth} />,
       color: '#8b5cf6',
       plugins: [],
       orders: [15, 16, 17] // gradients, text-style, etc.
@@ -56,7 +62,7 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
     {
       id: 'animations',
       name: 'Animations',
-      icon: <Play size={20} />,
+      icon: <Play size={iconSize} strokeWidth={strokeWidth} />,
       color: '#f59e0b',
       plugins: [],
       orders: [] // Will be populated by name matching
@@ -64,7 +70,7 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
     {
       id: 'advanced',
       name: 'Advanced Features',
-      icon: <Layers size={20} />,
+      icon: <Layers size={iconSize} strokeWidth={strokeWidth} />,
       color: '#059669',
       plugins: [],
       orders: [8, 20, 22, 23, 24, 25, 26, 30, 40] // groups, images, clipping, markers, symbols, filters, animation components, visual debug, creation renderer
@@ -72,7 +78,7 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
     {
       id: 'system',
       name: 'System & Utilities',
-      icon: <Zap size={20} />,
+      icon: <Zap size={iconSize} strokeWidth={strokeWidth} />,
       color: '#dc2626',
       plugins: [],
       orders: [-1, 100] // panel-mode, shortcuts
@@ -204,7 +210,7 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
               marginRight: '8px'
             }}
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={iconSize} strokeWidth={strokeWidth} />
           </button>
           <div style={{ fontSize: '16px', fontWeight: 600, color: '#374151' }}>
             {visiblePanels.find(p => p.id === selectedPlugin.id)?.name || selectedPlugin.id}
@@ -285,7 +291,7 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
               </div>
             </div>
             <ChevronRight 
-              size={20} 
+              size={iconSize} strokeWidth={strokeWidth} 
               style={{ 
                 color: '#9ca3af',
                 transform: expandedCategory === category.id ? 'rotate(90deg)' : 'rotate(0deg)',
@@ -341,7 +347,7 @@ export const MobilePluginMenu: React.FC<MobilePluginMenuProps> = ({
                         </div>
                       )}
                     </div>
-                    <ChevronRight size={16} style={{ color: '#d1d5db' }} />
+                    <ChevronRight size={iconSize} strokeWidth={strokeWidth} style={{ color: '#d1d5db' }} />
                   </button>
                 );
               })}

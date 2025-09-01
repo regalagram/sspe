@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Settings, RotateCcw, FileText } from 'lucide-react';
+import { useMobileDetection } from '../hooks/useMobileDetection';
+import { UI_CONSTANTS } from '../config/constants';
 
 export interface ImportSettings {
   mode: 'replace' | 'append';
@@ -22,6 +24,10 @@ export const SVGImportOptions: React.FC<SVGImportOptionsProps> = ({
   onApplyDefaults,
   className = ''
 }) => {
+  const { isMobile } = useMobileDetection();
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
+  
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleSettingChange = (key: keyof ImportSettings, value: any) => {
@@ -121,7 +127,7 @@ export const SVGImportOptions: React.FC<SVGImportOptionsProps> = ({
     <div className={className} style={containerStyle}>
       <div style={headerStyle} onClick={() => setIsExpanded(!isExpanded)}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Settings size={16} />
+          <Settings size={iconSize} strokeWidth={strokeWidth} />
           <span>Import Options</span>
         </div>
         <span style={{ 
@@ -136,7 +142,7 @@ export const SVGImportOptions: React.FC<SVGImportOptionsProps> = ({
         {/* Import Mode */}
         <div style={optionGroupStyle}>
           <div style={optionGroupTitleStyle}>
-            <FileText size={14} />
+            <FileText size={iconSize} strokeWidth={strokeWidth} />
             Import Mode
           </div>
           
@@ -181,7 +187,7 @@ export const SVGImportOptions: React.FC<SVGImportOptionsProps> = ({
         {/* ViewBox Settings */}
         <div style={optionGroupStyle}>
           <div style={optionGroupTitleStyle}>
-            <Settings size={14} />
+            <Settings size={iconSize} strokeWidth={strokeWidth} />
             ViewBox & Viewport
           </div>
           
@@ -215,7 +221,7 @@ export const SVGImportOptions: React.FC<SVGImportOptionsProps> = ({
         {/* Validation Settings */}
         <div style={optionGroupStyle}>
           <div style={optionGroupTitleStyle}>
-            <Settings size={14} />
+            <Settings size={iconSize} strokeWidth={strokeWidth} />
             Validation & Confirmation
           </div>
           
@@ -261,7 +267,7 @@ export const SVGImportOptions: React.FC<SVGImportOptionsProps> = ({
               e.currentTarget.style.borderColor = '#dee2e6';
             }}
           >
-            <RotateCcw size={12} />
+            <RotateCcw size={iconSize} strokeWidth={strokeWidth} />
             Reset to Defaults
           </button>
         </div>

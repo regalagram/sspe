@@ -2,6 +2,8 @@ import React from 'react';
 import { GradientStop } from '../types';
 import { convertRgbToHex } from '../utils/color-utils';
 import { Plus, X } from 'lucide-react';
+import { useMobileDetection } from '../hooks/useMobileDetection';
+import { UI_CONSTANTS } from '../config/constants';
 
 interface GradientStopEditorProps {
   stops: GradientStop[];
@@ -23,6 +25,9 @@ export const GradientStopEditor: React.FC<GradientStopEditorProps> = ({
   onStopsChange,
   disabled = false
 }) => {
+  const { isMobile } = useMobileDetection();
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
   const addStop = () => {
     const newOffset = stops.length > 0 ? Math.max(...stops.map(s => s.offset)) + 10 : 50;
     const clampedOffset = Math.min(newOffset, 100);
@@ -71,7 +76,7 @@ export const GradientStopEditor: React.FC<GradientStopEditorProps> = ({
             gap: '2px'
           }}
         >
-          <Plus size={10} />
+          <Plus size={iconSize} strokeWidth={strokeWidth} />
           Add
         </button>
       </div>
@@ -140,7 +145,7 @@ export const GradientStopEditor: React.FC<GradientStopEditorProps> = ({
                 color: '#ff6b6b'
               }}
             >
-              <X size={10} />
+              <X size={iconSize} strokeWidth={strokeWidth} />
             </button>
           )}
         </div>

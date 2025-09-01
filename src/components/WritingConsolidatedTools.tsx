@@ -19,6 +19,7 @@ export const WritingConsolidatedTools: React.FC = () => {
   // Match text toolbar button sizing exactly
   const buttonSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE;
   const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
   const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
 
   // Subscribe to tool mode changes
@@ -36,9 +37,9 @@ export const WritingConsolidatedTools: React.FC = () => {
   // Dynamic icon based on active tool
   const getCurrentIcon = () => {
   // If subpath-edit mode is active, show the mouse-pointer icon to indicate mode
-  if (isSubpathEditMode) return <MousePointerClick size={iconSize} />;
-    if (isPencilActive) return <Edit3 size={iconSize} />;
-    if (isCurveActive) return <Spline size={iconSize} />;
+  if (isSubpathEditMode) return <MousePointerClick size={iconSize} strokeWidth={strokeWidth} />;
+    if (isPencilActive) return <Edit3 size={iconSize} strokeWidth={strokeWidth} />;
+    if (isCurveActive) return <Spline size={iconSize} strokeWidth={strokeWidth} />;
     if (isCreateMode) {
       // Show the letter of the active creation command
       const activeTool = creationTools.find(tool => 
@@ -58,7 +59,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         );
       }
     }
-    return <Plus size={iconSize} strokeWidth={2.5} />; // Default creation tools icon with thicker stroke
+    return <Plus size={iconSize} strokeWidth={strokeWidth} />; // Default creation tools icon with dynamic stroke
   };
 
   const isAnyToolActive = isPencilActive || isCurveActive || isCreateMode;
@@ -192,7 +193,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         {isCreateMode && (
           <>
             <SubmenuItem
-              icon={<X size={iconSize} />}
+              icon={<X size={iconSize} strokeWidth={strokeWidth} />}
               label="Exit Creation Mode"
               onClick={() => {
                 handleExitCreateMode();
@@ -230,7 +231,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         
         {/* Pencil Tool - Simplified */}
         <SubmenuItem
-          icon={<Edit3 size={iconSize} />}
+          icon={<Edit3 size={iconSize} strokeWidth={strokeWidth} />}
           label={isPencilActive ? "Exit Pencil Mode" : "Pencil Tool"}
           onClick={() => {
             handlePencilToggle();
@@ -241,7 +242,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         
         {/* Curve Tool */}
         <SubmenuItem
-          icon={<Spline size={iconSize} />}
+          icon={<Spline size={iconSize} strokeWidth={strokeWidth} />}
           label={isCurveActive ? "Exit Curve Mode" : "Curve Tool"}
           onClick={() => {
             handleCurveToggle();
@@ -263,7 +264,7 @@ export const WritingConsolidatedTools: React.FC = () => {
               Curve Actions
             </div>
             <SubmenuItem
-              icon={<LogOut size={iconSize} />}
+              icon={<LogOut size={iconSize} strokeWidth={strokeWidth} />}
               label="Delete Selected Point"
               onClick={() => {
                 handleDeletePoint();
@@ -271,7 +272,7 @@ export const WritingConsolidatedTools: React.FC = () => {
               }}
             />
             <SubmenuItem
-              icon={<CornerUpRight size={iconSize} />}
+              icon={<CornerUpRight size={iconSize} strokeWidth={strokeWidth} />}
               label="Finish Path"
               onClick={() => {
                 handleFinishPath();
@@ -284,7 +285,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         <div style={{ height: '1px', background: '#e5e7eb', margin: '6px 0' }} />
         {!isSubpathEditMode ? (
           <SubmenuItem
-            icon={<MousePointerClick size={iconSize} />}
+            icon={<MousePointerClick size={iconSize} strokeWidth={strokeWidth} />}
             label="Subpath Edit"
             onClick={() => {
               toggleSubpathEditMode();
@@ -295,7 +296,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         ) : (
           <>
             <SubmenuItem
-              icon={<MousePointerClick size={iconSize} />}
+              icon={<MousePointerClick size={iconSize} strokeWidth={strokeWidth} />}
               label="Exit Subpath Edit"
               onClick={() => {
                 toggleSubpathEditMode();
@@ -307,14 +308,14 @@ export const WritingConsolidatedTools: React.FC = () => {
             <div style={{ height: '1px', background: '#e5e7eb', margin: '4px 0' }} />
 
             <SubmenuItem
-              icon={<Minus size={iconSize} />}
+              icon={<Minus size={iconSize} strokeWidth={strokeWidth} />}
               label={enabledFeatures.subpathShowCommandPoints ? 'Hide Command Points' : 'Show Command Points'}
               onClick={() => toggleFeature('subpathShowCommandPoints')}
               active={!!enabledFeatures.subpathShowCommandPoints}
             />
 
             <SubmenuItem
-              icon={<Plus size={iconSize} />}
+              icon={<Plus size={iconSize} strokeWidth={strokeWidth} />}
               label={enabledFeatures.subpathShowControlPoints ? 'Hide Control Points' : 'Show Control Points'}
               onClick={() => toggleFeature('subpathShowControlPoints')}
               active={!!enabledFeatures.subpathShowControlPoints}

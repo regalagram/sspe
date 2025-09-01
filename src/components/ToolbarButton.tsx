@@ -34,6 +34,7 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
 
   const buttonSize = sizes[size];
   const iconSize = isMobileDevice ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobileDevice ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
   const fontSize = Math.floor(buttonSize * 0.25);
 
   const buttonStyle: React.CSSProperties = {
@@ -94,7 +95,8 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
         justifyContent: 'center'
       }}>
         {React.cloneElement(icon as React.ReactElement, { 
-          size: iconSize
+          size: iconSize,
+          strokeWidth: strokeWidth
         } as any)}
       </div>
       {label && (

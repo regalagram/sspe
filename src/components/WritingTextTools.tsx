@@ -16,6 +16,7 @@ export const WritingTextTools: React.FC = () => {
   // Match floating toolbar button sizing
   const buttonSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE;
   const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
   const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
   
   const { 
@@ -130,7 +131,7 @@ export const WritingTextTools: React.FC = () => {
         {isTextActive && (
           <>
             <SubmenuItem
-              icon={<X size={iconSize} />}
+              icon={<X size={iconSize} strokeWidth={strokeWidth} />}
               label="Exit Text Mode"
               onClick={() => {
                 handleExitTextMode();
@@ -147,21 +148,21 @@ export const WritingTextTools: React.FC = () => {
         )}
 
         <SubmenuItem
-          icon={<Type size={iconSize} />}
+          icon={<Type size={iconSize} strokeWidth={strokeWidth} />}
           label="Add Text"
           onClick={handleAddText}
           active={activeTextType === 'single'}
         />
         
         <SubmenuItem
-          icon={<AlignJustify size={iconSize} />}
+          icon={<AlignJustify size={iconSize} strokeWidth={strokeWidth} />}
           label="Add Multiline Text"
           onClick={handleAddMultilineText}
           active={activeTextType === 'multiline'}
         />
         
         <SubmenuItem
-          icon={<Spline size={iconSize} />}
+          icon={<Spline size={iconSize} strokeWidth={strokeWidth} />}
           label="Add TextPath"
           onClick={handleAddTextPath}
           active={false}

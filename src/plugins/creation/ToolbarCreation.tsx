@@ -21,6 +21,7 @@ export const ToolbarCreationTools: React.FC = () => {
   // Match text toolbar button sizing exactly
   const buttonSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE;
   const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
   const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
 
   // Always show toolbar creation tools (removed mobile-only restriction)
@@ -43,35 +44,35 @@ export const ToolbarCreationTools: React.FC = () => {
   const tools = [
     { 
       command: 'M' as const, 
-      icon: <Move size={iconSize} />, 
+      icon: <Move size={iconSize} strokeWidth={strokeWidth} />, 
       label: 'M', 
       title: 'Move To (M)',
       description: 'Start new sub-path'
     },
     { 
       command: 'NEW_PATH' as const, 
-      icon: <Plus size={iconSize} />, 
+      icon: <Plus size={iconSize} strokeWidth={strokeWidth} />, 
       label: 'M+', 
       title: 'New Path (Shift+M)',
       description: 'Create new path'
     },
     { 
       command: 'L' as const, 
-      icon: <Minus size={iconSize} />, 
+      icon: <Minus size={iconSize} strokeWidth={strokeWidth} />, 
       label: 'L', 
       title: 'Line To (L)',
       description: 'Draw line'
     },
     { 
       command: 'C' as const, 
-      icon: <Spline size={iconSize} />, 
+      icon: <Spline size={iconSize} strokeWidth={strokeWidth} />, 
       label: 'C', 
       title: 'Cubic Bezier (C)',
       description: 'Draw curve'
     },
     { 
       command: 'Z' as const, 
-      icon: <X size={iconSize} />, 
+      icon: <X size={iconSize} strokeWidth={strokeWidth} />, 
       label: 'Z', 
       title: 'Close Path (Z)',
       description: 'Close path'
@@ -120,7 +121,7 @@ export const ToolbarCreationTools: React.FC = () => {
             {hasActiveTool && activeTool ? (
               <span style={{ fontSize: '10px' }}>{activeTool.label}</span>
             ) : (
-              <MousePointerClick size={iconSize} />
+              <MousePointerClick size={iconSize} strokeWidth={strokeWidth} />
             )}
           </div>
         }

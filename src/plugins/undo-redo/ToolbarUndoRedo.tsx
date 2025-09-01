@@ -4,17 +4,21 @@ import { MobileToolbarButton, MobileToolbarSection } from '../../components/Tool
 import { useEditorHistory } from '../../store/useEditorHistory';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 import { toggleZundoDebugPanel } from '../../store/useZundoDebugVisibility';
+import { UI_CONSTANTS } from '../../config/constants';
 
 export const ToolbarUndoRedoControls: React.FC = () => {
-  const { canUndo, canRedo, undo, redo } = useEditorHistory();
   const { isMobile } = useMobileDetection();
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
+  
+  const { canUndo, canRedo, undo, redo } = useEditorHistory();
 
   // Always show toolbar undo/redo controls (removed mobile-only restriction)
 
   return (
     <MobileToolbarSection title="Undo/Redo">
       <MobileToolbarButton
-        icon={<Undo2 />}
+        icon={<Undo2 size={iconSize} strokeWidth={strokeWidth} />}
         onClick={undo}
         disabled={!canUndo}
         color="#374151"
@@ -22,7 +26,7 @@ export const ToolbarUndoRedoControls: React.FC = () => {
         size="medium"
       />
       <MobileToolbarButton
-        icon={<Redo2 />}
+        icon={<Redo2 size={iconSize} strokeWidth={strokeWidth} />}
         onClick={redo}
         disabled={!canRedo}
         color="#374151"
@@ -31,7 +35,7 @@ export const ToolbarUndoRedoControls: React.FC = () => {
       />
       {process.env.NODE_ENV === 'development' && (
         <MobileToolbarButton
-          icon={<Bug />}
+          icon={<Bug size={iconSize} strokeWidth={strokeWidth} />}
           onClick={toggleZundoDebugPanel}
           color="#10b981"
           title="Toggle Zundo Debug Panel"

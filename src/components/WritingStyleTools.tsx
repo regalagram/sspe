@@ -25,6 +25,7 @@ export const WritingStyleTools: React.FC = () => {
   // Match text toolbar button sizing exactly
   const buttonSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE;
   const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
 
   const hasSelection = selection.selectedPaths.length > 0 || 
                       selection.selectedSubPaths.length > 0 || 
@@ -293,7 +294,7 @@ export const WritingStyleTools: React.FC = () => {
             position: 'relative',
             opacity: hasSelection ? 1 : 0.5
           }}>
-            <Palette size={iconSize} />
+            <Palette size={iconSize} strokeWidth={strokeWidth} />
           </div>
         }
         isOpen={isStyleSubmenuOpen}
@@ -451,7 +452,7 @@ export const WritingStyleTools: React.FC = () => {
             {popularPatterns.map(pattern => (
               <SubmenuItem
                 key={pattern.id}
-                icon={<Grid3X3 size={iconSize} />}
+                icon={<Grid3X3 size={iconSize} strokeWidth={strokeWidth} />}
                 label={pattern.name}
                 onClick={() => {
                   handleApplyPattern(pattern.id, 'fill');

@@ -23,6 +23,7 @@ export const SandwichButton: React.FC<SandwichButtonProps> = ({
   // Match toolbar height
   const toolbarHeight = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE;
   const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
 
   const handleClick = () => {
     if (isMobileDevice && onMobileToggle) {
@@ -68,7 +69,7 @@ export const SandwichButton: React.FC<SandwichButtonProps> = ({
           (e.currentTarget as HTMLDivElement).style.background = 'white';
         }}
       >
-        <Menu size={iconSize} />
+        <Menu size={iconSize} strokeWidth={strokeWidth} />
       </div>
     </>
   );

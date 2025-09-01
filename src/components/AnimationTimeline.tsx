@@ -1,8 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useEditorStore } from '../store/editorStore';
 import { Play, Pause, SkipBack, SkipForward } from 'lucide-react';
+import { useMobileDetection } from '../hooks/useMobileDetection';
+import { UI_CONSTANTS } from '../config/constants';
 
 export const AnimationTimeline: React.FC = () => {
+  const { isMobile } = useMobileDetection();
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
+  
   const {
     animations,
     animationState,
@@ -128,16 +134,16 @@ export const AnimationTimeline: React.FC = () => {
       {/* Playback Controls */}
       <div style={{ display: 'flex', gap: '2px', marginBottom: '12px', justifyContent: 'center' }}>
         <button style={buttonStyle} onClick={handleSkipBack}>
-          <SkipBack size={12} />
+          <SkipBack size={iconSize} strokeWidth={strokeWidth} />
         </button>
         <button 
           style={animationState.isPlaying ? activeButtonStyle : buttonStyle}
           onClick={handlePlayPause}
         >
-          {animationState.isPlaying ? <Pause size={12} /> : <Play size={12} />}
+          {animationState.isPlaying ? <Pause size={iconSize} strokeWidth={strokeWidth} /> : <Play size={iconSize} strokeWidth={strokeWidth} />}
         </button>
         <button style={buttonStyle} onClick={handleSkipForward}>
-          <SkipForward size={12} />
+          <SkipForward size={iconSize} strokeWidth={strokeWidth} />
         </button>
         <button style={buttonStyle} onClick={stopAnimations}>
           Stop

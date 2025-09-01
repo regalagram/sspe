@@ -279,6 +279,7 @@ export const FileActionsButton: React.FC = () => {
   // Match other toolbar buttons sizing
   const buttonSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE;
   const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
 
   return (
     <>
@@ -313,7 +314,7 @@ export const FileActionsButton: React.FC = () => {
             }}
             title="File Actions"
           >
-            <ArrowDownUp size={iconSize} strokeWidth={2.5} />
+            <ArrowDownUp size={iconSize} strokeWidth={strokeWidth} />
           </div>
         }
         isOpen={isFileActionsSubmenuOpen}
@@ -321,18 +322,18 @@ export const FileActionsButton: React.FC = () => {
         position="top"
       >
         <SubmenuItem
-          icon={<Upload size={16} />}
+          icon={<Upload size={16} strokeWidth={strokeWidth} />}
           label="Upload"
           onClick={handleUpload}
         />
         <SubmenuItem
-          icon={<Download size={16} />}
+          icon={<Download size={16} strokeWidth={strokeWidth} />}
           label="Download"
           onClick={handleDownload}
           disabled={!hasContent}
         />
         <SubmenuItem
-          icon={<Trash2 size={16} />}
+          icon={<Trash2 size={16} strokeWidth={strokeWidth} />}
           label="Clear All"
           onClick={handleClearAll}
         />

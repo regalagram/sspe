@@ -1,5 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Check, X } from 'lucide-react';
+import { useMobileDetection } from '../hooks/useMobileDetection';
+import { UI_CONSTANTS } from '../config/constants';
 
 interface MobileTextEditModalProps {
   textId: string;
@@ -18,6 +20,10 @@ export const MobileTextEditModal: React.FC<MobileTextEditModalProps> = ({
   onCancel,
   isVisible
 }) => {
+  const { isMobile } = useMobileDetection();
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
+  
   const [content, setContent] = useState(() => {
     return Array.isArray(initialContent) ? initialContent.join('\n') : initialContent;
   });
@@ -244,7 +250,7 @@ export const MobileTextEditModal: React.FC<MobileTextEditModalProps> = ({
                 e.currentTarget.style.backgroundColor = 'white';
               }}
             >
-              <X size={16} />
+              <X size={iconSize} strokeWidth={strokeWidth} />
               Cancel
             </button>
             <button
@@ -270,7 +276,7 @@ export const MobileTextEditModal: React.FC<MobileTextEditModalProps> = ({
                 e.currentTarget.style.backgroundColor = '#000';
               }}
             >
-              <Check size={16} />
+              <Check size={iconSize} strokeWidth={strokeWidth} />
               Save
             </button>
           </div>

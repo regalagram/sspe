@@ -38,6 +38,7 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
   // Match text toolbar button sizing exactly - use constants for consistency
   const buttonSize =  isMobileDevice ? UI_CONSTANTS.TOOLBAR.MOBILE_BUTTON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_BUTTON_SIZE;
   const iconSize = isMobileDevice ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobileDevice ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
 
   // Helper function to close submenu
   const closeSubmenu = () => {
@@ -147,7 +148,10 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
         title={action.tooltip || action.label}
         aria-label={action.label}
       >
-        <action.icon size={iconSize} />
+        {React.createElement(action.icon, { 
+          size: iconSize,
+          strokeWidth: strokeWidth
+        } as any)}
       </button>
 
       {/* Dropdown Menu */}
@@ -265,6 +269,7 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ option, onSelect }) => {
   
   // Define icon size for this component
   const iconSize = isMobileDevice ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobileDevice ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
   
   // Evaluate disabled state - could be boolean or function
   const isDisabled = typeof option.disabled === 'function' ? option.disabled() : !!option.disabled;
@@ -301,7 +306,10 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ option, onSelect }) => {
     >
       {option.icon && (
         <div style={{ marginRight: '8px' }}>
-          <option.icon size={iconSize} />
+          {React.createElement(option.icon, { 
+            size: iconSize,
+            strokeWidth: strokeWidth
+          } as any)}
         </div>
       )}
       <span>{option.label}</span>

@@ -28,8 +28,14 @@ import {
 } from 'lucide-react';
 import { createLinearGradient } from '../utils/gradient-utils';
 import { PluginButton } from './PluginButton';
+import { useMobileDetection } from '../hooks/useMobileDetection';
+import { UI_CONSTANTS } from '../config/constants';
 
 export const AnimationControls: React.FC = () => {
+  const { isMobile } = useMobileDetection();
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
+  
   const { 
     animations, 
     animationState, 
@@ -657,7 +663,7 @@ export const AnimationControls: React.FC = () => {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px' }}>
           <PluginButton
-            icon={animationState.isPlaying ? <Pause size={16} /> : <Play size={16} />}
+            icon={animationState.isPlaying ? <Pause size={iconSize} strokeWidth={strokeWidth} /> : <Play size={iconSize} strokeWidth={strokeWidth} />}
             text={animationState.isPlaying ? 'Pause' : 'Play'}
             color="#007bff"
             active={animationState.isPlaying}
@@ -665,7 +671,7 @@ export const AnimationControls: React.FC = () => {
             fullWidth={true}
           />
           <PluginButton
-            icon={<RotateCcw size={16} />}
+            icon={<RotateCcw size={iconSize} strokeWidth={strokeWidth} />}
             text="Stop"
             color="#6c757d"
             onPointerDown={handleStop}
@@ -685,7 +691,7 @@ export const AnimationControls: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div>
             <PluginButton
-              icon={<Eye size={16} />}
+              icon={<Eye size={iconSize} strokeWidth={strokeWidth} />}
               text="Fade In/Out"
               color="#e91e63"
               onPointerDown={() => handleQuickAnimation('fade')}
@@ -697,7 +703,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<Move size={16} />}
+              icon={<Move size={iconSize} strokeWidth={strokeWidth} />}
               text="Move"
               color="#2196f3"
               onPointerDown={() => handleQuickAnimation('move')}
@@ -709,7 +715,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<RotateCw size={16} />}
+              icon={<RotateCw size={iconSize} strokeWidth={strokeWidth} />}
               text="Rotate"
               color="#ff9800"
               onPointerDown={() => handleQuickAnimation('rotate')}
@@ -721,7 +727,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<Maximize size={16} />}
+              icon={<Maximize size={iconSize} strokeWidth={strokeWidth} />}
               text="Scale"
               color="#4caf50"
               onPointerDown={() => handleQuickAnimation('scale')}
@@ -733,7 +739,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<Filter size={16} />}
+              icon={<Filter size={iconSize} strokeWidth={strokeWidth} />}
               text="Blur"
               color="#9c27b0"
               onPointerDown={() => handleQuickAnimation('blur')}
@@ -745,7 +751,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<Droplets size={16} />}
+              icon={<Droplets size={iconSize} strokeWidth={strokeWidth} />}
               text="Shadow"
               color="#795548"
               onPointerDown={() => handleQuickAnimation('offset')}
@@ -757,7 +763,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<Palette size={16} />}
+              icon={<Palette size={iconSize} strokeWidth={strokeWidth} />}
               text="Color Shift"
               color="#f44336"
               onPointerDown={() => handleQuickAnimation('colorMatrix')}
@@ -769,7 +775,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<ZoomIn size={16} />}
+              icon={<ZoomIn size={iconSize} strokeWidth={strokeWidth} />}
               text="Zoom"
               color="#00bcd4"
               onPointerDown={() => handleQuickAnimation('viewBox')}
@@ -781,7 +787,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<MapPin size={16} />}
+              icon={<MapPin size={iconSize} strokeWidth={strokeWidth} />}
               text="Position"
               color="#3f51b5"
               onPointerDown={() => handleQuickAnimation('position')}
@@ -793,7 +799,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<Square size={16} />}
+              icon={<Square size={iconSize} strokeWidth={strokeWidth} />}
               text="Size"
               color="#607d8b"
               onPointerDown={() => handleQuickAnimation('size')}
@@ -805,7 +811,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<Circle size={16} />}
+              icon={<Circle size={iconSize} strokeWidth={strokeWidth} />}
               text="Circle"
               color="#ff5722"
               onPointerDown={() => handleQuickAnimation('circle')}
@@ -817,7 +823,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<Minus size={16} />}
+              icon={<Minus size={iconSize} strokeWidth={strokeWidth} />}
               text="Line"
               color="#009688"
               onPointerDown={() => handleQuickAnimation('line')}
@@ -829,7 +835,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<Zap size={16} />}
+              icon={<Zap size={iconSize} strokeWidth={strokeWidth} />}
               text="Gradient"
               color="#cddc39"
               onPointerDown={() => handleQuickAnimation('gradient')}
@@ -841,7 +847,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<Grid size={16} />}
+              icon={<Grid size={iconSize} strokeWidth={strokeWidth} />}
               text="Pattern"
               color="#8bc34a"
               onPointerDown={() => handleQuickAnimation('pattern')}
@@ -853,7 +859,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<AlignCenter size={16} />}
+              icon={<AlignCenter size={iconSize} strokeWidth={strokeWidth} />}
               text="Text Position"
               color="#ffc107"
               onPointerDown={() => handleQuickAnimation('textPosition')}
@@ -865,7 +871,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<Type size={16} />}
+              icon={<Type size={iconSize} strokeWidth={strokeWidth} />}
               text="Font Size"
               color="#673ab7"
               onPointerDown={() => handleQuickAnimation('fontSize')}
@@ -877,7 +883,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<Bold size={16} />}
+              icon={<Bold size={iconSize} strokeWidth={strokeWidth} />}
               text="Font Weight"
               color="#ff6f00"
               onPointerDown={() => handleQuickAnimation('fontWeight')}
@@ -889,7 +895,7 @@ export const AnimationControls: React.FC = () => {
           </div>
           <div>
             <PluginButton
-              icon={<AlignJustify size={16} />}
+              icon={<AlignJustify size={iconSize} strokeWidth={strokeWidth} />}
               text="Letter Spacing"
               color="#37474f"
               onPointerDown={() => handleQuickAnimation('letterSpacing')}
@@ -908,7 +914,7 @@ export const AnimationControls: React.FC = () => {
           Animation Templates
         </div>
         <PluginButton
-          icon={<MapPin size={16} />}
+          icon={<MapPin size={iconSize} strokeWidth={strokeWidth} />}
           text="Motion with Color Change"
           color="#ff6b35"
           onPointerDown={() => handleCreateMotionWithColorTemplate()}
@@ -921,7 +927,7 @@ export const AnimationControls: React.FC = () => {
           Create Animation
         </div>
         <PluginButton
-          icon={<Plus size={16} />}
+          icon={<Plus size={iconSize} strokeWidth={strokeWidth} />}
           text={showCreateForm ? 'Hide Form' : 'Custom Animation'}
           color="#28a745"
           active={showCreateForm}

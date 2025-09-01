@@ -2,8 +2,14 @@ import React, { useState } from 'react';
 import { useEditorStore } from '../store/editorStore';
 import { AnimationChain, AnimationEvent } from '../types';
 import { Play, Pause, Square, Link, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { useMobileDetection } from '../hooks/useMobileDetection';
+import { UI_CONSTANTS } from '../config/constants';
 
 export const AnimationSynchronizer: React.FC = () => {
+  const { isMobile } = useMobileDetection();
+  const iconSize = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_SIZE : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_SIZE;
+  const strokeWidth = isMobile ? UI_CONSTANTS.TOOLBAR.MOBILE_ICON_STROKE_WIDTH : UI_CONSTANTS.TOOLBAR.DESKTOP_ICON_STROKE_WIDTH;
+  
   const {
     animations,
     animationState,
@@ -146,7 +152,7 @@ export const AnimationSynchronizer: React.FC = () => {
     <div style={{ fontSize: '11px' }}>
       {/* Header */}
       <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Link size={14} />
+        <Link size={iconSize} strokeWidth={strokeWidth} />
         Animation Synchronization
       </div>
 
@@ -158,11 +164,11 @@ export const AnimationSynchronizer: React.FC = () => {
             style={animationState.isPlaying ? activeButtonStyle : buttonStyle}
             onClick={animationState.isPlaying ? pauseAnimations : playAnimations}
           >
-            {animationState.isPlaying ? <Pause size={12} /> : <Play size={12} />}
+            {animationState.isPlaying ? <Pause size={iconSize} strokeWidth={strokeWidth} /> : <Play size={iconSize} strokeWidth={strokeWidth} />}
             {animationState.isPlaying ? 'Pause' : 'Play'}
           </button>
           <button style={buttonStyle} onClick={stopAnimations}>
-            <Square size={12} />
+            <Square size={iconSize} strokeWidth={strokeWidth} />
             Stop
           </button>
           <button style={buttonStyle} onClick={processAnimationEvents}>
@@ -185,7 +191,7 @@ export const AnimationSynchronizer: React.FC = () => {
             setShowCreateChain(!showCreateChain);
           }}
         >
-          <Link size={12} />
+          <Link size={iconSize} strokeWidth={strokeWidth} />
           {showCreateChain ? 'Hide' : 'Create'} Chain
         </button>
 
@@ -305,7 +311,7 @@ export const AnimationSynchronizer: React.FC = () => {
                   cursor: 'pointer'
                 }} onClick={() => toggleChainExpanded(chain.id)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
-                    {expandedChains.has(chain.id) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    {expandedChains.has(chain.id) ? <ChevronDown size={iconSize} strokeWidth={strokeWidth} /> : <ChevronRight size={iconSize} strokeWidth={strokeWidth} />}
                     
                     {/* Editable chain name */}
                     {editingChainName === chain.id ? (
@@ -360,7 +366,7 @@ export const AnimationSynchronizer: React.FC = () => {
                       handleDeleteChain(chain.id);
                     }}
                   >
-                    <Trash2 size={10} />
+                    <Trash2 size={iconSize} strokeWidth={strokeWidth} />
                   </button>
                 </div>
 

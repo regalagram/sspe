@@ -1,9 +1,3 @@
-/**
- * Centralized Configuration System for SSPE
- * 
- * Replaces magic numbers scattered throughout the codebase with
- * a type-safe, centralized configuration system.
- */
 
 /**
  * UI Layout and Sizing Constants
@@ -29,6 +23,8 @@ export const UI_CONSTANTS = {
     MOBILE_BUTTON_SIZE: 40,
     DESKTOP_ICON_SIZE: 16,
     MOBILE_ICON_SIZE: 20,
+    DESKTOP_ICON_STROKE_WIDTH: 1.5,
+    MOBILE_ICON_STROKE_WIDTH: 1.5,
     ICON_SIZE: 20, // Legacy - keep for compatibility
     PADDING: 8,
     BORDER_RADIUS: 6,
