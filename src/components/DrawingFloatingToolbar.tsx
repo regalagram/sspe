@@ -4,7 +4,7 @@ import { Palette, Brush, LineSquiggle, Type, Hash } from 'lucide-react';
 import { FloatingToolbarButton } from './FloatingToolbar/FloatingToolbarButton';
 import { useEditorStore } from '../store/editorStore';
 import { useMobileDetection } from '../hooks/useMobileDetection';
-import { toolModeManager } from '../managers/ToolModeManager';
+import { toolModeManager } from '../core/ToolModeManager';
 import { pencilManager } from '../plugins/pencil/PencilManager';
 import { curvesManager } from '../plugins/curves/CurvesManager';
 import { shapeManager } from '../plugins/shapes/ShapeManager';

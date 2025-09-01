@@ -1,6 +1,6 @@
 import { Plugin } from '../../core/PluginSystem';
-import { textPointerHandlers, textManager } from '../../managers/TextManager';
-import { toolModeManager } from '../../managers/ToolModeManager';
+import { textPointerHandlers, textManager } from '../../core/TextManager';
+import { toolModeManager } from '../../core/ToolModeManager';
 
 export const TextPlacementPlugin: Plugin = {
   id: 'text-placement',

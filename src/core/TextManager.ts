@@ -1,5 +1,5 @@
 import { PointerEvent } from 'react';
-import { PointerEventHandler, PointerEventContext, pluginManager } from '../core/PluginSystem';
+import { PointerEventHandler, PointerEventContext, pluginManager } from './PluginSystem';
 import { useEditorStore } from '../store/editorStore';
 import { snapToGrid } from '../utils/path-utils';
 import { toolModeManager } from './ToolModeManager';

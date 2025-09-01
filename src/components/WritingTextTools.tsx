@@ -3,7 +3,7 @@ import { Type, ChevronDown, FileText, AlignJustify, Spline, X } from 'lucide-rea
 import { ToolbarButton, ToolbarSection } from './ToolbarButton';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useEditorStore } from '../store/editorStore';
-import { toolModeManager } from '../managers/ToolModeManager';
+import { toolModeManager } from '../core/ToolModeManager';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { textEditManager } from '../managers/TextEditManager';
 

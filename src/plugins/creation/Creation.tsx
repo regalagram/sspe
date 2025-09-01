@@ -3,7 +3,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { creationManager } from './CreationManager';
 import { CreationRenderer } from './CreationRenderer';
 import { CreationUI } from './CreationUI';
-import { toolModeManager } from '../../managers/ToolModeManager';
+import { toolModeManager } from '../../core/ToolModeManager';
 
 export const CreationPlugin: Plugin = {
   id: 'creation',

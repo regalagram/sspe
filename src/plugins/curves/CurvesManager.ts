@@ -3,7 +3,7 @@ import { PointerEvent } from 'react';
 import { snapToGrid } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { Point } from '../../types';
-import { toolModeManager } from '../../managers/ToolModeManager';
+import { toolModeManager } from '../../core/ToolModeManager';
 
 export enum CurveToolMode {
   INACTIVE = 'inactive',

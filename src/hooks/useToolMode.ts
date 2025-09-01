@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { toolModeManager } from '../managers/ToolModeManager';
+import { toolModeManager } from '../core/ToolModeManager';
 import { shallowEqual } from '../utils/comparison-utils';
 
 let lastSnapshot: any = null;

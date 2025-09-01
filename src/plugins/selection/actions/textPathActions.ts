@@ -2,7 +2,7 @@ import { Copy, Trash2, Lock, PaintBucket, Edit3 } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected } from './commonActions';
-import { textEditManager } from '../../../managers/TextEditManager';
+import { textEditManager } from '../../../core/TextEditManager';
 
 // Check if selected textPaths are locked
 const areTextPathsLocked = (): boolean => {

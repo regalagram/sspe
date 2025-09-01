@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { PluginButton } from '../../components/PluginButton';
 import { SHAPE_TEMPLATES, ShapeTemplate } from './ShapeDefinitions';
 import { shapeManager } from './ShapeManager';
-import { toolModeManager } from '../../managers/ToolModeManager';
+import { toolModeManager } from '../../core/ToolModeManager';
 import { useEditorStore } from '../../store/editorStore';
 import { 
   Square, 

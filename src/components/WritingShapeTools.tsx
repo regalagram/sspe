@@ -3,7 +3,7 @@ import { Square, Circle, Triangle, Star, Diamond, Hexagon, ChevronDown, ArrowRig
 import { ToolbarButton, ToolbarSection } from './ToolbarButton';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useEditorStore } from '../store/editorStore';
-import { toolModeManager } from '../managers/ToolModeManager';
+import { toolModeManager } from '../core/ToolModeManager';
 import { shapeManager } from '../plugins/shapes/ShapeManager';
 import { SHAPE_TEMPLATES } from '../plugins/shapes/ShapeDefinitions';
 import { useMobileDetection } from '../hooks/useMobileDetection';

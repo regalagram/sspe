@@ -6,7 +6,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { useMobileToolbarStore } from '../../store/toolbarStore';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 import { SVGCommandType, EditorCommandType } from '../../types';
-import { toolModeManager } from '../../managers/ToolModeManager';
+import { toolModeManager } from '../../core/ToolModeManager';
 import { creationManager } from './CreationManager';
 
 export const ToolbarCreationTools: React.FC = () => {

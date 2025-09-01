@@ -3,7 +3,7 @@ import { PointerEvent } from 'react';
 import { snapToGrid } from '../../utils/path-utils';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { useEditorStore } from '../../store/editorStore';
-import { toolModeManager } from '../../managers/ToolModeManager';
+import { toolModeManager } from '../../core/ToolModeManager';
 import { EditorCommandType, SVGCommand } from '../../types';
 import { getCreationInsertionContext, findSubPathByCommandId, findSubPathById } from '../../utils/selection-utils';
 import { calculateSmartBezierControlPoints } from '../../utils/bezier-utils';

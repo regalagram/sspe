@@ -1,6 +1,6 @@
 import { Plugin, PointerEventHandler, PointerEventContext } from '../../core/PluginSystem';
 import { textEditManager } from '../../managers/TextEditManager';
-import { toolModeManager } from '../../managers/ToolModeManager';
+import { toolModeManager } from '../../core/ToolModeManager';
 import { PointerEvent } from 'react';
 
 /**

@@ -4,7 +4,7 @@ import { SVGCommandType, EditorCommandType } from '../../types';
 import SVGCommandIcon from '../../components/SVGCommandIcons';
 import { PluginButton } from '../../components/PluginButton';
 import { LogOut } from 'lucide-react';
-import { toolModeManager } from '../../managers/ToolModeManager';
+import { toolModeManager } from '../../core/ToolModeManager';
 import { creationManager } from './CreationManager';
 
 interface CreationToolsProps {

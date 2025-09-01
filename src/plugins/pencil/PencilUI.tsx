@@ -3,7 +3,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { pencilManager } from './PencilManager';
 import { PluginButton } from '../../components/PluginButton';
 import { Edit3, LogOut } from 'lucide-react';
-import { toolModeManager } from '../../managers/ToolModeManager';
+import { toolModeManager } from '../../core/ToolModeManager';
 
 export const PencilUI: React.FC = () => {
   const { mode } = useEditorStore();

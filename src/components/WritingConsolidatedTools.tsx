@@ -4,7 +4,7 @@ import { ToolbarButton, ToolbarSection } from './ToolbarButton';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useToolbarStore } from '../store/toolbarStore';
 import { useEditorStore } from '../store/editorStore';
-import { toolModeManager } from '../managers/ToolModeManager';
+import { toolModeManager } from '../core/ToolModeManager';
 import { pencilManager } from '../plugins/pencil/PencilManager';
 import { curvesManager } from '../plugins/curves/CurvesManager';
 import { creationManager } from '../plugins/creation/CreationManager';

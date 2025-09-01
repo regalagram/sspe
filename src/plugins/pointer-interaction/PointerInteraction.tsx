@@ -12,7 +12,7 @@ import { stickyPointsManager } from './StickyPointsManager';
 import { ElementType, SelectionContext, isElementSelected, hasMultiSelection, shouldPreserveSelection, logSelectionDebug } from '../../utils/selection-utils';
 import { applyFinalSnapToGrid } from '../../utils/final-snap-utils';
 import { isGestureBlocked } from '../gestures/Gestures';
-import { toolModeManager } from '../../managers/ToolModeManager';
+import { toolModeManager } from '../../core/ToolModeManager';
 
 // ================== TYPES & INTERFACES ==================
 

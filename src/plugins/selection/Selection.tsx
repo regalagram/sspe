@@ -5,7 +5,7 @@ import { PluginButton } from '../../components/PluginButton';
 import { Copy, RotateCcw, Pointer, XCircle } from 'lucide-react';
 import { getSVGPoint } from '../../utils/transform-utils';
 import { transformManager } from '../transform/TransformManager';
-import { toolModeManager } from '../../managers/ToolModeManager';
+import { toolModeManager } from '../../core/ToolModeManager';
 import { duplicateSelected, invertSelection } from './actions/commonActions';
 import { getElementZIndex } from '../../utils/z-index-manager';
 

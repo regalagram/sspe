@@ -2,7 +2,7 @@ import { Copy, Trash2, Lock, Group, PaintBucket, Edit3 } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected } from './commonActions';
-import { textEditManager } from '../../../managers/TextEditManager';
+import { textEditManager } from '../../../core/TextEditManager';
 import { createGenericArrangeActions } from '../../../utils/floating-arrange-actions';
 import { createReorderActions, createElementReorderFunctions } from '../../../utils/floating-reorder-actions';
 import { arrangeManager } from '../../../plugins/arrange/ArrangeManager';

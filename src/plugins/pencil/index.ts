@@ -3,7 +3,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { pencilManager } from './PencilManager';
 import { PencilUI } from './PencilUI';
 import { PencilRenderer } from './PencilRenderer';
-import { toolModeManager } from '../../managers/ToolModeManager';
+import { toolModeManager } from '../../core/ToolModeManager';
 
 export const PencilPlugin: Plugin = {
   id: 'pencil',

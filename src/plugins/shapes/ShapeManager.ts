@@ -3,7 +3,7 @@ import { PointerEventHandler, PointerEventContext, pluginManager } from '../../c
 import { useEditorStore } from '../../store/editorStore';
 import { getShapeById } from './ShapeDefinitions';
 import { snapToGrid } from '../../utils/path-utils';
-import { toolModeManager } from '../../managers/ToolModeManager';
+import { toolModeManager } from '../../core/ToolModeManager';
 
 interface ShapeCreationState {
   isCreating: boolean;

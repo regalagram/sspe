@@ -2,7 +2,7 @@ import { Plugin } from '../../core/PluginSystem';
 import { curvesManager } from './CurvesManager';
 import { CurvesRenderer } from './CurvesRenderer';
 import { CurvesUI } from './CurvesUI';
-import { toolModeManager } from '../../managers/ToolModeManager';
+import { toolModeManager } from '../../core/ToolModeManager';
 
 export const CurvesPlugin: Plugin = {
   id: 'curves',

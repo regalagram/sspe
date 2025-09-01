@@ -14,10 +14,10 @@ import { transformManager } from '../plugins/transform/TransformManager';
 import { shouldPreserveSelection } from '../utils/selection-utils';
 import { stickyManager } from '../plugins/sticky-guidelines/StickyManager';
 import { applyFinalSnapToGrid } from '../utils/final-snap-utils';
-import { toolModeManager } from '../managers/ToolModeManager';
+import { toolModeManager } from './ToolModeManager';
 import { shapeManager } from '../plugins/shapes/ShapeManager';
 import { curvesManager } from '../plugins/curves/CurvesManager';
-import { textManager } from '../managers/TextManager';
+import { textManager } from './TextManager';
 
 export interface RenderItem {
   zIndex: number;

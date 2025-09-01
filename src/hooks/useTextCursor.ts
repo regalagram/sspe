@@ -1,4 +1,4 @@
-import { textManager } from '../managers/TextManager';
+import { textManager } from '../core/TextManager';
 
 export const useTextCursor = () => {
   const getCursor = (): string => {
