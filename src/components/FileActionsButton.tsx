@@ -285,7 +285,7 @@ export const FileActionsButton: React.FC<FileActionsButtonProps> = ({ onOpenVisu
     setFileActionsSubmenuOpen(false);
   };
 
-  // Delete LocalStorage functionality - matches DebugButton
+  // Delete LocalStorage functionality
   const handleClearLocalStorage = () => {
     localStorage.clear();
     window.location.reload();
