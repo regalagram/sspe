@@ -30,12 +30,10 @@ export const MobileTextEditModal: React.FC<MobileTextEditModalProps> = ({
   useEffect(() => {
     if (isVisible) {
       // Disable backdrop click initially
-      console.log('📱 MobileTextEditModal: Modal opened, disabling backdrop click temporarily');
       setBackdropClickEnabled(false);
       
       // Enable backdrop click after a delay
       const timer = setTimeout(() => {
-        console.log('📱 MobileTextEditModal: Enabling backdrop click after delay');
         setBackdropClickEnabled(true);
       }, 300); // 300ms delay to prevent immediate closure
       
@@ -74,19 +72,13 @@ export const MobileTextEditModal: React.FC<MobileTextEditModalProps> = ({
   // Handle key shortcuts
   // Handle cancel
   const handleCancel = () => {
-    console.log('📱 MobileTextEditModal: handleCancel called');
     onCancel();
   };
 
   // Handle backdrop click
   const handleBackdropClick = (e: React.MouseEvent) => {
-    console.log('📱 MobileTextEditModal: backdrop clicked', { 
-      backdropClickEnabled, 
-      timeStamp: e.timeStamp 
-    });
     
     if (!backdropClickEnabled) {
-      console.log('📱 MobileTextEditModal: backdrop click ignored (too early)');
       return;
     }
     
@@ -108,8 +100,6 @@ export const MobileTextEditModal: React.FC<MobileTextEditModalProps> = ({
   };
 
   if (!isVisible) return null;
-
-  console.log('📱 MobileTextEditModal: Rendering modal', { isVisible, textId });
 
   return (
     <div className="mobile-text-edit-modal">

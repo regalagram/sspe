@@ -1,0 +1,186 @@
+/* Safe Area Debug and Utility Classes */
+
+/* Base safe area classes */
+.safe-area-aware {
+  /* Applied automatically when safe areas are detected */
+}
+
+.has-notch {
+  /* Applied when device has a notch */
+}
+
+.has-home-indicator {
+  /* Applied when device has home indicator */
+}
+
+/* Debug mode styles */
+.safe-area-debug {
+  position: relative;
+}
+
+.safe-area-debug::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--debug-safe-area-top, 0);
+  background-color: rgba(255, 0, 0, 0.3);
+  border-bottom: 2px solid rgba(255, 0, 0, 0.8);
+  pointer-events: none;
+  z-index: 9998;
+}
+
+.safe-area-debug::after {
+  content: '';
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--debug-safe-area-bottom, 0);
+  background-color: rgba(255, 0, 0, 0.3);
+  border-top: 2px solid rgba(255, 0, 0, 0.8);
+  pointer-events: none;
+  z-index: 9998;
+}
+
+/* Component-specific safe area boundaries */
+.safe-area-boundary {
+  box-sizing: border-box;
+}
+
+.safe-area-toolbar {
+  /* Specific styles for toolbar safe area boundaries */
+}
+
+.safe-area-bottomSheet {
+  /* Specific styles for bottom sheet safe area boundaries */
+}
+
+.safe-area-floatingActions {
+  /* Specific styles for floating actions safe area boundaries */
+}
+
+.safe-area-canvas {
+  /* Specific styles for canvas safe area boundaries */
+}
+
+/* Mobile safe area container styles */
+.mobile-safe-area-container {
+  box-sizing: border-box;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.mobile-safe-area-container.mobile-fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  z-index: 9999;
+}
+
+.mobile-safe-area-container.landscape {
+  /* Landscape-specific adjustments */
+}
+
+.mobile-safe-area-container.has-notch {
+  /* Notch-specific adjustments */
+}
+
+.mobile-safe-area-container.has-home-indicator {
+  /* Home indicator-specific adjustments */
+}
+
+/* Safe area responsive utilities */
+@media (max-width: 768px) {
+  .safe-area-mobile-only {
+    display: block;
+  }
+  
+  .safe-area-desktop-only {
+    display: none;
+  }
+}
+
+@media (min-width: 769px) {
+  .safe-area-mobile-only {
+    display: none;
+  }
+  
+  .safe-area-desktop-only {
+    display: block;
+  }
+}
+
+/* Landscape orientation specific styles */
+@media (orientation: landscape) and (max-width: 1024px) {
+  .safe-area-hide-landscape {
+    display: none;
+  }
+  
+  .safe-area-show-landscape {
+    display: block;
+  }
+}
+
+@media (orientation: portrait) {
+  .safe-area-hide-landscape {
+    display: block;
+  }
+  
+  .safe-area-show-landscape {
+    display: none;
+  }
+}
+
+/* iOS-specific safe area enhancements */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari specific styles */
+  .mobile-safe-area-container {
+    /* Prevent iOS bounce scroll */
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevent zoom on double tap for safe area elements */
+  .safe-area-boundary,
+  .mobile-safe-area-container {
+    touch-action: manipulation;
+  }
+}
+
+/* High contrast safe area indicators */
+@media (prefers-contrast: high) {
+  .safe-area-debug::before,
+  .safe-area-debug::after {
+    background-color: rgba(255, 0, 0, 0.6);
+    border-color: rgb(255, 0, 0);
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .safe-area-boundary,
+  .mobile-safe-area-container {
+    transition: none;
+  }
+}
+
+/* Print styles - remove safe areas for print */
+@media print {
+  .safe-area-boundary,
+  .mobile-safe-area-container {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  .safe-area-debug::before,
+  .safe-area-debug::after {
+    display: none;
+  }
+}

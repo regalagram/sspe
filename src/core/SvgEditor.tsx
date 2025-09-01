@@ -53,7 +53,6 @@ export const SvgEditor: React.FC = () => {
   // Listen for mobile text edit events
   React.useEffect(() => {
     const handleMobileTextEdit = (event: CustomEvent<{ textId: string }>) => {
-      console.log('📱 SvgEditor: Received openMobileTextEdit event', event.detail);
       startMobileEdit(event.detail.textId);
     };
     

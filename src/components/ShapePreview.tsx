@@ -6,7 +6,7 @@ import { getShapeById } from '../plugins/shapes/ShapeDefinitions';
 export const ShapePreview: React.FC = () => {
   const { viewport } = useEditorStore();
   const toolSettings = useEditorStore((state) => state.toolSettings?.shared);
-  const [, forceUpdate] = useState({});
+  const [updateCounter, setUpdateCounter] = useState(0);
   const rafIdRef = useRef<number | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -16,7 +16,7 @@ export const ShapePreview: React.FC = () => {
     
     const animate = () => {
       if (shapeManager.isDragInProgress()) {
-        forceUpdate({});
+        setUpdateCounter(prev => prev + 1);
         rafIdRef.current = requestAnimationFrame(animate);
       } else {
         rafIdRef.current = null;
@@ -35,14 +35,21 @@ export const ShapePreview: React.FC = () => {
 
   // Monitor drag state and control animation
   useEffect(() => {
+    let isCleaningUp = false;
+    
     const checkDragState = () => {
+      if (isCleaningUp) return;
+      
       if (shapeManager.isDragInProgress()) {
         if (rafIdRef.current === null) {
           startAnimation();
         }
       } else {
         stopAnimation();
-        forceUpdate({}); // Final update when drag ends
+        // Final update when drag ends - but only if not already cleaning up
+        if (!isCleaningUp) {
+          setUpdateCounter(prev => prev + 1);
+        }
       }
     };
 
@@ -53,6 +60,7 @@ export const ShapePreview: React.FC = () => {
     intervalRef.current = setInterval(checkDragState, 16); // 60fps
 
     return () => {
+      isCleaningUp = true;
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }

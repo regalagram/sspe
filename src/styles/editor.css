@@ -546,20 +546,134 @@ html,body {
   }
 }
 
-/* Safe area handling for iOS devices */
+/* Comprehensive Safe Area Management for iOS */
 @supports (padding: max(0px)) {
+  /* Root safe area variables */
+  :root {
+    --safe-area-inset-top: env(safe-area-inset-top, 0px);
+    --safe-area-inset-right: env(safe-area-inset-right, 0px);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-inset-left: env(safe-area-inset-left, 0px);
+    
+    /* Component-specific safe area configurations */
+    --toolbar-safe-top: max(0px, var(--safe-area-inset-top));
+    --toolbar-safe-left: max(16px, calc(16px + var(--safe-area-inset-left)));
+    --toolbar-safe-right: max(16px, calc(16px + var(--safe-area-inset-right)));
+    --toolbar-safe-bottom: max(8px, calc(8px + var(--safe-area-inset-bottom)));
+    
+    --bottom-sheet-safe-bottom: max(16px, calc(16px + var(--safe-area-inset-bottom)));
+    --bottom-sheet-safe-left: max(16px, calc(16px + var(--safe-area-inset-left)));
+    --bottom-sheet-safe-right: max(16px, calc(16px + var(--safe-area-inset-right)));
+    
+    --floating-button-safe-right: max(24px, calc(24px + var(--safe-area-inset-right)));
+    --floating-button-safe-bottom: max(24px, calc(24px + var(--safe-area-inset-bottom)));
+    
+    --canvas-safe-top: var(--safe-area-inset-top);
+    --canvas-safe-right: var(--safe-area-inset-right);
+    --canvas-safe-bottom: var(--safe-area-inset-bottom);
+    --canvas-safe-left: var(--safe-area-inset-left);
+  }
+  
+  /* Main editor container */
+  .svg-editor {
+    padding-top: var(--canvas-safe-top);
+    padding-right: var(--canvas-safe-right);
+    padding-bottom: var(--canvas-safe-bottom);
+    padding-left: var(--canvas-safe-left);
+  }
+  
+  /* Mobile toolbar safe areas */
   .mobile-toolbar {
-    padding-left: max(16px, env(safe-area-inset-left));
-    padding-right: max(16px, env(safe-area-inset-right));
+    padding-top: var(--toolbar-safe-top);
+    padding-left: var(--toolbar-safe-left);
+    padding-right: var(--toolbar-safe-right);
+    padding-bottom: var(--toolbar-safe-bottom);
   }
   
+  .mobile-toolbar-container {
+    padding-left: var(--toolbar-safe-left);
+    padding-right: var(--toolbar-safe-right);
+  }
+  
+  /* Bottom sheet safe areas */
   .bottom-sheet {
-    padding-bottom: max(0px, env(safe-area-inset-bottom));
+    padding-bottom: var(--bottom-sheet-safe-bottom);
+    padding-left: var(--bottom-sheet-safe-left);
+    padding-right: var(--bottom-sheet-safe-right);
   }
   
+  /* Mobile plugin menu */
+  .mobile-plugin-menu {
+    padding-bottom: max(40px, calc(40px + var(--safe-area-inset-bottom))) !important;
+    padding-left: var(--bottom-sheet-safe-left);
+    padding-right: var(--bottom-sheet-safe-right);
+  }
+  
+  /* Floating buttons */
   .mobile-floating-button {
-    bottom: max(24px, calc(24px + env(safe-area-inset-bottom)));
-    right: max(24px, calc(24px + env(safe-area-inset-right)));
+    bottom: var(--floating-button-safe-bottom);
+    right: var(--floating-button-safe-right);
+  }
+  
+  /* Floating toolbars */
+  .drawing-floating-toolbar {
+    margin-bottom: max(8px, calc(8px + var(--safe-area-inset-bottom)));
+    margin-right: max(8px, calc(8px + var(--safe-area-inset-right)));
+    margin-left: max(8px, calc(8px + var(--safe-area-inset-left)));
+  }
+  
+  /* Text edit overlays */
+  .text-edit-overlay {
+    top: max(50px, calc(50px + var(--safe-area-inset-top)));
+    left: max(16px, calc(16px + var(--safe-area-inset-left)));
+    right: max(16px, calc(16px + var(--safe-area-inset-right)));
+  }
+  
+  .mobile-text-edit-modal {
+    top: var(--safe-area-inset-top);
+    bottom: var(--safe-area-inset-bottom);
+    left: var(--safe-area-inset-left);
+    right: var(--safe-area-inset-right);
+  }
+  
+  /* Animation controls */
+  .animation-controls {
+    bottom: max(80px, calc(80px + var(--safe-area-inset-bottom)));
+    left: max(16px, calc(16px + var(--safe-area-inset-left)));
+    right: max(16px, calc(16px + var(--safe-area-inset-right)));
+  }
+  
+  /* Fullscreen mode adjustments */
+  .fullscreen .svg-editor {
+    padding-top: var(--safe-area-inset-top);
+    padding-right: var(--safe-area-inset-right);
+    padding-bottom: var(--safe-area-inset-bottom);
+    padding-left: var(--safe-area-inset-left);
+  }
+  
+  /* Landscape orientation adjustments */
+  @media (orientation: landscape) {
+    :root {
+      /* In landscape, top and bottom safe areas might be smaller */
+      --toolbar-safe-top: max(8px, calc(8px + var(--safe-area-inset-top)));
+      --floating-button-safe-bottom: max(16px, calc(16px + var(--safe-area-inset-bottom)));
+      --bottom-sheet-safe-bottom: max(12px, calc(12px + var(--safe-area-inset-bottom)));
+    }
+    
+    /* Adjust toolbar for landscape notch */
+    .mobile-toolbar {
+      padding-left: max(44px, calc(16px + var(--safe-area-inset-left)));
+      padding-right: max(44px, calc(16px + var(--safe-area-inset-right)));
+    }
+  }
+  
+  /* Portrait orientation adjustments */
+  @media (orientation: portrait) {
+    :root {
+      /* In portrait, ensure adequate spacing for gestures */
+      --bottom-sheet-safe-bottom: max(20px, calc(20px + var(--safe-area-inset-bottom)));
+      --floating-button-safe-bottom: max(28px, calc(28px + var(--safe-area-inset-bottom)));
+    }
   }
 }
 
