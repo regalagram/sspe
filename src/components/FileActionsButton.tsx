@@ -340,28 +340,28 @@ export const FileActionsButton: React.FC<FileActionsButtonProps> = ({ onOpenVisu
         position="top"
       >
         <SubmenuItem
-          icon={<Upload size={16} strokeWidth={strokeWidth} />}
+          icon={<Upload size={iconSize} strokeWidth={strokeWidth} />}
           label="Upload"
           onClick={handleUpload}
         />
         <SubmenuItem
-          icon={<Download size={16} strokeWidth={strokeWidth} />}
+          icon={<Download size={iconSize} strokeWidth={strokeWidth} />}
           label="Download"
           onClick={handleDownload}
           disabled={!hasContent}
         />
         <SubmenuItem
-          icon={<Settings size={16} strokeWidth={strokeWidth} />}
+          icon={<Settings size={iconSize} strokeWidth={strokeWidth} />}
           label="Configuration"
           onClick={handleOpenConfig}
         />
         <SubmenuItem
-          icon={<Trash2 size={16} strokeWidth={strokeWidth} />}
+          icon={<Trash2 size={iconSize} strokeWidth={strokeWidth} />}
           label="Clear All"
           onClick={handleClearAll}
         />
         <SubmenuItem
-          icon={<RotateCcw size={16} strokeWidth={strokeWidth} />}
+          icon={<RotateCcw size={iconSize} strokeWidth={strokeWidth} />}
           label="Delete LocalStorage"
           onClick={handleClearLocalStorage}
         />
