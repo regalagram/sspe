@@ -12,6 +12,7 @@ import { stickyPointsManager } from './StickyPointsManager';
 import { ElementType, SelectionContext, isElementSelected, hasMultiSelection, shouldPreserveSelection, logSelectionDebug } from '../../utils/selection-utils';
 import { applyFinalSnapToGrid } from '../../utils/final-snap-utils';
 import { isGestureBlocked } from '../gestures/Gestures';
+import { toolModeManager } from '../../managers/ToolModeManager';
 
 // ================== TYPES & INTERFACES ==================
 
@@ -1744,10 +1745,52 @@ class PointerInteractionManager {
 
     // Handle empty space clicks (deselection and area selection)
     if (!this.state.isSpacePressed) {
+      // CRITICAL FIX: Check if we're in creation mode before handling area selection
+      // In creation modes (pencil, curves, creation commands), other plugins should handle empty space clicks
+      let isInCreationMode = false;
+      try {
+        // Check via toolModeManager directly
+        const activeMode = toolModeManager.getActiveMode();
+        isInCreationMode = ['creation', 'pencil', 'curves', 'shapes', 'text'].includes(activeMode);
+        
+        // Additional check for creation submode
+        if (!isInCreationMode && activeMode === 'creation') {
+          const state = toolModeManager.getState();
+          isInCreationMode = !!state.createSubMode;
+        }
+        
+        // Fallback check via editor store
+        if (!isInCreationMode) {
+          const editorState = this.editorStore;
+          if (editorState && editorState.mode) {
+            const mode = editorState.mode.current;
+            isInCreationMode = mode === 'create' || mode === 'curves' || mode === 'pencil';
+          }
+        }
+      } catch (error) {
+        // Fallback: check editor store directly
+        const editorState = this.editorStore;
+        if (editorState && editorState.mode) {
+          const mode = editorState.mode.current;
+          isInCreationMode = mode === 'create' || mode === 'curves' || mode === 'pencil';
+        }
+      }
+      
+      // If in creation mode, let creation plugins handle the event
+      if (isInCreationMode) {
+        this.debugManager.logGeneric('🔥 IN CREATION MODE - LETTING CREATION PLUGINS HANDLE', {
+          clickX: e.clientX,
+          clickY: e.clientY,
+          pointerType: e.pointerType,
+          activeMode: toolModeManager.getActiveMode(),
+          editorMode: this.editorStore?.mode?.current
+        });
+        return false; // Don't consume the event, let creation plugins handle it
+      }
+
       e.stopPropagation();
 
-
-      this.debugManager.logGeneric('🔥 EMPTY SPACE CLICK DETECTED!', {
+      this.debugManager.logGeneric('🔥 EMPTY SPACE CLICK DETECTED - AREA SELECTION', {
         clickX: e.clientX,
         clickY: e.clientY,
         modifiers,
