@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { ArrowDownUp, Trash2, Upload, Download } from 'lucide-react';
+import { ArrowDownUp, Trash2, Upload, Download, Settings, RotateCcw } from 'lucide-react';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useToolbarStore } from '../store/toolbarStore';
 import { useEditorStore } from '../store/editorStore';
@@ -9,7 +9,11 @@ import { generateId } from '../utils/id-utils';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { UI_CONSTANTS } from '../config/constants';
 
-export const FileActionsButton: React.FC = () => {
+interface FileActionsButtonProps {
+  onOpenVisualDebugPanel?: () => void;
+}
+
+export const FileActionsButton: React.FC<FileActionsButtonProps> = ({ onOpenVisualDebugPanel }) => {
   const { isMobile } = useMobileDetection();
   const { 
     isFileActionsSubmenuOpen, 
@@ -273,6 +277,20 @@ export const FileActionsButton: React.FC = () => {
     setFileActionsSubmenuOpen(false);
   };
 
+  // Configuration functionality - opens visual debug panel
+  const handleOpenConfig = () => {
+    if (onOpenVisualDebugPanel) {
+      onOpenVisualDebugPanel();
+    }
+    setFileActionsSubmenuOpen(false);
+  };
+
+  // Delete LocalStorage functionality - matches DebugButton
+  const handleClearLocalStorage = () => {
+    localStorage.clear();
+    window.location.reload();
+  };
+
   // Check if download should be disabled
   const hasContent = paths.length > 0 || texts.length > 0 || groups.length > 0 || images.length > 0;
 
@@ -333,9 +351,19 @@ export const FileActionsButton: React.FC = () => {
           disabled={!hasContent}
         />
         <SubmenuItem
+          icon={<Settings size={16} strokeWidth={strokeWidth} />}
+          label="Configuration"
+          onClick={handleOpenConfig}
+        />
+        <SubmenuItem
           icon={<Trash2 size={16} strokeWidth={strokeWidth} />}
           label="Clear All"
           onClick={handleClearAll}
+        />
+        <SubmenuItem
+          icon={<RotateCcw size={16} strokeWidth={strokeWidth} />}
+          label="Delete LocalStorage"
+          onClick={handleClearLocalStorage}
         />
       </ToolbarSubmenu>
       

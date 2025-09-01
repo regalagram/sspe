@@ -3,7 +3,6 @@ import { UIComponentDefinition } from '../core/PluginSystem';
 import { MobileUndoRedoControls } from '../plugins/undo-redo/ToolbarUndoRedo';
 import { ConsolidatedZoomControls } from './ConsolidatedZoomControls';
 import { AnimationPlayButton } from './AnimationPlayButton';
-import { DebugButton } from './DebugButton';
 import { SandwichButton } from './SandwichButton';
 import { WritingConsolidatedTools } from './WritingConsolidatedTools';
 import { WritingShapeTools } from './WritingShapeTools';
@@ -98,12 +97,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <AnimationPlayButton />
 
         {/* Section 5: File Actions */}
-        <FileActionsButton />
+        <FileActionsButton onOpenVisualDebugPanel={onOpenVisualDebugPanel} />
 
-        {/* Section 6: Debug Tools */}
-        <DebugButton onOpenVisualDebugPanel={onOpenVisualDebugPanel} />
-
-        {/* Section 7: Sandwich button for panels/sidebar */}
+        {/* Section 6: Sandwich button for panels/sidebar */}
         <SandwichButton 
           onMobileToggle={onMobileToggle}
           isMobileBottomSheetOpen={isMobileBottomSheetOpen}
