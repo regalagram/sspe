@@ -1,4 +1,4 @@
-import { Copy, Trash2, Lock, Filter, Group, Palette, Brush, LineSquiggle, Play, RotateCcw, PaintBucket } from 'lucide-react';
+import { Copy, Trash2, Lock, Filter, Group, Palette, Play, RotateCcw, PaintBucket } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
 import { duplicateSelected, deleteSelected, getSelectedElementsBounds } from './commonActions';
@@ -41,217 +41,13 @@ const applyImageOpacity = (opacity: number) => {
   });
 };
 
-// Get common stroke color for selected images
-const getCommonImageStrokeColor = (): string | any => {
-  const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages || [];
-  
-  if (selectedImages.length === 0) return '#000000';
-  
-  const firstImage = store.images.find(img => img.id === selectedImages[0]);
-  const stroke = firstImage?.style?.stroke;
-  
-  // Return the actual stroke value (string, gradient object, or pattern object)
-  if (stroke !== undefined && stroke !== null) {
-    return stroke;
-  }
-  
-  return '#000000';
-};
 
-// Apply stroke color to selected images
-const applyImageStrokeColor = (color: string | any) => {
-  const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages || [];
-  
-  // Save to history before changing colors
-  store.pushToHistory();
-  
-  // If color is a gradient or pattern object, add it to the store
-  if (typeof color === 'object' && color && color.id && (color.type === 'linear' || color.type === 'radial' || color.type === 'pattern')) {
-    // Check if gradient/pattern already exists in store
-    const existingItem = store.gradients.find((g: any) => g.id === color.id);
-    
-    if (!existingItem) {
-      store.addGradient(color);
-    }
-  }
-  
-  selectedImages.forEach(imageId => {
-    const image = store.images.find(img => img.id === imageId);
-    if (image) {
-      store.updateImage(imageId, { 
-        style: { 
-          ...image.style, 
-          stroke: color 
-        } 
-      });
-    }
-  });
-};
 
-// Get common stroke width for selected images
-const getCommonImageStrokeWidth = () => {
-  const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages || [];
-  
-  if (selectedImages.length === 0) return 1;
-  
-  const firstImage = store.images.find(img => img.id === selectedImages[0]);
-  return firstImage?.style?.strokeWidth || 1;
-};
 
-// Apply stroke width to selected images
-const applyImageStrokeWidth = (width: string | number) => {
-  const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages || [];
-  const strokeWidth = typeof width === 'number' ? width : parseFloat(width);
-  
-  if (!isNaN(strokeWidth) && strokeWidth >= 0) {
-    // Save to history before changing stroke width
-    store.pushToHistory();
-    
-    selectedImages.forEach(imageId => {
-      const image = store.images.find(img => img.id === imageId);
-      if (image) {
-        store.updateImage(imageId, { 
-          style: { 
-            ...image.style, 
-            strokeWidth 
-          } 
-        });
-      }
-    });
-  }
-};
 
-// Get common stroke opacity for selected images
-const getCommonImageStrokeOpacity = () => {
-  const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages || [];
-  
-  if (selectedImages.length === 0) return 1;
-  
-  const firstImage = store.images.find(img => img.id === selectedImages[0]);
-  return firstImage?.style?.strokeOpacity ?? 1;
-};
 
-// Apply stroke opacity to selected images
-const applyImageStrokeOpacity = (opacity: number) => {
-  const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages || [];
-  
-  if (opacity >= 0 && opacity <= 1) {
-    // Save to history before changing stroke opacity
-    store.pushToHistory();
-    
-    selectedImages.forEach(imageId => {
-      const image = store.images.find(img => img.id === imageId);
-      if (image) {
-        store.updateImage(imageId, { 
-          style: { 
-            ...image.style, 
-            strokeOpacity: opacity 
-          } 
-        });
-      }
-    });
-  }
-};
 
-// Simplified stroke dash functions for images
-const getCommonImageStrokeDash = () => {
-  const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages || [];
-  
-  if (selectedImages.length === 0) return 'none';
-  
-  const firstImage = store.images.find(img => img.id === selectedImages[0]);
-  const strokeDash = firstImage?.style?.strokeDasharray;
-  return typeof strokeDash === 'string' ? strokeDash : 'none';
-};
 
-const getCommonImageStrokeLinecap = () => {
-  const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages || [];
-  
-  if (selectedImages.length === 0) return 'butt';
-  
-  const firstImage = store.images.find(img => img.id === selectedImages[0]);
-  const strokeLinecap = firstImage?.style?.strokeLinecap;
-  return typeof strokeLinecap === 'string' ? strokeLinecap : 'butt';
-};
-
-const getCommonImageStrokeLinejoin = () => {
-  const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages || [];
-  
-  if (selectedImages.length === 0) return 'miter';
-  
-  const firstImage = store.images.find(img => img.id === selectedImages[0]);
-  const strokeLinejoin = firstImage?.style?.strokeLinejoin;
-  return typeof strokeLinejoin === 'string' ? strokeLinejoin : 'miter';
-};
-
-const applyImageStrokeDash = (dash: string) => {
-  const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages || [];
-  
-  // Save to history before changing stroke dash
-  store.pushToHistory();
-  
-  selectedImages.forEach(imageId => {
-    const image = store.images.find(img => img.id === imageId);
-    if (image) {
-      store.updateImage(imageId, { 
-        style: { 
-          ...image.style, 
-          strokeDasharray: dash 
-        } 
-      });
-    }
-  });
-};
-
-const applyImageStrokeLinecap = (linecap: string) => {
-  const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages || [];
-  
-  // Save to history before changing stroke linecap
-  store.pushToHistory();
-  
-  selectedImages.forEach(imageId => {
-    const image = store.images.find(img => img.id === imageId);
-    if (image) {
-      store.updateImage(imageId, { 
-        style: { 
-          ...image.style, 
-          strokeLinecap: linecap as any 
-        } 
-      });
-    }
-  });
-};
-
-const applyImageStrokeLinejoin = (linejoin: string) => {
-  const store = useEditorStore.getState();
-  const selectedImages = store.selection.selectedImages || [];
-  
-  // Save to history before changing stroke linejoin
-  store.pushToHistory();
-  
-  selectedImages.forEach(imageId => {
-    const image = store.images.find(img => img.id === imageId);
-    if (image) {
-      store.updateImage(imageId, { 
-        style: { 
-          ...image.style, 
-          strokeLinejoin: linejoin as any 
-        } 
-      });
-    }
-  });
-};
 
 // Check if selected images are locked
 const areImagesLocked = (): boolean => {
@@ -746,14 +542,8 @@ const clearImageStyle = () => {
   
   // Define default image style values
   const defaultStyle = {
-    stroke: undefined,
-    strokeWidth: undefined,
-    strokeDasharray: undefined,
-    strokeLinecap: undefined,
-    strokeLinejoin: undefined,
     filter: undefined,
-    opacity: undefined,
-    strokeOpacity: undefined
+    opacity: undefined
   };
   
   // Apply default style to all selected images
@@ -765,12 +555,6 @@ const clearImageStyle = () => {
       const newStyle = { ...currentStyle };
       
       // Delete properties that should be reset
-      delete newStyle.stroke;
-      delete newStyle.strokeWidth;
-      delete newStyle.strokeDasharray;
-      delete newStyle.strokeLinecap;
-      delete newStyle.strokeLinejoin;
-      delete newStyle.strokeOpacity;
       delete newStyle.filter;
       delete newStyle.opacity;
       
@@ -873,44 +657,6 @@ export const imageActions: ToolbarAction[] = [
   ...createImageArrangeActions(),
   // Add reorder actions for image elements
   ...createImageReorderActions(),
-  {
-    id: 'image-stroke-color',
-    icon: Brush,
-    label: 'Stroke Color',
-    type: 'color',
-    color: {
-      currentColor: getCommonImageStrokeColor(),
-      onChange: applyImageStrokeColor
-    },
-    priority: 980,
-    tooltip: 'Change image stroke color'
-  },
-  {
-    id: 'image-stroke-options',
-    icon: LineSquiggle,
-    label: 'Stroke Options',
-    type: 'input',
-    input: {
-      currentValue: getCommonImageStrokeWidth(),
-      onChange: applyImageStrokeWidth,
-      type: 'number',
-      placeholder: '1'
-    },
-    strokeOptions: {
-      getCurrentStrokeWidth: getCommonImageStrokeWidth,
-      getCurrentStrokeDash: getCommonImageStrokeDash,
-      getCurrentStrokeLinecap: getCommonImageStrokeLinecap,
-      getCurrentStrokeLinejoin: getCommonImageStrokeLinejoin,
-      getCurrentStrokeOpacity: getCommonImageStrokeOpacity,
-      onStrokeWidthChange: applyImageStrokeWidth,
-      onStrokeDashChange: applyImageStrokeDash,
-      onStrokeLinecapChange: applyImageStrokeLinecap,
-      onStrokeLinejoinChange: applyImageStrokeLinejoin,
-      onStrokeOpacityChange: applyImageStrokeOpacity
-    },
-    priority: 970,
-    tooltip: 'Configure stroke width, dash pattern, line cap, and line join'
-  },
   {
     id: 'image-filters',
     icon: Filter,

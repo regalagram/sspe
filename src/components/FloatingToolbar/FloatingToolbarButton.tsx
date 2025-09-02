@@ -1086,7 +1086,8 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({
     // Check images
     if (selectedImages.length > 0) {
       const firstImage = selectedImages[0];
-      const styleValue = isStroke ? firstImage?.style?.stroke : firstImage?.style?.fill;
+      // Images don't support stroke in SVG, only fill
+      const styleValue = firstImage?.style?.fill;
       return styleValue;
     }
     
@@ -1626,7 +1627,8 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({
       selection.selectedImages.forEach(imageId => {
         const image = store.images.find(img => img.id === imageId);
         if (image) {
-          const currentColor = isStroke ? image.style?.stroke : image.style?.fill;
+          // Images don't support stroke in SVG, only fill
+          const currentColor = image.style?.fill;
           const result = updateColorWithOpacity(currentColor, clampedOpacity);
           
           if (typeof result === 'string') {
@@ -1634,7 +1636,7 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({
             const updates: any = {
               ...image.style
             };
-            updates[isStroke ? 'stroke' : 'fill'] = result;
+            updates.fill = result;
             store.updateImage(imageId, { style: updates });
           } else {
             // Update color and opacity separately
@@ -1642,13 +1644,9 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({
               ...image.style
             };
             if (result.color !== currentColor) {
-              updates[isStroke ? 'stroke' : 'fill'] = result.color;
+              updates.fill = result.color;
             }
-            if (isStroke) {
-              updates.strokeOpacity = result.opacity;
-            } else {
-              updates.opacity = result.opacity; // For images, use opacity for fill-like behavior
-            }
+            updates.opacity = result.opacity; // For images, use opacity for fill-like behavior
             store.updateImage(imageId, { style: updates });
           }
         }
@@ -1732,11 +1730,8 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({
           const updates: any = {
             ...image.style
           };
-          if (isStroke) {
-            updates.strokeOpacity = clampedOpacity;
-          } else {
-            updates.opacity = clampedOpacity; // For images, use opacity for fill-like behavior
-          }
+          // Images don't support stroke in SVG, only opacity for fill-like behavior
+          updates.opacity = clampedOpacity;
           store.updateImage(imageId, { style: updates });
         }
       });
@@ -1854,14 +1849,15 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({
       selection.selectedImages.forEach(imageId => {
         const image = store.images.find(img => img.id === imageId);
         if (image) {
-          const currentColor = isStroke ? image.style?.stroke : image.style?.fill;
+          // Images don't support stroke in SVG, only fill
+          const currentColor = image.style?.fill;
           const newColor = updateEmbeddedOpacity(currentColor);
           
           if (newColor !== currentColor) {
             const updates: any = {
               ...image.style
             };
-            updates[isStroke ? 'stroke' : 'fill'] = newColor;
+            updates.fill = newColor;
             store.updateImage(imageId, { style: updates });
           }
         }
