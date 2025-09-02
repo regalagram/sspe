@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { MoreVertical } from 'lucide-react';
 import { ToolbarAction, DropdownOption } from '../../types/floatingToolbar';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
@@ -6,6 +7,53 @@ import { createLinearGradient, createRadialGradient, createGradientStop } from '
 import { useEditorStore } from '../../store/editorStore';
 import { parseColorWithOpacity } from '../../utils/color-utils';
 import { UI_CONSTANTS } from '../../config/constants';
+
+// Helper function to calculate fixed positioning for submenus to escape overflow containers
+const calculateFixedSubmenuPosition = (
+  buttonElement: HTMLElement | null,
+  submenuWidth: number,
+  submenuHeight: number,
+  isMobileDevice: boolean
+): { top: number; left: number } => {
+  if (!buttonElement) {
+    return { top: 100, left: 100 };
+  }
+
+  const buttonRect = buttonElement.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const padding = isMobileDevice ? 8 : 16;
+  const toolbarMargin = 8; // Small margin below the toolbar
+
+  // Position below the toolbar (button bottom + margin)
+  let top = buttonRect.bottom + toolbarMargin;
+  
+  // Center horizontally relative to the button
+  let left = buttonRect.left + (buttonRect.width / 2) - (submenuWidth / 2);
+
+  // Check if submenu goes off right edge
+  if (left + submenuWidth > viewportWidth - padding) {
+    left = viewportWidth - submenuWidth - padding;
+  }
+
+  // Check if submenu goes off left edge
+  if (left < padding) {
+    left = padding;
+  }
+
+  // Check if submenu goes off bottom edge
+  if (top + submenuHeight > viewportHeight - padding) {
+    // Position above the button if there's not enough space below
+    top = buttonRect.top - submenuHeight - toolbarMargin;
+  }
+
+  // Ensure submenu doesn't go above viewport
+  if (top < padding) {
+    top = padding;
+  }
+
+  return { top, left };
+};
 
 interface FloatingToolbarButtonProps {
   action: ToolbarAction;
@@ -27,6 +75,7 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showInputField, setShowInputField] = useState(false);
   const [inputValue, setInputValue] = useState(action.input?.currentValue?.toString() || '');
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
   
   // Check if this is a complex stroke action (has strokeOptions)
   const isComplexStroke = action.type === 'input' && (action as any).strokeOptions;
@@ -140,6 +189,7 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
   return (
     <div style={{ position: 'relative' }}>
       <button
+        ref={buttonRef}
         style={buttonStyle}
         onPointerDown={handleClick}
         onPointerEnter={handlePointerEnter}
@@ -155,105 +205,135 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
       </button>
 
       {/* Dropdown Menu */}
-      {isSubmenuOpen && action.dropdown && (
-        <div
-          style={{
-            position: 'absolute',
-            top: `${buttonSize + 4}px`,
-            left: '0',
-            background: 'white',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-            zIndex: 1001,
-            minWidth: '150px',
-            maxWidth: '250px',
-            padding: '0px'
-          }}
-          onPointerLeave={() => setShowDropdown(false)}
-        >
-          {action.dropdown.options.map(option => (
-            <DropdownItem 
-              key={option.id} 
-              option={option} 
-              onSelect={() => {
-                option.action();
-                setShowDropdown(false);
-                // Also close via external handler if provided
-                if (onSubmenuToggle) {
-                  onSubmenuToggle();
-                }
-              }}
-            />
-          ))}
-        </div>
-      )}
+      {isSubmenuOpen && action.dropdown && (() => {
+        const submenuPosition = calculateFixedSubmenuPosition(buttonRef.current, 200, 300, isMobileDevice);
+        const submenuContent = (
+          <div
+            style={{
+              position: 'fixed',
+              top: `${submenuPosition.top}px`,
+              left: `${submenuPosition.left}px`,
+              background: 'white',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+              zIndex: 10001,
+              minWidth: '150px',
+              maxWidth: '250px',
+              padding: '0px',
+              maxHeight: '300px',
+              overflowY: 'auto'
+            }}
+            onPointerLeave={isMobileDevice ? undefined : () => setShowDropdown(false)}
+            onPointerDown={(e) => {
+              // Prevent closing when clicking inside the menu
+              e.stopPropagation();
+            }}
+          >
+            {action.dropdown.options.map(option => (
+              <DropdownItem 
+                key={option.id} 
+                option={option} 
+                onSelect={() => {
+                  option.action();
+                  setShowDropdown(false);
+                  // Also close via external handler if provided
+                  if (onSubmenuToggle) {
+                    onSubmenuToggle();
+                  }
+                }}
+              />
+            ))}
+          </div>
+        );
+        return createPortal(submenuContent, document.body);
+      })()}
 
       {/* Input Field */}
-      {isSubmenuOpen && action.input && (
-        <div
-          style={{
-            position: 'absolute',
-            top: `${buttonSize + 4}px`,
-            left: '0',
-            background: 'white',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-            zIndex: 1001,
-            padding: '0px',
-            minWidth: '120px'
-          }}
-          onPointerLeave={closeSubmenu}
-        >
-          {isComplexStroke ? (
-            <StrokeOptionsContent 
-              action={action}
-              onClose={closeSubmenu}
-            />
-          ) : isOpacityControl ? (
-            <OpacityOptionsContent 
-              action={action}
-              onClose={closeSubmenu}
-            />
-          ) : (
-            <InputFieldContent 
-              action={action}
-              value={inputValue}
-              onChange={(value) => {
-                setInputValue(value);
-                action.input?.onChange(value);
-              }}
-              onClose={closeSubmenu}
-            />
-          )}
-        </div>
-      )}
+      {isSubmenuOpen && action.input && (() => {
+        const submenuPosition = calculateFixedSubmenuPosition(buttonRef.current, 200, 400, isMobileDevice);
+        const submenuContent = (
+          <div
+            style={{
+              position: 'fixed',
+              top: `${submenuPosition.top}px`,
+              left: `${submenuPosition.left}px`,
+              background: 'white',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+              zIndex: 10001,
+              padding: '0px',
+              minWidth: '120px',
+              maxHeight: '400px',
+              overflowY: 'auto'
+            }}
+            onPointerLeave={isMobileDevice ? undefined : closeSubmenu}
+            onPointerDown={(e) => {
+              // Prevent closing when clicking inside the menu
+              e.stopPropagation();
+            }}
+          >
+            {isComplexStroke ? (
+              <StrokeOptionsContent 
+                action={action}
+                onClose={closeSubmenu}
+              />
+            ) : isOpacityControl ? (
+              <OpacityOptionsContent 
+                action={action}
+                onClose={closeSubmenu}
+              />
+            ) : (
+              <InputFieldContent 
+                action={action}
+                value={inputValue}
+                onChange={(value) => {
+                  setInputValue(value);
+                  action.input?.onChange(value);
+                }}
+                onClose={closeSubmenu}
+              />
+            )}
+          </div>
+        );
+        return createPortal(submenuContent, document.body);
+      })()}
 
       {/* Color Picker */}
-      {isSubmenuOpen && action.color && (
-        <div
-          style={{
-            position: 'absolute',
-            top: `${buttonSize + 4}px`,
-            left: '0',
-            background: 'white',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-            zIndex: 1001,
-            padding: '0px'
-          }}
-          onPointerLeave={isMobileDevice ? undefined : closeSubmenu}
-        >
-          <ColorPickerContent 
-            currentColor={action.color.currentColor}
-            onChange={(color) => {
-              action.color?.onChange(color);
-              closeSubmenu();
+      {isSubmenuOpen && action.color && (() => {
+        const submenuPosition = calculateFixedSubmenuPosition(buttonRef.current, 300, 400, isMobileDevice);
+        const submenuContent = (
+          <div
+            style={{
+              position: 'fixed',
+              top: `${submenuPosition.top}px`,
+              left: `${submenuPosition.left}px`,
+              background: 'white',
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+              zIndex: 10001,
+              padding: '0px',
+              maxHeight: '400px',
+              overflowY: 'auto'
             }}
-            actionId={action.id}
-            getCurrentStrokeOpacity={action.color.getCurrentStrokeOpacity}
-            onStrokeOpacityChange={action.color.onStrokeOpacityChange}
-            getCurrentFillOpacity={action.color.getCurrentFillOpacity}
-            onFillOpacityChange={action.color.onFillOpacityChange}
-          />
-        </div>
-      )}
+            onPointerLeave={isMobileDevice ? undefined : closeSubmenu}
+            onPointerDown={(e) => {
+              // Prevent closing when clicking inside the menu
+              e.stopPropagation();
+            }}
+          >
+            <ColorPickerContent 
+              currentColor={action.color.currentColor}
+              onChange={(color) => {
+                action.color?.onChange(color);
+                closeSubmenu();
+              }}
+              actionId={action.id}
+              getCurrentStrokeOpacity={action.color.getCurrentStrokeOpacity}
+              onStrokeOpacityChange={action.color.onStrokeOpacityChange}
+              getCurrentFillOpacity={action.color.getCurrentFillOpacity}
+              onFillOpacityChange={action.color.onFillOpacityChange}
+            />
+          </div>
+        );
+        return createPortal(submenuContent, document.body);
+      })()}
     </div>
   );
 };

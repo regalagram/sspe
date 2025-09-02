@@ -8,9 +8,69 @@ import { PositioningEngine } from '../../core/FloatingToolbar/PositioningEngine'
 import { useEditorStore } from '../../store/editorStore';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 
-interface FloatingToolbarRendererProps {}
+// Helper function to calculate smart positioning for overflow menu
+const calculateOverflowPosition = (
+  toolbarElement: HTMLElement | null,
+  overflowButtonElement: HTMLElement | null,
+  menuWidth: number,
+  menuHeight: number,
+  isMobileDevice: boolean
+): { top: number; left?: number; right?: number } => {
+  if (!toolbarElement || !overflowButtonElement) {
+    return { top: 44, right: 0 };
+  }
 
-export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = () => {
+  const buttonRect = overflowButtonElement.getBoundingClientRect();
+  const toolbarRect = toolbarElement.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const padding = isMobileDevice ? 8 : 16;
+
+  // Default position below button, aligned to right
+  let top = buttonRect.height + 2;
+  let left: number | undefined = undefined;
+  let right: number | undefined = 0;
+
+  // Calculate if menu goes off right edge
+  const menuRightEdge = buttonRect.right + menuWidth;
+  if (menuRightEdge > viewportWidth - padding) {
+    // Keep right alignment
+    right = 0;
+  } else {
+    // Could position from left if there's more space
+    const spaceOnRight = viewportWidth - buttonRect.right;
+    const spaceOnLeft = buttonRect.left;
+    
+    if (spaceOnLeft > spaceOnRight && spaceOnLeft > menuWidth + padding) {
+      left = buttonRect.width - menuWidth;
+      right = undefined;
+    }
+  }
+
+  // Check vertical position
+  const menuBottomEdge = buttonRect.bottom + menuHeight;
+  if (menuBottomEdge > viewportHeight - padding) {
+    // Position above toolbar
+    top = -menuHeight - 2;
+  }
+
+  // Ensure menu doesn't go above viewport
+  if (buttonRect.top + top < padding) {
+    top = padding - buttonRect.top;
+  }
+
+  const result: { top: number; left?: number; right?: number } = { top };
+  if (left !== undefined) {
+    result.left = left;
+  }
+  if (right !== undefined) {
+    result.right = right;
+  }
+
+  return result;
+};
+
+export const FloatingToolbarRenderer: React.FC = () => {
   const { selection, viewport, isFloatingToolbarHidden, paths, texts, groups, images, floatingToolbarUpdateTimestamp } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   const [actions, setActions] = useState<ToolbarAction[]>([]);
@@ -19,6 +79,7 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const [activeSubmenuId, setActiveSubmenuId] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const overflowButtonRef = useRef<HTMLDivElement>(null);
   
   const isMobileDevice = isMobile || isTablet;
   const toolbarManager = FloatingToolbarManager.getInstance();
@@ -215,7 +276,7 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
         ))}
         
         {hasOverflow && (
-          <div style={{ position: 'relative' }}>
+          <div ref={overflowButtonRef} style={{ position: 'relative' }}>
             <FloatingToolbarButton
               action={{
                 id: 'overflow-menu',
@@ -232,45 +293,56 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
               size={currentConfig.buttonSize}
             />
             
-            {showOverflow && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: `${currentConfig.buttonSize + 2}px`,
-                  right: '0',
-                  background: 'white',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                  zIndex: 41,
-                  padding: '0px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0px',
-                  minWidth: `${currentConfig.buttonSize}px`,
-                  userSelect: 'none',
-                  touchAction: 'manipulation'
-                }}
-                onPointerLeave={() => setShowOverflow(false)}
-                onPointerDown={(e) => {
-                  // Only stop propagation on actual button clicks
-                  const target = e.target as HTMLElement;
-                  const isButton = target.tagName === 'BUTTON' || target.closest('button');
-                  if (isButton) {
+            {showOverflow && (() => {
+              const menuHeight = overflowActions.length * currentConfig.buttonSize;
+              const menuWidth = Math.max(currentConfig.buttonSize, 150);
+              const overflowPosition = calculateOverflowPosition(
+                toolbarRef.current,
+                overflowButtonRef.current,
+                menuWidth,
+                menuHeight,
+                isMobileDevice
+              );
+              
+              return (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: `${overflowPosition.top}px`,
+                    ...(overflowPosition.left !== undefined ? { left: `${overflowPosition.left}px` } : {}),
+                    ...(overflowPosition.right !== undefined ? { right: `${overflowPosition.right}px` } : {}),
+                    background: 'white',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    zIndex: 41,
+                    padding: '0px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0px',
+                    minWidth: `${currentConfig.buttonSize}px`,
+                    userSelect: 'none',
+                    touchAction: 'manipulation',
+                    maxHeight: '400px',
+                    overflowY: 'auto'
+                  }}
+                  onPointerLeave={isMobileDevice ? undefined : () => setShowOverflow(false)}
+                  onPointerDown={(e) => {
+                    // Prevent closing when clicking inside the menu
                     e.stopPropagation();
-                  }
-                }}
-              >
-                {overflowActions.map(action => (
-                  <FloatingToolbarButton
-                    key={action.id}
-                    action={action}
-                    size={currentConfig.buttonSize}
-                    compact
-                    isSubmenuOpen={activeSubmenuId === action.id}
-                    onSubmenuToggle={() => handleSubmenuToggle(action.id)}
-                  />
-                ))}
-              </div>
-            )}
+                  }}
+                >
+                  {overflowActions.map(action => (
+                    <FloatingToolbarButton
+                      key={action.id}
+                      action={action}
+                      size={currentConfig.buttonSize}
+                      compact
+                      isSubmenuOpen={activeSubmenuId === action.id}
+                      onSubmenuToggle={() => handleSubmenuToggle(action.id)}
+                    />
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

@@ -221,14 +221,31 @@ export const ToolbarSubmenu: React.FC<ToolbarSubmenuProps> = ({
   return (
     <>
       <div style={{ position: 'relative', display: 'inline-block' }}>
-        <div ref={triggerRef} onClick={onToggle} style={{ cursor: 'pointer' }}>
+        <div 
+          ref={triggerRef} 
+          onClick={onToggle} 
+          style={{ cursor: 'pointer' }}
+          onPointerDown={(e) => {
+            // Prevent closing when clicking the trigger on mobile
+            if (isMobile && isOpen) {
+              e.stopPropagation();
+            }
+          }}
+        >
           {trigger}
         </div>
       </div>
       
       {/* Render submenu in a portal to escape overflow constraints */}
       {isOpen && createPortal(
-        <div ref={submenuRef} style={submenuStyle}>
+        <div 
+          ref={submenuRef} 
+          style={submenuStyle}
+          onPointerDown={(e) => {
+            // Prevent closing when clicking inside the submenu
+            e.stopPropagation();
+          }}
+        >
           {children}
         </div>,
         document.body
