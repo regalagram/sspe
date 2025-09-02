@@ -121,7 +121,7 @@ export const WritingTextTools: React.FC = () => {
               ) : (
                 <Type />
               ),
-              { size: iconSize }
+              { size: iconSize, strokeWidth }
             )}
           </div>
         }
