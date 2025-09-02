@@ -295,7 +295,7 @@ const DropdownItem: React.FC<DropdownItemProps> = ({ option, onSelect }) => {
         padding: '6px 12px',
         cursor: isDisabled ? 'not-allowed' : 'pointer',
         opacity: isDisabled ? 0.5 : 1,
-        fontSize: '14px',
+        fontSize: '16px',
         color: isActive ? '#1f2937' : '#374151',
         fontWeight: isActive ? '600' : '400',
         transition: 'background 0.15s ease'

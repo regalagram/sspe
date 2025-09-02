@@ -261,7 +261,7 @@ export const SubmenuItem: React.FC<SubmenuItemProps> = ({
     cursor: disabled ? 'not-allowed' : 'pointer',
     backgroundColor: active ? '#374151' : 'transparent',
     color: disabled ? '#9ca3af' : active ? 'white' : '#374151',
-    fontSize: '14px',
+    fontSize: '16px',
     fontWeight: active ? 600 : 400,
     transition: 'all 0.15s ease',
     touchAction: 'manipulation',
