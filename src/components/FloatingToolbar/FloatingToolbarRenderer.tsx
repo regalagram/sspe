@@ -8,66 +8,52 @@ import { PositioningEngine } from '../../core/FloatingToolbar/PositioningEngine'
 import { useEditorStore } from '../../store/editorStore';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 
-// Helper function to calculate smart positioning for overflow menu
-const calculateOverflowPosition = (
-  toolbarElement: HTMLElement | null,
+// Helper function to calculate fixed positioning for overflow menu
+const calculateFixedOverflowPosition = (
   overflowButtonElement: HTMLElement | null,
   menuWidth: number,
   menuHeight: number,
   isMobileDevice: boolean
-): { top: number; left?: number; right?: number } => {
-  if (!toolbarElement || !overflowButtonElement) {
-    return { top: 44, right: 0 };
+): { top: number; left: number } => {
+  if (!overflowButtonElement) {
+    return { top: 100, left: 100 };
   }
 
-  const buttonRect = overflowButtonElement.getBoundingClientRect();
-  const toolbarRect = toolbarElement.getBoundingClientRect();
+  // Try to get the actual button element if the ref points to a container
+  const actualButton = overflowButtonElement.querySelector('button') || overflowButtonElement;
+  const buttonRect = actualButton.getBoundingClientRect();
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
   const padding = isMobileDevice ? 8 : 16;
+  const toolbarMargin = 4; // Small margin below the button
 
-  // Default position below button, aligned to right
-  let top = buttonRect.height + 2;
-  let left: number | undefined = undefined;
-  let right: number | undefined = 0;
+  // Position just below the overflow button
+  let top = buttonRect.bottom + toolbarMargin;
+  
+  // Since menu width now matches button width exactly, align left edges
+  let left = buttonRect.left;
 
-  // Calculate if menu goes off right edge
-  const menuRightEdge = buttonRect.right + menuWidth;
-  if (menuRightEdge > viewportWidth - padding) {
-    // Keep right alignment
-    right = 0;
-  } else {
-    // Could position from left if there's more space
-    const spaceOnRight = viewportWidth - buttonRect.right;
-    const spaceOnLeft = buttonRect.left;
-    
-    if (spaceOnLeft > spaceOnRight && spaceOnLeft > menuWidth + padding) {
-      left = buttonRect.width - menuWidth;
-      right = undefined;
-    }
+  // Only adjust if menu goes off viewport edges
+  if (left < padding) {
+    left = padding;
   }
 
-  // Check vertical position
-  const menuBottomEdge = buttonRect.bottom + menuHeight;
-  if (menuBottomEdge > viewportHeight - padding) {
-    // Position above toolbar
-    top = -menuHeight - 2;
+  if (left + menuWidth > viewportWidth - padding) {
+    left = viewportWidth - menuWidth - padding;
+  }
+
+  // Check if menu goes off bottom edge
+  if (top + menuHeight > viewportHeight - padding) {
+    // Position above the button if there's not enough space below
+    top = buttonRect.top - menuHeight - toolbarMargin;
   }
 
   // Ensure menu doesn't go above viewport
-  if (buttonRect.top + top < padding) {
-    top = padding - buttonRect.top;
+  if (top < padding) {
+    top = padding;
   }
 
-  const result: { top: number; left?: number; right?: number } = { top };
-  if (left !== undefined) {
-    result.left = left;
-  }
-  if (right !== undefined) {
-    result.right = right;
-  }
-
-  return result;
+  return { top, left };
 };
 
 export const FloatingToolbarRenderer: React.FC = () => {
@@ -276,44 +262,45 @@ export const FloatingToolbarRenderer: React.FC = () => {
         ))}
         
         {hasOverflow && (
-          <div ref={overflowButtonRef} style={{ position: 'relative' }}>
-            <FloatingToolbarButton
-              action={{
-                id: 'overflow-menu',
-                icon: MoreHorizontal,
-                label: 'More actions',
-                type: 'button',
-                action: () => {
-                  // Close any open submenus when opening/closing the overflow menu
-                  setActiveSubmenuId(null);
-                  setShowOverflow(!showOverflow);
-                },
-                tooltip: 'More actions'
-              }}
-              size={currentConfig.buttonSize}
-            />
+          <div style={{ position: 'relative' }}>
+            <div ref={overflowButtonRef}>
+              <FloatingToolbarButton
+                action={{
+                  id: 'overflow-menu',
+                  icon: MoreHorizontal,
+                  label: 'More actions',
+                  type: 'button',
+                  action: () => {
+                    // Close any open submenus when opening/closing the overflow menu
+                    setActiveSubmenuId(null);
+                    setShowOverflow(!showOverflow);
+                  },
+                  tooltip: 'More actions'
+                }}
+                size={currentConfig.buttonSize}
+              />
+            </div>
             
             {showOverflow && (() => {
               const menuHeight = overflowActions.length * currentConfig.buttonSize;
-              const menuWidth = Math.max(currentConfig.buttonSize, 150);
-              const overflowPosition = calculateOverflowPosition(
-                toolbarRef.current,
+              // Make menu width exactly match the button size for perfect alignment
+              const menuWidth = currentConfig.buttonSize;
+              const overflowPosition = calculateFixedOverflowPosition(
                 overflowButtonRef.current,
                 menuWidth,
                 menuHeight,
                 isMobileDevice
               );
               
-              return (
+              const overflowContent = (
                 <div
                   style={{
-                    position: 'absolute',
+                    position: 'fixed',
                     top: `${overflowPosition.top}px`,
-                    ...(overflowPosition.left !== undefined ? { left: `${overflowPosition.left}px` } : {}),
-                    ...(overflowPosition.right !== undefined ? { right: `${overflowPosition.right}px` } : {}),
+                    left: `${overflowPosition.left}px`,
                     background: 'white',
                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                    zIndex: 41,
+                    zIndex: 10000,
                     padding: '0px',
                     display: 'flex',
                     flexDirection: 'column',
@@ -342,6 +329,8 @@ export const FloatingToolbarRenderer: React.FC = () => {
                   ))}
                 </div>
               );
+              
+              return createPortal(overflowContent, document.body);
             })()}
           </div>
         )}

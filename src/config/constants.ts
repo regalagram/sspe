@@ -30,7 +30,7 @@ export const UI_CONSTANTS = {
     BORDER_RADIUS: 6,
     MAX_VISIBLE_BUTTONS: {
       DESKTOP: 10,
-      MOBILE: 9
+      MOBILE: 5
     }
   },
 
