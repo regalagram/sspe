@@ -116,7 +116,7 @@ export const textPathActions: ToolbarAction[] = [
     label: 'Edit',
     type: 'button',
     action: startTextPathEditingMobile,
-    priority: 950, // High priority to appear prominently
+    priority: 1100, // Highest priority to appear first
     tooltip: 'Edit textPath content',
     visible: isExactlyOneTextPathSelected
   },
@@ -129,7 +129,7 @@ export const textPathActions: ToolbarAction[] = [
       isActive: isTextFormatCopyActive,
       onToggle: startTextFormatCopy
     },
-    priority: 1000,
+    priority: 1020,
     tooltip: 'Copy textPath format (font, style, effects)',
     visible: areTextPathsCompatibleForFormatCopy
   },

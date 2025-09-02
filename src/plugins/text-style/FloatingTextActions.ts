@@ -677,7 +677,7 @@ export const textFloatingActions: ToolbarAction[] = [
       options: fontFamilies,
       currentValue: getCurrentFontFamily()
     },
-    priority: 960,
+    priority: 1000,
     tooltip: 'Change font family'
   },
   {
@@ -692,7 +692,7 @@ export const textFloatingActions: ToolbarAction[] = [
         applyTextStyle({ fontWeight: isBold ? 'normal' : 'bold' });
       }
     },
-    priority: 920,
+    priority: 990,
     tooltip: 'Toggle bold'
   },
   {
@@ -707,7 +707,7 @@ export const textFloatingActions: ToolbarAction[] = [
         applyTextStyle({ fontStyle: isItalic ? 'normal' : 'italic' });
       }
     },
-    priority: 910,
+    priority: 980,
     tooltip: 'Toggle italic'
   },
   {
@@ -722,7 +722,7 @@ export const textFloatingActions: ToolbarAction[] = [
         applyTextStyle({ textDecoration: isUnderline ? 'none' : 'underline' });
       }
     },
-    priority: 900,
+    priority: 970,
     tooltip: 'Toggle underline'
   },
   {
@@ -734,7 +734,7 @@ export const textFloatingActions: ToolbarAction[] = [
       currentColor: getCurrentTextColor(),
       onChange: (color: string | any) => applyTextStyle({ fill: color })
     },
-    priority: 990,
+    priority: 960,
     tooltip: 'Change text color'
   },
   {
@@ -746,7 +746,7 @@ export const textFloatingActions: ToolbarAction[] = [
       currentColor: getCurrentStrokeColor(),
       onChange: (color: string | any) => applyTextStyle({ stroke: color })
     },
-    priority: 980,
+    priority: 950,
     tooltip: 'Change text stroke color'
   },
   {
@@ -770,7 +770,7 @@ export const textFloatingActions: ToolbarAction[] = [
       onStrokeLinecapChange: applyStrokeLinecap,
       onStrokeLinejoinChange: applyStrokeLinejoin
     },
-    priority: 970,
+    priority: 940,
     tooltip: 'Configure stroke width, dash pattern, line cap, and line join'
   },
   {
@@ -781,7 +781,7 @@ export const textFloatingActions: ToolbarAction[] = [
     dropdown: {
       options: textFilterOptions
     },
-    priority: 950,
+    priority: 930,
     tooltip: 'Apply filters'
   },
   {
@@ -792,7 +792,7 @@ export const textFloatingActions: ToolbarAction[] = [
     dropdown: {
       options: textAnimationOptions
     },
-    priority: 945,
+    priority: 920,
     tooltip: 'Add animations'
   },
   {

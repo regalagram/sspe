@@ -228,7 +228,7 @@ export const textActions: ToolbarAction[] = [
     label: 'Edit',
     type: 'button',
     action: startTextEditingMobile,
-    priority: 950, // High priority to appear prominently
+    priority: 1100, // Highest priority to appear first
     tooltip: 'Edit text content',
     visible: isExactlyOneTextSelected
   },
@@ -241,7 +241,7 @@ export const textActions: ToolbarAction[] = [
       isActive: isTextFormatCopyActive,
       onToggle: startTextFormatCopy
     },
-    priority: 1000,
+    priority: 1050, // Second place after edit
     tooltip: 'Copy text format (font, style, effects)',
     visible: areTextsCompatibleForFormatCopy
   },
@@ -259,10 +259,10 @@ export const textActions: ToolbarAction[] = [
       return store.selection.selectedTexts.length >= 2;
     }
   },
-  // Add arrange actions for text elements using the new reusable component
-  ...createTextArrangeActions(),
-  // Add reorder actions for text elements
+  // Add reorder actions for text elements (higher priority than arrange)
   ...createTextReorderActions(),
+  // Add arrange actions for text elements (after reorder)
+  ...createTextArrangeActions(),
   {
     id: 'duplicate-text',
     icon: Copy,
