@@ -4,7 +4,7 @@ import { X, ChevronDown, ChevronRight, Copy, GitCompare, FileText, Search } from
 import { EditorState } from '../types';
 import { UI_CONSTANTS } from '../config/constants';
 import { useMobileDetection } from '../hooks/useMobileDetection';
-import { calculateInlineDiff, useDiffConfig } from '../store/diffConfig';
+import { calculateInlineDiff, useDiffConfig, reconstructDisplayData } from '../store/diffConfig';
 import { useTemporalStore } from '../store/useEditorHistory';
 import { useEditorStore } from '../store/editorStore';
 
@@ -144,23 +144,87 @@ export const ZundoStateModal: React.FC<ZundoStateModalProps> = ({
     return false;
   };
 
-  const renderValue = (value: any, depth: number = 0): React.ReactNode => {
-    if (value === null) return React.createElement('span', { style: { color: '#6b7280' } }, 'null');
-    if (value === undefined) return React.createElement('span', { style: { color: '#6b7280' } }, 'undefined');
-    if (typeof value === 'boolean') return React.createElement('span', { style: { color: '#7c3aed' } }, String(value));
-    if (typeof value === 'number') return React.createElement('span', { style: { color: '#2563eb' } }, value);
-    if (typeof value === 'string') return React.createElement('span', { style: { color: '#059669' } }, `"${value}"`);
+  // Helper function to check if a path was exactly changed (not just a container)
+  const isExactPathChanged = (currentPath: string, changedPaths: string[]): boolean => {
+    return changedPaths.includes(currentPath);
+  };
+
+  // Helper function to check if a path contains changes (for container styling)
+  const containsChanges = (currentPath: string, changedPaths: string[]): boolean => {
+    return changedPaths.some(changePath => changePath.startsWith(currentPath + '.'));
+  };
+
+  // Helper function to get change info for a specific path
+  const getChangeInfo = (currentPath: string): any | null => {
+    if (!diffData?.__diffMetadata?.changes) return null;
+    return diffData.__diffMetadata.changes.find((change: any) => change.path === currentPath);
+  };
+
+  const renderValue = (value: any, depth: number = 0, currentPath: string = ''): React.ReactNode => {
+    // Get all changed paths for highlighting
+    const changedPaths = diffData?.__diffMetadata?.changes?.map((change: any) => change.path) || [];
+    const isExactlyChanged = isExactPathChanged(currentPath, changedPaths);
+    const hasChildChanges = containsChanges(currentPath, changedPaths);
+    
+    // Style for exact value changes - bright highlight
+    const exactChangeStyle = isExactlyChanged ? {
+      backgroundColor: '#fef3c7',
+      padding: '2px 4px',
+      borderRadius: '3px',
+      border: '1px solid #f59e0b',
+      fontWeight: '600'
+    } : {};
+    
+    if (value === null) return React.createElement('span', { style: { color: '#6b7280', ...exactChangeStyle } }, 'null');
+    if (value === undefined) return React.createElement('span', { style: { color: '#6b7280', ...exactChangeStyle } }, 'undefined');
+    if (typeof value === 'boolean') return React.createElement('span', { style: { color: '#7c3aed', ...exactChangeStyle } }, String(value));
+    if (typeof value === 'number') return React.createElement('span', { style: { color: '#2563eb', ...exactChangeStyle } }, value);
+    if (typeof value === 'string') return React.createElement('span', { style: { color: '#059669', ...exactChangeStyle } }, `"${value}"`);
     
     if (Array.isArray(value)) {
-      if (value.length === 0) return React.createElement('span', { style: { color: '#6b7280' } }, '[]');
+      // Handle sparse arrays - only show elements that exist (not undefined)
+      const definedElements = value
+        .map((item, index) => ({ item, index }))
+        .filter(({ item }) => item !== undefined);
+      
+      if (definedElements.length === 0) return React.createElement('span', { style: { color: '#6b7280' } }, '[]');
+      
+      // Check if this is a sparse array (has gaps)
+      const isSparseArray = definedElements.length < value.length;
+      
       return React.createElement('div', { style: { marginLeft: '16px' } },
         React.createElement('span', { style: { color: '#6b7280' } }, '['),
-        ...value.map((item, index) => 
-          React.createElement('div', { key: index, style: { marginLeft: '8px' } },
-            React.createElement('span', { style: { color: '#9ca3af' } }, `${index}:`),
-            ' ', renderValue(item, depth + 1)
-          )
-        ),
+        isSparseArray && React.createElement('div', { 
+          style: { 
+            marginLeft: '8px',
+            fontSize: '11px',
+            color: '#f59e0b',
+            backgroundColor: '#fef3c7',
+            padding: '2px 6px',
+            borderRadius: '3px',
+            display: 'inline-block',
+            marginBottom: '4px'
+          }
+        }, `📌 Showing only ${definedElements.length} modified elements out of ${value.length} total`),
+        ...definedElements.map(({ item, index }) => {
+          const itemPath = currentPath ? `${currentPath}.${index}` : `${index}`;
+          const itemHasChanges = containsChanges(itemPath, changedPaths);
+          // No container highlighting - let individual values handle their own highlighting
+          return React.createElement('div', { 
+            key: index, 
+            style: { 
+              marginLeft: '8px'
+            }
+          },
+            React.createElement('span', { 
+              style: { 
+                color: isSparseArray ? '#f59e0b' : '#9ca3af',
+                fontWeight: isSparseArray ? '600' : 'normal'
+              } 
+            }, `[${index}]:`),
+            ' ', renderValue(item, depth + 1, itemPath)
+          );
+        }),
         React.createElement('span', { style: { color: '#6b7280' } }, ']')
       );
     }
@@ -170,17 +234,24 @@ export const ZundoStateModal: React.FC<ZundoStateModalProps> = ({
       if (keys.length === 0) return React.createElement('span', { style: { color: '#6b7280' } }, '{}');
       return React.createElement('div', { style: { marginLeft: '16px' } },
         React.createElement('span', { style: { color: '#6b7280' } }, '{'),
-        ...keys.map(key => 
-          React.createElement('div', { key, style: { marginLeft: '8px' } },
+        ...keys.map(key => {
+          const keyPath = currentPath ? `${currentPath}.${key}` : key;
+          // No container highlighting - let individual values handle their own highlighting
+          return React.createElement('div', { 
+            key, 
+            style: { 
+              marginLeft: '8px'
+            }
+          },
             React.createElement('span', { style: { color: '#4b5563' } }, `"${key}":`),
-            ' ', renderValue(value[key], depth + 1)
-          )
-        ),
+            ' ', renderValue(value[key], depth + 1, keyPath)
+          );
+        }),
         React.createElement('span', { style: { color: '#6b7280' } }, '}')
       );
     }
 
-    return React.createElement('span', null, String(value));
+    return React.createElement('span', { style: exactChangeStyle }, String(value));
   };
 
   const getSectionSummary = (key: string, value: any) => {
@@ -233,8 +304,12 @@ export const ZundoStateModal: React.FC<ZundoStateModalProps> = ({
   ].sort((a, b) => a.label.localeCompare(b.label));
 
   const dataToShow = useMemo(() => {
-    return showDiffOnly && diffData ? diffData : state;
-  }, [showDiffOnly, diffData, state]);
+    if (showDiffOnly && diffData) {
+      // Reconstruct rich display data from minimal storage using current state
+      return reconstructDisplayData(diffData, currentState);
+    }
+    return state;
+  }, [showDiffOnly, diffData, state, currentState]);
 
   // Filter sections based on view mode and search term
   const sectionsToShow = useMemo(() => {
@@ -486,6 +561,67 @@ export const ZundoStateModal: React.FC<ZundoStateModalProps> = ({
                   No differences detected for this state
                 </div>
               )}
+              
+              {/* Show granular changes summary */}
+              {showDiffOnly && diffData && diffData.__diffMetadata && (
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#f0f9ff',
+                  border: '1px solid #0ea5e9',
+                  borderRadius: '6px',
+                  marginBottom: '8px'
+                }}>
+                  <div style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#0369a1',
+                    marginBottom: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    🔍 Changes Detected ({diffData.__diffMetadata.changes.length})
+                  </div>
+                  <div style={{ fontSize: '12px', lineHeight: '1.5' }}>
+                    {diffData.__diffMetadata.changes.map((change: any, index: number) => (
+                      <div key={index} style={{
+                        padding: '6px 8px',
+                        backgroundColor: 'white',
+                        border: '1px solid #e0e7ff',
+                        borderRadius: '4px',
+                        marginBottom: '4px',
+                        fontFamily: 'monospace'
+                      }}>
+                        <div style={{ color: '#374151', marginBottom: '2px' }}>
+                          <span style={{ color: '#1f2937', fontWeight: '500', fontFamily: 'monospace' }}>{change.path}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ 
+                            color: '#dc2626', 
+                            backgroundColor: '#fee2e2', 
+                            padding: '1px 4px', 
+                            borderRadius: '2px',
+                            fontSize: '10px'
+                          }}>
+                            - {JSON.stringify(change.oldValue)}
+                          </span>
+                          <span style={{ color: '#6b7280' }}>→</span>
+                          <span style={{ 
+                            color: '#059669',
+                            backgroundColor: '#d1fae5',
+                            padding: '1px 4px',
+                            borderRadius: '2px',
+                            fontSize: '10px',
+                            fontWeight: '500'
+                          }}>
+                            + {JSON.stringify(change.value)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {sectionsToShow.map(({ key, label }) => {
                 const value = dataToShow[key as keyof EditorState];
                 const isExpanded = expandedSections.has(key);
@@ -583,7 +719,7 @@ export const ZundoStateModal: React.FC<ZundoStateModalProps> = ({
                           maxHeight: '240px',
                           overflowY: 'auto'
                         }}>
-                          {renderValue(value)}
+                          {renderValue(value, 0, key)}
                         </div>
                       </div>
                     )}

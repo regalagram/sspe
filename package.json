@@ -18,6 +18,7 @@
     "immer": "^10.1.1",
     "isomorphic-dompurify": "^2.26.0",
     "lucide-react": "^0.523.0",
+    "microdiff": "^1.5.0",
     "path-data-parser": "^0.1.0",
     "points-on-path": "^0.2.1",
     "react": "^19.1.0",
