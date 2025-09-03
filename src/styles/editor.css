@@ -962,13 +962,15 @@ html,body {
   pointer-events: none !important; /* Disable events on all other elements */
 }
 
-/* Force pointer cursor on all toolbar elements within SVG - always */
+/* Force pointer cursor on all toolbar and UI elements within SVG - always */
 .svg-editor .bottom-toolbar-content,
 .svg-editor .bottom-toolbar-content *,
 .svg-editor .floating-toolbar-content,
 .svg-editor .floating-toolbar-content *,
 .svg-editor .floating-toolbar,
 .svg-editor .floating-toolbar *,
+.svg-editor .accordion-panel-content svg,
+.svg-editor .accordion-panel-content svg *,
 .svg-editor *[data-layer="floating_ui"],
 .svg-editor *[data-element-type="ui"],
 .svg-editor *[data-plugin*="toolbar"],
