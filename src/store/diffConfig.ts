@@ -1,26 +1,27 @@
 import { useEditorStore } from './editorStore';
 
 /**
- * Configuraciones para el sistema de optimización de Zundo
+ * Configuraciones para el sistema de diff storage de Zundo
  * 
- * NOTA IMPORTANTE: Zundo no soporta almacenamiento de diffs parciales de manera nativa.
- * Esta configuración se usa principalmente para análisis y debugging.
- * La optimización real se hace a través de 'partialize' para excluir campos innecesarios.
+ * ZUNDO v2 SOPORTA ALMACENAMIENTO DE DIFFS de manera nativa.
+ * Esta configuración controla si se almacenan estados completos o solo diferencias.
+ * El almacenamiento de diffs reduce significativamente el uso de memoria.
  */
 export interface ZundoDiffConfig {
   enabled: boolean;
   mode: 'full' | 'diff';
 }
 
-// Estado global para configuración de análisis
+// Estado global para configuración de diff storage
 let diffConfig: ZundoDiffConfig = {
   enabled: true,
-  mode: 'diff' // Solo para logging/análisis, no afecta el almacenamiento real
+  mode: 'diff' // Controla si Zundo almacena diffs o estados completos
 };
+
 
 /**
  * Función para calcular diferencias entre estados
- * Utilizada para análisis y debugging - NO para almacenamiento
+ * Utilizada por Zundo para almacenar solo los campos que cambiaron
  */
 export function calculateStateDiff(
   currentState: any, 
@@ -30,28 +31,45 @@ export function calculateStateDiff(
   
   const diff: any = {};
   let hasChanges = false;
+  let changedFields: string[] = [];
   
   // Comparar campos del nivel superior
   for (const key in currentState) {
-    if (key === 'debugPanel') continue; // Siempre excluir debugPanel
+    // Excluir campos que no deben ser trackeados
+    if (key === 'debugPanel' || key === 'renderVersion' || 
+        key === 'floatingToolbarUpdateTimestamp') {
+      continue; 
+    }
     
     const currentValue = currentState[key];
     const pastValue = pastState[key];
     
-    // Comparación simple para detectar cambios
+    // Comparación para detectar cambios
     if (JSON.stringify(currentValue) !== JSON.stringify(pastValue)) {
       diff[key] = currentValue;
       hasChanges = true;
+      changedFields.push(key);
     }
   }
   
-  // Retorna los campos que cambiaron (solo para análisis)
+  // Debug logging en development
+  if (process.env.NODE_ENV === 'development' && hasChanges) {
+    const fullSize = JSON.stringify(currentState).length;
+    const diffSize = JSON.stringify(diff).length;
+    const savings = Math.round(((fullSize - diffSize) / fullSize) * 100);
+    
+    console.log(`📦 Zundo Diff: ${diffSize} bytes (${savings}% smaller than full state)`);
+    console.log(`🔍 Changed fields: [${changedFields.join(', ')}]`);
+  }
+  
+  
+  // Retorna los campos que cambiaron - null significa no guardar este cambio
   return hasChanges ? diff : null;
 }
 
 /**
- * Hook para controlar la configuración de análisis
- * NOTA: Esta configuración ya no afecta el almacenamiento real, solo el análisis/logging
+ * Hook para controlar la configuración de diff storage
+ * Esta configuración afecta directamente cómo Zundo almacena los estados
  */
 export function useDiffConfig() {
   return {
@@ -62,8 +80,13 @@ export function useDiffConfig() {
       
       // Notificar cambio para debug
       if (process.env.NODE_ENV === 'development') {
-        console.log(`🔄 Zundo analysis mode changed to: ${mode}`);
-        console.log('💡 Note: This only affects logging, not actual storage');
+        console.log(`🔄 Zundo diff storage changed to: ${mode}`);
+        console.log('💡 Note: This affects how states are stored in memory');
+        if (mode === 'diff') {
+          console.log('📉 Memory usage should decrease - storing only changes');
+        } else {
+          console.log('📈 Memory usage will increase - storing full states');
+        }
       }
     },
     toggleDiffMode: () => {
@@ -72,8 +95,13 @@ export function useDiffConfig() {
       diffConfig.enabled = newMode === 'diff';
       
       if (process.env.NODE_ENV === 'development') {
-        console.log(`🔄 Zundo analysis mode toggled to: ${newMode}`);
-        console.log('💡 Note: This only affects logging, not actual storage');
+        console.log(`🔄 Zundo diff storage toggled to: ${newMode}`);
+        console.log('💡 Note: This affects real memory usage');
+        if (newMode === 'diff') {
+          console.log('📉 Now storing only differences between states');
+        } else {
+          console.log('📈 Now storing complete states');
+        }
       }
       
       return newMode;
@@ -82,8 +110,17 @@ export function useDiffConfig() {
 }
 
 /**
- * Obtener configuración actual de diffs (para usar en el store)
+ * Obtener configuración actual de diff storage (usado por Zundo)
  */
 export function getCurrentDiffConfig() {
   return diffConfig;
+}
+
+/**
+ * Calcular diferencia entre dos estados específicos
+ * Usado para mostrar solo los campos que cambiaron
+ */
+export function calculateInlineDiff(currentState: any, previousState: any) {
+  if (!currentState || !previousState) return null;
+  return calculateStateDiff(currentState, previousState);
 }

@@ -560,10 +560,22 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         return historicalState;
       },
       
-      // Para optimización real de memoria, usaremos la estrategia 'partialize' 
-      // en lugar de 'diff' para excluir campos innecesarios
-      // La función diff de Zundo no está diseñada para almacenar estados parciales
-      // diff: undefined, // Removemos la función diff problemática
+      // Store only differences between states for memory optimization
+      diff: (pastState, currentState) => {
+        if (!pastState || !currentState) {
+          return currentState; // Store full state if no past state exists
+        }
+        
+        const diffConfig = getCurrentDiffConfig();
+        
+        // If diff mode is disabled, store full state
+        if (!diffConfig.enabled) {
+          return currentState;
+        }
+        
+        // Calculate differences between states
+        return calculateStateDiff(currentState, pastState);
+      },
       
       // Cool-off period to prevent excessive history entries during rapid changes
       handleSet: (handleSet) => {

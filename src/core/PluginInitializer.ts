@@ -44,6 +44,7 @@ import { CommandFloatingActionsPlugin } from '../plugins/commandFloatingActions'
 import { UnifiedRendererPlugin } from '../plugins/unified-renderer';
 import { SpecialPointFloatingActionsPlugin } from '../plugins/specialPointFloatingActions';
 import { StructureTreePlugin } from '../plugins/structure-tree';
+import { ZundoDebugPlugin } from '../plugins/zundo-debug';
 
 // Prevent multiple initializations
 let pluginsInitialized = false;
@@ -94,6 +95,7 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(SVGPlugin);
   pluginManager.registerPlugin(SubPathListPlugin);
   pluginManager.registerPlugin(StructureTreePlugin); // Tree structure view with lock controls
+  pluginManager.registerPlugin(ZundoDebugPlugin); // Debug panel for Zundo state history
   
   // Register plugins that depend on others
   pluginManager.registerPlugin(PencilPlugin); // Depends on mouse-interaction
