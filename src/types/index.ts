@@ -223,6 +223,11 @@ export interface HistoryState {
   future: EditorState[];
   canUndo: boolean;
   canRedo: boolean;
+  timestamps?: {
+    past: number[];
+    present: number;
+    future: number[];
+  };
 }
 
 export interface GridState {

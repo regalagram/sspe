@@ -430,6 +430,11 @@ const loadInitialState = (): EditorState => {
       future: [],
       canUndo: false,
       canRedo: false,
+      timestamps: {
+        past: [],
+        present: Date.now(),
+        future: []
+      }
     },
     isFullscreen: false,
     textEditState: {
