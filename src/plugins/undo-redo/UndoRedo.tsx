@@ -86,24 +86,11 @@ export const HistoryViewer: React.FC<HistoryViewerProps> = ({ history, onJumpToS
 
   return (
     <div className="history-viewer" style={{ 
-      marginTop: '20px', 
       padding: '10px',
-      borderTop: '1px solid #e5e7eb',
       maxHeight: '300px',
       overflowY: 'auto'
     }}>
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '8px', 
-        marginBottom: '15px',
-        fontSize: '14px',
-        fontWeight: '600',
-        color: '#374151'
-      }}>
-        <Clock size={16} />
-        <span>History States</span>
-      </div>
+
       
       <div className="history-timeline" style={{ position: 'relative' }}>
         {allStates.map((item, index) => (
