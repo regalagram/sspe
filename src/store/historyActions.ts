@@ -1,5 +1,6 @@
 import { StateCreator } from 'zustand';
 import { EditorState } from '../types';
+import { cleanStateForHistory, mergeCleanStateIntoCurrentState } from '../utils/history-utils';
 
 export interface HistoryActions {
   undo: () => void;
@@ -25,12 +26,18 @@ export const createHistoryActions: StateCreator<
       const currentTimestamp = state.history.timestamps?.present || Date.now();
       const futureTimestamps = state.history.timestamps?.future || [];
       
+      // Clean the current state before adding to future
+      const cleanedCurrentState = cleanStateForHistory(state);
+      
+      // Merge the clean previous state with current functions/history
+      const restoredState = mergeCleanStateIntoCurrentState(state, previous);
+      
       return {
-        ...previous,
+        ...restoredState,
         history: {
           past: newPast,
-          present: state,
-          future: [state, ...state.history.future],
+          present: cleanedCurrentState,
+          future: [cleanedCurrentState, ...state.history.future],
           canUndo: newPast.length > 0,
           canRedo: true,
           timestamps: {
@@ -54,10 +61,16 @@ export const createHistoryActions: StateCreator<
       const futureTimestamps = state.history.timestamps?.future || [];
       const newFutureTimestamps = futureTimestamps.slice(1);
       
+      // Clean the current state before adding to past
+      const cleanedCurrentState = cleanStateForHistory(state);
+      
+      // Merge the clean next state with current functions/history
+      const restoredState = mergeCleanStateIntoCurrentState(state, next);
+      
       return {
-        ...next,
+        ...restoredState,
         history: {
-          past: [...state.history.past, state],
+          past: [...state.history.past, cleanedCurrentState],
           present: next,
           future: newFuture,
           canUndo: true,
@@ -77,10 +90,13 @@ export const createHistoryActions: StateCreator<
       const pastTimestamps = state.history.timestamps?.past || [];
       const presentTimestamp = state.history.timestamps?.present || currentTimestamp;
       
+      // Clean the current state before saving to history
+      const cleanedState = cleanStateForHistory(state);
+      
       return {
         history: {
-          past: [...state.history.past, state].slice(-50),
-          present: state,
+          past: [...state.history.past, cleanedState].slice(-50),
+          present: cleanedState,
           future: [],
           canUndo: true,
           canRedo: false,

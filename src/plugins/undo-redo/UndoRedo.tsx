@@ -1,9 +1,10 @@
 import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
-import { Undo2, Redo2, Clock } from 'lucide-react';
+import { Undo2, Redo2, Clock, Eye } from 'lucide-react';
 import { PluginButton } from '../../components/PluginButton';
 import { EditorState } from '../../types';
+import { HistoryModal } from '../../components/HistoryModal';
 
 interface UndoRedoControlsProps {
   canUndo: boolean;
@@ -34,6 +35,9 @@ interface HistoryViewerProps {
 }
 
 export const HistoryViewer: React.FC<HistoryViewerProps> = ({ history, onJumpToState }) => {
+  const [selectedStateIndex, setSelectedStateIndex] = React.useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+
   // Combine all states with metadata
   const allStates: HistoryItem[] = React.useMemo(() => {
     const items: HistoryItem[] = [];
@@ -74,6 +78,19 @@ export const HistoryViewer: React.FC<HistoryViewerProps> = ({ history, onJumpToS
     return items;
   }, [history]);
 
+  // Get all history states for modal (past + present + future)
+  const allHistoryStates = React.useMemo(() => {
+    return [...history.past, history.present, ...history.future];
+  }, [history]);
+
+  // Current state index in the complete history
+  const currentStateIndex = history.past.length;
+
+  const handleViewState = (stateIndex: number) => {
+    setSelectedStateIndex(stateIndex);
+    setIsModalOpen(true);
+  };
+
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString('en-US', { 
@@ -90,6 +107,19 @@ export const HistoryViewer: React.FC<HistoryViewerProps> = ({ history, onJumpToS
       maxHeight: '300px',
       overflowY: 'auto'
     }}>
+      {/* History Modal */}
+      {selectedStateIndex !== null && (
+        <HistoryModal
+          historyStates={allHistoryStates}
+          currentStateIndex={currentStateIndex}
+          selectedStateIndex={selectedStateIndex}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedStateIndex(null);
+          }}
+          isVisible={isModalOpen}
+        />
+      )}
 
       
       <div className="history-timeline" style={{ position: 'relative' }}>
@@ -165,13 +195,45 @@ export const HistoryViewer: React.FC<HistoryViewerProps> = ({ history, onJumpToS
                     </span>
                   )}
                 </span>
-                <span style={{
-                  fontSize: '10px',
-                  color: '#6b7280',
-                  fontFamily: 'monospace'
-                }}>
-                  {formatTime(item.timestamp)}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{
+                    fontSize: '10px',
+                    color: '#6b7280',
+                    fontFamily: 'monospace'
+                  }}>
+                    {formatTime(item.timestamp)}
+                  </span>
+                  {/* Eye button to view state */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewState(item.index);
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '2px',
+                      borderRadius: '3px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#6b7280',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f3f4f6';
+                      e.currentTarget.style.color = '#374151';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = '#6b7280';
+                    }}
+                    title="View state details"
+                  >
+                    <Eye size={12} />
+                  </button>
+                </div>
               </div>
             </div>
           </div>

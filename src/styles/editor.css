@@ -966,3 +966,65 @@ svg:has(.creation-mode-overlay.text-mode) * {
 svg:has(.creation-mode-overlay) .creation-mode-overlay {
   pointer-events: all !important;
 }
+
+/* ============================================
+   HISTORY MODAL STYLES
+   ============================================ */
+
+.history-modal .modal-backdrop {
+  backdrop-filter: blur(2px);
+  transition: opacity 0.2s ease;
+}
+
+.history-modal .modal-content {
+  animation: historyModalSlideIn 0.3s ease-out;
+  transition: all 0.2s ease;
+}
+
+@keyframes historyModalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.history-modal pre {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db #f9fafb;
+}
+
+.history-modal pre::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.history-modal pre::-webkit-scrollbar-track {
+  background: #f9fafb;
+  border-radius: 3px;
+}
+
+.history-modal pre::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.history-modal pre::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Button hover effects */
+.history-modal button {
+  transition: all 0.15s ease;
+}
+
+.history-modal button:hover {
+  transform: translateY(-1px);
+}
+
+.history-modal button:active {
+  transform: translateY(0);
+}
