@@ -2,6 +2,7 @@ import React from 'react';
 import { Plugin } from '../../core/PluginSystem';
 import { useEditorStore } from '../../store/editorStore';
 import { useEditorHistory } from '../../store/useEditorHistory';
+import { globalUndoRedo, setUndoRedoFlag } from '../../store/simpleUndoRedo';
 import { Undo2, Redo2 } from 'lucide-react';
 import { PluginButton } from '../../components/PluginButton';
 
@@ -67,8 +68,16 @@ export const UndoRedoPlugin: Plugin = {
       modifiers: ['ctrl'],
       description: 'Undo',
       action: () => {
-        const store = useEditorStore.getState();
-        store.undo();
+        const currentState = useEditorStore.getState();
+        const undoState = globalUndoRedo.undo(currentState);
+        if (undoState) {
+          console.log('🔄 Shortcut undo');
+          setUndoRedoFlag(true);
+          useEditorStore.setState(undoState, true);
+          setTimeout(() => {
+            setUndoRedoFlag(false);
+          }, 100);
+        }
       }
     },
     {
@@ -76,8 +85,16 @@ export const UndoRedoPlugin: Plugin = {
       modifiers: ['ctrl'],
       description: 'Redo',
       action: () => {
-        const store = useEditorStore.getState();
-        store.redo();
+        const currentState = useEditorStore.getState();
+        const redoState = globalUndoRedo.redo(currentState);
+        if (redoState) {
+          console.log('🔄 Shortcut redo');
+          setUndoRedoFlag(true);
+          useEditorStore.setState(redoState, true);
+          setTimeout(() => {
+            setUndoRedoFlag(false);
+          }, 100);
+        }
       }
     },
     {
@@ -85,8 +102,16 @@ export const UndoRedoPlugin: Plugin = {
       modifiers: ['ctrl', 'shift'],
       description: 'Redo (Alternative)',
       action: () => {
-        const store = useEditorStore.getState();
-        store.redo();
+        const currentState = useEditorStore.getState();
+        const redoState = globalUndoRedo.redo(currentState);
+        if (redoState) {
+          console.log('🔄 Shortcut redo (alt)');
+          setUndoRedoFlag(true);
+          useEditorStore.setState(redoState, true);
+          setTimeout(() => {
+            setUndoRedoFlag(false);
+          }, 100);
+        }
       }
     }
   ],

@@ -1,5 +1,100 @@
 import { useEditorStore } from './editorStore';
 import microdiff from 'microdiff';
+import isEqual from 'fast-deep-equal';
+
+// Global flag to temporarily disable diff during problematic operations
+let isDiffTemporarilyDisabled = false;
+let isRedoOperation = false;
+
+/**
+ * Sanitize a state to ensure it doesn't contain invalid references or structural diff metadata
+ */
+export function sanitizeState(state: any): any {
+  if (!state || typeof state !== 'object') {
+    return state;
+  }
+  
+  // Create a clean copy
+  const cleanState = { ...state };
+  
+  // Remove any diff metadata that shouldn't be in the actual state
+  if (cleanState.__diffMetadata) {
+    delete cleanState.__diffMetadata;
+  }
+  
+  // Validate and clean arrays
+  if (cleanState.paths && Array.isArray(cleanState.paths)) {
+    cleanState.paths = cleanState.paths.filter((path: any) => path && typeof path === 'object' && path.id);
+  }
+  
+  if (cleanState.texts && Array.isArray(cleanState.texts)) {
+    cleanState.texts = cleanState.texts.filter((text: any) => text && typeof text === 'object' && text.id);
+  }
+  
+  // Clean selection state
+  if (cleanState.selection) {
+    const selection = { ...cleanState.selection };
+    
+    // Ensure arrays are valid
+    if (selection.selectedPaths && Array.isArray(selection.selectedPaths)) {
+      selection.selectedPaths = selection.selectedPaths.filter((id: any) => typeof id === 'string' && id.length > 0);
+    }
+    
+    if (selection.selectedTexts && Array.isArray(selection.selectedTexts)) {
+      selection.selectedTexts = selection.selectedTexts.filter((id: any) => typeof id === 'string' && id.length > 0);
+    }
+    
+    if (selection.selectedCommands && Array.isArray(selection.selectedCommands)) {
+      selection.selectedCommands = selection.selectedCommands.filter((cmd: any) => cmd && typeof cmd === 'object');
+    }
+    
+    cleanState.selection = selection;
+  }
+  
+  return cleanState;
+}
+
+/**
+ * Mark that we're about to perform a redo operation
+ */
+export function markRedoOperation() {
+  isRedoOperation = true;
+  console.log('🔄 Redo operation marked - will use full state storage');
+  
+  // Clear the flag after a short delay
+  setTimeout(() => {
+    isRedoOperation = false;
+    console.log('✅ Redo operation completed');
+  }, 100);
+}
+
+/**
+ * Check if we're currently in a redo operation
+ */
+export function isInRedoOperation(): boolean {
+  return isRedoOperation;
+}
+
+/**
+ * Temporarily disable diff calculation to prevent issues during redo operations
+ */
+export function temporarilyDisableDiff() {
+  isDiffTemporarilyDisabled = true;
+  console.warn('🚨 Diff calculation temporarily disabled');
+  
+  // Re-enable after a shorter delay to minimize impact on normal operations
+  setTimeout(() => {
+    isDiffTemporarilyDisabled = false;
+    console.log('✅ Diff calculation re-enabled');
+  }, 200); // Reduced from 1000ms to 200ms
+}
+
+/**
+ * Check if diff is currently disabled
+ */
+export function isDiffDisabled(): boolean {
+  return isDiffTemporarilyDisabled;
+}
 
 /**
  * Fields and paths that should be excluded from diff tracking and storage
@@ -82,7 +177,35 @@ export function calculateStateDiff(
   currentState: any, 
   pastState: any
 ): any | null {
+  try {
+    if (!currentState || !pastState) return currentState;
+    
+    // CRITICAL: Check if we're dealing with structural diffs from previous operations
+    // If currentState is already a structural diff, don't process it again
+    if (currentState.__diffMetadata?.type === 'structural') {
+      console.warn('🚨 Attempted to diff a structural diff - returning full state to preserve history');
+      return currentState; // Return full state to preserve history
+    }
+    
+    // If pastState is a structural diff, we need to reconstruct it first
+    if (pastState.__diffMetadata?.type === 'structural') {
+      console.warn('🚨 Past state is a structural diff - returning full state to preserve history');
+      return currentState; // Return full state to preserve history
+    }
   if (!currentState || !pastState) return currentState;
+  
+  // CRITICAL: Check if we're dealing with structural diffs from previous operations
+  // If currentState is already a structural diff, don't process it again
+  if (currentState.__diffMetadata?.type === 'structural') {
+    console.warn('🚨 Attempted to diff a structural diff - this indicates a Zundo configuration issue, returning null');
+    return null; // Return null to prevent storing invalid diffs
+  }
+  
+  // If pastState is a structural diff, we need to reconstruct it first
+  if (pastState.__diffMetadata?.type === 'structural') {
+    console.warn('� Past state is a structural diff - this indicates a Zundo configuration issue, returning null');
+    return null; // Return null to prevent storing invalid diffs
+  }
   
   // Create filtered states excluding fields that shouldn't be tracked
   const filteredCurrent = filterStateForDiff(currentState);
@@ -102,44 +225,140 @@ export function calculateStateDiff(
   }
   
   // CRITICAL: If too many fields changed, return null to prevent corruption
-  const affectedTopLevelFields = new Set(filteredChanges.map((c: any) => c.path[0])).size;
+  const affectedTopLevelFields = new Set(
+    filteredChanges
+      .map((c: any) => c.path[0])
+      .filter(field => field && typeof field === 'string') // Ensure valid field names
+  );
   const totalStateFields = Object.keys(filteredCurrent).length;
   
-  if (affectedTopLevelFields > totalStateFields * 0.8) {
-    console.warn(`🚨 WARNING: ${affectedTopLevelFields}/${totalStateFields} top-level fields changed - skipping this state`);
+  // Safety check: ensure we have valid data before comparison
+  if (affectedTopLevelFields.size === 0 || totalStateFields === 0) {
+    console.warn(`🚨 WARNING: Invalid state data - affectedFields: ${affectedTopLevelFields.size}, totalFields: ${totalStateFields}`);
+    return currentState; // Fallback to full state
+  }
+  
+  if (affectedTopLevelFields.size > totalStateFields * 0.8) {
+    console.warn(`🚨 WARNING: ${affectedTopLevelFields.size}/${totalStateFields} top-level fields changed - skipping this state`);
     return null; // Skip storing this state to prevent corruption
   }
   
-  // Simple implementation: return only the top-level fields that changed
-  // This is what Zundo expects - a simple object with only the changed fields
-  const diff: any = {};
-  const changedTopLevelFields = new Set(filteredChanges.map((c: any) => c.path[0]));
+  // Advanced deep diff implementation using microdiff
+  // Instead of storing only top-level fields, create a structural diff
+  const structuralDiff: any = {};
   
-  for (const field of changedTopLevelFields) {
-    diff[field] = filteredCurrent[field];
+  for (const change of filteredChanges) {
+    const path = change.path;
+    const { type } = change;
+    
+    // Get the appropriate value based on change type
+    let value: any;
+    let oldValue: any;
+    
+    switch (type) {
+      case 'CREATE':
+        value = (change as any).value;
+        break;
+      case 'CHANGE':
+        value = (change as any).value;
+        oldValue = (change as any).oldValue;
+        break;
+      case 'REMOVE':
+        oldValue = (change as any).value;
+        break;
+    }
+    
+    // Build nested structure based on the path
+    let current = structuralDiff;
+    
+    // Navigate/create the path structure
+    for (let i = 0; i < path.length - 1; i++) {
+      const key = path[i];
+      if (!(key in current)) {
+        // Determine if next level should be array or object
+        const nextKey = path[i + 1];
+        current[key] = typeof nextKey === 'number' || /^\d+$/.test(String(nextKey)) ? [] : {};
+      }
+      current = current[key];
+    }
+    
+    // Set the final value
+    const finalKey = path[path.length - 1];
+    
+    switch (type) {
+      case 'CREATE':
+      case 'CHANGE':
+        current[finalKey] = value;
+        break;
+      case 'REMOVE':
+        // For removal, we need to track this explicitly
+        // We'll use a special marker for removed values
+        current[finalKey] = { __ZUNDO_REMOVED__: true, __oldValue__: oldValue };
+        break;
+    }
   }
+  
+  // Add metadata for reconstruction
+  structuralDiff.__diffMetadata = {
+    type: 'structural',
+    changesCount: filteredChanges.length,
+    affectedFields: Array.from(affectedTopLevelFields),
+    timestamp: Date.now()
+  };
   
   // Debug logging in development
   if (process.env.NODE_ENV === 'development') {
     const fullSize = JSON.stringify(filteredCurrent).length;
-    const diffSize = JSON.stringify(diff).length;
+    const diffSize = JSON.stringify(structuralDiff).length;
     const savings = fullSize > 0 ? Math.max(0, Math.round(((fullSize - diffSize) / fullSize) * 100)) : 0;
     
-    // Safety check - if diff is larger than original, return null to skip
+    // Safety check - if diff is larger than original, fall back to field-level diff
     if (diffSize > fullSize) {
-      console.error(`🚨 EMERGENCY: Diff size (${diffSize}) larger than original (${fullSize}) - skipping state`);
-      return null;
+      console.warn(`📊 Structural diff larger than original, falling back to field-level diff`);
+      
+      // Fall back to simple field-level diff
+      const simpleDiff: any = {};
+      for (const field of affectedTopLevelFields) {
+        simpleDiff[field] = filteredCurrent[field];
+      }
+      
+      const simpleDiffSize = JSON.stringify(simpleDiff).length;
+      if (simpleDiffSize < fullSize) {
+        updateMetrics(simpleDiffSize, fullSize, 'field-level');
+        console.log(`📦 Zundo field-level diff fallback: ${simpleDiffSize} bytes`);
+        return simpleDiff;
+      } else {
+        updateMetrics(0, fullSize, 'skipped');
+        console.error(`🚨 EMERGENCY: Both diff methods larger than original - skipping state`);
+        return null;
+      }
     }
     
-    console.log(`📦 Zundo field-level diff: ${diffSize} bytes (${savings}% smaller than full state)`);
-    console.log(`🔍 Changed fields: [${Array.from(changedTopLevelFields).join(', ')}] (${filteredChanges.length} granular changes)`);
+    updateMetrics(diffSize, fullSize, 'structural');
+    console.log(`📦 Zundo structural diff: ${diffSize} bytes (${savings}% smaller than full state)`);
+    console.log(`🔍 Granular changes: ${filteredChanges.length} changes across [${Array.from(affectedTopLevelFields).join(', ')}]`);
     
-    if (filteredChanges.length <= 10) {
-      console.log(`🔬 Granular changes:`, filteredChanges.map((c: any) => `${c.path.join('.')}: ${c.type}`));
+    // Log performance metrics every 10 operations
+    if (diffMetrics.totalOperations % 10 === 0) {
+      console.log(`📊 Diff Performance Metrics:`, {
+        avgSavings: `${diffMetrics.averageSavings}%`,
+        totalOps: diffMetrics.totalOperations,
+        structural: diffMetrics.structuralDiffs,
+        fieldLevel: diffMetrics.fieldLevelDiffs,
+        skipped: diffMetrics.skippedStates
+      });
+    }
+    
+    if (filteredChanges.length <= 20) {
+      console.log(`🔬 Change details:`, filteredChanges.map((c: any) => `${c.path.join('.')}: ${c.type}`));
     }
   }
   
-  return diff;
+  return structuralDiff;
+  } catch (error) {
+    console.error('🚨 Error in calculateStateDiff:', error);
+    return currentState; // Return current state on error instead of null to prevent Zundo errors
+  }
 }
 
 /**
@@ -149,6 +368,7 @@ export function calculateStateDiff(
 export function useDiffConfig() {
   return {
     config: diffConfig,
+    metrics: getDiffMetrics(),
     setDiffMode: (mode: 'full' | 'diff') => {
       diffConfig.mode = mode;
       diffConfig.enabled = mode === 'diff';
@@ -180,7 +400,8 @@ export function useDiffConfig() {
       }
       
       return newMode;
-    }
+    },
+    resetMetrics: resetDiffMetrics
   };
 }
 
@@ -218,6 +439,80 @@ export function getExclusionConfig() {
 }
 
 /**
+ * Performance metrics for diff operations
+ */
+interface DiffMetrics {
+  averageDiffSize: number;
+  averageFullSize: number;
+  averageSavings: number;
+  totalOperations: number;
+  structuralDiffs: number;
+  fieldLevelDiffs: number;
+  skippedStates: number;
+}
+
+let diffMetrics: DiffMetrics = {
+  averageDiffSize: 0,
+  averageFullSize: 0,
+  averageSavings: 0,
+  totalOperations: 0,
+  structuralDiffs: 0,
+  fieldLevelDiffs: 0,
+  skippedStates: 0
+};
+
+/**
+ * Update metrics tracking
+ */
+function updateMetrics(diffSize: number, fullSize: number, diffType: 'structural' | 'field-level' | 'skipped') {
+  diffMetrics.totalOperations++;
+  
+  if (diffType === 'skipped') {
+    diffMetrics.skippedStates++;
+    return;
+  }
+  
+  if (diffType === 'structural') {
+    diffMetrics.structuralDiffs++;
+  } else {
+    diffMetrics.fieldLevelDiffs++;
+  }
+  
+  // Update running averages
+  const total = diffMetrics.totalOperations - diffMetrics.skippedStates;
+  const prevAvgDiff = diffMetrics.averageDiffSize;
+  const prevAvgFull = diffMetrics.averageFullSize;
+  
+  diffMetrics.averageDiffSize = ((prevAvgDiff * (total - 1)) + diffSize) / total;
+  diffMetrics.averageFullSize = ((prevAvgFull * (total - 1)) + fullSize) / total;
+  diffMetrics.averageSavings = diffMetrics.averageFullSize > 0 
+    ? Math.round(((diffMetrics.averageFullSize - diffMetrics.averageDiffSize) / diffMetrics.averageFullSize) * 100)
+    : 0;
+}
+
+/**
+ * Get current performance metrics
+ */
+export function getDiffMetrics(): DiffMetrics {
+  return { ...diffMetrics };
+}
+
+/**
+ * Reset performance metrics
+ */
+export function resetDiffMetrics() {
+  diffMetrics = {
+    averageDiffSize: 0,
+    averageFullSize: 0,
+    averageSavings: 0,
+    totalOperations: 0,
+    structuralDiffs: 0,
+    fieldLevelDiffs: 0,
+    skippedStates: 0
+  };
+}
+
+/**
  * Calculate difference between two specific states
  * Used to show only the fields that changed
  */
@@ -228,10 +523,171 @@ export function calculateInlineDiff(currentState: any, previousState: any) {
 
 /**
  * Reconstruct display data from field-level diff for rich context in UI  
- * Since we're now using simple field-level diffs, this just returns the diff as-is
+ * For structural diffs, this applies the diff to reconstruct the full state
  */
 export function reconstructDisplayData(diffData: any, currentState: any): any {
+  // If no diff data, return empty object
+  if (!diffData) return {};
+  
+  // Check if this is a structural diff
+  if (diffData.__diffMetadata?.type === 'structural') {
+    return reconstructFromStructuralDiff(diffData, currentState);
+  }
+  
   // With the simplified implementation, diffData is already in the right format
   // It contains only the top-level fields that changed, with their complete values
-  return diffData || {};
+  return diffData;
+}
+
+/**
+ * Reconstruct state from structural diff
+ * This function applies a structural diff to a base state to reconstruct the full state
+ */
+function reconstructFromStructuralDiff(structuralDiff: any, baseState: any): any {
+  if (!structuralDiff || !baseState) return baseState;
+  
+  try {
+    // Clone the base state to avoid mutations
+    const reconstructed = JSON.parse(JSON.stringify(baseState));
+    
+    // Remove metadata from diff before processing
+    const { __diffMetadata, ...diff } = structuralDiff;
+    
+    // Apply the structural diff with error handling
+    applyStructuralDiff(reconstructed, diff);
+    
+    return reconstructed;
+  } catch (error) {
+    console.warn('🚨 Error reconstructing from structural diff:', error);
+    console.warn('Falling back to base state');
+    return baseState;
+  }
+}
+
+/**
+ * Apply structural diff to an object
+ */
+function applyStructuralDiff(target: any, diff: any): void {
+  if (!target || !diff || typeof diff !== 'object') return;
+  
+  for (const [key, value] of Object.entries(diff)) {
+    try {
+      if (value && typeof value === 'object') {
+        // Check if this is a removal marker
+        if ((value as any).__ZUNDO_REMOVED__) {
+          delete target[key];
+          continue;
+        }
+        
+        // Check if this is a nested diff
+        if (Array.isArray(value) || (typeof value === 'object' && value.constructor === Object)) {
+          // Ensure target has the property as the correct type
+          if (!(key in target)) {
+            target[key] = Array.isArray(value) ? [] : {};
+          }
+          
+          // Validate that target[key] is compatible with the diff
+          if (typeof target[key] !== 'object') {
+            target[key] = Array.isArray(value) ? [] : {};
+          }
+          
+          // Recursively apply diff
+          applyStructuralDiff(target[key], value);
+        } else {
+          // Direct assignment
+          target[key] = value;
+        }
+      } else {
+        // Direct assignment for primitives
+        target[key] = value;
+      }
+    } catch (error) {
+      console.warn(`🚨 Error applying diff for key "${key}":`, error);
+      // Continue with other keys
+    }
+  }
+}
+
+/**
+ * Optimized equality function for Zundo
+ * Uses fast-deep-equal for performance with intelligent shallow checks first
+ */
+export function optimizedEquality(pastState: any, currentState: any): boolean {
+  try {
+    // Quick reference equality check
+    if (pastState === currentState) return true;
+    
+    // Handle null/undefined cases
+    if (!pastState || !currentState) return pastState === currentState;
+    
+    // CRITICAL: Check if we're dealing with structural diffs
+    if (pastState.__diffMetadata?.type === 'structural' || currentState.__diffMetadata?.type === 'structural') {
+      console.warn('🚨 Attempted to compare structural diff in equality function - treating as different');
+      return false; // Treat structural diffs as different to prevent issues
+    }
+    
+    // Type check
+    if (typeof pastState !== typeof currentState) return false;
+  
+  // For non-objects, use strict equality
+  if (typeof pastState !== 'object') return pastState === currentState;
+  
+  // Array check
+  const pastIsArray = Array.isArray(pastState);
+  const currentIsArray = Array.isArray(currentState);
+  if (pastIsArray !== currentIsArray) return false;
+  
+  // Length/size check for arrays and objects
+  if (pastIsArray) {
+    if (pastState.length !== currentState.length) return false;
+  } else {
+    const pastKeys = Object.keys(pastState);
+    const currentKeys = Object.keys(currentState);
+    if (pastKeys.length !== currentKeys.length) return false;
+    
+    // Quick key comparison for objects
+    for (let i = 0; i < pastKeys.length; i++) {
+      if (pastKeys[i] !== currentKeys[i]) return false;
+    }
+  }
+  
+  // Try shallow comparison first for performance (most changes are shallow)
+  let needsDeepComparison = false;
+  
+  if (pastIsArray) {
+    for (let i = 0; i < pastState.length; i++) {
+      if (pastState[i] !== currentState[i]) {
+        // If shallow comparison fails, check if we need deep comparison
+        if (typeof pastState[i] === 'object' && typeof currentState[i] === 'object') {
+          needsDeepComparison = true;
+          break;
+        } else {
+          return false; // Different primitives
+        }
+      }
+    }
+  } else {
+    for (const key in pastState) {
+      if (pastState[key] !== currentState[key]) {
+        // If shallow comparison fails, check if we need deep comparison
+        if (typeof pastState[key] === 'object' && typeof currentState[key] === 'object') {
+          needsDeepComparison = true;
+          break;
+        } else {
+          return false; // Different primitives
+        }
+      }
+    }
+  }
+  
+  // If shallow comparison passed completely, objects are equal
+  if (!needsDeepComparison) return true;
+  
+  // Use fast-deep-equal for deep comparison when needed
+  // This is much faster than JSON.stringify comparison
+  return isEqual(pastState, currentState);
+  } catch (error) {
+    console.error('🚨 Error in optimizedEquality:', error);
+    return false; // Return false on error to be safe
+  }
 }

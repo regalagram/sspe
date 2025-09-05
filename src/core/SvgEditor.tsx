@@ -21,6 +21,7 @@ import { PencilFloatingToolbar, CurveFloatingToolbar, ShapeFloatingToolbar, Text
 import { MobileTextEditModal } from '../components/MobileTextEditModal';
 import { useMobileTextEdit } from '../hooks/useMobileTextEdit';
 import { extractGradientsFromPaths, extractGradientsFromImages, extractGradientsFromTexts, extractGradientsFromTextPaths } from '../utils/gradient-utils';
+import { useEditorHistory } from '../store/useEditorHistory';
 
 // Register plugins immediately during module loading
 
@@ -31,6 +32,9 @@ export const SvgEditor: React.FC = () => {
   const editorStore = useEditorStore();
   const { isFullscreen, paths, images, texts, textPaths, gradients: storeGradients, enabledFeatures } = editorStore;
   const svgRef = useRef<SVGSVGElement>(null);
+  
+  // Initialize history system - this will capture the initial state
+  useEditorHistory();
   
   // Mobile text editing
   const { isMobile: isMobileForText, editData, startMobileEdit, handleSave, handleCancel, isModalOpen } = useMobileTextEdit();

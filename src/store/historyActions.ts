@@ -1,11 +1,12 @@
 import { StateCreator } from 'zustand';
 import { EditorState } from '../types';
+import { globalUndoRedo } from './simpleUndoRedo';
 
 export interface HistoryActions {
   undo: () => void;
   redo: () => void;
   pushToHistory: () => void;
-  // Zundo compatibility properties
+  // Compatibility properties
   canUndo: boolean;
   canRedo: boolean;
 }
@@ -16,35 +17,49 @@ export const createHistoryActions: StateCreator<
   [],
   HistoryActions
 > = (set, get, store) => ({
-  // Zundo integration - delegate to temporal store
+  // Delegate to our simple undo/redo system
   undo: () => {
-    const temporal = (store as any).temporal;
-    if (temporal) {
-      temporal.getState().undo();
+    const currentState = get();
+    const undoState = globalUndoRedo.undo(currentState);
+    if (undoState) {
+      console.log('🔄 Manual undo operation from historyActions');
+      set(undoState, true);
     }
   },
 
   redo: () => {
-    const temporal = (store as any).temporal;
-    if (temporal) {
-      temporal.getState().redo();
+    const currentState = get();
+    const redoState = globalUndoRedo.redo(currentState);
+    if (redoState) {
+      console.log('🔄 Manual redo operation from historyActions');
+      set(redoState, true);
     }
   },
 
-  // Keep pushToHistory for gradual migration - will be no-op with Zundo
+  // Manual history tracking - optimized for explicit calls
   pushToHistory: () => {
-    // No-op with Zundo - history is tracked automatically
-    // This is kept for backward compatibility during migration
+    const currentState = get();
+    console.log('📚 Manual pushToHistory called');
+    
+    // Extract only the historical state (remove UI-only fields)
+    const { 
+      history, 
+      renderVersion, 
+      floatingToolbarUpdateTimestamp,
+      deepSelection,
+      isSpecialPointSeparationAnimating,
+      ...historicalState 
+    } = currentState;
+    
+    globalUndoRedo.pushState(historicalState);
   },
 
-  // Computed properties that delegate to temporal store
+  // Computed properties that delegate to our simple undo/redo system
   get canUndo() {
-    const temporal = (store as any).temporal;
-    return temporal ? temporal.getState().pastStates.length > 0 : false;
+    return globalUndoRedo.getState().canUndo;
   },
 
   get canRedo() {
-    const temporal = (store as any).temporal;
-    return temporal ? temporal.getState().futureStates.length > 0 : false;
+    return globalUndoRedo.getState().canRedo;
   },
 });

@@ -291,11 +291,6 @@ export class PencilManager {
 
     const store = useEditorStore.getState();
     
-    // Save current state to history before adding new path (only if requested)
-    if (saveToHistory) {
-      store.pushToHistory();
-    }
-    
     // Filter out duplicate and very close points to avoid curve artifacts
     const filteredPoints = this.filterPoints(points);
     
@@ -403,6 +398,11 @@ export class PencilManager {
 
     // Add the path to the store
     store.replacePaths([...store.paths, newPath]);
+    
+    // Save state to history AFTER completing the path creation (only if requested)
+    if (saveToHistory) {
+      store.pushToHistory();
+    }
   }
 
   private animateSimplification(originalPoints: Point[], simplifiedPoints: Point[], svgElement: SVGSVGElement) {
