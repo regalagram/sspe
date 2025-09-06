@@ -92,40 +92,73 @@ interface SimpleCommandPointProps {
 
 const SimpleCommandPoint = React.memo<SimpleCommandPointProps>(({ 
   position, radius, fill, stroke, commandId, zoom, isSelected, isFirst, isLast, isMobile, isTablet 
-}) => (
-  <g key={`command-${commandId}`}>
-    <CommandPointGroup x={position.x} y={position.y} zoom={zoom}>
-      <CommandPointCircle
-        cx={position.x}
-        cy={position.y}
-        radius={radius}
-        fill={fill}
-        stroke={stroke}
-        zoom={zoom}
-      />
-      <CommandPointInteraction
-        cx={position.x}
-        cy={position.y}
-        radius={getInteractionRadius(radius, isMobile, isTablet)}
-        commandId={commandId}
-      />
-      {/* Inner circle for selected initial/final points */}
-      {isSelected && (isFirst || isLast) && (
-        <circle
+}) => {
+  // Check if this command is being dragged (hack to maintain sync)
+  const isDragging = transformManager.isMoving() && transformManager.getDraggingCommandId() === commandId;
+  
+  return (
+    <g>
+      <CommandPointGroup x={position.x} y={position.y} zoom={zoom}>
+        {/* Normal command circle - hide during drag to avoid sync issues */}
+        {!isDragging && (
+          <CommandPointCircle
+            cx={position.x}
+            cy={position.y}
+            radius={radius}
+            fill={fill}
+            stroke={stroke}
+            zoom={zoom}
+          />
+        )}
+        {/* Temporary sync-friendly circle during drag (hack!) */}
+        {isDragging && (
+          <circle
+            cx={position.x}
+            cy={position.y}
+            r={radius}
+            fill={isFirst ? "#8B4513" : isLast ? "#FFD700" : fill} // Café para inicial, amarillo para final, color original para otros
+            stroke={isFirst ? "#654321" : isLast ? "#FFA500" : stroke} // Bordes más oscuros para debug
+            strokeWidth={1}
+            vectorEffect="non-scaling-stroke"
+            style={{ 
+              pointerEvents: 'none',
+              opacity: 0.9
+            }}
+          />
+        )}
+        <CommandPointInteraction
           cx={position.x}
           cy={position.y}
-          r={radius * 0.4}
-          fill="#ffffff"
-          stroke="none"
-          style={{ 
-            pointerEvents: 'none',
-            opacity: 0.8
-          }}
+          radius={getInteractionRadius(radius, isMobile, isTablet)}
+          commandId={commandId}
         />
-      )}
-    </CommandPointGroup>
-  </g>
-), (prevProps, nextProps) => {
+        {/* Inner circle for selected initial/final points */}
+        {isSelected && (isFirst || isLast) && (
+          <circle
+            cx={position.x}
+            cy={position.y}
+            r={radius * 0.4}
+            fill="#ffffff"
+            stroke="none"
+            style={{ 
+              pointerEvents: 'none',
+              opacity: 0.8
+            }}
+          />
+        )}
+      </CommandPointGroup>
+    </g>
+  );
+}, (prevProps, nextProps) => {
+  // Check drag state for memoization
+  const wasDragging = transformManager.isMoving() && transformManager.getDraggingCommandId() === prevProps.commandId;
+  const isDragging = transformManager.isMoving() && transformManager.getDraggingCommandId() === nextProps.commandId;
+  
+  // If drag state changed, force re-render
+  if (wasDragging !== isDragging) {
+    return false;
+  }
+  
   // Ultra-strict comparison - ignore renderVersion completely to prevent unnecessary re-renders
   return (
     prevProps.commandId === nextProps.commandId &&
@@ -164,6 +197,11 @@ const SplitCommandPoint = React.memo<SplitCommandPointProps>(({
   position, radius, directionAngle, firstCommandId, lastCommandId, 
   firstCommandSelected, lastCommandSelected, zoom, isMobile, isTablet 
 }) => {
+  // Check if any of the split commands is being dragged (hack to maintain sync)
+  const isDraggingFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() === firstCommandId;
+  const isDraggingLast = transformManager.isMoving() && transformManager.getDraggingCommandId() === lastCommandId;
+  const isDraggingEither = isDraggingFirst || isDraggingLast;
+  
   // Calculate perpendicular angle for the split line
   const splitAngle = directionAngle + Math.PI / 2;
   
@@ -176,34 +214,69 @@ const SplitCommandPoint = React.memo<SplitCommandPointProps>(({
   const interactionRadius = getInteractionRadius(radius, isMobile, isTablet);
   
   return (
-    <g key={`command-split-${firstCommandId}-${lastCommandId}`}>
+    <g>
       <CommandPointGroup x={position.x} y={position.y} zoom={zoom}>
-        {/* First half (red) - initial point */}
-        <path
-          d={`M ${position.x} ${position.y} L ${splitX1} ${splitY1} A ${radius} ${radius} 0 0 1 ${splitX2} ${splitY2} Z`}
-          fill="#ef4444"
-          stroke="#dc2626"
-          strokeWidth={1}
-          vectorEffect="non-scaling-stroke"
-          style={{ 
-            pointerEvents: 'none',
-            opacity: 0.9
-          }}
-          className="command-point"
-        />
-        {/* Second half (green) - final point */}
-        <path
-          d={`M ${position.x} ${position.y} L ${splitX2} ${splitY2} A ${radius} ${radius} 0 0 1 ${splitX1} ${splitY1} Z`}
-          fill="#22c55e"
-          stroke="#16a34a"
-          strokeWidth={1}
-          vectorEffect="non-scaling-stroke"
-          style={{ 
-            pointerEvents: 'none',
-            opacity: 0.9
-          }}
-          className="command-point"
-        />
+        {/* Normal paths - hide during drag to avoid sync issues */}
+        {!isDraggingEither && (
+          <>
+            {/* First half (red) - initial point */}
+            <path
+              d={`M ${position.x} ${position.y} L ${splitX1} ${splitY1} A ${radius} ${radius} 0 0 1 ${splitX2} ${splitY2} Z`}
+              fill="#ef4444"
+              stroke="#dc2626"
+              strokeWidth={1}
+              vectorEffect="non-scaling-stroke"
+              style={{ 
+                pointerEvents: 'none',
+                opacity: 0.9
+              }}
+              className="command-point"
+            />
+            {/* Second half (green) - final point */}
+            <path
+              d={`M ${position.x} ${position.y} L ${splitX2} ${splitY2} A ${radius} ${radius} 0 0 1 ${splitX1} ${splitY1} Z`}
+              fill="#22c55e"
+              stroke="#16a34a"
+              strokeWidth={1}
+              vectorEffect="non-scaling-stroke"
+              style={{ 
+                pointerEvents: 'none',
+                opacity: 0.9
+              }}
+              className="command-point"
+            />
+          </>
+        )}
+        
+        {/* Temporary sync-friendly paths during drag (hack!) */}
+        {isDraggingEither && (
+          <>
+            {/* First half (red) - initial point - DEBUG: café si se arrastra */}
+            <path
+              d={`M ${position.x} ${position.y} L ${splitX1} ${splitY1} A ${radius} ${radius} 0 0 1 ${splitX2} ${splitY2} Z`}
+              fill={isDraggingFirst ? "#8B4513" : "#ef4444"} // Café si se arrastra, rojo normal si no
+              stroke={isDraggingFirst ? "#654321" : "#dc2626"} // Borde café oscuro si se arrastra
+              strokeWidth={1}
+              vectorEffect="non-scaling-stroke"
+              style={{ 
+                pointerEvents: 'none',
+                opacity: 0.9
+              }}
+            />
+            {/* Second half (green) - final point - DEBUG: amarillo si se arrastra */}
+            <path
+              d={`M ${position.x} ${position.y} L ${splitX2} ${splitY2} A ${radius} ${radius} 0 0 1 ${splitX1} ${splitY1} Z`}
+              fill={isDraggingLast ? "#FFD700" : "#22c55e"} // Amarillo si se arrastra, verde normal si no
+              stroke={isDraggingLast ? "#FFA500" : "#16a34a"} // Borde naranja si se arrastra
+              strokeWidth={1}
+              vectorEffect="non-scaling-stroke"
+              style={{ 
+                pointerEvents: 'none',
+                opacity: 0.9
+              }}
+            />
+          </>
+        )}
         {/* Interaction overlay first half (red) for last command */}
         <path
           d={`M ${position.x} ${position.y} L ${position.x + Math.cos(splitAngle) * interactionRadius} ${position.y + Math.sin(splitAngle) * interactionRadius} A ${interactionRadius} ${interactionRadius} 0 0 1 ${position.x - Math.cos(splitAngle) * interactionRadius} ${position.y - Math.sin(splitAngle) * interactionRadius} Z`}
@@ -254,6 +327,17 @@ const SplitCommandPoint = React.memo<SplitCommandPointProps>(({
     </g>
   );
 }, (prevProps, nextProps) => {
+  // Check drag state for memoization
+  const wasDraggingFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() === prevProps.firstCommandId;
+  const wasDraggingLast = transformManager.isMoving() && transformManager.getDraggingCommandId() === prevProps.lastCommandId;
+  const isDraggingFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() === nextProps.firstCommandId;
+  const isDraggingLast = transformManager.isMoving() && transformManager.getDraggingCommandId() === nextProps.lastCommandId;
+  
+  // If drag state changed, force re-render
+  if (wasDraggingFirst !== isDraggingFirst || wasDraggingLast !== isDraggingLast) {
+    return false;
+  }
+  
   // Ultra-strict comparison - ignore renderVersion to prevent unnecessary re-renders
   return (
     prevProps.firstCommandId === nextProps.firstCommandId &&
@@ -983,6 +1067,7 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
               
               return (
                 <SplitCommandPoint
+                  key={`split-${firstCommand.id}-${lastCommand.id}`}
                   position={position}
                   radius={radius}
                   directionAngle={directionAngle}
@@ -1002,6 +1087,7 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
             
             return (
               <SimpleCommandPoint
+                key={`command-${command.id}`}
                 position={position}
                 radius={radius}
                 fill={fill}
