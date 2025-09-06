@@ -880,8 +880,8 @@ const TextElementComponent: React.FC<{ text: any }> = ({ text }) => {
 };
 
 // Multiline Text Element Component
-const MultilineTextElementComponent: React.FC<{ text: any }> = ({ text }) => {
-  const { selection, viewport, renderVersion, enabledFeatures, updateTextSpan } = useEditorStore();
+const MultilineTextElementComponentCore: React.FC<{ text: any }> = ({ text }) => {
+  const { selection, viewport, enabledFeatures, updateTextSpan } = useEditorStore();
   const animations = useAnimationsForElement(text.id);
   const { isTextBeingEdited, updateTextContent: updateTextContentLive, stopTextEdit } = useTextEditMode();
   
@@ -986,7 +986,7 @@ const MultilineTextElementComponent: React.FC<{ text: any }> = ({ text }) => {
 
       {/* Selection indicator for multiline text */}
       {isSelected && (
-        <g key={`selected-multiline-text-${text.id}-v${renderVersion}`}>
+        <g key={`selected-multiline-text-${text.id}`}>
           {(() => {
             const bounds = calculateTextBoundsDOM(text);
             if (!bounds) return null;
@@ -1027,6 +1027,17 @@ const MultilineTextElementComponent: React.FC<{ text: any }> = ({ text }) => {
     </g>
   );
 };
+
+// Memoized MultilineTextElementComponent to prevent detached path elements
+const MultilineTextElementComponent = React.memo(MultilineTextElementComponentCore, (prevProps, nextProps) => {
+  return (
+    prevProps.text.id === nextProps.text.id &&
+    prevProps.text.content === nextProps.text.content &&
+    prevProps.text.x === nextProps.text.x &&
+    prevProps.text.y === nextProps.text.y &&
+    JSON.stringify(prevProps.text.style) === JSON.stringify(nextProps.text.style)
+  );
+});
 
 // Image Element Component
 const ImageElementComponent: React.FC<{ image: any }> = ({ image }) => {

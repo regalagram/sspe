@@ -6,7 +6,52 @@ import { TransformHandles } from './TransformHandles';
 import { DimensionsInfo } from './DimensionsInfo';
 import { handleManager } from '../handles/HandleManager';
 
-const TransformPlugin: React.FC = () => {
+// Memoized transform status indicator to prevent detached SVG elements
+interface TransformStatusIndicatorProps {
+  isTransforming: boolean;
+  transformMode: string | null;
+  viewport: { zoom: number };
+}
+
+const TransformStatusIndicator = React.memo<TransformStatusIndicatorProps>(({ isTransforming, transformMode, viewport }) => {
+  if (!isTransforming || !transformMode) {
+    return null;
+  }
+
+  return (
+    <g>
+      <rect
+        x={10 / viewport.zoom}
+        y={10 / viewport.zoom}
+        width={120 / viewport.zoom}
+        height={30 / viewport.zoom}
+        fill="rgba(0, 0, 0, 0.8)"
+        rx={4 / viewport.zoom}
+        pointerEvents="none"
+      />
+      <text
+        x={70 / viewport.zoom}
+        y={28 / viewport.zoom}
+        textAnchor="middle"
+        fontSize={12 / viewport.zoom}
+        fill="white"
+        pointerEvents="none"
+      >
+        {transformMode === 'scale' ? 'Scaling' : 'Rotating'}
+      </text>
+    </g>
+  );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.isTransforming === nextProps.isTransforming &&
+    prevProps.transformMode === nextProps.transformMode &&
+    prevProps.viewport.zoom === nextProps.viewport.zoom
+  );
+});
+
+TransformStatusIndicator.displayName = 'TransformStatusIndicator';
+
+const TransformPluginCore: React.FC = () => {
   const [bounds, setBounds] = useState<TransformBounds | null>(null);
   const [handles, setHandles] = useState<TransformHandle[]>([]);
   const [isTransforming, setIsTransforming] = useState(false);
@@ -21,7 +66,6 @@ const TransformPlugin: React.FC = () => {
   const uses = useEditorStore((state) => state.uses);
   const groups = useEditorStore((state) => state.groups);
   const viewport = useEditorStore((state) => state.viewport);
-  const renderVersion = useEditorStore((state) => state.renderVersion);
 
   // Function to check if selected commands should hide transform box
   const shouldHideTransformForCommands = (): boolean => {
@@ -176,7 +220,7 @@ const TransformPlugin: React.FC = () => {
       setBounds(null);
       setHandles([]);
     }
-  }, [selection.selectedCommands, selection.selectedSubPaths, selection.selectedTexts, selection.selectedTextPaths, selection.selectedImages, selection.selectedUses, selection.selectedGroups, paths, texts, textPaths, images, uses, groups, renderVersion]);
+  }, [selection.selectedCommands, selection.selectedSubPaths, selection.selectedTexts, selection.selectedTextPaths, selection.selectedImages, selection.selectedUses, selection.selectedGroups, paths, texts, textPaths, images, uses, groups]);
 
   // Update during transformation and movement
   useEffect(() => {
@@ -221,32 +265,20 @@ const TransformPlugin: React.FC = () => {
       )}
       
       {/* Transform status indicator */}
-      {isTransforming && transformMode && (
-        <g>
-          <rect
-            x={10 / viewport.zoom}
-            y={10 / viewport.zoom}
-            width={120 / viewport.zoom}
-            height={30 / viewport.zoom}
-            fill="rgba(0, 0, 0, 0.8)"
-            rx={4 / viewport.zoom}
-            pointerEvents="none"
-          />
-          <text
-            x={70 / viewport.zoom}
-            y={28 / viewport.zoom}
-            textAnchor="middle"
-            fontSize={12 / viewport.zoom}
-            fill="white"
-            pointerEvents="none"
-          >
-            {transformMode === 'scale' ? 'Scaling' : 'Rotating'}
-          </text>
-        </g>
-      )}
+      <TransformStatusIndicator 
+        isTransforming={isTransforming}
+        transformMode={transformMode}
+        viewport={viewport}
+      />
     </>
   );
 };
+
+// Memoized wrapper to prevent unnecessary re-renders and detached SVG elements
+const TransformPlugin = React.memo(TransformPluginCore, () => {
+  // Always re-render - let internal state management and memoized sub-components handle optimization
+  return false;
+});
 
 export const Transform: Plugin = {
   id: 'transform',

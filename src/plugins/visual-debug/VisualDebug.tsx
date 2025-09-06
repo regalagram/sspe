@@ -87,11 +87,10 @@ interface SimpleCommandPointProps {
   isLast: boolean;
   isMobile: boolean;
   isTablet: boolean;
-  renderVersion: number;
 }
 
 const SimpleCommandPoint = React.memo<SimpleCommandPointProps>(({ 
-  position, radius, fill, stroke, commandId, zoom, isSelected, isFirst, isLast, isMobile, isTablet, renderVersion 
+  position, radius, fill, stroke, commandId, zoom, isSelected, isFirst, isLast, isMobile, isTablet 
 }) => (
   <g key={`command-${commandId}`}>
     <CommandPointGroup x={position.x} y={position.y} zoom={zoom}>
@@ -158,12 +157,11 @@ interface SplitCommandPointProps {
   zoom: number;
   isMobile: boolean;
   isTablet: boolean;
-  renderVersion: number;
 }
 
 const SplitCommandPoint = React.memo<SplitCommandPointProps>(({ 
   position, radius, directionAngle, firstCommandId, lastCommandId, 
-  firstCommandSelected, lastCommandSelected, zoom, isMobile, isTablet, renderVersion 
+  firstCommandSelected, lastCommandSelected, zoom, isMobile, isTablet 
 }) => {
   // Calculate perpendicular angle for the split line
   const splitAngle = directionAngle + Math.PI / 2;
@@ -938,7 +936,6 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
                   zoom={viewport.zoom}
                   isMobile={isMobile}
                   isTablet={isTablet}
-                  renderVersion={renderVersion}
                 />
               );
             }
@@ -959,7 +956,6 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
                 isLast={isLastCommand}
                 isMobile={isMobile}
                 isTablet={isTablet}
-                renderVersion={renderVersion}
               />
             );
           });
