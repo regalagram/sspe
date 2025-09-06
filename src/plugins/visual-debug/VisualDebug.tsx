@@ -912,10 +912,13 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
       return true;
     }
     
-    // Rule 6: Mostrar puntos si el subpath es visible (condición por defecto para subpaths visibles)
-    // Esto permite que los puntos se muestren en paths/subpaths que están siendo renderizados
-    // sin necesidad de selección específica, siempre que no estén en transformación
-    if (!isTransforming && !isMoving) {
+    // Rule 6: Mostrar puntos si el subpath es visible Y el path está seleccionado
+    // Esta regla requiere que el path contenedor esté seleccionado para mostrar los puntos
+    // sin necesidad de selección específica de subpath o comando
+    const pathId = paths.find(p => p.subPaths.some(sp => sp.id === subPath.id))?.id;
+    const isPathSelected = pathId && selection.selectedPaths.includes(pathId);
+    
+    if (!isTransforming && !isMoving && isPathSelected) {
       return true;
     }
 
