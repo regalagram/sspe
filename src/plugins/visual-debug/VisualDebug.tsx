@@ -88,20 +88,20 @@ interface SimpleCommandPointProps {
   isLast: boolean;
   isMobile: boolean;
   isTablet: boolean;
+  // OPTIMIZATION: Pass cached drag state to avoid repeated transformManager calls
+  dragState: { isMoving: boolean; draggingCommandId: string | null };
 }
 
 const SimpleCommandPoint = React.memo<SimpleCommandPointProps>(({ 
-  position, radius, fill, stroke, commandId, zoom, isSelected, isFirst, isLast, isMobile, isTablet 
+  position, radius, fill, stroke, commandId, zoom, isSelected, isFirst, isLast, isMobile, isTablet, dragState 
 }) => {
-  // Check if this command needs the temporary rendering hack:
-  // 1. If this specific command is being dragged, OR
-  // 2. If this command is selected AND there's a drag operation with multiple selected commands
-  const isDraggingThis = transformManager.isMoving() && transformManager.getDraggingCommandId() === commandId;
-  const isDraggingMultipleSelected = transformManager.isMoving() && transformManager.getDraggingCommandId() && isSelected;
+  // OPTIMIZATION: Use cached drag state instead of calling transformManager repeatedly
+  const isDraggingThis = dragState.isMoving && dragState.draggingCommandId === commandId;
+  const isDraggingMultipleSelected = dragState.isMoving && dragState.draggingCommandId && isSelected;
   const needsTemporaryHack = isDraggingThis || isDraggingMultipleSelected;
   
   return (
-    <g>
+    <g key={`command-container-${commandId}`}>
       <CommandPointGroup x={position.x} y={position.y} zoom={zoom}>
         {/* Normal command circle - hide during drag to avoid sync issues */}
         {!needsTemporaryHack && (
@@ -114,9 +114,10 @@ const SimpleCommandPoint = React.memo<SimpleCommandPointProps>(({
             zoom={zoom}
           />
         )}
-        {/* Temporary sync-friendly circle during drag (hack!) */}
+        {/* Temporary sync-friendly circle during drag (hack!) - MEMORY SAFE */}
         {needsTemporaryHack && (
           <circle
+            key={`temp-hack-${commandId}`}
             cx={position.x}
             cy={position.y}
             r={radius}
@@ -124,6 +125,8 @@ const SimpleCommandPoint = React.memo<SimpleCommandPointProps>(({
             stroke={isFirst ? "#654321" : isLast ? "#FFA500" : stroke} // Bordes más oscuros para debug
             strokeWidth={1}
             vectorEffect="non-scaling-stroke"
+            data-temp-hack="true"
+            data-command-id={commandId}
             style={{ 
               pointerEvents: 'none',
               opacity: 0.9
@@ -154,14 +157,11 @@ const SimpleCommandPoint = React.memo<SimpleCommandPointProps>(({
     </g>
   );
 }, (prevProps, nextProps) => {
-  // Check drag state for memoization
-  const wasDraggingThis = transformManager.isMoving() && transformManager.getDraggingCommandId() === prevProps.commandId;
-  const wasDraggingMultipleSelected = transformManager.isMoving() && transformManager.getDraggingCommandId() && prevProps.isSelected;
-  const wasNeedingTemporaryHack = wasDraggingThis || wasDraggingMultipleSelected;
-  
-  const isDraggingThis = transformManager.isMoving() && transformManager.getDraggingCommandId() === nextProps.commandId;
-  const isDraggingMultipleSelected = transformManager.isMoving() && transformManager.getDraggingCommandId() && nextProps.isSelected;
-  const needsTemporaryHack = isDraggingThis || isDraggingMultipleSelected;
+  // OPTIMIZATION: Use cached drag state instead of calling transformManager
+  const wasNeedingTemporaryHack = (prevProps.dragState.isMoving && prevProps.dragState.draggingCommandId === prevProps.commandId) || 
+                                  (prevProps.dragState.isMoving && prevProps.dragState.draggingCommandId && prevProps.isSelected);
+  const needsTemporaryHack = (nextProps.dragState.isMoving && nextProps.dragState.draggingCommandId === nextProps.commandId) || 
+                            (nextProps.dragState.isMoving && nextProps.dragState.draggingCommandId && nextProps.isSelected);
   
   // If drag state changed, force re-render
   if (wasNeedingTemporaryHack !== needsTemporaryHack) {
@@ -181,7 +181,10 @@ const SimpleCommandPoint = React.memo<SimpleCommandPointProps>(({
     prevProps.isFirst === nextProps.isFirst &&
     prevProps.isLast === nextProps.isLast &&
     prevProps.isMobile === nextProps.isMobile &&
-    prevProps.isTablet === nextProps.isTablet
+    prevProps.isTablet === nextProps.isTablet &&
+    // Compare drag state for optimization
+    prevProps.dragState.isMoving === nextProps.dragState.isMoving &&
+    prevProps.dragState.draggingCommandId === nextProps.dragState.draggingCommandId
     // NOTE: Deliberately ignoring renderVersion to prevent forced re-renders
   );
 });
@@ -200,19 +203,19 @@ interface SplitCommandPointProps {
   zoom: number;
   isMobile: boolean;
   isTablet: boolean;
+  // OPTIMIZATION: Pass cached drag state to avoid repeated transformManager calls
+  dragState: { isMoving: boolean; draggingCommandId: string | null };
 }
 
 const SplitCommandPoint = React.memo<SplitCommandPointProps>(({ 
   position, radius, directionAngle, firstCommandId, lastCommandId, 
-  firstCommandSelected, lastCommandSelected, zoom, isMobile, isTablet 
+  firstCommandSelected, lastCommandSelected, zoom, isMobile, isTablet, dragState 
 }) => {
-  // Check if any of the split commands needs the temporary rendering hack:
-  // 1. If a specific command is being dragged, OR
-  // 2. If a command is selected AND there's a drag operation with multiple selected commands
-  const isDraggingFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() === firstCommandId;
-  const isDraggingLast = transformManager.isMoving() && transformManager.getDraggingCommandId() === lastCommandId;
-  const isDraggingMultipleFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() && firstCommandSelected;
-  const isDraggingMultipleLast = transformManager.isMoving() && transformManager.getDraggingCommandId() && lastCommandSelected;
+  // OPTIMIZATION: Use cached drag state instead of calling transformManager repeatedly
+  const isDraggingFirst = dragState.isMoving && dragState.draggingCommandId === firstCommandId;
+  const isDraggingLast = dragState.isMoving && dragState.draggingCommandId === lastCommandId;
+  const isDraggingMultipleFirst = dragState.isMoving && dragState.draggingCommandId && firstCommandSelected;
+  const isDraggingMultipleLast = dragState.isMoving && dragState.draggingCommandId && lastCommandSelected;
   
   const needsTemporaryHackFirst = isDraggingFirst || isDraggingMultipleFirst;
   const needsTemporaryHackLast = isDraggingLast || isDraggingMultipleLast;
@@ -269,11 +272,14 @@ const SplitCommandPoint = React.memo<SplitCommandPointProps>(({
           <>
             {/* First half (red) - initial point - DEBUG: café si se arrastra o está en selección múltiple */}
             <path
+              key={`temp-hack-first-${firstCommandId}`}
               d={`M ${position.x} ${position.y} L ${splitX1} ${splitY1} A ${radius} ${radius} 0 0 1 ${splitX2} ${splitY2} Z`}
               fill={needsTemporaryHackFirst ? "#8B4513" : "#ef4444"} // Café si necesita hack, rojo normal si no
               stroke={needsTemporaryHackFirst ? "#654321" : "#dc2626"} // Borde café oscuro si necesita hack
               strokeWidth={1}
               vectorEffect="non-scaling-stroke"
+              data-temp-hack="true"
+              data-command-id={firstCommandId}
               style={{ 
                 pointerEvents: 'none',
                 opacity: 0.9
@@ -281,11 +287,14 @@ const SplitCommandPoint = React.memo<SplitCommandPointProps>(({
             />
             {/* Second half (green) - final point - DEBUG: amarillo si se arrastra o está en selección múltiple */}
             <path
+              key={`temp-hack-last-${lastCommandId}`}
               d={`M ${position.x} ${position.y} L ${splitX2} ${splitY2} A ${radius} ${radius} 0 0 1 ${splitX1} ${splitY1} Z`}
               fill={needsTemporaryHackLast ? "#FFD700" : "#22c55e"} // Amarillo si necesita hack, verde normal si no
               stroke={needsTemporaryHackLast ? "#FFA500" : "#16a34a"} // Borde naranja si necesita hack
               strokeWidth={1}
               vectorEffect="non-scaling-stroke"
+              data-temp-hack="true"
+              data-command-id={lastCommandId}
               style={{ 
                 pointerEvents: 'none',
                 opacity: 0.9
@@ -343,20 +352,16 @@ const SplitCommandPoint = React.memo<SplitCommandPointProps>(({
     </g>
   );
 }, (prevProps, nextProps) => {
-  // Check drag state for memoization (including multiple selection drag)
-  const wasDraggingFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() === prevProps.firstCommandId;
-  const wasDraggingLast = transformManager.isMoving() && transformManager.getDraggingCommandId() === prevProps.lastCommandId;
-  const wasDraggingMultipleFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() && prevProps.firstCommandSelected;
-  const wasDraggingMultipleLast = transformManager.isMoving() && transformManager.getDraggingCommandId() && prevProps.lastCommandSelected;
-  const wasNeedingTemporaryHackFirst = wasDraggingFirst || wasDraggingMultipleFirst;
-  const wasNeedingTemporaryHackLast = wasDraggingLast || wasDraggingMultipleLast;
+  // OPTIMIZATION: Use cached drag state instead of calling transformManager
+  const wasNeedingTemporaryHackFirst = (prevProps.dragState.isMoving && prevProps.dragState.draggingCommandId === prevProps.firstCommandId) || 
+                                      (prevProps.dragState.isMoving && prevProps.dragState.draggingCommandId && prevProps.firstCommandSelected);
+  const wasNeedingTemporaryHackLast = (prevProps.dragState.isMoving && prevProps.dragState.draggingCommandId === prevProps.lastCommandId) || 
+                                     (prevProps.dragState.isMoving && prevProps.dragState.draggingCommandId && prevProps.lastCommandSelected);
   
-  const isDraggingFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() === nextProps.firstCommandId;
-  const isDraggingLast = transformManager.isMoving() && transformManager.getDraggingCommandId() === nextProps.lastCommandId;
-  const isDraggingMultipleFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() && nextProps.firstCommandSelected;
-  const isDraggingMultipleLast = transformManager.isMoving() && transformManager.getDraggingCommandId() && nextProps.lastCommandSelected;
-  const needsTemporaryHackFirst = isDraggingFirst || isDraggingMultipleFirst;
-  const needsTemporaryHackLast = isDraggingLast || isDraggingMultipleLast;
+  const needsTemporaryHackFirst = (nextProps.dragState.isMoving && nextProps.dragState.draggingCommandId === nextProps.firstCommandId) || 
+                                 (nextProps.dragState.isMoving && nextProps.dragState.draggingCommandId && nextProps.firstCommandSelected);
+  const needsTemporaryHackLast = (nextProps.dragState.isMoving && nextProps.dragState.draggingCommandId === nextProps.lastCommandId) || 
+                                (nextProps.dragState.isMoving && nextProps.dragState.draggingCommandId && nextProps.lastCommandSelected);
   
   // If drag state changed, force re-render
   if (wasNeedingTemporaryHackFirst !== needsTemporaryHackFirst || wasNeedingTemporaryHackLast !== needsTemporaryHackLast) {
@@ -375,7 +380,10 @@ const SplitCommandPoint = React.memo<SplitCommandPointProps>(({
     prevProps.lastCommandSelected === nextProps.lastCommandSelected &&
     prevProps.zoom === nextProps.zoom &&
     prevProps.isMobile === nextProps.isMobile &&
-    prevProps.isTablet === nextProps.isTablet
+    prevProps.isTablet === nextProps.isTablet &&
+    // Compare drag state for optimization
+    prevProps.dragState.isMoving === nextProps.dragState.isMoving &&
+    prevProps.dragState.draggingCommandId === nextProps.dragState.draggingCommandId
     // NOTE: Deliberately ignoring renderVersion to prevent forced re-renders
   );
 });
@@ -668,18 +676,107 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
   const { paths, selection, viewport, enabledFeatures, renderVersion, visualDebugSizes, mode, enabledFeatures: storeEnabledFeatures, ui } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   
-  // Cleanup effect to ensure no detached DOM references
+  // OPTIMIZATION: Cache drag state to avoid repeated transformManager calls
+  const dragState = React.useMemo(() => ({
+    isMoving: transformManager.isMoving(),
+    draggingCommandId: transformManager.getDraggingCommandId()
+  }), [renderVersion]); // Only recalculate when renderVersion changes
+  
+  // AGGRESSIVE CLEANUP: Force cleanup of detached SVG elements  
   React.useEffect(() => {
+    // Cleanup function for memory leak prevention
+    const cleanupDetachedElements = () => {
+      if (typeof window !== 'undefined' && window.document) {
+        // Find and remove orphaned SVG elements that match our patterns
+        const selectors = [
+          'g[transform*="translate"][transform*="scale"]', // Our CommandPointGroup patterns
+          'line[stroke-dasharray][pointer-events="none"]', // Handle/debug lines
+          'circle[vector-effect="non-scaling-stroke"]', // Command point circles
+          'path[vector-effect="non-scaling-stroke"][pointer-events="none"]' // Command point paths
+        ];
+        
+        selectors.forEach(selector => {
+          try {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(el => {
+              // Only remove if element is truly detached (no parent or grandparent in DOM)
+              if (!el.parentNode || !el.parentNode.parentNode || !document.body.contains(el)) {
+                el.remove();
+              }
+            });
+          } catch (e) {
+            // Silently handle any selector errors
+          }
+        });
+      }
+    };
+
+    // Cleanup on unmount
     return () => {
-      // Force cleanup of any potential detached DOM references on unmount
-      // This helps garbage collection of command point elements
+      // Immediate cleanup
+      cleanupDetachedElements();
+      
+      // Delayed cleanup to catch any async detached elements
+      setTimeout(cleanupDetachedElements, 100);
+      setTimeout(cleanupDetachedElements, 500);
+      
+      console.debug('CommandPointsRenderer: aggressive cleanup completed');
+    };
+  }, []);
+
+  // Additional cleanup on drag state changes to prevent accumulation
+  React.useEffect(() => {
+    if (!dragState.isMoving) {
+      // Clean up when drag ends
       setTimeout(() => {
-        // Allow React to complete unmounting before cleanup
-        if (typeof window !== 'undefined') {
-          // Manual cleanup is minimal since we now use memoized components
-          console.debug('CommandPointsRenderer: cleanup completed');
+        if (typeof window !== 'undefined' && window.document) {
+          // Force garbage collection of temporary hack elements
+          const tempElements = document.querySelectorAll('circle:not([class]), path:not([class])');
+          tempElements.forEach(el => {
+            if (!document.body.contains(el)) {
+              el.remove();
+            }
+          });
         }
-      }, 0);
+      }, 50);
+    }
+  }, [dragState.isMoving]);
+
+  // SPECIFIC CLEANUP: Target temp hack elements with data attributes
+  React.useEffect(() => {
+    const cleanupTempHackElements = () => {
+      if (typeof window !== 'undefined' && window.document) {
+        try {
+          // Target our specific temporary hack elements
+          const tempHackSelectors = [
+            '[data-temp-hack="true"]',
+            '[data-temp-type]',
+            'circle[data-command-id]:not([class*="command-point"])',
+            'path[data-command-id]:not([class*="command-point"])'
+          ];
+          
+          tempHackSelectors.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(el => {
+              // Check if element is detached or orphaned
+              if (!el.isConnected || !document.body.contains(el)) {
+                console.debug('Cleaning detached temp hack element:', selector, el);
+                el.remove();
+              }
+            });
+          });
+        } catch (e) {
+          console.warn('Error during temp hack cleanup:', e);
+        }
+      }
+    };
+
+    // Cleanup every few seconds to prevent accumulation
+    const intervalId = setInterval(cleanupTempHackElements, 3000);
+    
+    return () => {
+      clearInterval(intervalId);
+      cleanupTempHackElements(); // Final cleanup on unmount
     };
   }, []);
   
@@ -954,11 +1051,11 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
               const firstCommandSelected = selection.selectedCommands.includes(firstCommand.id);
               const zCommandSelected = selection.selectedCommands.includes(command.id);
               
-              // Apply temporary hack logic for Z commands (same as other command points)
-              const isDraggingFirstCommand = transformManager.isMoving() && transformManager.getDraggingCommandId() === firstCommand.id;
-              const isDraggingZCommand = transformManager.isMoving() && transformManager.getDraggingCommandId() === command.id;
-              const isDraggingMultipleFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() && firstCommandSelected;
-              const isDraggingMultipleZ = transformManager.isMoving() && transformManager.getDraggingCommandId() && zCommandSelected;
+              // Apply temporary hack logic for Z commands (same as other command points) - OPTIMIZED
+              const isDraggingFirstCommand = dragState.isMoving && dragState.draggingCommandId === firstCommand.id;
+              const isDraggingZCommand = dragState.isMoving && dragState.draggingCommandId === command.id;
+              const isDraggingMultipleFirst = dragState.isMoving && dragState.draggingCommandId && firstCommandSelected;
+              const isDraggingMultipleZ = dragState.isMoving && dragState.draggingCommandId && zCommandSelected;
               
               const needsTemporaryHackFirst = isDraggingFirstCommand || isDraggingMultipleFirst;
               const needsTemporaryHackZ = isDraggingZCommand || isDraggingMultipleZ;
@@ -1004,6 +1101,7 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
                       <>
                         {/* Visual first half (red) for Z command - DEBUG: café si necesita hack */}
                         <path
+                          key={`temp-z-visual-${command.id}-${Date.now()}`}
                           d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX1} ${zSplitY1} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX2} ${zSplitY2} Z`}
                           fill={needsTemporaryHackZ ? "#8B4513" : "#ef4444"} // Café si Z necesita hack, rojo normal
                           stroke={needsTemporaryHackZ ? "#654321" : "#dc2626"} // Borde café oscuro si Z necesita hack
@@ -1013,9 +1111,13 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
                             pointerEvents: 'none',
                             opacity: 0.9
                           }}
+                          data-temp-hack="true"
+                          data-command-id={command.id}
+                          data-temp-type="z-visual"
                         />
                         {/* Visual second half (green) for initial M command - DEBUG: amarillo si necesita hack */}
                         <path
+                          key={`temp-m-visual-${command.id}-${Date.now()}`}
                           d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX2} ${zSplitY2} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX1} ${zSplitY1} Z`}
                           fill={needsTemporaryHackFirst ? "#FFD700" : "#22c55e"} // Amarillo si M necesita hack, verde normal
                           stroke={needsTemporaryHackFirst ? "#FFA500" : "#16a34a"} // Borde naranja si M necesita hack
@@ -1025,6 +1127,9 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
                             pointerEvents: 'none',
                             opacity: 0.9
                           }}
+                          data-temp-hack="true"
+                          data-command-id={command.id}
+                          data-temp-type="m-visual"
                         />
                       </>
                     )}
@@ -1188,6 +1293,7 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
                   zoom={viewport.zoom}
                   isMobile={isMobile}
                   isTablet={isTablet}
+                  dragState={dragState}
                 />
               );
             }
@@ -1209,6 +1315,7 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
                 isLast={isLastCommand}
                 isMobile={isMobile}
                 isTablet={isTablet}
+                dragState={dragState}
               />
             );
           });
