@@ -258,6 +258,7 @@ export const SVGComponent: React.FC = () => {
         style.strokeDasharray ? `stroke-dasharray="${style.strokeDasharray}"` : '',
         style.strokeLinecap ? `stroke-linecap="${style.strokeLinecap}"` : '',
         style.strokeLinejoin ? `stroke-linejoin="${style.strokeLinejoin}"` : '',
+        style.fillRule ? `fill-rule="${style.fillRule}"` : '',
         style.fillOpacity !== undefined && style.fillOpacity !== 1 ? `fill-opacity="${style.fillOpacity}"` : '',
         style.strokeOpacity !== undefined && style.strokeOpacity !== 1 ? `stroke-opacity="${style.strokeOpacity}"` : '',
         style.markerStart ? `marker-start="${convertStyleValue(style.markerStart)}"` : '',
