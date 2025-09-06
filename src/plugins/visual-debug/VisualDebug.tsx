@@ -4,6 +4,7 @@ import { useEditorStore } from '../../store/editorStore';
 import { getAbsoluteCommandPosition } from '../../utils/path-utils';
 import { useMobileDetection, getControlPointSize, getInteractionRadius } from '../../hooks/useMobileDetection';
 import { stickyPointsManager } from '../pointer-interaction/StickyPointsManager';
+import { transformManager } from '../transform/TransformManager';
 
 // Memoized SVG components for command points optimization
 interface CommandPointCircleProps {
@@ -586,17 +587,20 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
     const isSubpathEditMode = mode?.current === 'subpath-edit';
     const subpathShowCommandPoints = storeEnabledFeatures.subpathShowCommandPoints ?? true;
     const selectionVisible = ui?.selectionVisible ?? true;
-    const shouldShow = selectionVisible && ((isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || hasSelectedSubPath || hasSelectedCommand);
     
     return {
       hasSelectedSubPath,
       hasSelectedCommand,
       isSubpathEditMode,
       subpathShowCommandPoints,
-      selectionVisible,
-      shouldShow
+      selectionVisible
     };
-  }, [selection.selectedSubPaths.length, selection.selectedCommands.length, mode?.current, storeEnabledFeatures.subpathShowCommandPoints, ui?.selectionVisible, enabledFeatures.commandPointsEnabled]);
+  }, [selection.selectedSubPaths.length, selection.selectedCommands.length, mode?.current, storeEnabledFeatures.subpathShowCommandPoints, ui?.selectionVisible]);
+
+  // Check transformation states outside of memoization for real-time updates
+  const isTransforming = transformManager.isTransforming();
+  const isMoving = transformManager.isMoving();
+  const shouldShow = computedFlags.selectionVisible && !isTransforming && !isMoving && ((computedFlags.isSubpathEditMode && computedFlags.subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || computedFlags.hasSelectedSubPath || computedFlags.hasSelectedCommand);
 
   // Memoize viewport bounds for efficient culling
   const viewportBounds = React.useMemo(() => {
@@ -625,7 +629,7 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
   }
 
   // Use computed flags
-  const { shouldShow, isSubpathEditMode, subpathShowCommandPoints, hasSelectedSubPath, hasSelectedCommand } = computedFlags;
+  const { isSubpathEditMode, subpathShowCommandPoints, hasSelectedSubPath, hasSelectedCommand } = computedFlags;
 
   if (!shouldShow) {
     return null;
@@ -645,7 +649,7 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
           const hasSelectedCommandInSubPath = subPath.commands.some(cmd => 
             selection.selectedCommands.includes(cmd.id)
           );
-          const shouldShowSubPath = (isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || isSubPathSelected || hasSelectedCommandInSubPath;
+          const shouldShowSubPath = !isTransforming && !isMoving && ((isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || isSubPathSelected || hasSelectedCommandInSubPath);
           // Check if first and last commands coincide (guard against empty commands array)
           const firstCommand = subPath.commands.length > 0 ? subPath.commands[0] : null;
           const lastCommand = subPath.commands.length > 0 ? subPath.commands[subPath.commands.length - 1] : null;
@@ -666,7 +670,7 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
             if (isZCommand) {
               // Show Z commands if feature is enabled OR if subpath is selected OR if Z command is selected
               const isZCommandSelected = selection.selectedCommands.includes(command.id);
-              const shouldShowZCommand = (isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || shouldShowSubPath || isZCommandSelected;
+              const shouldShowZCommand = !isTransforming && !isMoving && ((isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || shouldShowSubPath || isZCommandSelected);
               if (!shouldShowZCommand) return null;
               // Z commands don't have position, skip position-based checks
             } else {
@@ -682,7 +686,7 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
               
               // Si hidePointsInSelect está activo y el comando está seleccionado, no mostrar punto
               if (enabledFeatures.hidePointsInSelect && isCommandSelected) return null;
-              const shouldShowCommand = shouldShowSubPath || isCommandSelected;
+              const shouldShowCommand = !isTransforming && !isMoving && (shouldShowSubPath || isCommandSelected);
               if (!shouldShowCommand) return null;
             }
             

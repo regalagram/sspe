@@ -4,6 +4,7 @@ import { getAbsoluteCommandPosition, getAbsoluteControlPoints } from '../../util
 import { useMobileDetection, getInteractionRadius } from '../../hooks/useMobileDetection';
 import { handleManager } from './HandleManager';
 import { ControlPointType } from '../../types';
+import { transformManager } from '../transform/TransformManager';
 
 // Helper function to get control point size
 const getControlPointSize = (isMobile: boolean, isTablet: boolean): number => {
@@ -344,11 +345,14 @@ const HandleRendererCore: React.FC = React.memo(() => {
   const hasSelectedSubPath = selection.selectedSubPaths.length > 0;
   const hasSelectedCommand = selection.selectedCommands.length > 0;
   const selectionVisible = ui?.selectionVisible ?? true;
+  const isTransforming = transformManager.isTransforming();
+  const isMoving = transformManager.isMoving();
   
   // Show if feature is enabled OR if any sub-path is selected OR if any command is selected
   // For subpath-edit mode we additionally respect per-class flags
   // Also respect selectionVisible state for hiding during animations
-  const shouldShow = selectionVisible && ((isSubpathEditMode && (subpathShowCommandPoints || subpathShowControlPoints)) || controlPointsEnabled || hasSelectedSubPath || hasSelectedCommand);
+  // Hide during transformations and movements to avoid visual clutter
+  const shouldShow = selectionVisible && !isTransforming && !isMoving && ((isSubpathEditMode && (subpathShowCommandPoints || subpathShowControlPoints)) || controlPointsEnabled || hasSelectedSubPath || hasSelectedCommand);
 
   if (!shouldShow) {
     return null;
