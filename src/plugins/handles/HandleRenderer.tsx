@@ -348,18 +348,20 @@ const HandleRendererCore: React.FC = React.memo(() => {
   const isTransforming = transformManager.isTransforming();
   const isMoving = transformManager.isMoving();
   
+  // Use memoized drag state info
+  const { isDragging, dragCommandId, dragHandleType, pairedHandle } = dragStateInfo;
+  
   // Show if feature is enabled OR if any sub-path is selected OR if any command is selected
   // For subpath-edit mode we additionally respect per-class flags
   // Also respect selectionVisible state for hiding during animations
   // Hide during transformations and movements to avoid visual clutter
-  const shouldShow = selectionVisible && !isTransforming && !isMoving && ((isSubpathEditMode && (subpathShowCommandPoints || subpathShowControlPoints)) || controlPointsEnabled || hasSelectedSubPath || hasSelectedCommand);
+  // EXCEPTION: Always show when dragging a specific control point to maintain visual feedback
+  const isDraggingControlPoint = isDragging && dragCommandId && (dragHandleType === 'outgoing' || dragHandleType === 'incoming');
+  const shouldShow = selectionVisible && (!isTransforming && !isMoving || isDraggingControlPoint) && ((isSubpathEditMode && (subpathShowCommandPoints || subpathShowControlPoints)) || controlPointsEnabled || hasSelectedSubPath || hasSelectedCommand);
 
   if (!shouldShow) {
     return null;
   }
-
-  // Use memoized drag state info
-  const { isDragging, dragCommandId, dragHandleType, pairedHandle } = dragStateInfo;
 
   return (
     <g key={stableKey}>
