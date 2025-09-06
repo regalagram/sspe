@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { X, Copy, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { EditorState } from '../types';
-import { cleanStateForHistory } from '../utils/history-utils';
+import { cleanStateForHistory, safeClone } from '../utils/history-utils';
 
 interface HistoryModalProps {
   historyStates: EditorState[];
@@ -140,8 +140,8 @@ export const HistoryModal: React.FC<HistoryModalProps> = ({
         const previousItem = previousItems.find((prev: any) => prev.id === currentItem.id);
         if (previousItem) {
           // Deep comparison excluding timestamps and transient properties
-          const cleanCurrentItem = JSON.parse(JSON.stringify(currentItem));
-          const cleanPreviousItem = JSON.parse(JSON.stringify(previousItem));
+          const cleanCurrentItem = safeClone(currentItem);
+          const cleanPreviousItem = safeClone(previousItem);
           
           if (JSON.stringify(cleanCurrentItem) !== JSON.stringify(cleanPreviousItem)) {
             diff.modified.push(`${collection}.${currentItem.id}`);

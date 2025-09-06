@@ -1,6 +1,38 @@
 import { EditorState } from '../types';
 
 /**
+ * Safely clones a value handling edge cases for JSON serialization
+ * 
+ * Handles specific issues like:
+ * - undefined values (which JSON.stringify returns as undefined, not "undefined")
+ * - Functions and other non-serializable content
+ * - Circular references
+ * 
+ * This fixes the issue where deepSelection: undefined caused JSON.parse(undefined) to fail
+ */
+export function safeClone(value: any): any {
+  // Explicitly handle undefined - this is the main fix for deepSelection
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  
+  try {
+    const stringified = JSON.stringify(value);
+    // JSON.stringify can return undefined for some values (like functions, symbols)
+    if (stringified === undefined) {
+      return null; // Use null as safe fallback
+    }
+    return JSON.parse(stringified);
+  } catch (error) {
+    // If serialization fails (circular references, etc.), return null as safe fallback
+    return null;
+  }
+}
+
+/**
  * Creates a clean copy of the editor state for history storage
  * Excludes functions, history, and other non-serializable data
  */
@@ -33,13 +65,11 @@ export function cleanStateForHistory(state: any): any {
   // Copy all properties except excluded ones
   for (const [key, value] of Object.entries(state)) {
     if (!excludedKeys.has(key) && typeof value !== 'function') {
-      try {
-        // Deep clone to avoid reference issues
-        cleanState[key] = JSON.parse(JSON.stringify(value));
-      } catch (error) {
-        console.warn(`Failed to clone state property ${key}:`, error);
-        // Skip this property if it can't be serialized
+      const clonedValue = safeClone(value);
+      if (clonedValue === null && value !== null) {
+        console.warn(`Failed to clone state property ${key}: using null as fallback`);
       }
+      cleanState[key] = clonedValue;
     }
   }
 

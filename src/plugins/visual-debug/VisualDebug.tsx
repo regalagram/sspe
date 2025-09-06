@@ -5,6 +5,275 @@ import { getAbsoluteCommandPosition } from '../../utils/path-utils';
 import { useMobileDetection, getControlPointSize, getInteractionRadius } from '../../hooks/useMobileDetection';
 import { stickyPointsManager } from '../pointer-interaction/StickyPointsManager';
 
+// Memoized SVG components for command points optimization
+interface CommandPointCircleProps {
+  cx: number;
+  cy: number;
+  radius: number;
+  fill: string;
+  stroke: string;
+  zoom: number;
+}
+
+const CommandPointCircle = React.memo<CommandPointCircleProps>(({ 
+  cx, cy, radius, fill, stroke, zoom 
+}) => (
+  <circle
+    cx={cx}
+    cy={cy}
+    r={radius}
+    fill={fill}
+    stroke={stroke}
+    strokeWidth={1}
+    vectorEffect="non-scaling-stroke"
+    style={{ 
+      pointerEvents: 'none',
+      opacity: 0.9
+    }}
+    className="command-point"
+  />
+));
+
+CommandPointCircle.displayName = 'CommandPointCircle';
+
+interface CommandPointInteractionProps {
+  cx: number;
+  cy: number;
+  radius: number;
+  commandId: string;
+}
+
+const CommandPointInteraction = React.memo<CommandPointInteractionProps>(({ 
+  cx, cy, radius, commandId 
+}) => (
+  <circle
+    cx={cx}
+    cy={cy}
+    r={radius}
+    fill="transparent"
+    stroke="none"
+    className="command-point-interaction-overlay"
+    data-command-id={commandId}
+    style={{ cursor: 'default' }}
+  />
+));
+
+CommandPointInteraction.displayName = 'CommandPointInteraction';
+
+interface CommandPointGroupProps {
+  x: number;
+  y: number;
+  zoom: number;
+  children: React.ReactNode;
+}
+
+const CommandPointGroup = React.memo<CommandPointGroupProps>(({ x, y, zoom, children }) => (
+  <g transform={`translate(${x},${y}) scale(${1 / zoom}) translate(${-x},${-y})`}>
+    {children}
+  </g>
+));
+
+CommandPointGroup.displayName = 'CommandPointGroup';
+
+interface SimpleCommandPointProps {
+  position: { x: number; y: number };
+  radius: number;
+  fill: string;
+  stroke: string;
+  commandId: string;
+  zoom: number;
+  isSelected: boolean;
+  isFirst: boolean;
+  isLast: boolean;
+  isMobile: boolean;
+  isTablet: boolean;
+  renderVersion: number;
+}
+
+const SimpleCommandPoint = React.memo<SimpleCommandPointProps>(({ 
+  position, radius, fill, stroke, commandId, zoom, isSelected, isFirst, isLast, isMobile, isTablet, renderVersion 
+}) => (
+  <g key={`command-${commandId}-v${renderVersion}`}>
+    <CommandPointGroup x={position.x} y={position.y} zoom={zoom}>
+      <CommandPointCircle
+        cx={position.x}
+        cy={position.y}
+        radius={radius}
+        fill={fill}
+        stroke={stroke}
+        zoom={zoom}
+      />
+      <CommandPointInteraction
+        cx={position.x}
+        cy={position.y}
+        radius={getInteractionRadius(radius, isMobile, isTablet)}
+        commandId={commandId}
+      />
+      {/* Inner circle for selected initial/final points */}
+      {isSelected && (isFirst || isLast) && (
+        <circle
+          cx={position.x}
+          cy={position.y}
+          r={radius * 0.4}
+          fill="#ffffff"
+          stroke="none"
+          style={{ 
+            pointerEvents: 'none',
+            opacity: 0.8
+          }}
+        />
+      )}
+    </CommandPointGroup>
+  </g>
+), (prevProps, nextProps) => {
+  // Custom comparison for better memoization
+  return (
+    prevProps.position.x === nextProps.position.x &&
+    prevProps.position.y === nextProps.position.y &&
+    prevProps.radius === nextProps.radius &&
+    prevProps.fill === nextProps.fill &&
+    prevProps.stroke === nextProps.stroke &&
+    prevProps.commandId === nextProps.commandId &&
+    prevProps.zoom === nextProps.zoom &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.isFirst === nextProps.isFirst &&
+    prevProps.isLast === nextProps.isLast &&
+    prevProps.isMobile === nextProps.isMobile &&
+    prevProps.isTablet === nextProps.isTablet &&
+    prevProps.renderVersion === nextProps.renderVersion
+  );
+});
+
+SimpleCommandPoint.displayName = 'SimpleCommandPoint';
+
+// Complex components for special cases
+interface SplitCommandPointProps {
+  position: { x: number; y: number };
+  radius: number;
+  directionAngle: number;
+  firstCommandId: string;
+  lastCommandId: string;
+  firstCommandSelected: boolean;
+  lastCommandSelected: boolean;
+  zoom: number;
+  isMobile: boolean;
+  isTablet: boolean;
+  renderVersion: number;
+}
+
+const SplitCommandPoint = React.memo<SplitCommandPointProps>(({ 
+  position, radius, directionAngle, firstCommandId, lastCommandId, 
+  firstCommandSelected, lastCommandSelected, zoom, isMobile, isTablet, renderVersion 
+}) => {
+  // Calculate perpendicular angle for the split line
+  const splitAngle = directionAngle + Math.PI / 2;
+  
+  // Calculate split line endpoints
+  const splitX1 = position.x + Math.cos(splitAngle) * radius;
+  const splitY1 = position.y + Math.sin(splitAngle) * radius;
+  const splitX2 = position.x - Math.cos(splitAngle) * radius;
+  const splitY2 = position.y - Math.sin(splitAngle) * radius;
+  
+  const interactionRadius = getInteractionRadius(radius, isMobile, isTablet);
+  
+  return (
+    <g key={`command-split-${firstCommandId}-${lastCommandId}-v${renderVersion}`}>
+      <CommandPointGroup x={position.x} y={position.y} zoom={zoom}>
+        {/* First half (red) - initial point */}
+        <path
+          d={`M ${position.x} ${position.y} L ${splitX1} ${splitY1} A ${radius} ${radius} 0 0 1 ${splitX2} ${splitY2} Z`}
+          fill="#ef4444"
+          stroke="#dc2626"
+          strokeWidth={1}
+          vectorEffect="non-scaling-stroke"
+          style={{ 
+            pointerEvents: 'none',
+            opacity: 0.9
+          }}
+          className="command-point"
+        />
+        {/* Second half (green) - final point */}
+        <path
+          d={`M ${position.x} ${position.y} L ${splitX2} ${splitY2} A ${radius} ${radius} 0 0 1 ${splitX1} ${splitY1} Z`}
+          fill="#22c55e"
+          stroke="#16a34a"
+          strokeWidth={1}
+          vectorEffect="non-scaling-stroke"
+          style={{ 
+            pointerEvents: 'none',
+            opacity: 0.9
+          }}
+          className="command-point"
+        />
+        {/* Interaction overlay first half (red) for last command */}
+        <path
+          d={`M ${position.x} ${position.y} L ${position.x + Math.cos(splitAngle) * interactionRadius} ${position.y + Math.sin(splitAngle) * interactionRadius} A ${interactionRadius} ${interactionRadius} 0 0 1 ${position.x - Math.cos(splitAngle) * interactionRadius} ${position.y - Math.sin(splitAngle) * interactionRadius} Z`}
+          fill="transparent"
+          stroke="none"
+          className="command-point-interaction-overlay"
+          data-command-id={lastCommandId}
+          style={{ cursor: 'default' }}
+        />
+        {/* Interaction overlay second half (green) for first command */}
+        <path
+          d={`M ${position.x} ${position.y} L ${position.x - Math.cos(splitAngle) * interactionRadius} ${position.y - Math.sin(splitAngle) * interactionRadius} A ${interactionRadius} ${interactionRadius} 0 0 1 ${position.x + Math.cos(splitAngle) * interactionRadius} ${position.y + Math.sin(splitAngle) * interactionRadius} Z`}
+          fill="transparent"
+          stroke="none"
+          className="command-point-interaction-overlay"
+          data-command-id={firstCommandId}
+          style={{ cursor: 'default' }}
+        />
+        {/* Inner circle for selected initial point */}
+        {firstCommandSelected && (
+          <circle
+            cx={position.x + Math.cos(directionAngle) * radius * 0.3}
+            cy={position.y + Math.sin(directionAngle) * radius * 0.3}
+            r={radius * 0.2}
+            fill="#ffffff"
+            stroke="none"
+            style={{ 
+              pointerEvents: 'none',
+              opacity: 0.8
+            }}
+          />
+        )}
+        {/* Inner circle for selected final point */}
+        {lastCommandSelected && (
+          <circle
+            cx={position.x - Math.cos(directionAngle) * radius * 0.3}
+            cy={position.y - Math.sin(directionAngle) * radius * 0.3}
+            r={radius * 0.2}
+            fill="#ffffff"
+            stroke="none"
+            style={{ 
+              pointerEvents: 'none',
+              opacity: 0.8
+            }}
+          />
+        )}
+      </CommandPointGroup>
+    </g>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison for better memoization
+  return (
+    prevProps.position.x === nextProps.position.x &&
+    prevProps.position.y === nextProps.position.y &&
+    prevProps.radius === nextProps.radius &&
+    prevProps.directionAngle === nextProps.directionAngle &&
+    prevProps.firstCommandId === nextProps.firstCommandId &&
+    prevProps.lastCommandId === nextProps.lastCommandId &&
+    prevProps.firstCommandSelected === nextProps.firstCommandSelected &&
+    prevProps.lastCommandSelected === nextProps.lastCommandSelected &&
+    prevProps.zoom === nextProps.zoom &&
+    prevProps.isMobile === nextProps.isMobile &&
+    prevProps.isTablet === nextProps.isTablet &&
+    prevProps.renderVersion === nextProps.renderVersion
+  );
+});
+
+SplitCommandPoint.displayName = 'SplitCommandPoint';
+
 interface VisualDebugControlsProps {
   commandPointsEnabled: boolean;
   controlPointsEnabled: boolean;
@@ -285,27 +554,44 @@ export const StickyVisualFeedback: React.FC = () => {
   );
 };
 
-// Command Points Renderer Component
-export const CommandPointsRenderer: React.FC = () => {
+// Command Points Renderer Component - Optimized with memoization
+const CommandPointsRendererCore: React.FC = React.memo(() => {
   // All hooks must be called before any early returns
   const { paths, selection, viewport, enabledFeatures, renderVersion, visualDebugSizes, mode, enabledFeatures: storeEnabledFeatures, ui } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
+  
+  // Memoize computed values
+  const baseRadius = React.useMemo(() => 
+    getControlPointSize(isMobile, isTablet), 
+    [isMobile, isTablet]
+  );
+  
+  // Memoize computed flags
+  const computedFlags = React.useMemo(() => {
+    const hasSelectedSubPath = selection.selectedSubPaths.length > 0;
+    const hasSelectedCommand = selection.selectedCommands.length > 0;
+    const isSubpathEditMode = mode?.current === 'subpath-edit';
+    const subpathShowCommandPoints = storeEnabledFeatures.subpathShowCommandPoints ?? true;
+    const selectionVisible = ui?.selectionVisible ?? true;
+    const shouldShow = selectionVisible && ((isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || hasSelectedSubPath || hasSelectedCommand);
+    
+    return {
+      hasSelectedSubPath,
+      hasSelectedCommand,
+      isSubpathEditMode,
+      subpathShowCommandPoints,
+      selectionVisible,
+      shouldShow
+    };
+  }, [selection.selectedSubPaths.length, selection.selectedCommands.length, mode?.current, storeEnabledFeatures.subpathShowCommandPoints, ui?.selectionVisible, enabledFeatures.commandPointsEnabled]);
 
   // Early returns after all hooks are called
   if (!paths || paths.length === 0) {
     return null;
   }
 
-  // Check if any sub-path is selected or any command is selected
-  const hasSelectedSubPath = selection.selectedSubPaths.length > 0;
-  const hasSelectedCommand = selection.selectedCommands.length > 0;
-
-  // Show if feature is enabled OR if any sub-path is selected OR if any command is selected
-  const isSubpathEditMode = mode?.current === 'subpath-edit';
-  const subpathShowCommandPoints = storeEnabledFeatures.subpathShowCommandPoints ?? true;
-
-  const selectionVisible = ui?.selectionVisible ?? true;
-  const shouldShow = selectionVisible && ((isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || hasSelectedSubPath || hasSelectedCommand);
+  // Use computed flags
+  const { shouldShow, isSubpathEditMode, subpathShowCommandPoints, hasSelectedSubPath, hasSelectedCommand } = computedFlags;
 
   if (!shouldShow) {
     return null;
@@ -406,7 +692,6 @@ export const CommandPointsRenderer: React.FC = () => {
               }
               
               // Use same radius calculation as coincidence case (with 30% larger for initial)
-              const baseRadius = getControlPointSize(isMobile, isTablet);
               let zRadius = baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.commandPointsFactor;
               zRadius *= 1.3; // Same 30% larger as initial points
               
@@ -519,7 +804,6 @@ export const CommandPointsRenderer: React.FC = () => {
               }
             }
             
-            const baseRadius = getControlPointSize(isMobile, isTablet);
             let radius = baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.commandPointsFactor;
             
             // Make initial point 30% larger
@@ -599,82 +883,19 @@ export const CommandPointsRenderer: React.FC = () => {
               const lastCommandSelected = selection.selectedCommands.includes(lastCommand.id);
               
               return (
-                <g key={`command-split-${firstCommand.id}-${lastCommand.id}-v${renderVersion}`}>
-                  <g transform={`translate(${position.x},${position.y}) scale(${1 / viewport.zoom}) translate(${-position.x},${-position.y})`}>
-                  {/* First half (red) - initial point */}
-                  <path
-                    d={`M ${position.x} ${position.y} L ${splitX1} ${splitY1} A ${radius} ${radius} 0 0 1 ${splitX2} ${splitY2} Z`}
-                    fill="#ef4444"
-                    stroke="#dc2626"
-                    strokeWidth={1}
-                    vectorEffect="non-scaling-stroke"
-                    style={{ 
-                      pointerEvents: 'none',
-                      opacity: 0.9
-                    }}
-                    className="command-point"
-                  />
-                  {/* Second half (green) - final point */}
-                  <path
-                    d={`M ${position.x} ${position.y} L ${splitX2} ${splitY2} A ${radius} ${radius} 0 0 1 ${splitX1} ${splitY1} Z`}
-                    fill="#22c55e"
-                    stroke="#16a34a"
-                    strokeWidth={1}
-                    vectorEffect="non-scaling-stroke"
-                    style={{ 
-                      pointerEvents: 'none',
-                      opacity: 0.9
-                    }}
-                    className="command-point"
-                  />
-                  {/* Interaction overlay first half (red) for last command */}
-                  <path
-                    d={`M ${position.x} ${position.y} L ${position.x + Math.cos(splitAngle) * getInteractionRadius(radius, isMobile, isTablet)} ${position.y + Math.sin(splitAngle) * getInteractionRadius(radius, isMobile, isTablet)} A ${getInteractionRadius(radius, isMobile, isTablet)} ${getInteractionRadius(radius, isMobile, isTablet)} 0 0 1 ${position.x - Math.cos(splitAngle) * getInteractionRadius(radius, isMobile, isTablet)} ${position.y - Math.sin(splitAngle) * getInteractionRadius(radius, isMobile, isTablet)} Z`}
-                    fill="transparent"
-                    stroke="none"
-                    className="command-point-interaction-overlay"
-                    data-command-id={lastCommand.id}
-                    style={{ cursor: 'default' }}
-                  />
-                  {/* Interaction overlay second half (green) for first command */}
-                  <path
-                    d={`M ${position.x} ${position.y} L ${position.x - Math.cos(splitAngle) * getInteractionRadius(radius, isMobile, isTablet)} ${position.y - Math.sin(splitAngle) * getInteractionRadius(radius, isMobile, isTablet)} A ${getInteractionRadius(radius, isMobile, isTablet)} ${getInteractionRadius(radius, isMobile, isTablet)} 0 0 1 ${position.x + Math.cos(splitAngle) * getInteractionRadius(radius, isMobile, isTablet)} ${position.y + Math.sin(splitAngle) * getInteractionRadius(radius, isMobile, isTablet)} Z`}
-                    fill="transparent"
-                    stroke="none"
-                    className="command-point-interaction-overlay"
-                    data-command-id={firstCommand.id}
-                    style={{ cursor: 'default' }}
-                  />
-                  {/* Inner circle for selected initial point */}
-                  {firstCommandSelected && (
-                    <circle
-                      cx={position.x + Math.cos(directionAngle) * radius * 0.3}
-                      cy={position.y + Math.sin(directionAngle) * radius * 0.3}
-                      r={radius * 0.2}
-                      fill="#ffffff"
-                      stroke="none"
-                      style={{ 
-                        pointerEvents: 'none',
-                        opacity: 0.8
-                      }}
-                    />
-                  )}
-                  {/* Inner circle for selected final point */}
-                  {lastCommandSelected && (
-                    <circle
-                      cx={position.x - Math.cos(directionAngle) * radius * 0.3}
-                      cy={position.y - Math.sin(directionAngle) * radius * 0.3}
-                      r={radius * 0.2}
-                      fill="#ffffff"
-                      stroke="none"
-                      style={{ 
-                        pointerEvents: 'none',
-                        opacity: 0.8
-                      }}
-                    />
-                  )}
-                  </g>
-                </g>
+                <SplitCommandPoint
+                  position={position}
+                  radius={radius}
+                  directionAngle={directionAngle}
+                  firstCommandId={firstCommand.id}
+                  lastCommandId={lastCommand.id}
+                  firstCommandSelected={firstCommandSelected}
+                  lastCommandSelected={lastCommandSelected}
+                  zoom={viewport.zoom}
+                  isMobile={isMobile}
+                  isTablet={isTablet}
+                  renderVersion={renderVersion}
+                />
               );
             }
 
@@ -682,57 +903,40 @@ export const CommandPointsRenderer: React.FC = () => {
             if (!position) return null;
             
             return (
-              <g key={`command-${command.id}-v${renderVersion}`}>
-                <g transform={`translate(${position.x},${position.y}) scale(${1 / viewport.zoom}) translate(${-position.x},${-position.y})`}>
-                  {/* Visual command point */}
-                  <circle
-                    cx={position.x}
-                    cy={position.y}
-                    r={radius}
-                    fill={fill}
-                    stroke={stroke}
-                    strokeWidth={1}
-                    vectorEffect="non-scaling-stroke"
-                    style={{ 
-                      pointerEvents: 'none',
-                      opacity: 0.9
-                    }}
-                    className="command-point"
-                  />
-                  {/* Interaction overlay */}
-                  <circle
-                    cx={position.x}
-                    cy={position.y}
-                    r={getInteractionRadius(radius, isMobile, isTablet)}
-                    fill="transparent"
-                    stroke="none"
-                    className="command-point-interaction-overlay"
-                    data-command-id={command.id}
-                    style={{ cursor: 'default' }}
-                  />
-                  {/* Inner circle for selected initial/final points */}
-                  {isCommandSelected && (isFirstCommand || isLastCommand) && (
-                    <circle
-                      cx={position.x}
-                      cy={position.y}
-                      r={radius * 0.4}
-                      fill="#ffffff"
-                      stroke="none"
-                      style={{ 
-                        pointerEvents: 'none',
-                        opacity: 0.8
-                      }}
-                    />
-                  )}
-                </g>
-              </g>
+              <SimpleCommandPoint
+                position={position}
+                radius={radius}
+                fill={fill}
+                stroke={stroke}
+                commandId={command.id}
+                zoom={viewport.zoom}
+                isSelected={isCommandSelected}
+                isFirst={isFirstCommand}
+                isLast={isLastCommand}
+                isMobile={isMobile}
+                isTablet={isTablet}
+                renderVersion={renderVersion}
+              />
             );
           });
         })
       )}
     </>
   );
-};
+});
+
+CommandPointsRendererCore.displayName = 'CommandPointsRendererCore';
+
+// Main wrapper component for command points rendering
+export const CommandPointsRenderer: React.FC = React.memo(() => {
+  return <CommandPointsRendererCore />;
+}, () => {
+  // Always re-render - let the internal memoization handle the optimization
+  // This is because Zustand state changes are handled internally
+  return false;
+});
+
+CommandPointsRenderer.displayName = 'CommandPointsRenderer';
 
 
 

@@ -12,6 +12,188 @@ const getControlPointSize = (isMobile: boolean, isTablet: boolean): number => {
   return 8;
 };
 
+// Memoized SVG components for performance optimization
+interface ControlPointLineProps {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  color: string;
+  zoom: number;
+}
+
+const ControlPointLine = React.memo<ControlPointLineProps>(({ x1, y1, x2, y2, color, zoom }) => (
+  <line
+    x1={x1}
+    y1={y1}
+    x2={x2}
+    y2={y2}
+    stroke={color}
+    strokeWidth={1}
+    vectorEffect="non-scaling-stroke"
+    strokeDasharray={`${2 / zoom},${2 / zoom}`}
+    pointerEvents="none"
+    opacity={1.0}
+  />
+));
+
+ControlPointLine.displayName = 'ControlPointLine';
+
+interface ControlPointCircleProps {
+  cx: number;
+  cy: number;
+  radius: number;
+  fill: string;
+  stroke: string;
+  zoom: number;
+  isBeingDragged: boolean;
+}
+
+const ControlPointCircle = React.memo<ControlPointCircleProps>(({ 
+  cx, cy, radius, fill, stroke, zoom, isBeingDragged 
+}) => (
+  <circle
+    cx={cx}
+    cy={cy}
+    r={radius}
+    fill={fill}
+    stroke={stroke}
+    strokeWidth={1.5}
+    vectorEffect="non-scaling-stroke"
+    className="control-point"
+    opacity={1.0}
+    style={{ pointerEvents: 'none' }}
+    filter={isBeingDragged ? 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' : undefined}
+  />
+));
+
+ControlPointCircle.displayName = 'ControlPointCircle';
+
+interface InteractionOverlayProps {
+  cx: number;
+  cy: number;
+  radius: number;
+  commandId: string;
+  prevCommandId?: string;
+  controlPoint: 'x1y1' | 'x2y2';
+}
+
+const InteractionOverlay = React.memo<InteractionOverlayProps>(({ 
+  cx, cy, radius, commandId, prevCommandId, controlPoint 
+}) => (
+  <circle
+    cx={cx}
+    cy={cy}
+    r={radius}
+    fill="transparent"
+    stroke="none"
+    className="control-point-interaction-overlay"
+    data-command-id={commandId}
+    data-prev-command-id={prevCommandId}
+    data-control-point={controlPoint}
+    style={{ cursor: 'default' }}
+  />
+));
+
+InteractionOverlay.displayName = 'InteractionOverlay';
+
+interface ControlPointGroupProps {
+  x: number;
+  y: number;
+  zoom: number;
+  children: React.ReactNode;
+}
+
+const ControlPointGroup = React.memo<ControlPointGroupProps>(({ x, y, zoom, children }) => (
+  <g transform={`translate(${x},${y}) scale(${1 / zoom}) translate(${-x},${-y})`}>
+    {children}
+  </g>
+));
+
+ControlPointGroup.displayName = 'ControlPointGroup';
+
+interface SingleControlPointProps {
+  controlPoint: { x: number; y: number };
+  anchorPoint: { x: number; y: number };
+  radius: number;
+  colors: {
+    fill: string;
+    stroke: string;
+    lineColor: string;
+  };
+  commandId: string;
+  prevCommandId?: string;
+  controlPointType: 'x1y1' | 'x2y2';
+  zoom: number;
+  isBeingDragged: boolean;
+  isMobile: boolean;
+  isTablet: boolean;
+}
+
+const SingleControlPoint = React.memo<SingleControlPointProps>(({ 
+  controlPoint, 
+  anchorPoint, 
+  radius, 
+  colors, 
+  commandId, 
+  prevCommandId, 
+  controlPointType, 
+  zoom, 
+  isBeingDragged,
+  isMobile,
+  isTablet 
+}) => (
+  <>
+    <ControlPointLine
+      x1={anchorPoint.x}
+      y1={anchorPoint.y}
+      x2={controlPoint.x}
+      y2={controlPoint.y}
+      color={colors.lineColor}
+      zoom={zoom}
+    />
+    <ControlPointGroup x={controlPoint.x} y={controlPoint.y} zoom={zoom}>
+      <ControlPointCircle
+        cx={controlPoint.x}
+        cy={controlPoint.y}
+        radius={radius * 0.7}
+        fill={colors.fill}
+        stroke={colors.stroke}
+        zoom={zoom}
+        isBeingDragged={isBeingDragged}
+      />
+      <InteractionOverlay
+        cx={controlPoint.x}
+        cy={controlPoint.y}
+        radius={getInteractionRadius(radius * 0.7, isMobile, isTablet)}
+        commandId={commandId}
+        prevCommandId={prevCommandId}
+        controlPoint={controlPointType}
+      />
+    </ControlPointGroup>
+  </>
+), (prevProps, nextProps) => {
+  // Custom comparison function for better memoization
+  return (
+    prevProps.controlPoint.x === nextProps.controlPoint.x &&
+    prevProps.controlPoint.y === nextProps.controlPoint.y &&
+    prevProps.anchorPoint.x === nextProps.anchorPoint.x &&
+    prevProps.anchorPoint.y === nextProps.anchorPoint.y &&
+    prevProps.radius === nextProps.radius &&
+    prevProps.colors.fill === nextProps.colors.fill &&
+    prevProps.colors.stroke === nextProps.colors.stroke &&
+    prevProps.colors.lineColor === nextProps.colors.lineColor &&
+    prevProps.commandId === nextProps.commandId &&
+    prevProps.prevCommandId === nextProps.prevCommandId &&
+    prevProps.controlPointType === nextProps.controlPointType &&
+    prevProps.zoom === nextProps.zoom &&
+    prevProps.isBeingDragged === nextProps.isBeingDragged &&
+    prevProps.isMobile === nextProps.isMobile &&
+    prevProps.isTablet === nextProps.isTablet
+  );
+});
+
+SingleControlPoint.displayName = 'SingleControlPoint';
 
 // Helper function to get handle colors based on type and display mode
 const getHandleColors = (type: ControlPointType, isOptionPressed: boolean, isNextCommandDisplay: boolean = false) => {
@@ -38,32 +220,41 @@ const getHandleColors = (type: ControlPointType, isOptionPressed: boolean, isNex
   };
 };
 
-export const HandleRenderer: React.FC = () => {
+const HandleRendererCore: React.FC = React.memo(() => {
   const { paths, enabledFeatures, viewport, selection, visualDebugSizes, mode, ui } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   const [handleState, setHandleState] = React.useState(handleManager.getState());
   const [renderKey, setRenderKey] = React.useState(0);
 
-  // Subscribe to handle state changes
-  React.useEffect(() => {
-    const unsubscribe = handleManager.addListener(() => {
-      const newState = handleManager.getState();
-      setHandleState(newState);
-      
-      // NO incrementar renderKey durante el drag - esto causa que React desmonte los elementos
-      // Solo incrementar cuando NO estamos en drag
-      if (!newState.dragState.isDragging) {
-        setRenderKey(prev => prev + 1);
-      }
-    });
+  // Subscribe to handle state changes - memoized callback to prevent re-subscription
+  const handleStateChange = React.useCallback(() => {
+    const newState = handleManager.getState();
+    setHandleState(newState);
     
-    return unsubscribe;
+    // NO incrementar renderKey durante el drag - esto causa que React desmonte los elementos
+    // Solo incrementar cuando NO estamos en drag
+    if (!newState.dragState.isDragging) {
+      setRenderKey(prev => prev + 1);
+    }
   }, []);
 
-  // Force re-render when visual debug sizes change
   React.useEffect(() => {
-    setRenderKey(prev => prev + 1);
-  }, [visualDebugSizes.globalFactor, visualDebugSizes.controlPointsFactor]);
+    const unsubscribe = handleManager.addListener(handleStateChange);
+    return unsubscribe;
+  }, [handleStateChange]);
+
+  // Memoized visual debug change handler
+  const visualDebugKey = React.useMemo(
+    () => `${visualDebugSizes.globalFactor}-${visualDebugSizes.controlPointsFactor}`,
+    [visualDebugSizes.globalFactor, visualDebugSizes.controlPointsFactor]
+  );
+
+  // Force re-render when visual debug sizes change - only when not dragging
+  React.useEffect(() => {
+    if (!handleState.dragState.isDragging) {
+      setRenderKey(prev => prev + 1);
+    }
+  }, [visualDebugKey, handleState.dragState.isDragging]);
 
   // Memoize drag state to prevent unnecessary re-renders during drag
   const dragStateInfo = React.useMemo(() => {
@@ -81,6 +272,19 @@ export const HandleRenderer: React.FC = () => {
     };
   }, [handleState.dragState.isDragging, handleState.dragState.commandId, handleState.dragState.handleType]);
 
+  // Calculate responsive radius based on device with size factors
+  const controlPointRadius = React.useMemo(() => {
+    const baseRadius = getControlPointSize(isMobile, isTablet);
+    return baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.controlPointsFactor;
+  }, [isMobile, isTablet, visualDebugSizes.globalFactor, visualDebugSizes.controlPointsFactor]);
+
+  // Use stable key during drag to prevent React from dismounting elements
+  const stableKey = React.useMemo(() => {
+    const { isDragging } = dragStateInfo;
+    return isDragging ? `handle-renderer-stable-${visualDebugKey}` : `handle-renderer-${renderKey}-${visualDebugKey}`;
+  }, [dragStateInfo.isDragging, visualDebugKey, renderKey]);
+
+  // Early returns after all hooks
   if (!paths || paths.length === 0) {
     return null;
   }
@@ -107,15 +311,6 @@ export const HandleRenderer: React.FC = () => {
 
   // Use memoized drag state info
   const { isDragging, dragCommandId, dragHandleType, pairedHandle } = dragStateInfo;
-
-  // Calcular radio responsivo basado en el dispositivo con factores de tamaño - una vez por render
-  const baseRadius = getControlPointSize(isMobile, isTablet);
-  const controlPointRadius = baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.controlPointsFactor;
-
-  // Use stable key during drag to prevent React from dismounting elements
-  // Include visualDebugSizes factors to force re-render when they change
-  const debugKey = `${visualDebugSizes.globalFactor}-${visualDebugSizes.controlPointsFactor}`;
-  const stableKey = isDragging ? `handle-renderer-stable-${debugKey}` : `handle-renderer-${renderKey}-${debugKey}`;
 
   return (
     <g key={stableKey}>
@@ -166,7 +361,7 @@ export const HandleRenderer: React.FC = () => {
             const isNextCommandDisplay = controlPointInfo?.isNextCommandDisplay || false;
             const colors = getHandleColors(handleType, handleState.isOptionPressed, isNextCommandDisplay);
             
-            // Usar el radio calculado globalmente
+            // Use the memoized radius
             const radius = controlPointRadius;
             
             // Find previous command position for connecting control points
@@ -187,126 +382,55 @@ export const HandleRenderer: React.FC = () => {
                 {command.command === 'C' && controlPoints.length >= 2 ? (
                   <>
                     {/* First control point (x1y1) - handle saliente */}
-                    {prevPosition && (
-                      <>
-                        {/* Mostrar este handle: SIEMPRE si estamos arrastrando este comando y este control point */}
-                        {(() => {
-                          const isBeingDragged = isDragging && command.id === dragCommandId && dragHandleType === 'outgoing';
-                          const shouldShow = !isDragging || 
-                            (isDragging && command.id === dragCommandId) ||
-                            (isDragging && isPairedCommand && pairedHandle?.controlPoint === 'x1y1');
-                          
-                          // Si estamos arrastrando este control point específico, SIEMPRE mostrarlo
-                          return shouldShow || isBeingDragged;
-                        })() && (
-                          <>
-                            <line
-                              x1={prevPosition.x}
-                              y1={prevPosition.y}
-                              x2={controlPoints[0].x}
-                              y2={controlPoints[0].y}
-                              stroke={colors.lineColor}
-                              strokeWidth={1}
-                              vectorEffect="non-scaling-stroke"
-                              strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
-                              pointerEvents="none"
-                              opacity={1.0}
-                            />
-                            <g transform={`translate(${controlPoints[0].x},${controlPoints[0].y}) scale(${1 / viewport.zoom}) translate(${-controlPoints[0].x},${-controlPoints[0].y})`}>
-                              {/* Visual control point */}
-                              <circle
-                                cx={controlPoints[0].x}
-                                cy={controlPoints[0].y}
-                                r={radius * 0.7}
-                                fill={colors.fill}
-                                stroke={colors.stroke}
-                                strokeWidth={1.5}
-                                vectorEffect="non-scaling-stroke"
-                                className="control-point"
-                                opacity={1.0}
-                                style={{ pointerEvents: 'none' }}
-                                // Durante el drag, hacer el punto más visible
-                                filter={isDragging && command.id === dragCommandId && dragHandleType === 'outgoing' ? 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' : undefined}
-                              />
-                              {/* Interaction overlay */}
-                              <circle
-                                cx={controlPoints[0].x}
-                                cy={controlPoints[0].y}
-                                r={getInteractionRadius(radius * 0.7, isMobile, isTablet)}
-                                fill="transparent"
-                                stroke="none"
-                                className="control-point-interaction-overlay"
-                                data-command-id={command.id}
-                                data-prev-command-id={prevCommand ? prevCommand.id : undefined}
-                                data-control-point="x1y1"
-                                style={{ cursor: 'default' }}
-                              />
-                            </g>
-                          </>
-                        )}
-                      </>
-                    )}
+                    {prevPosition && (() => {
+                      const isBeingDragged = isDragging && command.id === dragCommandId && dragHandleType === 'outgoing';
+                      const shouldShow = !isDragging || 
+                        (isDragging && command.id === dragCommandId) ||
+                        (isDragging && isPairedCommand && pairedHandle?.controlPoint === 'x1y1');
+                      
+                      // Si estamos arrastrando este control point específico, SIEMPRE mostrarlo
+                      return (shouldShow || isBeingDragged) ? (
+                        <SingleControlPoint
+                          key={`x1y1-${command.id}`}
+                          controlPoint={controlPoints[0]}
+                          anchorPoint={prevPosition}
+                          radius={radius}
+                          colors={colors}
+                          commandId={command.id}
+                          prevCommandId={prevCommand ? prevCommand.id : undefined}
+                          controlPointType="x1y1"
+                          zoom={viewport.zoom}
+                          isBeingDragged={isBeingDragged}
+                          isMobile={isMobile}
+                          isTablet={isTablet}
+                        />
+                      ) : null;
+                    })()}
                     
                     {/* Second control point (x2y2) - handle entrante */}
-                    {controlPoints.length >= 2 && (
-                      <>
-                        {/* Mostrar este handle: SIEMPRE si estamos arrastrando este comando y este control point */}
-                        {(() => {
-                          const isBeingDragged = isDragging && command.id === dragCommandId && dragHandleType === 'incoming';
-                          const shouldShow = !isDragging || 
-                            (isDragging && command.id === dragCommandId) ||
-                            (isDragging && isPairedCommand && pairedHandle?.controlPoint === 'x2y2');
-                          
-                          // Si estamos arrastrando este control point específico, SIEMPRE mostrarlo
-                          return shouldShow || isBeingDragged;
-                        })() && (
-                          <>
-                            <line
-                              x1={position.x}
-                              y1={position.y}
-                              x2={controlPoints[1].x}
-                              y2={controlPoints[1].y}
-                              stroke={colors.lineColor}
-                              strokeWidth={1}
-                              vectorEffect="non-scaling-stroke"
-                              strokeDasharray={`${2 / viewport.zoom},${2 / viewport.zoom}`}
-                              pointerEvents="none"
-                              opacity={1.0}
-                            />
-                            <g transform={`translate(${controlPoints[1].x},${controlPoints[1].y}) scale(${1 / viewport.zoom}) translate(${-controlPoints[1].x},${-controlPoints[1].y})`}>
-                              {/* Visual control point */}
-                              <circle
-                                cx={controlPoints[1].x}
-                                cy={controlPoints[1].y}
-                                r={radius * 0.7}
-                                fill={colors.fill}
-                                stroke={colors.stroke}
-                                strokeWidth={1.5}
-                                vectorEffect="non-scaling-stroke"
-                                className="control-point"
-                                opacity={1.0}
-                                style={{ pointerEvents: 'none' }}
-                                // Durante el drag, hacer el punto más visible
-                                filter={isDragging && command.id === dragCommandId && dragHandleType === 'incoming' ? 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' : undefined}
-                              />
-                              {/* Interaction overlay */}
-                              <circle
-                                cx={controlPoints[1].x}
-                                cy={controlPoints[1].y}
-                                r={getInteractionRadius(radius * 0.7, isMobile, isTablet)}
-                                fill="transparent"
-                                stroke="none"
-                                className="control-point-interaction-overlay"
-                                data-command-id={command.id}
-                                data-control-point="x2y2"
-                                style={{ cursor: 'default' }}
-                              />
-                            </g>
-                          </>
-                        )}
-                      </>
-                    )}
-
+                    {controlPoints.length >= 2 && (() => {
+                      const isBeingDragged = isDragging && command.id === dragCommandId && dragHandleType === 'incoming';
+                      const shouldShow = !isDragging || 
+                        (isDragging && command.id === dragCommandId) ||
+                        (isDragging && isPairedCommand && pairedHandle?.controlPoint === 'x2y2');
+                      
+                      // Si estamos arrastrando este control point específico, SIEMPRE mostrarlo
+                      return (shouldShow || isBeingDragged) ? (
+                        <SingleControlPoint
+                          key={`x2y2-${command.id}`}
+                          controlPoint={controlPoints[1]}
+                          anchorPoint={position}
+                          radius={radius}
+                          colors={colors}
+                          commandId={command.id}
+                          controlPointType="x2y2"
+                          zoom={viewport.zoom}
+                          isBeingDragged={isBeingDragged}
+                          isMobile={isMobile}
+                          isTablet={isTablet}
+                        />
+                      ) : null;
+                    })()}
                   </>
                 ) : null}
               </g>
@@ -316,4 +440,17 @@ export const HandleRenderer: React.FC = () => {
       )}
     </g>
   );
-};
+});
+
+HandleRendererCore.displayName = 'HandleRendererCore';
+
+// Memoized wrapper component with shallow comparison for Zustand state
+export const HandleRenderer: React.FC = React.memo(() => {
+  return <HandleRendererCore />;
+}, () => {
+  // Always re-render - let the internal memoization handle the optimization
+  // This is because Zustand state changes are handled internally
+  return false;
+});
+
+HandleRenderer.displayName = 'HandleRenderer';
