@@ -823,7 +823,7 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
     return null;
   }, [paths]);
 
-  const shouldShow = computedFlags.selectionVisible && (!isTransforming && !isMoving || (isMoving && draggingCommandId)) && ((computedFlags.isSubpathEditMode && computedFlags.subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || computedFlags.hasSelectedSubPath || computedFlags.hasSelectedCommand);
+  const shouldShow = computedFlags.selectionVisible && (!isTransforming && !isMoving || (isMoving && draggingCommandId));
 
   // Memoize viewport bounds for efficient culling
   const viewportBounds = React.useMemo(() => {
@@ -882,11 +882,15 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
     // Rule 5: Si se está moviendo un comando diferente, ocultar EXCEPTO para efecto magneto
     if (isMoving && draggingCommandId) {
       // Si este comando es el que se está arrastrando, siempre mostrarlo
-      if (commandId === draggingCommandId) return true;
+      if (commandId === draggingCommandId) {
+        return true;
+      }
       
       // Find info about the dragging command to check if it's in the same subpath
       const draggingInfo = findCommandInfo(draggingCommandId);
-      if (!draggingInfo || draggingInfo.subPath.id !== subPath.id) return false;
+      if (!draggingInfo || draggingInfo.subPath.id !== subPath.id) {
+        return false;
+      }
       
       const { commandIndex: draggingIndex } = draggingInfo;
       const isDraggingInitial = draggingIndex === 0;
@@ -895,11 +899,13 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
       // Efecto magneto: si se arrastra el primer comando, mostrar el último (y viceversa)
       if (isDraggingInitial) {
         const finalCommandIndex = subPath.commands.length - 1;
-        return subPath.commands[finalCommandIndex].id === commandId;
+        const shouldShow = subPath.commands[finalCommandIndex].id === commandId;
+        return shouldShow;
       }
       
       if (isDraggingFinal) {
-        return subPath.commands[0].id === commandId;
+        const shouldShow = subPath.commands[0].id === commandId;
+        return shouldShow;
       }
       
       // Para cualquier otro comando que se esté moviendo, ocultar todos los demás
@@ -909,7 +915,9 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
     // Condiciones adicionales: mostrar si el comando está seleccionado o si hay comandos seleccionados en el subpath
     if (isCommandSelected || hasSelectedCommandInSubPath) {
       // Aplicar hidePointsInSelect solo si el comando específico está seleccionado
-      if (enabledFeatures.hidePointsInSelect && isCommandSelected) return false;
+      if (enabledFeatures.hidePointsInSelect && isCommandSelected) {
+        return false;
+      }
       return true;
     }
     
@@ -964,10 +972,13 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
             // Handle Z commands specially - they don't have their own position
             const isZCommand = command.command === 'Z';
             
+            // Get command selection status - needed for visibility rules and rendering
+            const isCommandSelected = selection.selectedCommands.includes(command.id);
+            
             let position = null;
             if (isZCommand) {
               // Show Z commands using consolidated visibility rules
-              const isZCommandSelected = selection.selectedCommands.includes(command.id);
+              const isZCommandSelected = isCommandSelected; // Use the same value
               const shouldShowZCommand = shouldShowCommandPoint(command.id, subPath, isZCommandSelected, isSubPathSelected, hasSelectedCommandInSubPath);
               if (!shouldShowZCommand) return null;
               // Z commands don't have position, skip position-based checks
@@ -975,20 +986,17 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
               position = getAbsoluteCommandPosition(command, subPath, path.subPaths);
               if (!position) return null;
               
+              // Use consolidated visibility rules FIRST
+              const shouldShowCommand = shouldShowCommandPoint(command.id, subPath, isCommandSelected, isSubPathSelected, hasSelectedCommandInSubPath);
+              if (!shouldShowCommand) return null;
+              
               // Viewport culling: Skip rendering if point is outside visible area
               // Only skip for non-selected commands to ensure selected items remain visible
-              const isCommandSelected = selection.selectedCommands.includes(command.id);
+              // Apply this AFTER visibility rules to avoid conflicts with Rule 6
               if (!isCommandSelected && !isPointVisible(position.x, position.y)) {
                 return null;
               }
-              
-              // Use consolidated visibility rules
-              const shouldShowCommand = shouldShowCommandPoint(command.id, subPath, isCommandSelected, isSubPathSelected, hasSelectedCommandInSubPath);
-              if (!shouldShowCommand) return null;
             }
-            
-            // Use isCommandSelected from above or get it for Z commands
-            const isCommandSelected = selection.selectedCommands.includes(command.id);
             
             // Determine if this is the first or last command in the subpath
             const isFirstCommand = commandIndex === 0;
