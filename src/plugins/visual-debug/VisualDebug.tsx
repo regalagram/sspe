@@ -93,14 +93,18 @@ interface SimpleCommandPointProps {
 const SimpleCommandPoint = React.memo<SimpleCommandPointProps>(({ 
   position, radius, fill, stroke, commandId, zoom, isSelected, isFirst, isLast, isMobile, isTablet 
 }) => {
-  // Check if this command is being dragged (hack to maintain sync)
-  const isDragging = transformManager.isMoving() && transformManager.getDraggingCommandId() === commandId;
+  // Check if this command needs the temporary rendering hack:
+  // 1. If this specific command is being dragged, OR
+  // 2. If this command is selected AND there's a drag operation with multiple selected commands
+  const isDraggingThis = transformManager.isMoving() && transformManager.getDraggingCommandId() === commandId;
+  const isDraggingMultipleSelected = transformManager.isMoving() && transformManager.getDraggingCommandId() && isSelected;
+  const needsTemporaryHack = isDraggingThis || isDraggingMultipleSelected;
   
   return (
     <g>
       <CommandPointGroup x={position.x} y={position.y} zoom={zoom}>
         {/* Normal command circle - hide during drag to avoid sync issues */}
-        {!isDragging && (
+        {!needsTemporaryHack && (
           <CommandPointCircle
             cx={position.x}
             cy={position.y}
@@ -111,7 +115,7 @@ const SimpleCommandPoint = React.memo<SimpleCommandPointProps>(({
           />
         )}
         {/* Temporary sync-friendly circle during drag (hack!) */}
-        {isDragging && (
+        {needsTemporaryHack && (
           <circle
             cx={position.x}
             cy={position.y}
@@ -151,11 +155,16 @@ const SimpleCommandPoint = React.memo<SimpleCommandPointProps>(({
   );
 }, (prevProps, nextProps) => {
   // Check drag state for memoization
-  const wasDragging = transformManager.isMoving() && transformManager.getDraggingCommandId() === prevProps.commandId;
-  const isDragging = transformManager.isMoving() && transformManager.getDraggingCommandId() === nextProps.commandId;
+  const wasDraggingThis = transformManager.isMoving() && transformManager.getDraggingCommandId() === prevProps.commandId;
+  const wasDraggingMultipleSelected = transformManager.isMoving() && transformManager.getDraggingCommandId() && prevProps.isSelected;
+  const wasNeedingTemporaryHack = wasDraggingThis || wasDraggingMultipleSelected;
+  
+  const isDraggingThis = transformManager.isMoving() && transformManager.getDraggingCommandId() === nextProps.commandId;
+  const isDraggingMultipleSelected = transformManager.isMoving() && transformManager.getDraggingCommandId() && nextProps.isSelected;
+  const needsTemporaryHack = isDraggingThis || isDraggingMultipleSelected;
   
   // If drag state changed, force re-render
-  if (wasDragging !== isDragging) {
+  if (wasNeedingTemporaryHack !== needsTemporaryHack) {
     return false;
   }
   
@@ -197,10 +206,17 @@ const SplitCommandPoint = React.memo<SplitCommandPointProps>(({
   position, radius, directionAngle, firstCommandId, lastCommandId, 
   firstCommandSelected, lastCommandSelected, zoom, isMobile, isTablet 
 }) => {
-  // Check if any of the split commands is being dragged (hack to maintain sync)
+  // Check if any of the split commands needs the temporary rendering hack:
+  // 1. If a specific command is being dragged, OR
+  // 2. If a command is selected AND there's a drag operation with multiple selected commands
   const isDraggingFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() === firstCommandId;
   const isDraggingLast = transformManager.isMoving() && transformManager.getDraggingCommandId() === lastCommandId;
-  const isDraggingEither = isDraggingFirst || isDraggingLast;
+  const isDraggingMultipleFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() && firstCommandSelected;
+  const isDraggingMultipleLast = transformManager.isMoving() && transformManager.getDraggingCommandId() && lastCommandSelected;
+  
+  const needsTemporaryHackFirst = isDraggingFirst || isDraggingMultipleFirst;
+  const needsTemporaryHackLast = isDraggingLast || isDraggingMultipleLast;
+  const needsTemporaryHackEither = needsTemporaryHackFirst || needsTemporaryHackLast;
   
   // Calculate perpendicular angle for the split line
   const splitAngle = directionAngle + Math.PI / 2;
@@ -217,7 +233,7 @@ const SplitCommandPoint = React.memo<SplitCommandPointProps>(({
     <g>
       <CommandPointGroup x={position.x} y={position.y} zoom={zoom}>
         {/* Normal paths - hide during drag to avoid sync issues */}
-        {!isDraggingEither && (
+        {!needsTemporaryHackEither && (
           <>
             {/* First half (red) - initial point */}
             <path
@@ -249,13 +265,13 @@ const SplitCommandPoint = React.memo<SplitCommandPointProps>(({
         )}
         
         {/* Temporary sync-friendly paths during drag (hack!) */}
-        {isDraggingEither && (
+        {needsTemporaryHackEither && (
           <>
-            {/* First half (red) - initial point - DEBUG: café si se arrastra */}
+            {/* First half (red) - initial point - DEBUG: café si se arrastra o está en selección múltiple */}
             <path
               d={`M ${position.x} ${position.y} L ${splitX1} ${splitY1} A ${radius} ${radius} 0 0 1 ${splitX2} ${splitY2} Z`}
-              fill={isDraggingFirst ? "#8B4513" : "#ef4444"} // Café si se arrastra, rojo normal si no
-              stroke={isDraggingFirst ? "#654321" : "#dc2626"} // Borde café oscuro si se arrastra
+              fill={needsTemporaryHackFirst ? "#8B4513" : "#ef4444"} // Café si necesita hack, rojo normal si no
+              stroke={needsTemporaryHackFirst ? "#654321" : "#dc2626"} // Borde café oscuro si necesita hack
               strokeWidth={1}
               vectorEffect="non-scaling-stroke"
               style={{ 
@@ -263,11 +279,11 @@ const SplitCommandPoint = React.memo<SplitCommandPointProps>(({
                 opacity: 0.9
               }}
             />
-            {/* Second half (green) - final point - DEBUG: amarillo si se arrastra */}
+            {/* Second half (green) - final point - DEBUG: amarillo si se arrastra o está en selección múltiple */}
             <path
               d={`M ${position.x} ${position.y} L ${splitX2} ${splitY2} A ${radius} ${radius} 0 0 1 ${splitX1} ${splitY1} Z`}
-              fill={isDraggingLast ? "#FFD700" : "#22c55e"} // Amarillo si se arrastra, verde normal si no
-              stroke={isDraggingLast ? "#FFA500" : "#16a34a"} // Borde naranja si se arrastra
+              fill={needsTemporaryHackLast ? "#FFD700" : "#22c55e"} // Amarillo si necesita hack, verde normal si no
+              stroke={needsTemporaryHackLast ? "#FFA500" : "#16a34a"} // Borde naranja si necesita hack
               strokeWidth={1}
               vectorEffect="non-scaling-stroke"
               style={{ 
@@ -327,14 +343,23 @@ const SplitCommandPoint = React.memo<SplitCommandPointProps>(({
     </g>
   );
 }, (prevProps, nextProps) => {
-  // Check drag state for memoization
+  // Check drag state for memoization (including multiple selection drag)
   const wasDraggingFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() === prevProps.firstCommandId;
   const wasDraggingLast = transformManager.isMoving() && transformManager.getDraggingCommandId() === prevProps.lastCommandId;
+  const wasDraggingMultipleFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() && prevProps.firstCommandSelected;
+  const wasDraggingMultipleLast = transformManager.isMoving() && transformManager.getDraggingCommandId() && prevProps.lastCommandSelected;
+  const wasNeedingTemporaryHackFirst = wasDraggingFirst || wasDraggingMultipleFirst;
+  const wasNeedingTemporaryHackLast = wasDraggingLast || wasDraggingMultipleLast;
+  
   const isDraggingFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() === nextProps.firstCommandId;
   const isDraggingLast = transformManager.isMoving() && transformManager.getDraggingCommandId() === nextProps.lastCommandId;
+  const isDraggingMultipleFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() && nextProps.firstCommandSelected;
+  const isDraggingMultipleLast = transformManager.isMoving() && transformManager.getDraggingCommandId() && nextProps.lastCommandSelected;
+  const needsTemporaryHackFirst = isDraggingFirst || isDraggingMultipleFirst;
+  const needsTemporaryHackLast = isDraggingLast || isDraggingMultipleLast;
   
   // If drag state changed, force re-render
-  if (wasDraggingFirst !== isDraggingFirst || wasDraggingLast !== isDraggingLast) {
+  if (wasNeedingTemporaryHackFirst !== needsTemporaryHackFirst || wasNeedingTemporaryHackLast !== needsTemporaryHackLast) {
     return false;
   }
   
@@ -701,38 +726,6 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
     return null;
   }, [paths]);
 
-  // Check if a specific command should be shown during dragging
-  const shouldShowCommandDuringDrag = React.useCallback((commandId: string, subPath: any) => {
-    if (!draggingCommandId || !isMoving) return false;
-    
-    // If this is the command being dragged, always show it
-    if (commandId === draggingCommandId) return true;
-    
-    // Find info about the dragging command
-    const draggingInfo = findCommandInfo(draggingCommandId);
-    if (!draggingInfo) return false;
-    
-    // Check if dragging command and current command are in the same subpath
-    if (draggingInfo.subPath.id !== subPath.id) return false;
-    
-    const { commandIndex: draggingIndex } = draggingInfo;
-    const isDraggingInitial = draggingIndex === 0;
-    const isDraggingFinal = draggingIndex === draggingInfo.subPath.commands.length - 1;
-    
-    // If dragging initial command, show the final command for magneto effect
-    if (isDraggingInitial) {
-      const finalCommandIndex = subPath.commands.length - 1;
-      return subPath.commands[finalCommandIndex].id === commandId;
-    }
-    
-    // If dragging final command, show the initial command for magneto effect
-    if (isDraggingFinal) {
-      return subPath.commands[0].id === commandId;
-    }
-    
-    return false;
-  }, [draggingCommandId, isMoving, findCommandInfo]);
-
   const shouldShow = computedFlags.selectionVisible && (!isTransforming && !isMoving || (isMoving && draggingCommandId)) && ((computedFlags.isSubpathEditMode && computedFlags.subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || computedFlags.hasSelectedSubPath || computedFlags.hasSelectedCommand);
 
   // Memoize viewport bounds for efficient culling
@@ -756,13 +749,88 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
     );
   }, [viewportBounds]);
 
+  // Use computed flags early to make them available for the function below
+  const { isSubpathEditMode, subpathShowCommandPoints, hasSelectedSubPath, hasSelectedCommand } = computedFlags;
+
+  // Consolidated function to determine if command point should be visible (regular function to avoid hook order issues)
+  const shouldShowCommandPoint = (
+    commandId: string, 
+    subPath: any, 
+    isCommandSelected: boolean,
+    isSubPathSelected: boolean,
+    hasSelectedCommandInSubPath: boolean
+  ): boolean => {
+    // Rule 1: Si el subpath está seleccionado, mostrar todos los puntos de comando EXCEPTO si hidePointsInSelect está activo
+    if (isSubPathSelected) {
+      if (enabledFeatures.hidePointsInSelect) return false;
+      return true;
+    }
+    
+    // Rule 2: Si estamos en modo subpath-edit, mostrar todos los puntos EXCEPTO si subpathShowCommandPoints está desactivado
+    if (isSubpathEditMode) {
+      if (!subpathShowCommandPoints) return false;
+      return true;
+    }
+    
+    // Rule 3: Si commandPointsEnabled está activo globalmente, mostrar todos los puntos
+    if (enabledFeatures.commandPointsEnabled) {
+      return true;
+    }
+    
+    // Rule 4: Si hay transformación (pero no movimiento de comando), ocultar todos los puntos
+    if (isTransforming && !isMoving) {
+      return false;
+    }
+    
+    // Rule 5: Si se está moviendo un comando diferente, ocultar EXCEPTO para efecto magneto
+    if (isMoving && draggingCommandId) {
+      // Si este comando es el que se está arrastrando, siempre mostrarlo
+      if (commandId === draggingCommandId) return true;
+      
+      // Find info about the dragging command to check if it's in the same subpath
+      const draggingInfo = findCommandInfo(draggingCommandId);
+      if (!draggingInfo || draggingInfo.subPath.id !== subPath.id) return false;
+      
+      const { commandIndex: draggingIndex } = draggingInfo;
+      const isDraggingInitial = draggingIndex === 0;
+      const isDraggingFinal = draggingIndex === draggingInfo.subPath.commands.length - 1;
+      
+      // Efecto magneto: si se arrastra el primer comando, mostrar el último (y viceversa)
+      if (isDraggingInitial) {
+        const finalCommandIndex = subPath.commands.length - 1;
+        return subPath.commands[finalCommandIndex].id === commandId;
+      }
+      
+      if (isDraggingFinal) {
+        return subPath.commands[0].id === commandId;
+      }
+      
+      // Para cualquier otro comando que se esté moviendo, ocultar todos los demás
+      return false;
+    }
+    
+    // Condiciones adicionales: mostrar si el comando está seleccionado o si hay comandos seleccionados en el subpath
+    if (isCommandSelected || hasSelectedCommandInSubPath) {
+      // Aplicar hidePointsInSelect solo si el comando específico está seleccionado
+      if (enabledFeatures.hidePointsInSelect && isCommandSelected) return false;
+      return true;
+    }
+    
+    // Rule 6: Mostrar puntos si el subpath es visible (condición por defecto para subpaths visibles)
+    // Esto permite que los puntos se muestren en paths/subpaths que están siendo renderizados
+    // sin necesidad de selección específica, siempre que no estén en transformación
+    if (!isTransforming && !isMoving) {
+      return true;
+    }
+
+    // Por defecto, no mostrar
+    return false;
+  };
+
   // Early returns after all hooks are called
   if (!paths || paths.length === 0) {
     return null;
   }
-
-  // Use computed flags
-  const { isSubpathEditMode, subpathShowCommandPoints, hasSelectedSubPath, hasSelectedCommand } = computedFlags;
 
   if (!shouldShow) {
     return null;
@@ -782,7 +850,7 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
           const hasSelectedCommandInSubPath = subPath.commands.some(cmd => 
             selection.selectedCommands.includes(cmd.id)
           );
-          const shouldShowSubPath = (!isTransforming && !isMoving && ((isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || isSubPathSelected || hasSelectedCommandInSubPath)) || (isMoving && draggingCommandId && subPath.commands.some(cmd => cmd.id === draggingCommandId));
+          
           // Check if first and last commands coincide (guard against empty commands array)
           const firstCommand = subPath.commands.length > 0 ? subPath.commands[0] : null;
           const lastCommand = subPath.commands.length > 0 ? subPath.commands[subPath.commands.length - 1] : null;
@@ -801,10 +869,9 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
             
             let position = null;
             if (isZCommand) {
-              // Show Z commands if feature is enabled OR if subpath is selected OR if Z command is selected
+              // Show Z commands using consolidated visibility rules
               const isZCommandSelected = selection.selectedCommands.includes(command.id);
-              const shouldShowDuringDrag = shouldShowCommandDuringDrag(command.id, subPath);
-              const shouldShowZCommand = (!isTransforming && !isMoving && ((isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || shouldShowSubPath || isZCommandSelected)) || shouldShowDuringDrag;
+              const shouldShowZCommand = shouldShowCommandPoint(command.id, subPath, isZCommandSelected, isSubPathSelected, hasSelectedCommandInSubPath);
               if (!shouldShowZCommand) return null;
               // Z commands don't have position, skip position-based checks
             } else {
@@ -818,12 +885,8 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
                 return null;
               }
               
-              // Si hidePointsInSelect está activo y el comando está seleccionado, no mostrar punto
-              if (enabledFeatures.hidePointsInSelect && isCommandSelected) return null;
-              
-              // Check if should show during drag (for magneto effect)
-              const shouldShowDuringDrag = shouldShowCommandDuringDrag(command.id, subPath);
-              const shouldShowCommand = (!isTransforming && !isMoving && (shouldShowSubPath || isCommandSelected)) || shouldShowDuringDrag;
+              // Use consolidated visibility rules
+              const shouldShowCommand = shouldShowCommandPoint(command.id, subPath, isCommandSelected, isSubPathSelected, hasSelectedCommandInSubPath);
               if (!shouldShowCommand) return null;
             }
             
@@ -891,35 +954,82 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
               const firstCommandSelected = selection.selectedCommands.includes(firstCommand.id);
               const zCommandSelected = selection.selectedCommands.includes(command.id);
               
+              // Apply temporary hack logic for Z commands (same as other command points)
+              const isDraggingFirstCommand = transformManager.isMoving() && transformManager.getDraggingCommandId() === firstCommand.id;
+              const isDraggingZCommand = transformManager.isMoving() && transformManager.getDraggingCommandId() === command.id;
+              const isDraggingMultipleFirst = transformManager.isMoving() && transformManager.getDraggingCommandId() && firstCommandSelected;
+              const isDraggingMultipleZ = transformManager.isMoving() && transformManager.getDraggingCommandId() && zCommandSelected;
+              
+              const needsTemporaryHackFirst = isDraggingFirstCommand || isDraggingMultipleFirst;
+              const needsTemporaryHackZ = isDraggingZCommand || isDraggingMultipleZ;
+              const needsTemporaryHackEither = needsTemporaryHackFirst || needsTemporaryHackZ;
+              
               return (
                 <g key={`command-z-${command.id}`}>
                   <g transform={`translate(${firstCommandPosition.x},${firstCommandPosition.y}) scale(${1 / viewport.zoom}) translate(${-firstCommandPosition.x},${-firstCommandPosition.y})`}>
-                    {/* Visual first half (red) for Z command */}
-                    <path
-                      d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX1} ${zSplitY1} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX2} ${zSplitY2} Z`}
-                      fill="#ef4444"
-                      stroke="#dc2626"
-                      strokeWidth={1}
-                      vectorEffect="non-scaling-stroke"
-                      style={{ 
-                        pointerEvents: 'none',
-                        opacity: 0.9
-                      }}
-                    />
-                    {/* Visual second half (green) for initial M command */}
-                    <path
-                      d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX2} ${zSplitY2} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX1} ${zSplitY1} Z`}
-                      fill="#22c55e"
-                      stroke="#16a34a"
-                      strokeWidth={1}
-                      vectorEffect="non-scaling-stroke"
-                      style={{ 
-                        pointerEvents: 'none',
-                        opacity: 0.9
-                      }}
-                      className="command-point"
-                    />
-                    {/* Interaction overlay first half (red) for Z command */}
+                    {/* Normal rendering - hide during drag to avoid sync issues */}
+                    {!needsTemporaryHackEither && (
+                      <>
+                        {/* Visual first half (red) for Z command */}
+                        <path
+                          d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX1} ${zSplitY1} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX2} ${zSplitY2} Z`}
+                          fill="#ef4444"
+                          stroke="#dc2626"
+                          strokeWidth={1}
+                          vectorEffect="non-scaling-stroke"
+                          style={{ 
+                            pointerEvents: 'none',
+                            opacity: 0.9
+                          }}
+                          className="command-point"
+                        />
+                        {/* Visual second half (green) for initial M command */}
+                        <path
+                          d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX2} ${zSplitY2} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX1} ${zSplitY1} Z`}
+                          fill="#22c55e"
+                          stroke="#16a34a"
+                          strokeWidth={1}
+                          vectorEffect="non-scaling-stroke"
+                          style={{ 
+                            pointerEvents: 'none',
+                            opacity: 0.9
+                          }}
+                          className="command-point"
+                        />
+                      </>
+                    )}
+                    
+                    {/* Temporary sync-friendly rendering during drag (hack!) */}
+                    {needsTemporaryHackEither && (
+                      <>
+                        {/* Visual first half (red) for Z command - DEBUG: café si necesita hack */}
+                        <path
+                          d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX1} ${zSplitY1} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX2} ${zSplitY2} Z`}
+                          fill={needsTemporaryHackZ ? "#8B4513" : "#ef4444"} // Café si Z necesita hack, rojo normal
+                          stroke={needsTemporaryHackZ ? "#654321" : "#dc2626"} // Borde café oscuro si Z necesita hack
+                          strokeWidth={1}
+                          vectorEffect="non-scaling-stroke"
+                          style={{ 
+                            pointerEvents: 'none',
+                            opacity: 0.9
+                          }}
+                        />
+                        {/* Visual second half (green) for initial M command - DEBUG: amarillo si necesita hack */}
+                        <path
+                          d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${zSplitX2} ${zSplitY2} A ${zRadius} ${zRadius} 0 0 1 ${zSplitX1} ${zSplitY1} Z`}
+                          fill={needsTemporaryHackFirst ? "#FFD700" : "#22c55e"} // Amarillo si M necesita hack, verde normal
+                          stroke={needsTemporaryHackFirst ? "#FFA500" : "#16a34a"} // Borde naranja si M necesita hack
+                          strokeWidth={1}
+                          vectorEffect="non-scaling-stroke"
+                          style={{ 
+                            pointerEvents: 'none',
+                            opacity: 0.9
+                          }}
+                        />
+                      </>
+                    )}
+                    
+                    {/* Interaction overlays - always present */}
                     <path
                       d={`M ${firstCommandPosition.x} ${firstCommandPosition.y} L ${firstCommandPosition.x + Math.cos(zSplitAngle) * getInteractionRadius(zRadius, isMobile, isTablet)} ${firstCommandPosition.y + Math.sin(zSplitAngle) * getInteractionRadius(zRadius, isMobile, isTablet)} A ${getInteractionRadius(zRadius, isMobile, isTablet)} ${getInteractionRadius(zRadius, isMobile, isTablet)} 0 0 1 ${firstCommandPosition.x - Math.cos(zSplitAngle) * getInteractionRadius(zRadius, isMobile, isTablet)} ${firstCommandPosition.y - Math.sin(zSplitAngle) * getInteractionRadius(zRadius, isMobile, isTablet)} Z`}
                       fill="transparent"

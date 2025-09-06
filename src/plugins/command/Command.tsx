@@ -26,7 +26,7 @@ const CommandPanel: React.FC<CommandPanelProps> = ({ command, pathId, subPathId 
 
     // Always show command type
     properties.push(
-      <div>
+      <div key="command-type">
         <div>
           Command Type:
         </div>
@@ -39,7 +39,7 @@ const CommandPanel: React.FC<CommandPanelProps> = ({ command, pathId, subPathId 
     // Show coordinates based on command type
     if (cmd.x !== undefined || cmd.y !== undefined) {
       properties.push(
-        <div>
+        <div key="coordinates">
           <div>
             Coordinates:
           </div>
@@ -53,7 +53,7 @@ const CommandPanel: React.FC<CommandPanelProps> = ({ command, pathId, subPathId 
     // Show control points for curves
     if (cmd.x1 !== undefined || cmd.y1 !== undefined) {
       properties.push(
-        <div>
+        <div key="control-point-1">
           <div>
             Control Point 1:
           </div>
@@ -66,7 +66,7 @@ const CommandPanel: React.FC<CommandPanelProps> = ({ command, pathId, subPathId 
 
     if (cmd.x2 !== undefined || cmd.y2 !== undefined) {
       properties.push(
-        <div>
+        <div key="control-point-2">
           <div>
             Control Point 2:
           </div>
@@ -79,7 +79,7 @@ const CommandPanel: React.FC<CommandPanelProps> = ({ command, pathId, subPathId 
 
     // Show ID information
     properties.push(
-      <div>
+      <div key="ids">
         <div>
           IDs
         </div>
