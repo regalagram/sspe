@@ -837,27 +837,6 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
 
   const shouldShow = computedFlags.selectionVisible && (!isTransforming && !isMoving || (isMoving && draggingCommandId));
 
-  // Memoize viewport bounds for efficient culling
-  const viewportBounds = React.useMemo(() => {
-    const margin = 100; // Render points slightly outside viewport for smooth panning
-    return {
-      left: viewport.viewBox.x - margin,
-      top: viewport.viewBox.y - margin, 
-      right: viewport.viewBox.x + viewport.viewBox.width + margin,
-      bottom: viewport.viewBox.y + viewport.viewBox.height + margin
-    };
-  }, [viewport.viewBox.x, viewport.viewBox.y, viewport.viewBox.width, viewport.viewBox.height]);
-
-  // Helper function to check if a point is within viewport bounds
-  const isPointVisible = React.useCallback((x: number, y: number) => {
-    return (
-      x >= viewportBounds.left &&
-      x <= viewportBounds.right &&
-      y >= viewportBounds.top &&
-      y <= viewportBounds.bottom
-    );
-  }, [viewportBounds]);
-
   // Use computed flags early to make them available for the function below
   const { isSubpathEditMode, subpathShowCommandPoints, hasSelectedSubPath, hasSelectedCommand } = computedFlags;
 
@@ -1002,12 +981,7 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
               const shouldShowCommand = shouldShowCommandPoint(command.id, subPath, isCommandSelected, isSubPathSelected, hasSelectedCommandInSubPath);
               if (!shouldShowCommand) return null;
               
-              // Viewport culling: Skip rendering if point is outside visible area
-              // Only skip for non-selected commands to ensure selected items remain visible
-              // Apply this AFTER visibility rules to avoid conflicts with Rule 6
-              if (!isCommandSelected && !isPointVisible(position.x, position.y)) {
-                return null;
-              }
+              // Viewport culling removed - keep all points visible to avoid issues during drag
             }
             
             // Determine if this is the first or last command in the subpath
