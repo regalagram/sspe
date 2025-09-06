@@ -677,10 +677,17 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
   const { isMobile, isTablet } = useMobileDetection();
   
   // OPTIMIZATION: Cache drag state to avoid repeated transformManager calls
-  const dragState = React.useMemo(() => ({
-    isMoving: transformManager.isMoving(),
-    draggingCommandId: transformManager.getDraggingCommandId()
-  }), [renderVersion]); // Only recalculate when renderVersion changes
+  const dragState = React.useMemo(() => {
+    const state = {
+      isMoving: transformManager.isMoving(),
+      draggingCommandId: transformManager.getDraggingCommandId()
+    };
+    
+    // DEBUG: Log when dragState is recalculated (potential memoization issue)
+    console.debug('[VisualDebug] dragState recalculated:', state, 'renderVersion:', renderVersion);
+    
+    return state;
+  }, [renderVersion]); // Only recalculate when renderVersion changes
   
   // AGGRESSIVE CLEANUP: Force cleanup of detached SVG elements  
   React.useEffect(() => {
@@ -794,13 +801,18 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
     const subpathShowCommandPoints = storeEnabledFeatures.subpathShowCommandPoints ?? true;
     const selectionVisible = ui?.selectionVisible ?? true;
     
-    return {
+    const flags = {
       hasSelectedSubPath,
       hasSelectedCommand,
       isSubpathEditMode,
       subpathShowCommandPoints,
       selectionVisible
     };
+    
+    // DEBUG: Log when computedFlags are recalculated (potential memoization issue)
+    console.debug('[VisualDebug] computedFlags recalculated:', flags);
+    
+    return flags;
   }, [selection.selectedSubPaths.length, selection.selectedCommands.length, mode?.current, storeEnabledFeatures.subpathShowCommandPoints, ui?.selectionVisible]);
 
   // Check transformation states outside of memoization for real-time updates
