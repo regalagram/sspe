@@ -378,6 +378,9 @@ class DragManager {
     // Store which command is being dragged
     this.draggingCommandId = draggingCommandId;
 
+    // Sync with TransformManager for global access
+    transformManager.setDraggingCommandId(draggingCommandId || null);
+
     // Detect if this is a dual point drag scenario
     const selectedCommands = this.editorStore.selection.selectedCommands || [];
     this.isDualPointDrag = this.isDualPointIndividualSelection(selectedCommands) ||
@@ -699,6 +702,7 @@ class DragManager {
     this.stickyDisabledForDrag = false; // Re-enable sticky for future drags
     this.hasClearedSplitState = false; // Reset split state clearing
     transformManager.setMoving(false);
+    transformManager.setDraggingCommandId(null); // Clear dragging command ID from transform manager
     stickyManager.clearGuidelines();
     stickyPointsManager.clearSticky(); // Clear sticky points state
     // Force transform manager to update after movement so handles reflect new positions

@@ -63,6 +63,7 @@ interface TransformState {
   initialUses: { [useId: string]: any }; // Store initial use element positions and properties
   onStateChange?: () => void; // Callback for state changes
   isMoving: boolean; // Track if selection is being moved (drag & drop)
+  draggingCommandId: string | null; // Track which specific command is being dragged
 }
 
 export class TransformManager {
@@ -81,7 +82,8 @@ export class TransformManager {
     initialImages: {},
     initialUses: {},
     onStateChange: undefined,
-    isMoving: false
+    isMoving: false,
+    draggingCommandId: null
   };
 
   private editorStore: any = null;
@@ -718,6 +720,19 @@ export class TransformManager {
   // Check if currently moving selection
   isMoving(): boolean {
     return this.state.isMoving;
+  }
+
+  // Methods to control dragging command state
+  setDraggingCommandId(commandId: string | null) {
+    if (this.state.draggingCommandId !== commandId) {
+      this.state.draggingCommandId = commandId;
+      this.triggerStateChange();
+    }
+  }
+
+  // Get the currently dragging command ID
+  getDraggingCommandId(): string | null {
+    return this.state.draggingCommandId;
   }
 
   // Helper methods

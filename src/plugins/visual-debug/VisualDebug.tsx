@@ -600,7 +600,56 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
   // Check transformation states outside of memoization for real-time updates
   const isTransforming = transformManager.isTransforming();
   const isMoving = transformManager.isMoving();
-  const shouldShow = computedFlags.selectionVisible && !isTransforming && !isMoving && ((computedFlags.isSubpathEditMode && computedFlags.subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || computedFlags.hasSelectedSubPath || computedFlags.hasSelectedCommand);
+  const draggingCommandId = transformManager.getDraggingCommandId();
+  
+  // Helper function to find command info for dragging command detection
+  const findCommandInfo = React.useCallback((commandId: string) => {
+    for (const path of paths) {
+      for (const subPath of path.subPaths) {
+        for (let i = 0; i < subPath.commands.length; i++) {
+          const command = subPath.commands[i];
+          if (command.id === commandId) {
+            return { command, subPath, commandIndex: i };
+          }
+        }
+      }
+    }
+    return null;
+  }, [paths]);
+
+  // Check if a specific command should be shown during dragging
+  const shouldShowCommandDuringDrag = React.useCallback((commandId: string, subPath: any) => {
+    if (!draggingCommandId || !isMoving) return false;
+    
+    // If this is the command being dragged, always show it
+    if (commandId === draggingCommandId) return true;
+    
+    // Find info about the dragging command
+    const draggingInfo = findCommandInfo(draggingCommandId);
+    if (!draggingInfo) return false;
+    
+    // Check if dragging command and current command are in the same subpath
+    if (draggingInfo.subPath.id !== subPath.id) return false;
+    
+    const { commandIndex: draggingIndex } = draggingInfo;
+    const isDraggingInitial = draggingIndex === 0;
+    const isDraggingFinal = draggingIndex === draggingInfo.subPath.commands.length - 1;
+    
+    // If dragging initial command, show the final command for magneto effect
+    if (isDraggingInitial) {
+      const finalCommandIndex = subPath.commands.length - 1;
+      return subPath.commands[finalCommandIndex].id === commandId;
+    }
+    
+    // If dragging final command, show the initial command for magneto effect
+    if (isDraggingFinal) {
+      return subPath.commands[0].id === commandId;
+    }
+    
+    return false;
+  }, [draggingCommandId, isMoving, findCommandInfo]);
+
+  const shouldShow = computedFlags.selectionVisible && (!isTransforming && !isMoving || (isMoving && draggingCommandId)) && ((computedFlags.isSubpathEditMode && computedFlags.subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || computedFlags.hasSelectedSubPath || computedFlags.hasSelectedCommand);
 
   // Memoize viewport bounds for efficient culling
   const viewportBounds = React.useMemo(() => {
@@ -649,7 +698,7 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
           const hasSelectedCommandInSubPath = subPath.commands.some(cmd => 
             selection.selectedCommands.includes(cmd.id)
           );
-          const shouldShowSubPath = !isTransforming && !isMoving && ((isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || isSubPathSelected || hasSelectedCommandInSubPath);
+          const shouldShowSubPath = (!isTransforming && !isMoving && ((isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || isSubPathSelected || hasSelectedCommandInSubPath)) || (isMoving && draggingCommandId && subPath.commands.some(cmd => cmd.id === draggingCommandId));
           // Check if first and last commands coincide (guard against empty commands array)
           const firstCommand = subPath.commands.length > 0 ? subPath.commands[0] : null;
           const lastCommand = subPath.commands.length > 0 ? subPath.commands[subPath.commands.length - 1] : null;
@@ -670,7 +719,8 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
             if (isZCommand) {
               // Show Z commands if feature is enabled OR if subpath is selected OR if Z command is selected
               const isZCommandSelected = selection.selectedCommands.includes(command.id);
-              const shouldShowZCommand = !isTransforming && !isMoving && ((isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || shouldShowSubPath || isZCommandSelected);
+              const shouldShowDuringDrag = shouldShowCommandDuringDrag(command.id, subPath);
+              const shouldShowZCommand = (!isTransforming && !isMoving && ((isSubpathEditMode && subpathShowCommandPoints) || enabledFeatures.commandPointsEnabled || shouldShowSubPath || isZCommandSelected)) || shouldShowDuringDrag;
               if (!shouldShowZCommand) return null;
               // Z commands don't have position, skip position-based checks
             } else {
@@ -686,7 +736,10 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
               
               // Si hidePointsInSelect está activo y el comando está seleccionado, no mostrar punto
               if (enabledFeatures.hidePointsInSelect && isCommandSelected) return null;
-              const shouldShowCommand = !isTransforming && !isMoving && (shouldShowSubPath || isCommandSelected);
+              
+              // Check if should show during drag (for magneto effect)
+              const shouldShowDuringDrag = shouldShowCommandDuringDrag(command.id, subPath);
+              const shouldShowCommand = (!isTransforming && !isMoving && (shouldShowSubPath || isCommandSelected)) || shouldShowDuringDrag;
               if (!shouldShowCommand) return null;
             }
             
