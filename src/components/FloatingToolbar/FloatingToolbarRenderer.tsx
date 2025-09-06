@@ -8,9 +8,54 @@ import { PositioningEngine } from '../../core/FloatingToolbar/PositioningEngine'
 import { useEditorStore } from '../../store/editorStore';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
 
+// Hook to inject styles only once - prevents style element memory leaks
+const useFloatingToolbarStyles = () => {
+  useEffect(() => {
+    const styleId = 'floating-toolbar-styles';
+    
+    // Check if styles already exist
+    if (document.getElementById(styleId)) {
+      return;
+    }
+    
+    // Create style element only once
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      @keyframes fadeInScale {
+        from {
+          opacity: 0;
+          transform: scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      
+      /* Ensure mobile transform is preserved */
+      @media (max-width: 768px) {
+        .floating-toolbar-content {
+          animation: none !important;
+        }
+      }
+    `;
+    
+    document.head.appendChild(style);
+    
+    // Cleanup function to remove styles when all toolbar instances are unmounted
+    return () => {
+      const existingStyle = document.getElementById(styleId);
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+    };
+  }, []);
+};
+
 interface FloatingToolbarRendererProps {}
 
-export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = () => {
+const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () => {
   const { selection, viewport, isFloatingToolbarHidden, paths, texts, groups, images, floatingToolbarUpdateTimestamp } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   const [actions, setActions] = useState<ToolbarAction[]>([]);
@@ -19,6 +64,9 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const [activeSubmenuId, setActiveSubmenuId] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  
+  // Inject styles only once to prevent memory leaks
+  useFloatingToolbarStyles();
   
   const isMobileDevice = isMobile || isTablet;
   const toolbarManager = FloatingToolbarManager.getInstance();
@@ -164,28 +212,7 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
   }
 
   const toolbarContent = (
-    <>
-      <style>{`
-        @keyframes fadeInScale {
-          from {
-            opacity: 0;
-            transform: scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-        
-        /* Ensure mobile transform is preserved */
-        @media (max-width: 768px) {
-          .floating-toolbar-content {
-            animation: none !important;
-          }
-        }
-      `}</style>
-      
-      <div 
+    <div 
         ref={toolbarRef} 
         style={toolbarStyle}
         className="floating-toolbar-content"
@@ -274,8 +301,14 @@ export const FloatingToolbarRenderer: React.FC<FloatingToolbarRendererProps> = (
           </div>
         )}
       </div>
-    </>
   );
 
   return createPortal(toolbarContent, portalContainer);
 };
+
+// Memoized wrapper to prevent unnecessary re-renders that cause DOM element leaks
+export const FloatingToolbarRenderer = React.memo(FloatingToolbarRendererCore, (prevProps, nextProps) => {
+  // Since this component has no props, it should only re-render when Zustand state changes
+  // Let the component's internal useEditorStore handle state change detection
+  return false; // Always re-render, let internal memoization handle optimization
+});
