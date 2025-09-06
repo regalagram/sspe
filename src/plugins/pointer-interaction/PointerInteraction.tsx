@@ -1206,7 +1206,10 @@ class PointerInteractionManager {
       this.panZoomManager.updateStore(store);
     }
 
-    // Initialize cursor to crosshair for empty areas and force pointer on interactive elements
+    // Initialize cursor management with proper cleanup to avoid detached DOM references
+    this.initializeCursorManagement();
+    
+    // Keep legacy method temporarily for compatibility
     setTimeout(() => {
       const svgElements = document.querySelectorAll('.svg-editor svg');
       svgElements.forEach(svg => {
@@ -1256,6 +1259,83 @@ class PointerInteractionManager {
       // Run only once on initialization
       simpleEnforceCursors();
     }, 100);
+  }
+
+  /**
+   * Improved cursor management with debouncing and proper cleanup
+   * Reduces detached DOM element issues by avoiding stale NodeList references
+   */
+  private initializeCursorManagement(): void {
+    let cursorTimeout: NodeJS.Timeout | null = null;
+    
+    const updateCursors = () => {
+      // Clear previous timeout to prevent multiple executions
+      if (cursorTimeout) {
+        clearTimeout(cursorTimeout);
+      }
+      
+      cursorTimeout = setTimeout(() => {
+        // Use live NodeList queries to avoid detached element references
+        this.updateSVGCursors();
+        cursorTimeout = null;
+      }, 150); // Slightly longer debounce to reduce frequency
+    };
+    
+    // Initial cursor setup
+    updateCursors();
+    
+    // Store reference for cleanup
+    (this as any).cursorCleanup = () => {
+      if (cursorTimeout) {
+        clearTimeout(cursorTimeout);
+        cursorTimeout = null;
+      }
+    };
+  }
+
+  private updateSVGCursors(): void {
+    // Use try-catch to handle cases where DOM elements are being modified
+    try {
+      const svgElements = document.querySelectorAll('.svg-editor svg');
+      
+      svgElements.forEach(svg => {
+        // Check if element is still connected to DOM to avoid detached references
+        if (!svg.isConnected) return;
+        
+        if (!this.state.isSpacePressed) {
+          (svg as HTMLElement).style.cursor = 'crosshair';
+        }
+
+        // Process control points with connection check
+        const controlPoints = svg.querySelectorAll('circle[data-control-point="x1y1"], circle[data-control-point="x2y2"], circle.control-point');
+        controlPoints.forEach(point => {
+          if (point.isConnected) {
+            (point as HTMLElement).style.cursor = 'pointer';
+            (point as HTMLElement).style.setProperty('cursor', 'pointer', 'important');
+          }
+        });
+
+        // Process command points with connection check
+        const commandPoints = svg.querySelectorAll('circle[data-command-id], circle.command-point');
+        commandPoints.forEach(point => {
+          if (point.isConnected) {
+            (point as HTMLElement).style.cursor = 'pointer';
+            (point as HTMLElement).style.setProperty('cursor', 'pointer', 'important');
+          }
+        });
+
+        // Process command paths with connection check
+        const paths = svg.querySelectorAll('path[data-command-id]');
+        paths.forEach(path => {
+          if (path.isConnected) {
+            (path as HTMLElement).style.cursor = 'pointer';
+          }
+        });
+      });
+    } catch (error) {
+      // Silently handle DOM modification errors during re-renders
+      console.debug('Cursor update skipped due to DOM changes:', error);
+    }
   }
 
   private setupKeyboardListeners(): void {
@@ -1993,6 +2073,12 @@ class PointerInteractionManager {
     document.removeEventListener('keydown', this.handleKeyDown);
     document.removeEventListener('keyup', this.handleKeyUp);
     this.elementCache.clear();
+    
+    // Cleanup cursor management to prevent memory leaks
+    if ((this as any).cursorCleanup) {
+      (this as any).cursorCleanup();
+      (this as any).cursorCleanup = null;
+    }
   }
 }
 

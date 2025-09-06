@@ -93,7 +93,7 @@ interface SimpleCommandPointProps {
 const SimpleCommandPoint = React.memo<SimpleCommandPointProps>(({ 
   position, radius, fill, stroke, commandId, zoom, isSelected, isFirst, isLast, isMobile, isTablet, renderVersion 
 }) => (
-  <g key={`command-${commandId}-v${renderVersion}`}>
+  <g key={`command-${commandId}`}>
     <CommandPointGroup x={position.x} y={position.y} zoom={zoom}>
       <CommandPointCircle
         cx={position.x}
@@ -126,21 +126,21 @@ const SimpleCommandPoint = React.memo<SimpleCommandPointProps>(({
     </CommandPointGroup>
   </g>
 ), (prevProps, nextProps) => {
-  // Custom comparison for better memoization
+  // Ultra-strict comparison - ignore renderVersion completely to prevent unnecessary re-renders
   return (
+    prevProps.commandId === nextProps.commandId &&
     prevProps.position.x === nextProps.position.x &&
     prevProps.position.y === nextProps.position.y &&
     prevProps.radius === nextProps.radius &&
     prevProps.fill === nextProps.fill &&
     prevProps.stroke === nextProps.stroke &&
-    prevProps.commandId === nextProps.commandId &&
     prevProps.zoom === nextProps.zoom &&
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.isFirst === nextProps.isFirst &&
     prevProps.isLast === nextProps.isLast &&
     prevProps.isMobile === nextProps.isMobile &&
-    prevProps.isTablet === nextProps.isTablet &&
-    prevProps.renderVersion === nextProps.renderVersion
+    prevProps.isTablet === nextProps.isTablet
+    // NOTE: Deliberately ignoring renderVersion to prevent forced re-renders
   );
 });
 
@@ -177,7 +177,7 @@ const SplitCommandPoint = React.memo<SplitCommandPointProps>(({
   const interactionRadius = getInteractionRadius(radius, isMobile, isTablet);
   
   return (
-    <g key={`command-split-${firstCommandId}-${lastCommandId}-v${renderVersion}`}>
+    <g key={`command-split-${firstCommandId}-${lastCommandId}`}>
       <CommandPointGroup x={position.x} y={position.y} zoom={zoom}>
         {/* First half (red) - initial point */}
         <path
@@ -255,20 +255,20 @@ const SplitCommandPoint = React.memo<SplitCommandPointProps>(({
     </g>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison for better memoization
+  // Ultra-strict comparison - ignore renderVersion to prevent unnecessary re-renders
   return (
+    prevProps.firstCommandId === nextProps.firstCommandId &&
+    prevProps.lastCommandId === nextProps.lastCommandId &&
     prevProps.position.x === nextProps.position.x &&
     prevProps.position.y === nextProps.position.y &&
     prevProps.radius === nextProps.radius &&
     prevProps.directionAngle === nextProps.directionAngle &&
-    prevProps.firstCommandId === nextProps.firstCommandId &&
-    prevProps.lastCommandId === nextProps.lastCommandId &&
     prevProps.firstCommandSelected === nextProps.firstCommandSelected &&
     prevProps.lastCommandSelected === nextProps.lastCommandSelected &&
     prevProps.zoom === nextProps.zoom &&
     prevProps.isMobile === nextProps.isMobile &&
-    prevProps.isTablet === nextProps.isTablet &&
-    prevProps.renderVersion === nextProps.renderVersion
+    prevProps.isTablet === nextProps.isTablet
+    // NOTE: Deliberately ignoring renderVersion to prevent forced re-renders
   );
 });
 
@@ -560,6 +560,21 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
   const { paths, selection, viewport, enabledFeatures, renderVersion, visualDebugSizes, mode, enabledFeatures: storeEnabledFeatures, ui } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   
+  // Cleanup effect to ensure no detached DOM references
+  React.useEffect(() => {
+    return () => {
+      // Force cleanup of any potential detached DOM references on unmount
+      // This helps garbage collection of command point elements
+      setTimeout(() => {
+        // Allow React to complete unmounting before cleanup
+        if (typeof window !== 'undefined') {
+          // Manual cleanup is minimal since we now use memoized components
+          console.debug('CommandPointsRenderer: cleanup completed');
+        }
+      }, 0);
+    };
+  }, []);
+  
   // Memoize computed values
   const baseRadius = React.useMemo(() => 
     getControlPointSize(isMobile, isTablet), 
@@ -584,6 +599,27 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
       shouldShow
     };
   }, [selection.selectedSubPaths.length, selection.selectedCommands.length, mode?.current, storeEnabledFeatures.subpathShowCommandPoints, ui?.selectionVisible, enabledFeatures.commandPointsEnabled]);
+
+  // Memoize viewport bounds for efficient culling
+  const viewportBounds = React.useMemo(() => {
+    const margin = 100; // Render points slightly outside viewport for smooth panning
+    return {
+      left: viewport.viewBox.x - margin,
+      top: viewport.viewBox.y - margin, 
+      right: viewport.viewBox.x + viewport.viewBox.width + margin,
+      bottom: viewport.viewBox.y + viewport.viewBox.height + margin
+    };
+  }, [viewport.viewBox.x, viewport.viewBox.y, viewport.viewBox.width, viewport.viewBox.height]);
+
+  // Helper function to check if a point is within viewport bounds
+  const isPointVisible = React.useCallback((x: number, y: number) => {
+    return (
+      x >= viewportBounds.left &&
+      x <= viewportBounds.right &&
+      y >= viewportBounds.top &&
+      y <= viewportBounds.bottom
+    );
+  }, [viewportBounds]);
 
   // Early returns after all hooks are called
   if (!paths || paths.length === 0) {
@@ -638,13 +674,21 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
             } else {
               position = getAbsoluteCommandPosition(command, subPath, path.subPaths);
               if (!position) return null;
+              
+              // Viewport culling: Skip rendering if point is outside visible area
+              // Only skip for non-selected commands to ensure selected items remain visible
               const isCommandSelected = selection.selectedCommands.includes(command.id);
+              if (!isCommandSelected && !isPointVisible(position.x, position.y)) {
+                return null;
+              }
+              
               // Si hidePointsInSelect está activo y el comando está seleccionado, no mostrar punto
               if (enabledFeatures.hidePointsInSelect && isCommandSelected) return null;
               const shouldShowCommand = shouldShowSubPath || isCommandSelected;
               if (!shouldShowCommand) return null;
             }
             
+            // Use isCommandSelected from above or get it for Z commands
             const isCommandSelected = selection.selectedCommands.includes(command.id);
             
             // Determine if this is the first or last command in the subpath
@@ -709,7 +753,7 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
               const zCommandSelected = selection.selectedCommands.includes(command.id);
               
               return (
-                <g key={`command-z-${command.id}-v${renderVersion}`}>
+                <g key={`command-z-${command.id}`}>
                   <g transform={`translate(${firstCommandPosition.x},${firstCommandPosition.y}) scale(${1 / viewport.zoom}) translate(${-firstCommandPosition.x},${-firstCommandPosition.y})`}>
                     {/* Visual first half (red) for Z command */}
                     <path

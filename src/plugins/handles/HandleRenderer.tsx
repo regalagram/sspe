@@ -35,7 +35,16 @@ const ControlPointLine = React.memo<ControlPointLineProps>(({ x1, y1, x2, y2, co
     pointerEvents="none"
     opacity={1.0}
   />
-));
+), (prevProps, nextProps) => {
+  return (
+    prevProps.x1 === nextProps.x1 &&
+    prevProps.y1 === nextProps.y1 &&
+    prevProps.x2 === nextProps.x2 &&
+    prevProps.y2 === nextProps.y2 &&
+    prevProps.color === nextProps.color &&
+    prevProps.zoom === nextProps.zoom
+  );
+});
 
 ControlPointLine.displayName = 'ControlPointLine';
 
@@ -65,7 +74,17 @@ const ControlPointCircle = React.memo<ControlPointCircleProps>(({
     style={{ pointerEvents: 'none' }}
     filter={isBeingDragged ? 'drop-shadow(0 0 4px rgba(0,0,0,0.5))' : undefined}
   />
-));
+), (prevProps, nextProps) => {
+  return (
+    prevProps.cx === nextProps.cx &&
+    prevProps.cy === nextProps.cy &&
+    prevProps.radius === nextProps.radius &&
+    prevProps.fill === nextProps.fill &&
+    prevProps.stroke === nextProps.stroke &&
+    prevProps.zoom === nextProps.zoom &&
+    prevProps.isBeingDragged === nextProps.isBeingDragged
+  );
+});
 
 ControlPointCircle.displayName = 'ControlPointCircle';
 
@@ -93,7 +112,16 @@ const InteractionOverlay = React.memo<InteractionOverlayProps>(({
     data-control-point={controlPoint}
     style={{ cursor: 'default' }}
   />
-));
+), (prevProps, nextProps) => {
+  return (
+    prevProps.cx === nextProps.cx &&
+    prevProps.cy === nextProps.cy &&
+    prevProps.radius === nextProps.radius &&
+    prevProps.commandId === nextProps.commandId &&
+    prevProps.prevCommandId === nextProps.prevCommandId &&
+    prevProps.controlPoint === nextProps.controlPoint
+  );
+});
 
 InteractionOverlay.displayName = 'InteractionOverlay';
 
@@ -108,7 +136,14 @@ const ControlPointGroup = React.memo<ControlPointGroupProps>(({ x, y, zoom, chil
   <g transform={`translate(${x},${y}) scale(${1 / zoom}) translate(${-x},${-y})`}>
     {children}
   </g>
-));
+), (prevProps, nextProps) => {
+  return (
+    prevProps.x === nextProps.x &&
+    prevProps.y === nextProps.y &&
+    prevProps.zoom === nextProps.zoom &&
+    prevProps.children === nextProps.children
+  );
+});
 
 ControlPointGroup.displayName = 'ControlPointGroup';
 
@@ -173,21 +208,21 @@ const SingleControlPoint = React.memo<SingleControlPointProps>(({
     </ControlPointGroup>
   </>
 ), (prevProps, nextProps) => {
-  // Custom comparison function for better memoization
+  // Ultra-strict comparison prioritizing stable props first
   return (
+    prevProps.commandId === nextProps.commandId &&
+    prevProps.controlPointType === nextProps.controlPointType &&
+    prevProps.prevCommandId === nextProps.prevCommandId &&
     prevProps.controlPoint.x === nextProps.controlPoint.x &&
     prevProps.controlPoint.y === nextProps.controlPoint.y &&
     prevProps.anchorPoint.x === nextProps.anchorPoint.x &&
     prevProps.anchorPoint.y === nextProps.anchorPoint.y &&
     prevProps.radius === nextProps.radius &&
+    prevProps.zoom === nextProps.zoom &&
+    prevProps.isBeingDragged === nextProps.isBeingDragged &&
     prevProps.colors.fill === nextProps.colors.fill &&
     prevProps.colors.stroke === nextProps.colors.stroke &&
     prevProps.colors.lineColor === nextProps.colors.lineColor &&
-    prevProps.commandId === nextProps.commandId &&
-    prevProps.prevCommandId === nextProps.prevCommandId &&
-    prevProps.controlPointType === nextProps.controlPointType &&
-    prevProps.zoom === nextProps.zoom &&
-    prevProps.isBeingDragged === nextProps.isBeingDragged &&
     prevProps.isMobile === nextProps.isMobile &&
     prevProps.isTablet === nextProps.isTablet
   );
@@ -224,18 +259,12 @@ const HandleRendererCore: React.FC = React.memo(() => {
   const { paths, enabledFeatures, viewport, selection, visualDebugSizes, mode, ui } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   const [handleState, setHandleState] = React.useState(handleManager.getState());
-  const [renderKey, setRenderKey] = React.useState(0);
 
   // Subscribe to handle state changes - memoized callback to prevent re-subscription
   const handleStateChange = React.useCallback(() => {
     const newState = handleManager.getState();
     setHandleState(newState);
-    
-    // NO incrementar renderKey durante el drag - esto causa que React desmonte los elementos
-    // Solo incrementar cuando NO estamos en drag
-    if (!newState.dragState.isDragging) {
-      setRenderKey(prev => prev + 1);
-    }
+    // Removed renderKey increment - let React memoization handle re-renders efficiently
   }, []);
 
   React.useEffect(() => {
@@ -249,12 +278,8 @@ const HandleRendererCore: React.FC = React.memo(() => {
     [visualDebugSizes.globalFactor, visualDebugSizes.controlPointsFactor]
   );
 
-  // Force re-render when visual debug sizes change - only when not dragging
-  React.useEffect(() => {
-    if (!handleState.dragState.isDragging) {
-      setRenderKey(prev => prev + 1);
-    }
-  }, [visualDebugKey, handleState.dragState.isDragging]);
+  // Visual debug size changes will be handled automatically by React memoization
+  // Removed forced re-render to prevent component unmounting
 
   // Memoize drag state to prevent unnecessary re-renders during drag
   const dragStateInfo = React.useMemo(() => {
@@ -278,11 +303,31 @@ const HandleRendererCore: React.FC = React.memo(() => {
     return baseRadius * visualDebugSizes.globalFactor * visualDebugSizes.controlPointsFactor;
   }, [isMobile, isTablet, visualDebugSizes.globalFactor, visualDebugSizes.controlPointsFactor]);
 
-  // Use stable key during drag to prevent React from dismounting elements
+  // Memoize viewport bounds for efficient culling
+  const viewportBounds = React.useMemo(() => {
+    const margin = 150; // Larger margin for control points since they extend beyond anchor points
+    return {
+      left: viewport.viewBox.x - margin,
+      top: viewport.viewBox.y - margin, 
+      right: viewport.viewBox.x + viewport.viewBox.width + margin,
+      bottom: viewport.viewBox.y + viewport.viewBox.height + margin
+    };
+  }, [viewport.viewBox.x, viewport.viewBox.y, viewport.viewBox.width, viewport.viewBox.height]);
+
+  // Helper function to check if a control point is within viewport bounds
+  const isControlPointVisible = React.useCallback((x: number, y: number) => {
+    return (
+      x >= viewportBounds.left &&
+      x <= viewportBounds.right &&
+      y >= viewportBounds.top &&
+      y <= viewportBounds.bottom
+    );
+  }, [viewportBounds]);
+
+  // Use stable key to prevent React from dismounting elements - no renderKey to prevent unmounting
   const stableKey = React.useMemo(() => {
-    const { isDragging } = dragStateInfo;
-    return isDragging ? `handle-renderer-stable-${visualDebugKey}` : `handle-renderer-${renderKey}-${visualDebugKey}`;
-  }, [dragStateInfo.isDragging, visualDebugKey, renderKey]);
+    return `handle-renderer-stable-${visualDebugKey}`;
+  }, [visualDebugKey]);
 
   // Early returns after all hooks
   if (!paths || paths.length === 0) {
@@ -388,6 +433,15 @@ const HandleRendererCore: React.FC = React.memo(() => {
                         (isDragging && command.id === dragCommandId) ||
                         (isDragging && isPairedCommand && pairedHandle?.controlPoint === 'x1y1');
                       
+                      // Viewport culling: skip rendering if control point is not visible and not being interacted with
+                      const isVisible = isCommandSelected || isSubPathSelected || 
+                        isControlPointVisible(controlPoints[0].x, controlPoints[0].y) || 
+                        isControlPointVisible(prevPosition.x, prevPosition.y);
+                      
+                      if (!isVisible && !isBeingDragged && !shouldShow) {
+                        return null;
+                      }
+                      
                       // Si estamos arrastrando este control point específico, SIEMPRE mostrarlo
                       return (shouldShow || isBeingDragged) ? (
                         <SingleControlPoint
@@ -413,6 +467,15 @@ const HandleRendererCore: React.FC = React.memo(() => {
                       const shouldShow = !isDragging || 
                         (isDragging && command.id === dragCommandId) ||
                         (isDragging && isPairedCommand && pairedHandle?.controlPoint === 'x2y2');
+                      
+                      // Viewport culling: skip rendering if control point is not visible and not being interacted with
+                      const isVisible = isCommandSelected || isSubPathSelected || 
+                        isControlPointVisible(controlPoints[1].x, controlPoints[1].y) || 
+                        isControlPointVisible(position.x, position.y);
+                      
+                      if (!isVisible && !isBeingDragged && !shouldShow) {
+                        return null;
+                      }
                       
                       // Si estamos arrastrando este control point específico, SIEMPRE mostrarlo
                       return (shouldShow || isBeingDragged) ? (
