@@ -25,8 +25,8 @@ export const UI_CONSTANTS = {
 
   // Toolbar Configuration
   TOOLBAR: {
-    DESKTOP_BUTTON_SIZE: 40,
-    MOBILE_BUTTON_SIZE: 32,
+    DESKTOP_BUTTON_SIZE: 32,
+    MOBILE_BUTTON_SIZE: 28,
     ICON_SIZE: 20,
     PADDING: 8,
     BORDER_RADIUS: 6,
@@ -38,10 +38,10 @@ export const UI_CONSTANTS = {
 
   // Icon Configuration
   ICONS: {
-    DESKTOP_SIZE: 20,
-    DESKTOP_STROKE_WIDTH: 2,
-    MOBILE_SIZE: 16,
-    MOBILE_STROKE_WIDTH: 1.5
+    DESKTOP_SIZE: 17,
+    DESKTOP_STROKE_WIDTH: 1.6,
+    MOBILE_SIZE: 14,
+    MOBILE_STROKE_WIDTH: 1.3
   },
 
   // Touch Targets (WCAG Compliance)
