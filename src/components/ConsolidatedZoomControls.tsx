@@ -4,6 +4,7 @@ import { ToolbarSection } from './ToolbarButton';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useEditorStore } from '../store/editorStore';
 import { useMobileDetection } from '../hooks/useMobileDetection';
+import { CONFIG } from '../config/constants';
 
 export const ConsolidatedZoomControls: React.FC = () => {
   const { isMobile } = useMobileDetection();
@@ -28,9 +29,10 @@ export const ConsolidatedZoomControls: React.FC = () => {
     toggleFeature
   } = useEditorStore();
 
-  // Match text toolbar button sizing exactly
-  const buttonSize = isMobile ? 28 : 32;
-  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+  // Use CONFIG constants for consistent sizing
+  const buttonSize = isMobile ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
+  const iconSize = isMobile ? CONFIG.UI.ICONS.MOBILE_SIZE : CONFIG.UI.ICONS.DESKTOP_SIZE;
+  const strokeWidth = isMobile ? CONFIG.UI.ICONS.MOBILE_STROKE_WIDTH : CONFIG.UI.ICONS.DESKTOP_STROKE_WIDTH;
 
   const hasSelection = selection.selectedCommands.length > 0 || 
                        selection.selectedPaths.length > 0 || 
@@ -141,7 +143,7 @@ export const ConsolidatedZoomControls: React.FC = () => {
       >
         {/* Fullscreen Control - First for mobile accessibility */}
         <SubmenuItem
-          icon={isFullscreen ? <Minimize size={isMobile ? 12 : 13} /> : <Expand size={isMobile ? 12 : 13} />}
+          icon={isFullscreen ? <Minimize size={iconSize} strokeWidth={strokeWidth} /> : <Expand size={iconSize} strokeWidth={strokeWidth} />}
           label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
           onClick={() => {
             handleFullscreenToggle();
@@ -151,7 +153,7 @@ export const ConsolidatedZoomControls: React.FC = () => {
         />
         
         <SubmenuItem
-          icon={<Navigation size={iconSize} />}
+          icon={<Navigation size={iconSize} strokeWidth={strokeWidth} />}
           label={enabledFeatures.stickyGuidelinesEnabled ? "Disable Sticky Guidelines" : "Enable Sticky Guidelines"}
           onClick={() => {
             toggleFeature('stickyGuidelinesEnabled');
@@ -171,7 +173,7 @@ export const ConsolidatedZoomControls: React.FC = () => {
           Grid Options
         </div>
         <SubmenuItem
-          icon={<Grid3X3 size={isMobile ? 12 : 13} />}
+          icon={<Grid3X3 size={iconSize} strokeWidth={strokeWidth} />}
           label={grid.enabled ? "Hide Grid" : "Show Grid"}
           onClick={() => {
             toggleGrid();
@@ -180,7 +182,7 @@ export const ConsolidatedZoomControls: React.FC = () => {
           active={!grid.enabled}
         />
         <SubmenuItem
-          icon={<Grid3X3 size={isMobile ? 12 : 13} />}
+          icon={<Grid3X3 size={iconSize} strokeWidth={strokeWidth} />}
           label={grid.snapToGrid ? "Disable Snap" : "Enable Snap"}
           onClick={() => {
             toggleSnapToGrid();
@@ -189,7 +191,7 @@ export const ConsolidatedZoomControls: React.FC = () => {
           active={grid.snapToGrid}
         />
         <SubmenuItem
-          icon={<Grid3X3 size={isMobile ? 12 : 13} />}
+          icon={<Grid3X3 size={iconSize} strokeWidth={strokeWidth} />}
           label={grid.showLabels ? "Hide Ruler Labels" : "Show Ruler Labels"}
           onClick={() => {
             toggleGridLabels();
@@ -210,7 +212,7 @@ export const ConsolidatedZoomControls: React.FC = () => {
         </div>
         {hasSelection && (
           <SubmenuItem
-            icon={<Target size={isMobile ? 12 : 13} />}
+            icon={<Target size={iconSize} strokeWidth={strokeWidth} />}
             label="Fit Selection"
             onClick={() => {
               zoomToSelection();
@@ -220,7 +222,7 @@ export const ConsolidatedZoomControls: React.FC = () => {
         )}
         {hasSubPathSelection && (
           <SubmenuItem
-            icon={<Target size={isMobile ? 12 : 13} />}
+            icon={<Target size={iconSize} strokeWidth={strokeWidth} />}
             label="Fit SubPath"
             onClick={() => {
               zoomToSubPath();
@@ -229,7 +231,7 @@ export const ConsolidatedZoomControls: React.FC = () => {
           />
         )}
         <SubmenuItem
-          icon={<Maximize2 size={isMobile ? 12 : 13} />}
+          icon={<Maximize2 size={iconSize} strokeWidth={strokeWidth} />}
           label="Fit to Screen"
           onClick={() => {
             zoomToFit();
@@ -237,7 +239,7 @@ export const ConsolidatedZoomControls: React.FC = () => {
           }}
         />
         <SubmenuItem
-          icon={<RotateCcw size={isMobile ? 12 : 13} />}
+          icon={<RotateCcw size={iconSize} strokeWidth={strokeWidth} />}
           label="Reset View"
           onClick={() => {
             resetView();
@@ -245,7 +247,7 @@ export const ConsolidatedZoomControls: React.FC = () => {
           }}
         />
         <SubmenuItem
-          icon={<ZoomIn size={isMobile ? 12 : 13} />}
+          icon={<ZoomIn size={iconSize} strokeWidth={strokeWidth} />}
           label="Zoom In"
           onClick={() => {
             handleZoomIn();
@@ -253,7 +255,7 @@ export const ConsolidatedZoomControls: React.FC = () => {
           }}
         />
         <SubmenuItem
-          icon={<ZoomOut size={isMobile ? 12 : 13} />}
+          icon={<ZoomOut size={iconSize} strokeWidth={strokeWidth} />}
           label="Zoom Out"
           onClick={() => {
             handleZoomOut();

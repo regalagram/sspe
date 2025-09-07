@@ -16,10 +16,11 @@ export const WritingConsolidatedTools: React.FC = () => {
   const [toolModeState, setToolModeState] = useState(toolModeManager.getState());
   const { mode, selection } = useEditorStore();
 
-  // Match text toolbar button sizing exactly
+  // Use CONFIG constants for consistent sizing
   const buttonSize = isMobile ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
-  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
-  const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
+  const iconSize = isMobile ? CONFIG.UI.ICONS.MOBILE_SIZE : CONFIG.UI.ICONS.DESKTOP_SIZE;
+  const strokeWidth = isMobile ? CONFIG.UI.ICONS.MOBILE_STROKE_WIDTH : CONFIG.UI.ICONS.DESKTOP_STROKE_WIDTH;
+  const chevronSize = isMobile ? 8 : 9; // Keep chevron sizes for now
 
   // Subscribe to tool mode changes
   useEffect(() => {
@@ -32,13 +33,16 @@ export const WritingConsolidatedTools: React.FC = () => {
                         (mode.current === 'create' && mode.createMode?.commandType === 'PENCIL');
   const isCurveActive = mode.current === 'curves';
   const isCreateMode = mode.current === 'create' && mode.createMode?.commandType !== 'PENCIL';
+  
+  // Subpath-edit mode state (moved up to avoid reference errors)
+  const isSubpathEditMode = mode.current === 'subpath-edit';
 
   // Dynamic icon based on active tool
   const getCurrentIcon = () => {
-  // If subpath-edit mode is active, show the mouse-pointer icon to indicate mode
-  if (isSubpathEditMode) return <MousePointerClick size={iconSize} />;
-    if (isPencilActive) return <Edit3 size={iconSize} />;
-    if (isCurveActive) return <Spline size={iconSize} />;
+    // If subpath-edit mode is active, show the mouse-pointer icon to indicate mode
+    if (isSubpathEditMode) return <MousePointerClick size={iconSize} strokeWidth={strokeWidth} />;
+    if (isPencilActive) return <Edit3 size={iconSize} strokeWidth={strokeWidth} />;
+    if (isCurveActive) return <Spline size={iconSize} strokeWidth={strokeWidth} />;
     if (isCreateMode) {
       // Show the letter of the active creation command
       const activeTool = creationTools.find(tool => 
@@ -58,13 +62,10 @@ export const WritingConsolidatedTools: React.FC = () => {
         );
       }
     }
-    return <Plus size={iconSize} strokeWidth={2.5} />; // Default creation tools icon with thicker stroke
+    return <Plus size={iconSize} strokeWidth={strokeWidth} />; // Default creation tools icon
   };
 
   const isAnyToolActive = isPencilActive || isCurveActive || isCreateMode;
-
-  // Subpath-edit mode state
-  const isSubpathEditMode = mode.current === 'subpath-edit';
 
   const { enabledFeatures, toggleFeature } = useEditorStore();
 
@@ -192,7 +193,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         {isCreateMode && (
           <>
             <SubmenuItem
-              icon={<X size={isMobile ? 12 : 13} />}
+              icon={<X size={iconSize} strokeWidth={strokeWidth} />}
               label="Exit Creation Mode"
               onClick={() => {
                 handleExitCreateMode();
@@ -230,7 +231,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         
         {/* Pencil Tool - Simplified */}
         <SubmenuItem
-          icon={<Edit3 size={isMobile ? 12 : 13} />}
+          icon={<Edit3 size={iconSize} strokeWidth={strokeWidth} />}
           label={isPencilActive ? "Exit Pencil Mode" : "Pencil Tool"}
           onClick={() => {
             handlePencilToggle();
@@ -241,7 +242,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         
         {/* Curve Tool */}
         <SubmenuItem
-          icon={<Spline size={isMobile ? 12 : 13} />}
+          icon={<Spline size={iconSize} strokeWidth={strokeWidth} />}
           label={isCurveActive ? "Exit Curve Mode" : "Curve Tool"}
           onClick={() => {
             handleCurveToggle();
@@ -263,7 +264,7 @@ export const WritingConsolidatedTools: React.FC = () => {
               Curve Actions
             </div>
             <SubmenuItem
-              icon={<LogOut size={isMobile ? 12 : 13} />}
+              icon={<LogOut size={iconSize} strokeWidth={strokeWidth} />}
               label="Delete Selected Point"
               onClick={() => {
                 handleDeletePoint();
@@ -271,7 +272,7 @@ export const WritingConsolidatedTools: React.FC = () => {
               }}
             />
             <SubmenuItem
-              icon={<CornerUpRight size={isMobile ? 12 : 13} />}
+              icon={<CornerUpRight size={iconSize} strokeWidth={strokeWidth} />}
               label="Finish Path"
               onClick={() => {
                 handleFinishPath();
@@ -284,7 +285,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         <div style={{ height: '1px', background: '#e5e7eb', margin: '6px 0' }} />
         {!isSubpathEditMode ? (
           <SubmenuItem
-            icon={<MousePointerClick size={isMobile ? 12 : 13} />}
+            icon={<MousePointerClick size={iconSize} strokeWidth={strokeWidth} />}
             label="Subpath Edit"
             onClick={() => {
               toggleSubpathEditMode();
@@ -295,7 +296,7 @@ export const WritingConsolidatedTools: React.FC = () => {
         ) : (
           <>
             <SubmenuItem
-              icon={<MousePointerClick size={isMobile ? 12 : 13} />}
+              icon={<MousePointerClick size={iconSize} strokeWidth={strokeWidth} />}
               label="Exit Subpath Edit"
               onClick={() => {
                 toggleSubpathEditMode();
@@ -307,14 +308,14 @@ export const WritingConsolidatedTools: React.FC = () => {
             <div style={{ height: '1px', background: '#e5e7eb', margin: '4px 0' }} />
 
             <SubmenuItem
-              icon={<Minus size={isMobile ? 12 : 13} />}
+              icon={<Minus size={iconSize} strokeWidth={strokeWidth} />}
               label={enabledFeatures.subpathShowCommandPoints ? 'Hide Command Points' : 'Show Command Points'}
               onClick={() => toggleFeature('subpathShowCommandPoints')}
               active={!!enabledFeatures.subpathShowCommandPoints}
             />
 
             <SubmenuItem
-              icon={<Plus size={isMobile ? 12 : 13} />}
+              icon={<Plus size={iconSize} strokeWidth={strokeWidth} />}
               label={enabledFeatures.subpathShowControlPoints ? 'Hide Control Points' : 'Show Control Points'}
               onClick={() => toggleFeature('subpathShowControlPoints')}
               active={!!enabledFeatures.subpathShowControlPoints}

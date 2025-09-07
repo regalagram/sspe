@@ -30,6 +30,12 @@ export const generateCSSCustomProperties = (): Record<string, string> => {
     '--toolbar-padding': `${CONFIG.UI.TOOLBAR.PADDING}px`,
     '--toolbar-border-radius': `${CONFIG.UI.TOOLBAR.BORDER_RADIUS}px`,
 
+    // Icon Sizing
+    '--icon-size-desktop': `${CONFIG.UI.ICONS.DESKTOP_SIZE}px`,
+    '--icon-size-mobile': `${CONFIG.UI.ICONS.MOBILE_SIZE}px`,
+    '--icon-stroke-width-desktop': CONFIG.UI.ICONS.DESKTOP_STROKE_WIDTH.toString(),
+    '--icon-stroke-width-mobile': CONFIG.UI.ICONS.MOBILE_STROKE_WIDTH.toString(),
+
     // Touch Targets
     '--touch-target-min-size': `${CONFIG.UI.TOUCH_TARGET.MIN_SIZE}px`,
     '--touch-target-recommended-size': `${CONFIG.UI.TOUCH_TARGET.RECOMMENDED_SIZE}px`,

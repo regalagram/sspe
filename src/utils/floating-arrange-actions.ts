@@ -2,6 +2,7 @@ import { AlignLeft, AlignCenter, AlignRight, AlignVerticalJustifyStart, AlignVer
 import { ToolbarAction } from '../types/floatingToolbar';
 import { useEditorStore } from '../store/editorStore';
 import { arrangeManager } from '../plugins/arrange/ArrangeManager';
+import { CONFIG } from '../config/constants';
 
 // Helper functions for selection validation
 const getSubPathSelectionCount = () => {

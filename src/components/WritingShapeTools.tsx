@@ -13,10 +13,11 @@ export const WritingShapeTools: React.FC = () => {
   const [isShapeSubmenuOpen, setIsShapeSubmenuOpen] = useState(false);
   const [toolModeState, setToolModeState] = useState(toolModeManager.getState());
 
-  // Match floating toolbar button sizing
+  // Use CONFIG constants for consistent sizing
   const buttonSize = isMobile ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
-  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
-  const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
+  const iconSize = isMobile ? CONFIG.UI.ICONS.MOBILE_SIZE : CONFIG.UI.ICONS.DESKTOP_SIZE;
+  const strokeWidth = isMobile ? CONFIG.UI.ICONS.MOBILE_STROKE_WIDTH : CONFIG.UI.ICONS.DESKTOP_STROKE_WIDTH;
+  const chevronSize = isMobile ? 8 : 9; // Keep chevron sizes for now
 
   // Subscribe to tool mode changes
   useEffect(() => {
@@ -38,27 +39,27 @@ export const WritingShapeTools: React.FC = () => {
 
   // Icon mapping for shapes
   const getShapeIcon = (templateId: string, size?: number): React.ReactElement => {
-    const iconSize = size || (isMobile ? 12 : 13);
+    const iconSizeToUse = size || iconSize;
     const iconMap: Record<string, React.ReactElement> = {
-      'debug-dot': <Dot size={iconSize} />,
-      'rectangle': <Square size={iconSize} strokeWidth={2.5} />,
-      'square': <Square size={iconSize} strokeWidth={2.5} />,
-      'circle': <Circle size={iconSize} />,
-      'ellipse': <Circle size={iconSize} />,
-      'triangle': <Triangle size={iconSize} />,
-      'diamond': <Diamond size={iconSize} />,
-      'pentagon': <Hexagon size={iconSize} />, // Using hexagon as closest available
-      'hexagon': <Hexagon size={iconSize} />,
-      'octagon': <Hexagon size={iconSize} />, // Using hexagon as closest available
-      'star': <Star size={iconSize} />,
-      'arrow-right': <ArrowRight size={iconSize} />,
-      'arrow-left': <ArrowLeft size={iconSize} />,
-      'arrow-up': <ArrowUp size={iconSize} />,
-      'arrow-down': <ArrowDown size={iconSize} />,
-      'heart': <Heart size={iconSize} />,
-      'cloud': <Cloud size={iconSize} />,
+      'debug-dot': <Dot size={iconSizeToUse} strokeWidth={strokeWidth} />,
+      'rectangle': <Square size={iconSizeToUse} strokeWidth={strokeWidth} />,
+      'square': <Square size={iconSizeToUse} strokeWidth={strokeWidth} />,
+      'circle': <Circle size={iconSizeToUse} strokeWidth={strokeWidth} />,
+      'ellipse': <Circle size={iconSizeToUse} strokeWidth={strokeWidth} />,
+      'triangle': <Triangle size={iconSizeToUse} strokeWidth={strokeWidth} />,
+      'diamond': <Diamond size={iconSizeToUse} strokeWidth={strokeWidth} />,
+      'pentagon': <Hexagon size={iconSizeToUse} strokeWidth={strokeWidth} />, // Using hexagon as closest available
+      'hexagon': <Hexagon size={iconSizeToUse} strokeWidth={strokeWidth} />,
+      'octagon': <Hexagon size={iconSizeToUse} strokeWidth={strokeWidth} />, // Using hexagon as closest available
+      'star': <Star size={iconSizeToUse} strokeWidth={strokeWidth} />,
+      'arrow-right': <ArrowRight size={iconSizeToUse} strokeWidth={strokeWidth} />,
+      'arrow-left': <ArrowLeft size={iconSizeToUse} strokeWidth={strokeWidth} />,
+      'arrow-up': <ArrowUp size={iconSizeToUse} strokeWidth={strokeWidth} />,
+      'arrow-down': <ArrowDown size={iconSizeToUse} strokeWidth={strokeWidth} />,
+      'heart': <Heart size={iconSizeToUse} strokeWidth={strokeWidth} />,
+      'cloud': <Cloud size={iconSizeToUse} strokeWidth={strokeWidth} />,
     };
-    return iconMap[templateId] || <Square size={iconSize} />;
+    return iconMap[templateId] || <Square size={iconSizeToUse} strokeWidth={strokeWidth} />;
   };
 
   // Get popular shapes for quick access
@@ -94,8 +95,8 @@ export const WritingShapeTools: React.FC = () => {
             touchAction: 'manipulation'
           }}>
             {React.cloneElement(
-              isShapeActive && activeTemplate ? getShapeIcon(activeTemplate.id) : <Square strokeWidth={2.5} />, 
-              { size: iconSize, strokeWidth: 2.5 }
+              isShapeActive && activeTemplate ? getShapeIcon(activeTemplate.id) : <Square />, 
+              { size: iconSize, strokeWidth: strokeWidth }
             )}
           </div>
         }
@@ -105,7 +106,7 @@ export const WritingShapeTools: React.FC = () => {
         {isShapeActive && (
           <>
             <SubmenuItem
-              icon={<X size={isMobile ? 12 : 13} />}
+              icon={<X size={iconSize} strokeWidth={strokeWidth} />}
               label="Exit Shape Mode"
               onClick={() => {
                 handleExitShapeMode();

@@ -5,6 +5,8 @@ import { Undo2, Redo2, Clock, Eye } from 'lucide-react';
 import { PluginButton } from '../../components/PluginButton';
 import { EditorState } from '../../types';
 import { HistoryModal } from '../../components/HistoryModal';
+import { CONFIG } from '../../config/constants';
+import { useMobileDetection } from '../../hooks/useMobileDetection';
 
 interface UndoRedoControlsProps {
   canUndo: boolean;
@@ -162,7 +164,7 @@ const HistoryItemComponent = React.memo<HistoryItemComponentProps>(({
                 e.currentTarget.style.color = '#6b7280';
               }}
             >
-              <Eye size={12} />
+              <Eye size={12} strokeWidth={1.5} />
             </button>
           </div>
         </div>
@@ -338,10 +340,14 @@ export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({
   onUndo,
   onRedo,
 }) => {
+  const { isMobile } = useMobileDetection();
+  const iconSize = isMobile ? CONFIG.UI.ICONS.MOBILE_SIZE : CONFIG.UI.ICONS.DESKTOP_SIZE;
+  const strokeWidth = isMobile ? CONFIG.UI.ICONS.MOBILE_STROKE_WIDTH : CONFIG.UI.ICONS.DESKTOP_STROKE_WIDTH;
+
   return (
     <div className="undo-redo-controls" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <PluginButton
-        icon={<Undo2 size={16} />}
+        icon={<Undo2 size={iconSize} strokeWidth={strokeWidth} />}
         text="Undo"
         color="#374151"
         active={false}
@@ -349,7 +355,7 @@ export const UndoRedoControls: React.FC<UndoRedoControlsProps> = ({
         onPointerDown={onUndo}
       />
       <PluginButton
-        icon={<Redo2 size={16} />}
+        icon={<Redo2 size={iconSize} strokeWidth={strokeWidth} />}
         text="Redo"
         color="#374151"
         active={false}

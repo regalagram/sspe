@@ -2,6 +2,7 @@ import React from 'react';
 import { Menu } from 'lucide-react';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { usePanelModeStore } from '../plugins/panelmode/PanelManager';
+import { CONFIG } from '../config/constants';
 
 interface SandwichButtonProps {
   // For mobile - pass the bottom sheet toggle function
@@ -19,8 +20,8 @@ export const SandwichButton: React.FC<SandwichButtonProps> = ({
   // Desktop accordion state
   const { accordionVisible, toggleAccordionVisible } = usePanelModeStore();
 
-  // Match toolbar height
-  const toolbarHeight = isMobile ? 28 : 32;
+  // Use CONFIG constants for consistent sizing
+  const toolbarHeight = isMobile ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
 
   const handleClick = () => {
     if (isMobileDevice && onMobileToggle) {
@@ -66,7 +67,10 @@ export const SandwichButton: React.FC<SandwichButtonProps> = ({
           (e.currentTarget as HTMLDivElement).style.background = 'white';
         }}
       >
-        <Menu size={isMobile ? 12 : 13} />
+        <Menu 
+          size={isMobile ? CONFIG.UI.ICONS.MOBILE_SIZE : CONFIG.UI.ICONS.DESKTOP_SIZE} 
+          strokeWidth={isMobile ? CONFIG.UI.ICONS.MOBILE_STROKE_WIDTH : CONFIG.UI.ICONS.DESKTOP_STROKE_WIDTH} 
+        />
       </div>
     </>
   );

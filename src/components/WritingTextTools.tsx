@@ -6,16 +6,18 @@ import { useEditorStore } from '../store/editorStore';
 import { toolModeManager } from '../core/ToolModeManager';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { textEditManager } from '../core/TextEditManager';
+import { CONFIG } from '../config/constants';
 
 export const WritingTextTools: React.FC = () => {
   const { isMobile } = useMobileDetection();
   const [isTextSubmenuOpen, setIsTextSubmenuOpen] = useState(false);
   const [toolModeState, setToolModeState] = useState(toolModeManager.getState());
 
-  // Match floating toolbar button sizing
-  const buttonSize = isMobile ? 28 : 32;
-  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
-  const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
+  // Use CONFIG constants for consistent sizing
+  const buttonSize = isMobile ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
+  const iconSize = isMobile ? CONFIG.UI.ICONS.MOBILE_SIZE : CONFIG.UI.ICONS.DESKTOP_SIZE;
+  const strokeWidth = isMobile ? CONFIG.UI.ICONS.MOBILE_STROKE_WIDTH : CONFIG.UI.ICONS.DESKTOP_STROKE_WIDTH;
+  const chevronSize = isMobile ? 8 : 9; // Keep chevron sizes for now
   
   const { 
     addText, 
@@ -119,7 +121,7 @@ export const WritingTextTools: React.FC = () => {
               ) : (
                 <Type />
               ),
-              { size: iconSize }
+              { size: iconSize, strokeWidth: strokeWidth }
             )}
           </div>
         }
@@ -129,7 +131,7 @@ export const WritingTextTools: React.FC = () => {
         {isTextActive && (
           <>
             <SubmenuItem
-              icon={<X size={isMobile ? 12 : 13} />}
+              icon={<X size={iconSize} strokeWidth={strokeWidth} />}
               label="Exit Text Mode"
               onClick={() => {
                 handleExitTextMode();
@@ -146,21 +148,21 @@ export const WritingTextTools: React.FC = () => {
         )}
 
         <SubmenuItem
-          icon={<Type size={isMobile ? 12 : 13} />}
+          icon={<Type size={iconSize} strokeWidth={strokeWidth} />}
           label="Add Text"
           onClick={handleAddText}
           active={activeTextType === 'single'}
         />
         
         <SubmenuItem
-          icon={<AlignJustify size={isMobile ? 12 : 13} />}
+          icon={<AlignJustify size={iconSize} strokeWidth={strokeWidth} />}
           label="Add Multiline Text"
           onClick={handleAddMultilineText}
           active={activeTextType === 'multiline'}
         />
         
         <SubmenuItem
-          icon={<Spline size={isMobile ? 12 : 13} />}
+          icon={<Spline size={iconSize} strokeWidth={strokeWidth} />}
           label="Add TextPath"
           onClick={handleAddTextPath}
           active={false}

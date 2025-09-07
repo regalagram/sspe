@@ -5,6 +5,7 @@ import { useMobileDetection } from '../../hooks/useMobileDetection';
 import { createLinearGradient, createRadialGradient, createGradientStop } from '../../utils/gradient-utils';
 import { useEditorStore } from '../../store/editorStore';
 import { parseColorWithOpacity } from '../../utils/color-utils';
+import { CONFIG } from '../../config/constants';
 
 interface FloatingToolbarButtonProps {
   action: ToolbarAction;
@@ -34,9 +35,9 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
   const isOpacityControl = action.type === 'input' && (action as any).opacityOptions;
   
   const isMobileDevice = isMobile || isTablet;
-  // Match text toolbar button sizing exactly - use 28px for mobile consistency
-  const buttonSize = size || (isMobileDevice ? 28 : 32);
-  const iconSize = isMobileDevice ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+  // Use CONFIG constants for consistent sizing
+  const buttonSize = size || (isMobileDevice ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE);
+  const iconSize = isMobileDevice ? CONFIG.UI.ICONS.MOBILE_SIZE : CONFIG.UI.ICONS.DESKTOP_SIZE;
 
   // Helper function to close submenu
   const closeSubmenu = () => {
@@ -146,7 +147,10 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
         title={action.tooltip || action.label}
         aria-label={action.label}
       >
-        <action.icon size={iconSize} />
+        <action.icon 
+          size={iconSize} 
+          strokeWidth={isMobileDevice ? CONFIG.UI.ICONS.MOBILE_STROKE_WIDTH : CONFIG.UI.ICONS.DESKTOP_STROKE_WIDTH}
+        />
       </button>
 
       {/* Dropdown Menu */}

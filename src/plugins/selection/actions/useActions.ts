@@ -1,6 +1,7 @@
 import { Copy, Trash2, Lock, Group, Palette, Brush, LineSquiggle, Filter, Play, PaintBucket, RotateCcw } from 'lucide-react';
 import { ToolbarAction } from '../../../types/floatingToolbar';
 import { useEditorStore } from '../../../store/editorStore';
+import { CONFIG } from '../../../config/constants';
 import { duplicateSelected, deleteSelected, getSelectedElementsBounds } from './commonActions';
 import { createGenericArrangeActions } from '../../../utils/floating-arrange-actions';
 import { createReorderActions, createElementReorderFunctions } from '../../../utils/floating-reorder-actions';

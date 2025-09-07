@@ -8,6 +8,7 @@ import { useMobileDetection } from '../../hooks/useMobileDetection';
 import { SVGCommandType, EditorCommandType } from '../../types';
 import { toolModeManager } from '../../core/ToolModeManager';
 import { creationManager } from './CreationManager';
+import { CONFIG } from '../../config/constants';
 
 export const ToolbarCreationTools: React.FC = () => {
   const { mode } = useEditorStore();
@@ -17,10 +18,11 @@ export const ToolbarCreationTools: React.FC = () => {
     setCreationSubmenuOpen 
   } = useMobileToolbarStore();
 
-  // Match text toolbar button sizing exactly
-  const buttonSize = isMobile ? 28 : 32;
-  const iconSize = isMobile ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
-  const chevronSize = isMobile ? 8 : 9; // Fixed chevron sizes: 8px mobile, 9px desktop
+  // Use CONFIG constants for consistent sizing
+  const buttonSize = isMobile ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
+  const iconSize = isMobile ? CONFIG.UI.ICONS.MOBILE_SIZE : CONFIG.UI.ICONS.DESKTOP_SIZE;
+  const strokeWidth = isMobile ? CONFIG.UI.ICONS.MOBILE_STROKE_WIDTH : CONFIG.UI.ICONS.DESKTOP_STROKE_WIDTH;
+  const chevronSize = isMobile ? 8 : 9; // Keep chevron sizes for now
 
   // Always show toolbar creation tools (removed mobile-only restriction)
 
@@ -42,35 +44,35 @@ export const ToolbarCreationTools: React.FC = () => {
   const tools = [
     { 
       command: 'M' as const, 
-      icon: <Move size={isMobile ? 12 : 13} />, 
+      icon: <Move size={iconSize} strokeWidth={strokeWidth} />, 
       label: 'M', 
       title: 'Move To (M)',
       description: 'Start new sub-path'
     },
     { 
       command: 'NEW_PATH' as const, 
-      icon: <Plus size={isMobile ? 12 : 13} />, 
+      icon: <Plus size={iconSize} strokeWidth={strokeWidth} />, 
       label: 'M+', 
       title: 'New Path (Shift+M)',
       description: 'Create new path'
     },
     { 
       command: 'L' as const, 
-      icon: <Minus size={isMobile ? 12 : 13} />, 
+      icon: <Minus size={iconSize} strokeWidth={strokeWidth} />, 
       label: 'L', 
       title: 'Line To (L)',
       description: 'Draw line'
     },
     { 
       command: 'C' as const, 
-      icon: <Spline size={isMobile ? 12 : 13} />, 
+      icon: <Spline size={iconSize} strokeWidth={strokeWidth} />, 
       label: 'C', 
       title: 'Cubic Bezier (C)',
       description: 'Draw curve'
     },
     { 
       command: 'Z' as const, 
-      icon: <X size={isMobile ? 12 : 13} />, 
+      icon: <X size={iconSize} strokeWidth={strokeWidth} />, 
       label: 'Z', 
       title: 'Close Path (Z)',
       description: 'Close path'
@@ -121,7 +123,7 @@ export const ToolbarCreationTools: React.FC = () => {
             {hasActiveTool && activeTool ? (
               <span style={{ fontSize: '10px' }}>{activeTool.label}</span>
             ) : (
-              <MousePointerClick size={iconSize} />
+              <MousePointerClick size={iconSize} strokeWidth={strokeWidth} />
             )}
           </div>
         }
@@ -131,7 +133,7 @@ export const ToolbarCreationTools: React.FC = () => {
         {isCreateMode && (
           <>
             <MobileSubmenuItem
-              icon={<X size={isMobile ? 12 : 13} />}
+              icon={<X size={iconSize} strokeWidth={strokeWidth} />}
               label="Exit Create Mode"
               onClick={() => handleToolAction(handleExitCreateMode)}
               active={true}

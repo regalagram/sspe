@@ -7,6 +7,7 @@ import { generateSVGCode } from '../utils/svg-export';
 import { parseCompleteSVG } from '../utils/svg-parser';
 import { generateId } from '../utils/id-utils';
 import { useMobileDetection } from '../hooks/useMobileDetection';
+import { CONFIG } from '../config/constants';
 
 export const FileActionsButton: React.FC = () => {
   const { isMobile } = useMobileDetection();
@@ -276,8 +277,9 @@ export const FileActionsButton: React.FC = () => {
   const hasContent = paths.length > 0 || texts.length > 0 || groups.length > 0 || images.length > 0;
 
   // Match other toolbar buttons sizing
-  const buttonSize = isMobile ? 28 : 32;
-  const iconSize = isMobile ? 12 : 13;
+  const buttonSize = isMobile ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
+  const iconSize = isMobile ? CONFIG.UI.ICONS.MOBILE_SIZE : CONFIG.UI.ICONS.DESKTOP_SIZE;
+  const strokeWidth = isMobile ? CONFIG.UI.ICONS.MOBILE_STROKE_WIDTH : CONFIG.UI.ICONS.DESKTOP_STROKE_WIDTH;
 
   return (
     <>
@@ -312,7 +314,7 @@ export const FileActionsButton: React.FC = () => {
             }}
             title="File Actions"
           >
-            <ArrowDownUp size={iconSize} strokeWidth={2.5} />
+            <ArrowDownUp size={iconSize} strokeWidth={strokeWidth} />
           </div>
         }
         isOpen={isFileActionsSubmenuOpen}
@@ -320,18 +322,18 @@ export const FileActionsButton: React.FC = () => {
         position="top"
       >
         <SubmenuItem
-          icon={<Upload size={16} />}
+          icon={<Upload size={iconSize} strokeWidth={strokeWidth} />}
           label="Upload"
           onClick={handleUpload}
         />
         <SubmenuItem
-          icon={<Download size={16} />}
+          icon={<Download size={iconSize} strokeWidth={strokeWidth} />}
           label="Download"
           onClick={handleDownload}
           disabled={!hasContent}
         />
         <SubmenuItem
-          icon={<Trash2 size={16} />}
+          icon={<Trash2 size={iconSize} strokeWidth={strokeWidth} />}
           label="Clear All"
           onClick={handleClearAll}
         />

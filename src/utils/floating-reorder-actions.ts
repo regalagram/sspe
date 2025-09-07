@@ -2,6 +2,7 @@ import { Layers, ArrowUp, ArrowDown, ChevronUp, ChevronDown } from 'lucide-react
 import { ToolbarAction } from '../types/floatingToolbar';
 import { useEditorStore } from '../store/editorStore';
 import { reorderManager } from '../plugins/reorder/ReorderManager';
+import { CONFIG } from '../config/constants';
 import { globalBringToFront, globalSendToBack, globalSendForward, globalSendBackward, initializeZIndexes } from './z-index-manager';
 import { handleMixedSelectionReorder } from './mixed-selection-reorder';
 

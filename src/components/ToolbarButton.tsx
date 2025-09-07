@@ -1,5 +1,6 @@
 import React from 'react';
 import { useMobileDetection } from '../hooks/useMobileDetection';
+import { CONFIG } from '../config/constants';
 
 interface ToolbarButtonProps {
   icon: React.ReactNode;
@@ -27,12 +28,12 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
 
   const sizes = {
     small: isMobileDevice ? 24 : 24,
-    medium: isMobileDevice ? 28 : 32, // Match floating toolbar: 28px mobile, 32px desktop
+    medium: isMobileDevice ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE, // Use CONFIG constants
     large: isMobileDevice ? 36 : 40
   };
 
   const buttonSize = sizes[size];
-  const iconSize = isMobileDevice ? 12 : 13; // Fixed icon sizes: 12px mobile, 13px desktop
+  const iconSize = isMobileDevice ? CONFIG.UI.ICONS.MOBILE_SIZE : CONFIG.UI.ICONS.DESKTOP_SIZE; // Use CONFIG constants
   const fontSize = Math.floor(buttonSize * 0.25);
 
   const buttonStyle: React.CSSProperties = {
@@ -53,8 +54,7 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
     WebkitTapHighlightColor: 'transparent',
     outline: 'none',
     position: 'relative',
-    overflow: 'hidden',
-    opacity: disabled ? 0.5 : 1
+    overflow: 'hidden'
   };
 
   const handlePointerDown = () => {
@@ -65,25 +65,26 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
 
   const handlePointerEnter = (e: React.PointerEvent) => {
     if (!disabled && !active) {
-      (e.currentTarget as HTMLButtonElement).style.background = '#f3f4f6';
+      (e.currentTarget as HTMLDivElement).style.background = '#f3f4f6';
     }
   };
 
   const handlePointerLeave = (e: React.PointerEvent) => {
     if (!active) {
-      (e.currentTarget as HTMLButtonElement).style.background = 'white';
+      (e.currentTarget as HTMLDivElement).style.background = 'white';
     }
   };
 
   return (
-    <button
+    <div
       style={buttonStyle}
       onPointerDown={handlePointerDown}
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
-      disabled={disabled}
       title={title}
       aria-label={title}
+      role="button"
+      tabIndex={disabled ? -1 : 0}
     >
       <div style={{ 
         width: `${iconSize}px`, 
@@ -93,7 +94,8 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
         justifyContent: 'center'
       }}>
         {React.cloneElement(icon as React.ReactElement, { 
-          size: iconSize
+          size: iconSize,
+          strokeWidth: isMobileDevice ? CONFIG.UI.ICONS.MOBILE_STROKE_WIDTH : CONFIG.UI.ICONS.DESKTOP_STROKE_WIDTH
         } as any)}
       </div>
       {label && (
@@ -110,7 +112,7 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
           {label}
         </div>
       )}
-    </button>
+    </div>
   );
 };
 

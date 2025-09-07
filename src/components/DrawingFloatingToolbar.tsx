@@ -370,7 +370,7 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
   }
 
   const actions = createToolbarActions();
-  // Match text toolbar button sizing exactly
+  // Use CONFIG constants for consistent sizing
   const buttonSize = isMobileDevice ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
   
   return createPortal(

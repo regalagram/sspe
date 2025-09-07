@@ -16,6 +16,8 @@ export const DebugButton: React.FC<DebugButtonProps> = ({ onOpenVisualDebugPanel
   const { enabledFeatures, toggleFeature } = useEditorStore();
 
   const buttonSize = isMobile ? CONFIG.UI.TOOLBAR.MOBILE_BUTTON_SIZE : CONFIG.UI.TOOLBAR.DESKTOP_BUTTON_SIZE;
+  const iconSize = isMobile ? CONFIG.UI.ICONS.MOBILE_SIZE : CONFIG.UI.ICONS.DESKTOP_SIZE;
+  const strokeWidth = isMobile ? CONFIG.UI.ICONS.MOBILE_STROKE_WIDTH : CONFIG.UI.ICONS.DESKTOP_STROKE_WIDTH;
 
   const handleClearLocalStorage = () => {
     localStorage.clear();
@@ -73,7 +75,7 @@ export const DebugButton: React.FC<DebugButtonProps> = ({ onOpenVisualDebugPanel
             opacity: 1,
             touchAction: 'manipulation'
           }}>
-            <Bug size={isMobile ? 14 : 16} color="#374151" />
+            <Bug size={iconSize} strokeWidth={strokeWidth} color="#374151" />
           </div>
         }
         isOpen={isSubmenuOpen}
@@ -85,48 +87,48 @@ export const DebugButton: React.FC<DebugButtonProps> = ({ onOpenVisualDebugPanel
         </div>
         
         <SubmenuItem
-          icon={<Eye size={isMobile ? 12 : 13} />}
+          icon={<Eye size={iconSize} strokeWidth={strokeWidth} />}
           label={enabledFeatures.commandPointsEnabled ? "Hide Command Points" : "Show Command Points"}
           onClick={handleToggleCommandPoints}
           active={enabledFeatures.commandPointsEnabled}
         />
         
         <SubmenuItem
-          icon={<Eye size={isMobile ? 12 : 13} />}
+          icon={<Eye size={iconSize} strokeWidth={strokeWidth} />}
           label={enabledFeatures.controlPointsEnabled ? "Hide Control Points" : "Show Control Points"}
           onClick={handleToggleControlPoints}
           active={enabledFeatures.controlPointsEnabled}
         />
         
         <SubmenuItem
-          icon={<Eye size={isMobile ? 12 : 13} />}
+          icon={<Eye size={iconSize} strokeWidth={strokeWidth} />}
           label={enabledFeatures.wireframeEnabled ? "Hide Wireframe" : "Show Wireframe"}
           onClick={handleToggleWireframe}
           active={enabledFeatures.wireframeEnabled}
         />
         
         <SubmenuItem
-          icon={<Eye size={isMobile ? 12 : 13} />}
+          icon={<Eye size={iconSize} strokeWidth={strokeWidth} />}
           label={enabledFeatures.hidePointsInSelect ? "Show Points In Select" : "Hide Points In Select"}
           onClick={handleToggleHidePointsInSelect}
           active={enabledFeatures.hidePointsInSelect}
         />
         
         <SubmenuItem
-          icon={<Eye size={isMobile ? 12 : 13} />}
+          icon={<Eye size={iconSize} strokeWidth={strokeWidth} />}
           label={enabledFeatures.showGroupsFrame ? "Hide Groups Frame" : "Show Groups Frame"}
           onClick={handleToggleShowGroupsFrame}
           active={enabledFeatures.showGroupsFrame}
         />
         
         <SubmenuItem
-          icon={<Settings size={isMobile ? 12 : 13} />}
+          icon={<Settings size={iconSize} strokeWidth={strokeWidth} />}
           label="Configuration"
           onClick={handleOpenConfig}
         />
         
         <SubmenuItem
-          icon={<RotateCcw size={isMobile ? 12 : 13} />}
+          icon={<RotateCcw size={iconSize} strokeWidth={strokeWidth} />}
           label="Delete LocalStorage"
           onClick={handleClearLocalStorage}
         />
