@@ -60,7 +60,7 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
   const { isMobile, isTablet } = useMobileDetection();
   const [actions, setActions] = useState<ToolbarAction[]>([]);
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
-  const [showOverflow, setShowOverflow] = useState(false);
+  const [showOverflow, setShowOverflow] = useState(true);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const [activeSubmenuId, setActiveSubmenuId] = useState<string | null>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -158,14 +158,49 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
     }
   }, [selection, viewport, isFloatingToolbarHidden, paths, texts, groups, images, toolbarManager, positioningEngine, isMobileDevice]);
 
+  // Automatically show overflow when there are overflow actions
+  useEffect(() => {
+    const visibleActionsCount = actions.filter(action => {
+      if (action.visible === undefined) return true;
+      if (typeof action.visible === 'function') return action.visible();
+      return action.visible;
+    }).length;
+    
+    if (visibleActionsCount > currentConfig.maxVisibleButtons) {
+      const singleOverflow = visibleActionsCount === currentConfig.maxVisibleButtons + 1;
+      if (!singleOverflow) {
+        setShowOverflow(true);
+      }
+    }
+  }, [actions, currentConfig.maxVisibleButtons]);
+
   // DEBUG: Log for development
     
   if (!position || actions.length === 0 || !portalContainer || isFloatingToolbarHidden) {
     return null;
   }
 
-  const visibleActions = actions.slice(0, currentConfig.maxVisibleButtons - 1);
-  const overflowActions = actions.slice(currentConfig.maxVisibleButtons - 1);
+  // Filter actions by visibility (consider visible property)
+  const getVisibleActions = (actionsArray: ToolbarAction[]): ToolbarAction[] => {
+    return actionsArray.filter(action => {
+      if (action.visible === undefined) return true; // Default to visible
+      if (typeof action.visible === 'function') return action.visible();
+      return action.visible;
+    });
+  };
+
+  const allVisibleActions = getVisibleActions(actions);
+  
+  // If there's only one overflow action among visible actions, show it directly instead of using overflow menu
+  const wouldHaveOverflow = allVisibleActions.length > currentConfig.maxVisibleButtons;
+  const singleOverflowAction = wouldHaveOverflow && allVisibleActions.length === currentConfig.maxVisibleButtons + 1;
+  
+  const visibleActions = singleOverflowAction 
+    ? allVisibleActions.slice(0, currentConfig.maxVisibleButtons) // Show all visible actions if only one would overflow
+    : allVisibleActions.slice(0, currentConfig.maxVisibleButtons - 1);
+  const overflowActions = singleOverflowAction 
+    ? [] // No overflow actions if showing single action directly
+    : allVisibleActions.slice(currentConfig.maxVisibleButtons - 1);
   const hasOverflow = overflowActions.length > 0;
 
   // No complex calculations needed for mobile - use simple fixed positioning
@@ -275,9 +310,9 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
                   zIndex: 41,
                   padding: '0px',
                   display: 'flex',
-                  flexDirection: 'column',
+                  flexDirection: 'row',
                   gap: '0px',
-                  minWidth: `${currentConfig.buttonSize}px`,
+                  width: `${overflowActions.length * currentConfig.buttonSize}px`,
                   userSelect: 'none',
                   touchAction: 'manipulation'
                 }}
