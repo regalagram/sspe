@@ -1,4 +1,4 @@
-import { SVGAnimation, AnimationEvent } from '../types';
+import { SVGAnimation, AnimationEvent, EditorState } from '../types';
 import { generateId } from '../utils/id-utils';
 import { elementRefManager } from '../core/ElementRefManager';
 import { TypedSVGAnimation, removeStyleProperty, isAnimationElement, hasAttributeName } from '../types/animation-types';
@@ -36,6 +36,7 @@ export interface AnimationActions {
   createRotateAnimation: (elementId: string, duration: string, degrees: string) => void;
   createScaleAnimation: (elementId: string, duration: string, fromScale?: string, toScale?: string) => void;
   createMoveAnimation: (elementId: string, duration: string, fromX: number, fromY: number, toX: number, toY: number) => void;
+  createPathDrawAnimation: (elementId: string, duration: string, pathLength?: number) => void;
   
   // Filter animation creators
   createFilterBlurAnimation: (elementId: string, duration: string, fromStdDev?: number, toStdDev?: number) => void;
@@ -670,6 +671,52 @@ export const createAnimationActions = (set: any, get: any): AnimationActions => 
       transformType: 'translate',
       from: `${fromX} ${fromY}`,
       to: `${toX} ${toY}`,
+      dur: duration,
+      fill: 'freeze',
+    });
+  },
+
+  createPathDrawAnimation: (elementId: string, duration: string, pathLength?: number) => {
+    const { paths, updatePathStyle } = get();
+    const addAnimation = get().addAnimation;
+    
+    // Find the target path to get its length if not provided
+    const targetPath = paths.find((path: any) => path.id === elementId);
+    if (!targetPath) {
+      console.warn(`Path with id ${elementId} not found for draw animation`);
+      return;
+    }
+
+    // Use normalized path length (1) for stroke-dasharray calculations
+    // This works because SVG pathLength attribute normalizes the path
+    const normalizedLength = pathLength || 1;
+    
+    // Set up the path for drawing animation
+    // Set pathLength attribute for consistent animation across different path lengths
+    // Set stroke-dasharray and stroke-dashoffset to create the drawing effect
+    
+    // Update the path object to include pathLength using the correct Zustand pattern
+    set((state: EditorState) => ({
+      ...state,
+      paths: state.paths.map((path: any) =>
+        path.id === elementId
+          ? { ...path, pathLength: normalizedLength }
+          : path
+      )
+    }));
+    
+    updatePathStyle(elementId, {
+      strokeDasharray: `${normalizedLength}`,
+      strokeDashoffset: normalizedLength
+    });
+
+    // Create the animation to animate stroke-dashoffset from pathLength to 0
+    addAnimation({
+      type: 'animate',
+      targetElementId: elementId,
+      attributeName: 'stroke-dashoffset',
+      from: `${normalizedLength}`,
+      to: '0',
       dur: duration,
       fill: 'freeze',
     });

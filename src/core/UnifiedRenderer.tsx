@@ -34,6 +34,7 @@ interface PathWithAnimationsProps {
   stroke?: string;
   strokeWidth?: number;
   strokeDasharray?: string;
+  strokeDashoffset?: number | string;
   strokeLinecap?: "butt" | "round" | "square" | "inherit";
   strokeLinejoin?: "miter" | "round" | "bevel" | "inherit";
   fillOpacity?: number;
@@ -42,6 +43,7 @@ interface PathWithAnimationsProps {
   markerStart?: string;
   markerMid?: string;
   markerEnd?: string;
+  pathLength?: number;
   style?: React.CSSProperties;
   path?: any; // Full path object for overlay logic
 }
@@ -440,6 +442,7 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
         stroke={props.stroke}
         strokeWidth={props.strokeWidth}
         strokeDasharray={props.strokeDasharray}
+        strokeDashoffset={props.strokeDashoffset}
         strokeLinecap={props.strokeLinecap}
         strokeLinejoin={props.strokeLinejoin}
         fillOpacity={props.fillOpacity}
@@ -448,6 +451,7 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
         markerStart={props.markerStart}
         markerMid={props.markerMid}
         markerEnd={props.markerEnd}
+        pathLength={props.pathLength}
         data-element-type="path"
         data-element-id={props.pathId}
         style={props.style}
@@ -1282,6 +1286,7 @@ const renderPathElement = (path: any, selection: any, viewport: any, enabledFeat
       stroke={strokeValue}
       strokeWidth={isWireframeMode ? wireframeStrokeWidth : (path.style.strokeWidth || 1) / viewport.zoom}
       strokeDasharray={isWireframeMode ? undefined : path.style.strokeDasharray}
+      strokeDashoffset={isWireframeMode ? undefined : path.style.strokeDashoffset}
       strokeLinecap={path.style.strokeLinecap}
       strokeLinejoin={path.style.strokeLinejoin}
       fillOpacity={isWireframeMode ? 0 : path.style.fillOpacity}
@@ -1290,6 +1295,7 @@ const renderPathElement = (path: any, selection: any, viewport: any, enabledFeat
       markerStart={path.style.markerStart}
       markerMid={path.style.markerMid}
       markerEnd={path.style.markerEnd}
+      pathLength={path.pathLength}
       path={path}
       style={{ 
         pointerEvents: 'all',

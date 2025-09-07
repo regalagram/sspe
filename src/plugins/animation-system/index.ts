@@ -4,6 +4,7 @@ import { AnimationControls } from '../../components/AnimationControls';
 import { AnimationTimeline } from '../../components/AnimationTimeline';
 import { AnimationRenderer, AnimationTimer } from '../../components/AnimationRenderer';
 import { AnimationSynchronizer } from '../../components/AnimationSynchronizer';
+import { getPathDrawAnimationTargetId } from '../../utils/animation-target-utils';
 
 export const AnimationSystemPlugin: Plugin = {
   id: 'animation-system',
@@ -101,6 +102,25 @@ export const AnimationSystemPlugin: Plugin = {
         
         if (targetElementId) {
           store.createRotateAnimation(targetElementId, '2s', '360');
+        }
+      }
+    },
+    {
+      key: 'd',
+      modifiers: ['ctrl'],
+      description: 'Add path draw animation to selected path',
+      action: () => {
+        const store = useEditorStore.getState();
+        const { selection, paths } = store;
+        
+        // Get the target path ID, handling subpaths and commands
+        const targetElementId = getPathDrawAnimationTargetId(selection, paths);
+        
+        if (targetElementId) {
+          store.createPathDrawAnimation(targetElementId, '3s', 1);
+        } else {
+          // Could show a message that no path is selected
+          console.warn('Path draw animation requires a path, subpath, or command to be selected');
         }
       }
     }

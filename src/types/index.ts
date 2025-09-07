@@ -25,6 +25,7 @@ export interface SVGPath {
   id: string;
   subPaths: SVGSubPath[];
   style: PathStyle;
+  pathLength?: number; // For animation normalization
   locked?: boolean; // If true, path is locked and unselectable
   zIndex?: number; // Z-order for global layering across all element types
 }

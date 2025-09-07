@@ -8,6 +8,7 @@ import { calculateViewBoxFromSVGString } from '../../utils/viewbox-utils';
 import { PluginButton } from '../../components/PluginButton';
 import { SVGDropZone } from '../../components/SVGDropZone';
 import { SVGImportOptions, ImportSettings } from '../../components/SVGImportOptions';
+import { AnimationTimer } from '../../components/AnimationRenderer';
 import { RotateCcw, CheckCircle2, Trash2, Upload, Download } from 'lucide-react';
 import { generateSVGCode as generateUnifiedSVG, downloadSVGFile } from '../../utils/svg-export';
 import { getAllElementsByZIndex, initializeZIndexes } from '../../utils/z-index-manager';
@@ -256,6 +257,7 @@ export const SVGComponent: React.FC = () => {
         strokeValue !== 'none' ? `stroke="${strokeValue}"` : '',
         style.strokeWidth ? `stroke-width="${style.strokeWidth}"` : '',
         style.strokeDasharray ? `stroke-dasharray="${style.strokeDasharray}"` : '',
+        style.strokeDashoffset !== undefined ? `stroke-dashoffset="${style.strokeDashoffset}"` : '',
         style.strokeLinecap ? `stroke-linecap="${style.strokeLinecap}"` : '',
         style.strokeLinejoin ? `stroke-linejoin="${style.strokeLinejoin}"` : '',
         style.fillRule ? `fill-rule="${style.fillRule}"` : '',
@@ -267,6 +269,7 @@ export const SVGComponent: React.FC = () => {
         style.filter ? `filter="${convertStyleValue(style.filter)}"` : '',
         style.clipPath ? `clip-path="${convertStyleValue(style.clipPath)}"` : '',
         style.mask ? `mask="${convertStyleValue(style.mask)}"` : '',
+        path.pathLength !== undefined ? `pathLength="${path.pathLength}"` : '',
       ].filter(Boolean).join(' ');
       
       // Get animations for this path
@@ -1391,17 +1394,25 @@ export const SVGComponent: React.FC = () => {
       if (elementAnimations.length === 0) return '';
       
       const result = elementAnimations.map(animation => {
-        // For SVG export, calculate proper begin times for sequential playback
+        // Determine if this animation should be editor-controlled or run autonomously
+        const isEditorControlled = animationState && animationState.isPlaying !== undefined;
         let beginValue = '0s';
-        const chainDelay = chainDelays.get(animation.id);
         
-        if (chainDelay !== undefined && chainDelay > 0) {
-          // Convert from ms to seconds for SVG
-          const delayInSeconds = chainDelay / 1000;
-          beginValue = `${delayInSeconds}s`;
+        if (isEditorControlled) {
+          // When editor-controlled, use indefinite so animations can be controlled programmatically
+          beginValue = 'indefinite';
         } else {
-          // Use original begin time or default to 0s
-          beginValue = getAnimationProperty(animation, 'begin') || '0s';
+          // For SVG export, calculate proper begin times for sequential playback
+          const chainDelay = chainDelays.get(animation.id);
+          
+          if (chainDelay !== undefined && chainDelay > 0) {
+            // Convert from ms to seconds for SVG
+            const delayInSeconds = chainDelay / 1000;
+            beginValue = `${delayInSeconds}s`;
+          } else {
+            // Use original begin time or default to 0s
+            beginValue = getAnimationProperty(animation, 'begin') || '0s';
+          }
         }
 
         const dur = getAnimationProperty(animation, 'dur') || '2s';

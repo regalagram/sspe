@@ -24,10 +24,12 @@ import {
   Zap,
   Target,
   AlignJustify,
-  Trash2
+  Trash2,
+  PenTool
 } from 'lucide-react';
 import { createLinearGradient } from '../utils/gradient-utils';
 import { PluginButton } from './PluginButton';
+import { getAnimationTargetId, getPathDrawAnimationTargetId } from '../utils/animation-target-utils';
 
 export const AnimationControls: React.FC = () => {
   const { 
@@ -50,6 +52,7 @@ export const AnimationControls: React.FC = () => {
     createFadeAnimation,
     createMoveAnimation,
     createRotateAnimation,
+    createPathDrawAnimation,
     createScaleAnimation,
     createFilterBlurAnimation,
     createFilterOffsetAnimation,
@@ -146,7 +149,7 @@ export const AnimationControls: React.FC = () => {
   };
 
   const handleCreateAnimation = () => {
-    const targetId = getAnimationTargetId();
+    const targetId = getAnimationTargetId(selection, paths);
     
     if (!targetId) {
       alert('Please select an element to animate');
@@ -172,7 +175,7 @@ export const AnimationControls: React.FC = () => {
   };
 
   const handleCreateMotionWithColorTemplate = () => {
-    const targetId = getAnimationTargetId();
+    const targetId = getAnimationTargetId(selection, paths);
     
     if (!targetId) {
       alert('Please select an element to animate');
@@ -212,58 +215,6 @@ export const AnimationControls: React.FC = () => {
     addAnimation(colorAnimation);
     
     alert(`Created motion animation following path: ${motionPathId.slice(-8)} with synchronized color changes!`);
-  };
-
-  const getAnimationTargetId = () => {
-    const { paths, texts, images, groups, uses } = useEditorStore.getState();
-    
-    // If a text is directly selected, use it
-    if (selection.selectedTexts.length > 0) {
-      return selection.selectedTexts[0];
-    }
-    
-    // If a path is directly selected, use it
-    if (selection.selectedPaths.length > 0) {
-      return selection.selectedPaths[0];
-    }
-    
-    // If an image is directly selected, use it
-    if (selection.selectedImages && selection.selectedImages.length > 0) {
-      return selection.selectedImages[0];
-    }
-    
-    // If a group is directly selected, use it
-    if (selection.selectedGroups && selection.selectedGroups.length > 0) {
-      return selection.selectedGroups[0];
-    }
-    
-    // If a symbol use is directly selected, use it
-    if (selection.selectedUses && selection.selectedUses.length > 0) {
-      return selection.selectedUses[0];
-    }
-    
-    // If a subpath is selected, find the parent path
-    if (selection.selectedSubPaths.length > 0) {
-      const subPathId = selection.selectedSubPaths[0];
-      const parentPath = paths.find(path => 
-        path.subPaths.some(subPath => subPath.id === subPathId)
-      );
-      return parentPath?.id || subPathId; // Fallback to subpath if parent not found
-    }
-    
-    // If a command is selected, find the parent path
-    if (selection.selectedCommands.length > 0) {
-      const commandId = selection.selectedCommands[0];
-      for (const path of paths) {
-        for (const subPath of path.subPaths) {
-          if (subPath.commands.some(cmd => cmd.id === commandId)) {
-            return path.id;
-          }
-        }
-      }
-    }
-    
-    return null;
   };
 
   const handleGradientAnimation = (elementId: string) => {
@@ -346,8 +297,8 @@ export const AnimationControls: React.FC = () => {
     });
   };
 
-  const handleQuickAnimation = (type: 'fade' | 'move' | 'rotate' | 'scale' | 'blur' | 'offset' | 'colorMatrix' | 'viewBox' | 'position' | 'size' | 'circle' | 'line' | 'gradient' | 'pattern' | 'textPosition' | 'fontSize' | 'fontWeight' | 'letterSpacing') => {
-    const targetId = getAnimationTargetId();
+  const handleQuickAnimation = (type: 'fade' | 'move' | 'rotate' | 'scale' | 'pathDraw' | 'blur' | 'offset' | 'colorMatrix' | 'viewBox' | 'position' | 'size' | 'circle' | 'line' | 'gradient' | 'pattern' | 'textPosition' | 'fontSize' | 'fontWeight' | 'letterSpacing') => {
+    const targetId = getAnimationTargetId(selection, paths);
     
     if (type !== 'viewBox' && !targetId) {
       alert('Please select an element to animate');
@@ -366,6 +317,15 @@ export const AnimationControls: React.FC = () => {
         break;
       case 'scale':
         createScaleAnimation(targetId!, '2s');
+        break;
+      case 'pathDraw':
+        // Path draw animation only works on paths - use specific function
+        const pathTargetId = getPathDrawAnimationTargetId(selection, paths);
+        if (pathTargetId) {
+          createPathDrawAnimation(pathTargetId, '3s', 1);
+        } else {
+          alert('Path draw animation requires a path, subpath, or command to be selected');
+        }
         break;
       case 'blur':
         createFilterBlurAnimation(targetId!, '2s', 0, 5);
@@ -544,7 +504,7 @@ export const AnimationControls: React.FC = () => {
 
   // Get available attributes based on animation type and selected element
   const getAvailableAttributes = (type: string) => {
-    const targetId = getAnimationTargetId();
+    const targetId = getAnimationTargetId(selection, paths);
     const isTextElement = targetId && texts.some(text => text.id === targetId);
     
     switch (type) {
@@ -729,6 +689,18 @@ export const AnimationControls: React.FC = () => {
             />
             <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
               Changes element size from 1 to 1.5. Works on all elements.
+            </div>
+          </div>
+          <div>
+            <PluginButton
+              icon={<PenTool size={16} />}
+              text="Path Draw"
+              color="#673ab7"
+              onPointerDown={() => handleQuickAnimation('pathDraw')}
+              fullWidth={true}
+            />
+            <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', paddingLeft: '4px' }}>
+              Animates a drawing effect along the path. Only works on path elements.
             </div>
           </div>
           <div>

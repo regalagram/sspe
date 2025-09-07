@@ -463,10 +463,12 @@ export const generateSVGCode = (editorState: any): string => {
     const attributes = [
       `id="${path.id}"`,
       `d="${pathData}"`,
+      path.pathLength !== undefined ? `pathLength="${formatNumber(path.pathLength)}"` : '',
       fillValue !== 'none' ? `fill="${fillValue}"` : 'fill="none"',
       strokeValue !== 'none' ? `stroke="${strokeValue}"` : '',
       style.strokeWidth ? `stroke-width="${formatNumber(style.strokeWidth)}"` : '',
       style.strokeDasharray ? `stroke-dasharray="${style.strokeDasharray}"` : '',
+      style.strokeDashoffset !== undefined ? `stroke-dashoffset="${formatNumber(style.strokeDashoffset)}"` : '',
       style.strokeLinecap ? `stroke-linecap="${style.strokeLinecap}"` : '',
       style.strokeLinejoin ? `stroke-linejoin="${style.strokeLinejoin}"` : '',
       style.fillRule ? `fill-rule="${style.fillRule}"` : '',
