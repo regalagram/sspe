@@ -93,7 +93,7 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
 
     switch (action.type) {
       case 'button':
-        action.action?.();
+        action.action?.(e);
         break;
       case 'toggle':
         action.toggle?.onToggle();
@@ -120,7 +120,7 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
         }
         break;
       default:
-        action.action?.();
+        action.action?.(e);
     }
   };
 

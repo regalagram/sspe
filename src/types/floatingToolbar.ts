@@ -10,7 +10,7 @@ export interface ToolbarAction {
   type: 'button' | 'toggle' | 'dropdown' | 'color' | 'input';
   
   // Action handlers
-  action?: () => void;
+  action?: (e?: any) => void;
   toggle?: {
     isActive: () => boolean;
     onToggle: () => void;

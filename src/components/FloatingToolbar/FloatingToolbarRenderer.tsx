@@ -249,7 +249,12 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
                 icon: MoreHorizontal,
                 label: 'More actions',
                 type: 'button',
-                action: () => {
+                action: (e?: any) => {
+                  // Prevent event propagation to avoid auto-close
+                  if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
                   // Close any open submenus when opening/closing the overflow menu
                   setActiveSubmenuId(null);
                   setShowOverflow(!showOverflow);
@@ -276,7 +281,7 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
                   userSelect: 'none',
                   touchAction: 'manipulation'
                 }}
-                onPointerLeave={() => setShowOverflow(false)}
+                onPointerLeave={isMobileDevice ? undefined : () => setShowOverflow(false)}
                 onPointerDown={(e) => {
                   // Only stop propagation on actual button clicks
                   const target = e.target as HTMLElement;
