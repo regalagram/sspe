@@ -917,7 +917,7 @@ export function parseSVGToSubPaths(svgString: string, useComputedStyles = false)
             }
           ];
           
-          console.log(`📐 Creating path with ${commands.length} static commands and ${hasAnimatedD ? 'animated' : 'no'} d attribute`);
+          // console.log(`📐 Creating path with ${commands.length} static commands and ${hasAnimatedD ? 'animated' : 'no'} d attribute`);
           
           paths.push({
             id: pathId,
@@ -2622,7 +2622,7 @@ function parseImages(svgElement: Element): SVGImage[] {
   const images: SVGImage[] = [];
   
   const imageElements = svgElement.querySelectorAll('image');
-  console.log(`🖼️ Found ${imageElements.length} image elements in SVG`);
+  // console.log(`🖼️ Found ${imageElements.length} image elements in SVG`);
   
   imageElements.forEach(imageElement => {
     // Use existing ID if present, otherwise generate a new one
@@ -2660,7 +2660,7 @@ function parseImages(svgElement: Element): SVGImage[] {
     });
   });
   
-  console.log(`🖼️ Total images parsed: ${images.length}`);
+  // console.log(`🖼️ Total images parsed: ${images.length}`);
   return images;
 }
 
@@ -2903,7 +2903,7 @@ export function parseCompleteSVG(svgString: string): {
     // Parse animations FIRST to ensure elements get proper IDs
     let animations = parseAnimations(svgElement);
     
-    console.log('🎬 Parsed animations:', animations.length, animations);
+    // console.log('🎬 Parsed animations:', animations.length, animations);
     
     // Get document order for z-index assignment
     // Find all renderable elements in document order (paths, texts, images, uses - not in groups)
@@ -2929,7 +2929,7 @@ export function parseCompleteSVG(svgString: string): {
       orderIndex++;
     });
     
-    console.log('📊 Element order map:', elementOrderMap);
+    // console.log('📊 Element order map:', elementOrderMap);
     
     // Parse other elements using the modified svgElement (with temp IDs)
     const paths = parseSVGToSubPaths(svgElement.outerHTML);
@@ -2983,8 +2983,8 @@ export function parseCompleteSVG(svgString: string): {
       });
     }
     
-    console.log('🖼️ Parsed images:', imagesWithZIndex.length, imagesWithZIndex);
-    console.log('📊 Z-index assignments completed for import');
+    // console.log('🖼️ Parsed images:', imagesWithZIndex.length, imagesWithZIndex);
+    // console.log('📊 Z-index assignments completed for import');
     if (animationChains.length > 0) {
       console.log('⛓️ Auto-generated animation chains:', animationChains.length, animationChains);
     }

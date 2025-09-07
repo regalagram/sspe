@@ -684,7 +684,7 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
     };
     
     // DEBUG: Log when dragState is recalculated (potential memoization issue)
-    console.debug('[VisualDebug] dragState recalculated:', state, 'renderVersion:', renderVersion);
+    // console.debug('[VisualDebug] dragState recalculated:', state, 'renderVersion:', renderVersion);
     
     return state;
   }, [renderVersion]); // Only recalculate when renderVersion changes
@@ -810,7 +810,7 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
     };
     
     // DEBUG: Log when computedFlags are recalculated (potential memoization issue)
-    console.debug('[VisualDebug] computedFlags recalculated:', flags);
+    // console.debug('[VisualDebug] computedFlags recalculated:', flags);
     
     return flags;
   }, [selection.selectedSubPaths.length, selection.selectedCommands.length, mode?.current, storeEnabledFeatures.subpathShowCommandPoints, ui?.selectionVisible]);

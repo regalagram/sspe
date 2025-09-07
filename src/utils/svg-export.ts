@@ -754,8 +754,8 @@ export const generateSVGCode = (editorState: any): string => {
   const usedMaskIds = new Set<string>();
   const usedFilterIds = new Set<string>();
   
-  // Check all elements for references
-  [...paths, ...texts, ...textPaths, ...images, ...uses].forEach((element: any) => {
+  // Helper function to check an element for gradient/pattern references
+  const checkElementForReferences = (element: any) => {
     const style = element.style || {};
     
     // Check for gradient/pattern references (both object and string formats)
@@ -804,8 +804,48 @@ export const generateSVGCode = (editorState: any): string => {
       const filterId = style.filter.replace('url(#', '').replace(')', '');
       usedFilterIds.add(filterId);
     }
-  });
+  };
+  
+  // Check all top-level elements for references
+  [...paths, ...texts, ...textPaths, ...images, ...uses].forEach(checkElementForReferences);
 
+  // Also check elements within groups recursively
+  const checkGroupChildren = (group: any) => {
+    if (group.children) {
+      group.children.forEach((child: any) => {
+        // Find the actual element by ID and type
+        let childElement = null;
+        if (child.type === 'path') {
+          childElement = paths.find((p: any) => p.id === child.id);
+        } else if (child.type === 'text') {
+          childElement = texts.find((t: any) => t.id === child.id);
+        } else if (child.type === 'textPath') {
+          childElement = textPaths.find((tp: any) => tp.id === child.id);
+        } else if (child.type === 'image') {
+          childElement = images.find((i: any) => i.id === child.id);
+        } else if (child.type === 'use') {
+          childElement = uses.find((u: any) => u.id === child.id);
+        } else if (child.type === 'group') {
+          const nestedGroup = groups.find((g: any) => g.id === child.id);
+          if (nestedGroup) {
+            checkGroupChildren(nestedGroup);
+          }
+        }
+        
+        if (childElement) {
+          checkElementForReferences(childElement);
+        }
+      });
+    }
+  };
+  
+  groups.forEach(checkGroupChildren);
+
+  // Debug logging to understand gradient detection
+  console.log('🎨 Gradient Export Debug:');
+  console.log('Available gradients:', gradients.map((g: any) => g.id));
+  console.log('Detected used gradient IDs:', Array.from(usedGradientIds));
+  
   // Check for symbol references in use elements
   uses.forEach((use: any) => {
     const symbolId = use.href.replace('#', '');
@@ -813,7 +853,13 @@ export const generateSVGCode = (editorState: any): string => {
   });
 
   // Filter to only include used definitions
-  const allGradients = gradients.filter((gradient: any) => usedGradientIds.has(gradient.id));
+  // If we have gradients available but didn't detect any usage, include all as fallback
+  const detectedGradients = gradients.filter((gradient: any) => usedGradientIds.has(gradient.id));
+  const allGradients = detectedGradients.length === 0 && gradients.length > 0 
+    ? gradients  // Include all gradients as fallback
+    : detectedGradients;
+  
+  console.log('Gradients to export:', allGradients.map((g: any) => g.id));
   const allMarkers = markers; // Include ALL markers temporarily
   const allClipPaths = clipPaths; // Include ALL clipPaths temporarily
   const allMasks = masks.filter((mask: any) => usedMaskIds.has(mask.id));
