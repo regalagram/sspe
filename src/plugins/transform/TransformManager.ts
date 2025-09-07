@@ -840,7 +840,8 @@ export class TransformManager {
     // Save to history
     store.pushToHistory();
     
-   
+    // Hide floating toolbar during transformation
+    store.hideFloatingToolbarDuringDrag();
 
     // Trigger state change to hide handles
     this.triggerStateChange();
@@ -1544,6 +1545,9 @@ export class TransformManager {
     this.state.initialTextPaths = {};
     this.state.initialImages = {};
     this.state.initialUses = {};
+
+    // Show floating toolbar after transformation
+    store.showFloatingToolbarAfterDrag();
 
     // Trigger state change to show handles again
     this.triggerStateChange();
