@@ -328,7 +328,7 @@ export const createGenericArrangeActions = (
           }
         ]
       },
-      priority: 920,
+      priority: 930,
       tooltip: `Align and distribute ${elementType}`,
       visible: () => canAlign() || canDistribute()
     }

@@ -259,10 +259,10 @@ export const textActions: ToolbarAction[] = [
       return store.selection.selectedTexts.length >= 2;
     }
   },
-  // Add arrange actions for text elements using the new reusable component
-  ...createTextArrangeActions(),
   // Add reorder actions for text elements
   ...createTextReorderActions(),
+  // Add arrange actions for text elements using the new reusable component
+  ...createTextArrangeActions(),
   {
     id: 'duplicate-text',
     icon: Copy,
