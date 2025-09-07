@@ -147,10 +147,10 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
         title={action.tooltip || action.label}
         aria-label={action.label}
       >
-        <action.icon 
-          size={iconSize} 
-          strokeWidth={isMobileDevice ? CONFIG.UI.ICONS.MOBILE_STROKE_WIDTH : CONFIG.UI.ICONS.DESKTOP_STROKE_WIDTH}
-        />
+        {React.cloneElement(<action.icon />, {
+          size: iconSize,
+          strokeWidth: isMobileDevice ? CONFIG.UI.ICONS.MOBILE_STROKE_WIDTH : CONFIG.UI.ICONS.DESKTOP_STROKE_WIDTH
+        } as any)}
       </button>
 
       {/* Dropdown Menu */}
