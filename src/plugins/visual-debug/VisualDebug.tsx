@@ -5,6 +5,7 @@ import { getAbsoluteCommandPosition } from '../../utils/path-utils';
 import { useMobileDetection, getControlPointSize, getInteractionRadius } from '../../hooks/useMobileDetection';
 import { stickyPointsManager } from '../pointer-interaction/StickyPointsManager';
 import { transformManager } from '../transform/TransformManager';
+import { performDeepEventCleanup } from '../../utils/deep-event-cleanup';
 
 // Memoized SVG components for command points optimization
 interface CommandPointCircleProps {
@@ -689,45 +690,24 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
     return state;
   }, [renderVersion]); // Only recalculate when renderVersion changes
   
-  // AGGRESSIVE CLEANUP: Force cleanup of detached SVG elements  
+  // DEEP EVENT CLEANUP: Clean events and references to prevent detached elements
   React.useEffect(() => {
-    // Cleanup function for memory leak prevention
-    const cleanupDetachedElements = () => {
-      if (typeof window !== 'undefined' && window.document) {
-        // Find and remove orphaned SVG elements that match our patterns
-        const selectors = [
-          'g[transform*="translate"][transform*="scale"]', // Our CommandPointGroup patterns
-          'line[stroke-dasharray][pointer-events="none"]', // Handle/debug lines
-          'circle[vector-effect="non-scaling-stroke"]', // Command point circles
-          'path[vector-effect="non-scaling-stroke"][pointer-events="none"]' // Command point paths
-        ];
-        
-        selectors.forEach(selector => {
-          try {
-            const elements = document.querySelectorAll(selector);
-            elements.forEach(el => {
-              // Only remove if element is truly detached (no parent or grandparent in DOM)
-              if (!el.parentNode || !el.parentNode.parentNode || !document.body.contains(el)) {
-                el.remove();
-              }
-            });
-          } catch (e) {
-            // Silently handle any selector errors
-          }
-        });
-      }
-    };
-
-    // Cleanup on unmount
     return () => {
-      // Immediate cleanup
-      cleanupDetachedElements();
+      console.debug('CommandPointsRenderer: Performing deep event cleanup before unmount');
       
-      // Delayed cleanup to catch any async detached elements
-      setTimeout(cleanupDetachedElements, 100);
-      setTimeout(cleanupDetachedElements, 500);
+      // Find the SVG container that contains all command points
+      const svgContainer = document.querySelector('.svg-editor svg');
+      if (svgContainer) {
+        performDeepEventCleanup(svgContainer as HTMLElement, { logProgress: false });
+      }
       
-      console.debug('CommandPointsRenderer: aggressive cleanup completed');
+      // Also clean any floating containers that might have command point interactions
+      const floatingContainers = document.querySelectorAll('[data-singleton-toolbar="true"], .floating-toolbar-content');
+      floatingContainers.forEach(container => {
+        performDeepEventCleanup(container as HTMLElement, { logProgress: false });
+      });
+      
+      console.debug('CommandPointsRenderer: Deep event cleanup completed');
     };
   }, []);
 

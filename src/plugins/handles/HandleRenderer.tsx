@@ -5,6 +5,7 @@ import { useMobileDetection, getInteractionRadius } from '../../hooks/useMobileD
 import { handleManager } from './HandleManager';
 import { ControlPointType } from '../../types';
 import { transformManager } from '../transform/TransformManager';
+import { performDeepEventCleanup } from '../../utils/deep-event-cleanup';
 
 // Helper function to get control point size
 const getControlPointSize = (isMobile: boolean, isTablet: boolean): number => {
@@ -272,6 +273,27 @@ const HandleRendererCore: React.FC = React.memo(() => {
     const unsubscribe = handleManager.addListener(handleStateChange);
     return unsubscribe;
   }, [handleStateChange]);
+
+  // DEEP EVENT CLEANUP: Clean events and references to prevent detached elements
+  React.useEffect(() => {
+    return () => {
+      console.debug('HandleRenderer: Performing deep event cleanup before unmount');
+      
+      // Find the SVG container that contains all control points
+      const svgContainer = document.querySelector('.svg-editor svg');
+      if (svgContainer) {
+        performDeepEventCleanup(svgContainer as HTMLElement, { logProgress: false });
+      }
+      
+      // Also clean any floating containers that might have control point interactions
+      const floatingContainers = document.querySelectorAll('[data-singleton-toolbar="true"], .floating-toolbar-content');
+      floatingContainers.forEach(container => {
+        performDeepEventCleanup(container as HTMLElement, { logProgress: false });
+      });
+      
+      console.debug('HandleRenderer: Deep event cleanup completed');
+    };
+  }, []);
 
   // Memoized visual debug change handler
   const visualDebugKey = React.useMemo(
