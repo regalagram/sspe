@@ -308,6 +308,14 @@ class RectSelectionManager {
         selectInBox(this.state.selectionRect);
       }
 
+      // Clear selectionBox in store to prevent detached rectangles
+      this.editorStore.setState(state => ({
+        selection: {
+          ...state.selection,
+          selectionBox: null
+        }
+      }));
+
       this.state.isSelecting = false;
       this.state.selectionStart = null;
       this.state.selectionRect = null;
@@ -359,10 +367,14 @@ export const useRectSelection = () => {
   };
 };
 
-// Selection Rectangle Renderer
+// Global reference for current selection rectangle to prevent detached elements
+let currentSelectionRect: SVGRectElement | null = null;
+
+// Selection Rectangle Renderer with Direct DOM Management
 export const SelectionRectRenderer: React.FC = () => {
   const { viewport, selection, paths } = useEditorStore();
   const [, forceUpdate] = useState({});
+  const containerRef = React.useRef<SVGGElement>(null);
 
   React.useEffect(() => {
     const unsubscribe = rectSelectionManager.addListener(() => {
@@ -370,6 +382,14 @@ export const SelectionRectRenderer: React.FC = () => {
     });
     return unsubscribe;
   }, []);
+
+  // Clean up any previous rectangle before creating a new one
+  const cleanupPreviousRect = () => {
+    if (currentSelectionRect && currentSelectionRect.parentNode) {
+      currentSelectionRect.parentNode.removeChild(currentSelectionRect);
+      currentSelectionRect = null;
+    }
+  };
 
   // Function to check if selected commands are coincident (dual points) and should hide selection rect
   const shouldHideSelectionForCoincidentCommands = (): boolean => {
@@ -511,23 +531,39 @@ export const SelectionRectRenderer: React.FC = () => {
   // Hide selection rect for coincident commands (dual points)
   const shouldHideForCoincidentCommands = shouldHideSelectionForCoincidentCommands();
   
-  if (!selectionRect || shouldHideForCoincidentCommands) {
-        return null;
-  }
+  // Clean up any existing rectangle first
+  React.useEffect(() => {
+    return cleanupPreviousRect;
+  }, []);
+
+  React.useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Always clean up previous rectangle
+    cleanupPreviousRect();
+
+    // Create new rectangle if needed
+    if (selectionRect && !shouldHideForCoincidentCommands) {
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', selectionRect.x.toString());
+      rect.setAttribute('y', selectionRect.y.toString());
+      rect.setAttribute('width', selectionRect.width.toString());
+      rect.setAttribute('height', selectionRect.height.toString());
+      rect.setAttribute('fill', 'rgba(0, 120, 204, 0.15)');
+      rect.setAttribute('stroke', '#007acc');
+      rect.setAttribute('stroke-width', '1');
+      rect.setAttribute('vector-effect', 'non-scaling-stroke');
+      rect.style.pointerEvents = 'none';
+      
+      // Add to container and update reference
+      containerRef.current.appendChild(rect);
+      currentSelectionRect = rect;
+    }
+  }, [selectionRect, shouldHideForCoincidentCommands]);
   
-  
+  // Return stable container element
   return (
-    <rect
-      x={selectionRect.x}
-      y={selectionRect.y}
-      width={selectionRect.width}
-      height={selectionRect.height}
-      fill="rgba(0, 120, 204, 0.15)"
-      stroke="#007acc"
-      strokeWidth={1}
-      vectorEffect="non-scaling-stroke"
-      style={{ pointerEvents: 'none' }}
-    />
+    <g ref={containerRef} data-selection-rect-container="true"></g>
   );
 };
 
