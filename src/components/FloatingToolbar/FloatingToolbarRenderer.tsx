@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { FloatingToolbarButton } from './FloatingToolbarButton';
-import { ToolbarAction } from '../../types/floatingToolbar';
+import { ToolbarAction, ToolbarPosition } from '../../types/floatingToolbar';
 import { FloatingToolbarManager } from '../../core/FloatingToolbar/FloatingToolbarManager';
 import { PositioningEngine } from '../../core/FloatingToolbar/PositioningEngine';
 import { useEditorStore } from '../../store/editorStore';
@@ -63,7 +63,7 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
   const { selection, viewport, isFloatingToolbarHidden, paths, texts, groups, images, floatingToolbarUpdateTimestamp } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   const [actions, setActions] = useState<ToolbarAction[]>([]);
-  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const [position, setPosition] = useState<ToolbarPosition | null>(null);
   const [showOverflow, setShowOverflow] = useState(true);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const [activeSubmenuId, setActiveSubmenuId] = useState<string | null>(null);
@@ -100,7 +100,7 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
     selection.selectedGradientStops.length > 0
   );
 
-  const isToolbarVisible = hasSelection && !isFloatingToolbarHidden && actions.length > 0 && position && portalContainer;
+  const isToolbarVisible = hasSelection && !isFloatingToolbarHidden && actions.length > 0 && !!position && !!portalContainer;
   
   const { renderPortal } = useFloatingToolbarSingleton({
     isVisible: isToolbarVisible,
@@ -158,7 +158,8 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
       if (isMobileDevice && toolbarPosition) {
         toolbarPosition = {
           x: window.innerWidth / 2, // Center horizontally
-          y: 8 // Fixed top position
+          y: 8, // Fixed top position
+          placement: 'top'
         };
       }
             
@@ -166,8 +167,8 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
         setPosition(toolbarPosition);
       } else {
         const fallbackPosition = isMobileDevice 
-          ? { x: window.innerWidth / 2, y: 8 }
-          : { x: 100, y: 100 };
+          ? { x: window.innerWidth / 2, y: 8, placement: 'top' as const }
+          : { x: 100, y: 100, placement: 'top' as const };
         setPosition(fallbackPosition);
       }
     } else {

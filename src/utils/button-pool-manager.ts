@@ -140,7 +140,7 @@ class ButtonPoolManager {
       return;
     }
     
-    const { button } = buttonInstance;
+    const { element: button } = buttonInstance;
     
     // Update properties
     if (properties.innerHTML !== undefined) {

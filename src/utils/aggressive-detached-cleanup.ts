@@ -161,7 +161,7 @@ export const forceAggressiveCleanup = (): number => {
 };
 
 // Check if aggressive cleanup is active
-export const isAggressiveCleanupActive = (): boolean => {
+export const getIsAggressiveCleanupActive = (): boolean => {
   return isAggressiveCleanupActive;
 };
 

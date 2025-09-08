@@ -9,6 +9,8 @@
  * the DOM structure, allowing React to unmount components normally.
  */
 
+import React from 'react';
+
 /**
  * Performs deep event listener cleanup on an element and all its children
  * This removes event listeners and references that cause memory leaks 

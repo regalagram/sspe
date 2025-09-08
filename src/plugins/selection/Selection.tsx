@@ -8,6 +8,7 @@ import { transformManager } from '../transform/TransformManager';
 import { toolModeManager } from '../../core/ToolModeManager';
 import { duplicateSelected, invertSelection } from './actions/commonActions';
 import { getElementZIndex } from '../../utils/z-index-manager';
+import { EditorState } from '../../types';
 
 
 // Rectangle Selection Manager
@@ -309,7 +310,7 @@ class RectSelectionManager {
       }
 
       // Clear selectionBox in store to prevent detached rectangles
-      this.editorStore.setState(state => ({
+      this.editorStore.setState((state: EditorState) => ({
         selection: {
           ...state.selection,
           selectionBox: null

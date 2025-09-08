@@ -11,7 +11,7 @@ interface SingletonSelectionRectProps {
 }
 
 // Global singleton state to ensure only one instance renders
-let currentInstance: React.RefObject<SVGRectElement> | null = null;
+let currentInstance: React.RefObject<SVGRectElement | null> | null = null;
 let isRenderingInstance = false;
 
 export const SingletonSelectionRect: React.FC<SingletonSelectionRectProps> = ({
