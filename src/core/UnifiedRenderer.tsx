@@ -1442,6 +1442,9 @@ export const UnifiedRenderer: React.FC = () => {
             }
           }
         });
+      } catch (error) {
+        // Ignore cleanup errors
+      }
 
 
       // Expose emergency cleanup function for debugging (development only)
