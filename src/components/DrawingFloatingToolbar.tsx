@@ -208,6 +208,17 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
     }
   }, [isToolActive, toolSettings, manager, toolType]);
 
+  // Cleanup effect to prevent memory leaks when component unmounts
+  useEffect(() => {
+    return () => {
+      // Force close any open submenus to prevent detached elements
+      setActiveSubmenuId(null);
+      
+      // Clear portal container reference
+      setPortalContainer(null);
+    };
+  }, []);
+
   // Handle submenu toggling - only one submenu can be open at a time
   const handleSubmenuToggle = (actionId: string) => {
     setActiveSubmenuId(prevActiveId => {

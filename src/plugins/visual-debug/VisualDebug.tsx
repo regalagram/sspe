@@ -5,7 +5,6 @@ import { getAbsoluteCommandPosition } from '../../utils/path-utils';
 import { useMobileDetection, getControlPointSize, getInteractionRadius } from '../../hooks/useMobileDetection';
 import { stickyPointsManager } from '../pointer-interaction/StickyPointsManager';
 import { transformManager } from '../transform/TransformManager';
-import { performDeepEventCleanup } from '../../utils/deep-event-cleanup';
 
 // Memoized SVG components for command points optimization
 interface CommandPointCircleProps {
@@ -690,82 +689,269 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
     return state;
   }, [renderVersion]); // Only recalculate when renderVersion changes
   
-  // DEEP EVENT CLEANUP: Clean events and references to prevent detached elements
+  // Component cleanup on unmount - comprehensive command points cleanup
   React.useEffect(() => {
     return () => {
-      console.debug('CommandPointsRenderer: Performing deep event cleanup before unmount');
-      
-      // Find the SVG container that contains all command points
-      const svgContainer = document.querySelector('.svg-editor svg');
-      if (svgContainer) {
-        performDeepEventCleanup(svgContainer as HTMLElement, { logProgress: false });
-      }
-      
-      // Also clean any floating containers that might have command point interactions
-      const floatingContainers = document.querySelectorAll('[data-singleton-toolbar="true"], .floating-toolbar-content');
-      floatingContainers.forEach(container => {
-        performDeepEventCleanup(container as HTMLElement, { logProgress: false });
-      });
-      
-      console.debug('CommandPointsRenderer: Deep event cleanup completed');
-    };
-  }, []);
+      // Force cleanup of all command point related DOM elements (safety measure)
+      const commandPointSelectors = [
+        '.command-point',                              // Normal command points (circles AND paths)
+        '.command-point-interaction-overlay',          // Interaction overlays (circles AND paths)
+        'path.command-point',                          // Split points as paths
+        'path.command-point-interaction-overlay',      // Split point interaction overlays as paths
+        '[data-command-id]',                          // Elements with command ID
+        '[data-temp-hack="true"]',                    // Temporary hack elements
+        '[data-temp-type]',                           // Other temp elements
+        'circle[data-split-initial]',                 // Split point initial halves (circles)
+        'circle[data-split-final]',                   // Split point final halves (circles)
+        'path[data-split-initial]',                   // Split paths initial
+        'path[data-split-final]',                     // Split paths final
+        'circle:not([class])[data-command-id]',       // Classless circles with command ID
+        'path:not([class])[data-command-id]',         // Classless paths with command ID
+        'g[transform*="translate"][transform*="scale"]', // Transform groups with scale
+        'g[transform*="translate"]'                   // All transform groups
+      ];
 
-  // Additional cleanup on drag state changes to prevent accumulation
-  React.useEffect(() => {
-    if (!dragState.isMoving) {
-      // Clean up when drag ends
-      setTimeout(() => {
-        if (typeof window !== 'undefined' && window.document) {
-          // Force garbage collection of temporary hack elements
-          const tempElements = document.querySelectorAll('circle:not([class]), path:not([class])');
-          tempElements.forEach(el => {
-            if (!document.body.contains(el)) {
-              el.remove();
+      commandPointSelectors.forEach(selector => {
+        try {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach(element => {
+            // Force remove event listeners before DOM cleanup (aggressive strategy)
+            try {
+              // Clone the element to remove all event listeners
+              const cleanElement = element.cloneNode(true);
+              if (element.parentNode) {
+                element.parentNode.replaceChild(cleanElement, element);
+              }
+            } catch (error) {
+              // Fallback: try direct removal
+              try {
+                if (element.parentNode) {
+                  element.parentNode.removeChild(element);
+                }
+              } catch (fallbackError) {
+                // Final fallback: clear all React and event properties
+                try {
+                  (element as any).onpointerdown = null;
+                  (element as any).onpointerup = null;
+                  (element as any).onpointermove = null;
+                  (element as any).onclick = null;
+                  (element as any).onpointerenter = null;
+                  (element as any).onpointerleave = null;
+                  (element as any).__reactProps = null;
+                  (element as any).__reactInternalInstance = null;
+                  (element as any).__reactFiber = null;
+                  (element as any)._reactInternalFiber = null;
+                  // Clear cursor styles that might hold references
+                  (element as any).style.cursor = '';
+                } catch (cleanupError) {
+                  // Ignore all cleanup errors
+                }
+              }
             }
           });
+        } catch (error) {
+          // Ignore selector errors
         }
-      }, 50);
-    }
-  }, [dragState.isMoving]);
+      });
 
-  // SPECIFIC CLEANUP: Target temp hack elements with data attributes
-  React.useEffect(() => {
-    const cleanupTempHackElements = () => {
-      if (typeof window !== 'undefined' && window.document) {
-        try {
-          // Target our specific temporary hack elements
-          const tempHackSelectors = [
-            '[data-temp-hack="true"]',
-            '[data-temp-type]',
-            'circle[data-command-id]:not([class*="command-point"])',
-            'path[data-command-id]:not([class*="command-point"])'
-          ];
+      // Aggressive cleanup for all detached command point elements (including split points as paths)
+      try {
+        const allCommandElements = [
+          ...document.querySelectorAll('circle.command-point'),
+          ...document.querySelectorAll('circle.command-point-interaction-overlay'),
+          ...document.querySelectorAll('path.command-point'),              // Split points as paths
+          ...document.querySelectorAll('path.command-point-interaction-overlay'), // Split point overlays as paths
+          ...document.querySelectorAll('[data-command-id]'),
+          ...document.querySelectorAll('[data-temp-hack="true"]'),
+          ...document.querySelectorAll('g[transform*="translate"][transform*="scale"]'), // Transform groups
+          ...document.querySelectorAll('g[transform*="translate"]'), // All transform groups
+        ];
+        
+        allCommandElements.forEach(element => {
+          if (!document.contains(element.parentNode)) {
+            // This is a detached command point element, force clean it
+            try {
+              // Clear all possible event listeners and React references
+              (element as any).onpointerdown = null;
+              (element as any).onpointerup = null;
+              (element as any).onpointermove = null;
+              (element as any).onclick = null;
+              (element as any).onpointerenter = null;
+              (element as any).onpointerleave = null;
+              (element as any).__reactProps = null;
+              (element as any).__reactInternalInstance = null;
+              (element as any).__reactFiber = null;
+              (element as any)._reactInternalFiber = null;
+              (element as any).__reactEventHandlers = null;
+              (element as any)._owner = null;
+              (element as any)._store = null;
+              (element as any)._reactListening = null;
+              (element as any).style.cursor = '';
+              
+              if (element.parentNode) {
+                element.parentNode.removeChild(element);
+              }
+            } catch (error) {
+              // Ignore individual element cleanup errors
+            }
+          }
+        });
+      } catch (error) {
+        // Ignore aggressive cleanup errors
+      }
+
+      // NUCLEAR OPTION: Complete destruction of detached command point containers
+      try {
+        const svgContainers = document.querySelectorAll('.svg-editor svg, svg');
+        
+        svgContainers.forEach(svg => {
+          const commandPointContainers = svg.querySelectorAll('g');
           
-          tempHackSelectors.forEach(selector => {
-            const elements = document.querySelectorAll(selector);
-            elements.forEach(el => {
-              // Check if element is detached or orphaned
-              if (!el.isConnected || !document.body.contains(el)) {
-                console.debug('Cleaning detached temp hack element:', selector, el);
-                el.remove();
+          commandPointContainers.forEach(container => {
+            if (!document.contains(container.parentNode)) {
+              // This container is detached
+              const hasCommandPoints = container.querySelector('.command-point') ||
+                                      container.querySelector('.command-point-interaction-overlay') ||
+                                      container.querySelector('path[data-command-id]') ||
+                                      container.hasAttribute('transform') ||
+                                      container.children.length === 0;
+              
+              if (hasCommandPoints) {
+                try {
+                  // NUCLEAR: Complete destruction of container and all children
+                  const destroyElement = (element: Element) => {
+                    // First, recursively destroy all children
+                    Array.from(element.children).forEach(child => {
+                      destroyElement(child);
+                    });
+                    
+                    // Clear all possible React and event references
+                    (element as any).onpointerdown = null;
+                    (element as any).onpointerup = null;
+                    (element as any).onpointermove = null;
+                    (element as any).onclick = null;
+                    (element as any).onpointerenter = null;
+                    (element as any).onpointerleave = null;
+                    (element as any).__reactProps = null;
+                    (element as any).__reactInternalInstance = null;
+                    (element as any).__reactFiber = null;
+                    (element as any)._reactInternalFiber = null;
+                    (element as any).__reactEventHandlers = null;
+                    (element as any)._owner = null;
+                    (element as any)._store = null;
+                    (element as any)._reactListening = null;
+                    
+                    // Clear CSS that might hold references
+                    if (element instanceof HTMLElement || element instanceof SVGElement) {
+                      (element as any).style.cursor = '';
+                      (element as any).onpointerdown = null;
+                      (element as any).onclick = null;
+                    }
+                  };
+                  
+                  // Destroy the container and all its children
+                  destroyElement(container);
+                  
+                  // Finally remove from DOM
+                  if (container.parentNode) {
+                    container.parentNode.removeChild(container);
+                  }
+                } catch (error) {
+                  // Ultimate nuclear option: innerHTML destruction
+                  try {
+                    (container as any).innerHTML = '';
+                    (container as any).textContent = '';
+                    if (container.parentNode) {
+                      container.parentNode.removeChild(container);
+                    }
+                  } catch (finalError) {
+                    // Ignore all errors - element is beyond salvation
+                  }
+                }
+              }
+            }
+          });
+        });
+      } catch (error) {
+        // Ignore nuclear cleanup errors
+      }
+
+      // Clear any pending requestAnimationFrame callbacks
+      // Note: React will handle cleanup of memoized values and callbacks automatically
+
+      // Expose emergency cleanup function for command points (development only)
+      if (process.env.NODE_ENV === 'development') {
+        (window as any).emergencyCleanupCommandPoints = () => {
+          console.log('🎯 Emergency cleanup of detached command points...');
+          let cleanedCount = 0;
+          
+          try {
+            const commandPointElements = [
+              ...document.querySelectorAll('.command-point'),
+              ...document.querySelectorAll('.command-point-interaction-overlay'),
+              ...document.querySelectorAll('[data-command-id]'),
+              ...document.querySelectorAll('[data-temp-hack="true"]')
+            ];
+            
+            commandPointElements.forEach(element => {
+              if (!document.contains(element.parentNode)) {
+                try {
+                  // Clear all event listeners and React references
+                  (element as any).onpointerdown = null;
+                  (element as any).onpointerup = null;
+                  (element as any).onpointermove = null;
+                  (element as any).onclick = null;
+                  (element as any).__reactProps = null;
+                  (element as any).__reactFiber = null;
+                  (element as any).style.cursor = '';
+                  
+                  if (element.parentNode) {
+                    element.parentNode.removeChild(element);
+                    cleanedCount++;
+                  }
+                } catch (error) {
+                  // Ignore individual cleanup errors
+                }
               }
             });
-          });
-        } catch (e) {
-          console.warn('Error during temp hack cleanup:', e);
-        }
+            
+            console.log(`🎯 Cleaned ${cleanedCount} detached command point elements`);
+          } catch (error) {
+            console.warn('Command points emergency cleanup error:', error);
+          }
+        };
       }
     };
-
-    // Cleanup every few seconds to prevent accumulation
-    const intervalId = setInterval(cleanupTempHackElements, 3000);
-    
-    return () => {
-      clearInterval(intervalId);
-      cleanupTempHackElements(); // Final cleanup on unmount
-    };
   }, []);
+
+  // Cleanup temporary elements when drag ends with event listener cleanup
+  React.useEffect(() => {
+    if (!dragState.isMoving) {
+      // Use requestAnimationFrame to ensure cleanup happens after render
+      requestAnimationFrame(() => {
+        const tempElements = document.querySelectorAll('[data-temp-hack="true"]');
+        tempElements.forEach(element => {
+          if (!element.isConnected) {
+            try {
+              // Clear event listeners before removal
+              (element as any).onpointerdown = null;
+              (element as any).onpointerup = null;
+              (element as any).onpointermove = null;
+              (element as any).onclick = null;
+              (element as any).__reactProps = null;
+              (element as any).__reactFiber = null;
+              
+              if (element.parentNode) {
+                element.parentNode.removeChild(element);
+              }
+            } catch (error) {
+              // Ignore cleanup errors
+            }
+          }
+        });
+      });
+    }
+  }, [dragState.isMoving]);
   
   // Memoize computed values
   const baseRadius = React.useMemo(() => 

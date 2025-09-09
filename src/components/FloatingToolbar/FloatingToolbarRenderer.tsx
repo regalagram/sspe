@@ -302,6 +302,20 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
       }
     }
   }, [actions, currentConfig.maxVisibleButtons]);
+
+  // Cleanup effect for component unmount
+  useEffect(() => {
+    return () => {
+      // Force close any open submenus and overflow menus
+      setActiveSubmenuId(null);
+      setShowOverflow(false);
+      setActions([]);
+      setPosition(null);
+      
+      // Clear portal container reference
+      setPortalContainer(null);
+    };
+  }, []);
     
   // Don't render if toolbar should not be visible
   if (!isToolbarVisible) {

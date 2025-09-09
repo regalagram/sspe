@@ -5,7 +5,6 @@ import { useMobileDetection, getInteractionRadius } from '../../hooks/useMobileD
 import { handleManager } from './HandleManager';
 import { ControlPointType } from '../../types';
 import { transformManager } from '../transform/TransformManager';
-import { performDeepEventCleanup } from '../../utils/deep-event-cleanup';
 
 // Helper function to get control point size
 const getControlPointSize = (isMobile: boolean, isTablet: boolean): number => {
@@ -266,34 +265,155 @@ const HandleRendererCore: React.FC = React.memo(() => {
   const handleStateChange = React.useCallback(() => {
     const newState = handleManager.getState();
     setHandleState(newState);
-    // Removed renderKey increment - let React memoization handle re-renders efficiently
   }, []);
 
   React.useEffect(() => {
     const unsubscribe = handleManager.addListener(handleStateChange);
-    return unsubscribe;
+    return () => {
+      // Ensure proper cleanup of listener
+      if (unsubscribe && typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, [handleStateChange]);
 
-  // DEEP EVENT CLEANUP: Clean events and references to prevent detached elements
+
+
+  // Component cleanup on unmount - comprehensive control points cleanup
   React.useEffect(() => {
     return () => {
-      console.debug('HandleRenderer: Performing deep event cleanup before unmount');
-      
-      // Find the SVG container that contains all control points
-      const svgContainer = document.querySelector('.svg-editor svg');
-      if (svgContainer) {
-        performDeepEventCleanup(svgContainer as HTMLElement, { logProgress: false });
-      }
-      
-      // Also clean any floating containers that might have control point interactions
-      const floatingContainers = document.querySelectorAll('[data-singleton-toolbar="true"], .floating-toolbar-content');
-      floatingContainers.forEach(container => {
-        performDeepEventCleanup(container as HTMLElement, { logProgress: false });
+      // Reset component state to initial values to prevent memory leaks
+      setHandleState({
+        controlPoints: new Map(),
+        isOptionPressed: false,
+        dragState: {
+          isDragging: false,
+          commandId: null,
+          handleType: null,
+          originalType: null,
+          startPoint: null,
+        }
       });
       
-      console.debug('HandleRenderer: Deep event cleanup completed');
+      // Force HandleManager to clean any active drag state
+      if (handleManager) {
+        try {
+          // Cancel any active drag operation
+          if (handleManager.getState().dragState.isDragging) {
+            handleManager.endDragHandle();
+          }
+          // Clear control points from manager
+          const currentState = handleManager.getState();
+          if (currentState.controlPoints) {
+            currentState.controlPoints.clear();
+          }
+        } catch (error) {
+          // Ignore HandleManager cleanup errors
+        }
+      }
+      
+      // Force cleanup of all control point and subpath feedback related DOM elements
+      // (comprehensive safety measure for all handle/control point variants and visual feedback)
+      const controlPointSelectors = [
+        // Control point elements
+        '.control-point',                                    // ControlPointCircle elements
+        '.control-point-interaction-overlay',               // InteractionOverlay elements  
+        '[data-control-point="x1y1"]',                     // Outgoing control point elements
+        '[data-control-point="x2y2"]',                     // Incoming control point elements
+        '[data-control-point]',                            // All control point elements
+        '[data-command-id][data-control-point]',           // Control point elements with command ID
+        '[data-prev-command-id]',                          // Elements with prev command ID
+        'line[stroke="#007acc"]',                          // Control point lines (blue)
+        'line[stroke="#fbbf24"]',                          // Control point lines (yellow, option pressed)
+        'line[stroke-dasharray]',                          // Dashed control point lines
+        'circle[fill="#ffffff"][stroke="#007acc"]',        // Control point circles (normal)
+        'circle[fill="#fbbf24"][stroke="#f59e0b"]',        // Control point circles (option pressed)
+        'g[transform*="scale"]',                           // ControlPointGroup transforms
+        // Subpath visual feedback elements
+        'path[stroke="#66ff99"]',                          // Green feedback paths
+        'path[stroke-opacity="0.3"]',                      // Semi-transparent feedback
+        'path[style*="filter: blur"]',                     // Blurred feedback paths
+        'path[style*="filter: drop-shadow"]',             // Drop shadow feedback paths
+        'path[data-element-type="subpath"]',              // Subpath overlay elements
+        'path[data-subpath-id]',                          // Elements with subpath ID
+        'path[stroke-dasharray="6,4"]',                   // Dashed feedback paths
+        // Catch any orphaned elements from SingleControlPoint components
+        'circle[r][fill="#ffffff"]:not([class])',          // Potential unclassified control circles
+        'line[stroke-dasharray]:not([class])',            // Potential unclassified control lines
+        // Additional selectors for edge cases
+        'g[key*="handle-control"]',                        // Control point container groups
+        'g[key*="x1y1"]',                                  // Outgoing control point groups
+        'g[key*="x2y2"]',                                  // Incoming control point groups
+        // Empty groups that remain after cleanup
+        'g:empty',                                         // Empty groups
+        'g:not(:has(*))',                                  // Groups with no child elements
+      ];
+
+      controlPointSelectors.forEach(selector => {
+        try {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach(element => {
+            // Force remove event listeners before DOM cleanup
+            try {
+              // Clone the element to remove all event listeners
+              const cleanElement = element.cloneNode(true);
+              if (element.parentNode) {
+                element.parentNode.replaceChild(cleanElement, element);
+              }
+            } catch (error) {
+              // Fallback: try direct removal
+              try {
+                if (element.parentNode) {
+                  element.parentNode.removeChild(element);
+                }
+              } catch (fallbackError) {
+                // Final fallback: clear all React and event properties
+                try {
+                  (element as any).onpointerdown = null;
+                  (element as any).onclick = null;
+                  (element as any).onpointerenter = null;
+                  (element as any).onpointerleave = null;
+                  (element as any).__reactProps = null;
+                  (element as any).__reactInternalInstance = null;
+                  (element as any).__reactFiber = null;
+                } catch (cleanupError) {
+                  // Ignore all cleanup errors
+                }
+              }
+            }
+          });
+        } catch (error) {
+          // Ignore selector errors
+        }
+      });
+
     };
   }, []);
+
+  // Cleanup control point elements when drag ends
+  React.useEffect(() => {
+    const dragState = handleState.dragState;
+    if (!dragState.isDragging && dragState.commandId === null) {
+      // Drag just ended, cleanup any temporary control point elements
+      requestAnimationFrame(() => {
+        const tempControlElements = document.querySelectorAll(
+          'circle[style*="filter: drop-shadow"], g[transform*="scale"]:not(.control-point)'
+        );
+        tempControlElements.forEach(element => {
+          if (!element.isConnected) {
+            try {
+              if (element.parentNode) {
+                element.parentNode.removeChild(element);
+              }
+            } catch (error) {
+              // Ignore cleanup errors
+            }
+          }
+        });
+      });
+    }
+  }, [handleState.dragState.isDragging, handleState.dragState.commandId]);
+
 
   // Memoized visual debug change handler
   const visualDebugKey = React.useMemo(

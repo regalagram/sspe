@@ -368,7 +368,6 @@ export const useRectSelection = () => {
   };
 };
 
-import { registerElementForCleanup, removeElementProperly } from '../../utils/proper-element-cleanup';
 import { forceCleanupAllSelectionRects } from '../../utils/selection-rect-manager';
 
 // Legacy cleanup function - now handled by singleton
@@ -384,11 +383,9 @@ export const SelectionRectRenderer: React.FC = () => {
   
   // Force cleanup of detached selection rectangles on mount (once) - but exclude our persistent one
   React.useEffect(() => {
-    console.log('[SelectionRectRenderer] Initializing - will NOT cleanup all selection rects to avoid interference');
     // Note: Not calling forceCleanupAllSelectionRects() here as it interferes with our persistent element
     
     return () => {
-      console.log('[SelectionRectRenderer] Component unmounting - final cleanup');
       // Only cleanup on unmount, not on every render
       if (rectElementRef.current && rectElementRef.current.parentNode) {
         rectElementRef.current.parentNode.removeChild(rectElementRef.current);
@@ -407,8 +404,9 @@ export const SelectionRectRenderer: React.FC = () => {
   const cleanupPreviousRect = () => {
     // Clean up tracked rect (legacy system)
     if (currentSelectionRect) {
-      console.log('[Selection] Properly cleaning up previous selection rect (legacy)');
-      removeElementProperly(currentSelectionRect);
+      if (currentSelectionRect && currentSelectionRect.parentNode) {
+        currentSelectionRect.parentNode.removeChild(currentSelectionRect);
+      }
       currentSelectionRect = null;
     }
     
@@ -577,18 +575,6 @@ export const SelectionRectRenderer: React.FC = () => {
       rectElementRef.current = rect;
       setRectElement(rect);
       
-      console.log('[SelectionRectRenderer] Created persistent selection rectangle', {
-        element: rect,
-        container: containerRef.current,
-        containerParent: containerRef.current.parentNode,
-        isInDOM: !!rect.parentNode,
-        isInDOMAfterAppend: !!containerRef.current.contains(rect),
-        attributes: {
-          fill: rect.getAttribute('fill'),
-          stroke: rect.getAttribute('stroke'),
-          'stroke-width': rect.getAttribute('stroke-width')
-        }
-      });
     }
   }, [containerRef.current, rectElement]);
   
@@ -604,7 +590,6 @@ export const SelectionRectRenderer: React.FC = () => {
         rectElement.style.visibility = 'visible';
         rectElement.style.opacity = '1';
         
-        console.log('[SelectionRectRenderer] Updated persistent rect:', selectionRect, 'Element in DOM:', !!rectElement.parentNode);
       } else {
         rectElement.style.display = 'none';
         rectElement.style.visibility = 'hidden';
@@ -616,47 +601,9 @@ export const SelectionRectRenderer: React.FC = () => {
   // Ensure container ref is available after mount
   React.useEffect(() => {
     if (containerRef.current) {
-      console.log('[SelectionRectRenderer] Container ref is ready:', containerRef.current);
     }
   }, []);
   
-  // Make debugging function available globally  
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      (window as any).debugSelectionRect = () => {
-        console.log('=== Selection Rectangle Debug Info ===');
-        console.log('rectElement:', rectElement);
-        console.log('rectElement in DOM:', rectElement ? !!rectElement.parentNode : 'no element');
-        console.log('shouldShowSelectionRect:', shouldShowSelectionRect);
-        console.log('selectionRect:', selectionRect);
-        console.log('container:', containerRef.current);
-        console.log('container in DOM:', containerRef.current ? !!containerRef.current.parentNode : 'no container');
-        
-        if (rectElement) {
-          const computedStyle = window.getComputedStyle(rectElement);
-          console.log('Element computed styles:', {
-            display: computedStyle.display,
-            visibility: computedStyle.visibility,
-            opacity: computedStyle.opacity,
-            fill: rectElement.getAttribute('fill'),
-            stroke: rectElement.getAttribute('stroke'),
-            x: rectElement.getAttribute('x'),
-            y: rectElement.getAttribute('y'),
-            width: rectElement.getAttribute('width'),
-            height: rectElement.getAttribute('height')
-          });
-          
-          const rect = rectElement.getBoundingClientRect();
-          console.log('Element bounding rect:', rect);
-        }
-        
-        // Find all selection rects in DOM
-        const allRects = document.querySelectorAll('rect[data-persistent-selection-rect="true"]');
-        console.log('All persistent selection rects in DOM:', allRects);
-      };
-      console.log('debugSelectionRect() function available in console');
-    }
-  }, [rectElement, shouldShowSelectionRect, selectionRect]);
 
   // Return container with persistent DOM element
   return (

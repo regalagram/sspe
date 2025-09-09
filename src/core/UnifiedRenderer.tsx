@@ -1368,6 +1368,187 @@ export const UnifiedRenderer: React.FC = () => {
     return () => {
       curvesUnsubscribe();
       clearInterval(managersInterval);
+      
+      // Cleanup subpath visual feedback elements and event listeners on unmount
+      const feedbackSelectors = [
+        'path[stroke="#66ff99"]',                          // Green feedback paths
+        'path[stroke-opacity="0.3"]',                      // Semi-transparent feedback
+        'path[style*="filter: blur"]',                     // Blurred feedback paths
+        'path[style*="filter: drop-shadow"]',             // Drop shadow feedback paths
+        'path[data-element-type="subpath"]',              // Subpath overlay elements
+        'path[data-subpath-id]',                          // Elements with subpath ID
+        'path[stroke-dasharray*="6"][stroke-dasharray*="4"]', // Dashed feedback paths (6,4 pattern)
+        'g:has(path[data-element-type="subpath"])'        // Groups containing subpath elements
+      ];
+
+      feedbackSelectors.forEach(selector => {
+        try {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach(element => {
+            // Force remove event listeners before DOM cleanup
+            try {
+              // Clone the element to remove all event listeners
+              const cleanElement = element.cloneNode(true);
+              if (element.parentNode) {
+                element.parentNode.replaceChild(cleanElement, element);
+              }
+            } catch (error) {
+              // Fallback: try direct removal
+              try {
+                if (element.parentNode) {
+                  element.parentNode.removeChild(element);
+                }
+              } catch (fallbackError) {
+                // Final fallback: clear all properties
+                try {
+                  (element as any).onpointerdown = null;
+                  (element as any).onclick = null;
+                  (element as any).__reactProps = null;
+                  (element as any).__reactInternalInstance = null;
+                } catch (cleanupError) {
+                  // Ignore all cleanup errors
+                }
+              }
+            }
+          });
+        } catch (error) {
+          // Ignore selector errors
+        }
+      });
+
+      // Additional aggressive cleanup for detached elements with event listeners
+      try {
+        const allPaths = document.querySelectorAll('path');
+        allPaths.forEach(path => {
+          if (!document.contains(path.parentNode)) {
+            // This is a detached element, force clean it
+            try {
+              // Clear React and event listener references
+              (path as any).onpointerdown = null;
+              (path as any).onclick = null;
+              (path as any).onpointerenter = null;
+              (path as any).onpointerleave = null;
+              (path as any).__reactProps = null;
+              (path as any).__reactInternalInstance = null;
+              (path as any).__reactFiber = null;
+              (path as any)._reactInternalFiber = null;
+              (path as any).style.cursor = '';
+              
+              if (path.parentNode) {
+                path.parentNode.removeChild(path);
+              }
+            } catch (error) {
+              // Ignore individual element cleanup errors
+            }
+          }
+        });
+
+        // NUCLEAR CLEANUP: Complete destruction of feedback element containers
+        const svgContainers = document.querySelectorAll('.svg-editor svg, svg');
+        
+        svgContainers.forEach(svg => {
+          const feedbackContainers = svg.querySelectorAll('g');
+          
+          feedbackContainers.forEach(container => {
+            if (!document.contains(container.parentNode)) {
+              // Check if this container has feedback elements
+              const hasFeedbackElements = container.querySelector('path[data-element-type="subpath"]') ||
+                                         container.querySelector('path[stroke="#66ff99"]') ||
+                                         container.querySelector('path[stroke-opacity="0.3"]') ||
+                                         container.querySelector('path[stroke-dasharray*="6"]') ||
+                                         container.children.length === 0;
+              
+              if (hasFeedbackElements) {
+                try {
+                  // NUCLEAR: Recursively destroy all feedback elements
+                  const nukeContainer = (element: Element) => {
+                    Array.from(element.children).forEach(child => {
+                      nukeContainer(child);
+                    });
+                    
+                    // Clear all React and event references
+                    (element as any).onpointerdown = null;
+                    (element as any).onpointerup = null;
+                    (element as any).onpointermove = null;
+                    (element as any).onclick = null;
+                    (element as any).onpointerenter = null;
+                    (element as any).onpointerleave = null;
+                    (element as any).__reactProps = null;
+                    (element as any).__reactInternalInstance = null;
+                    (element as any).__reactFiber = null;
+                    (element as any)._reactInternalFiber = null;
+                    (element as any).__reactEventHandlers = null;
+                    (element as any)._owner = null;
+                    (element as any)._store = null;
+                    (element as any)._reactListening = null;
+                    
+                    // Clear styles that hold references
+                    if (element instanceof HTMLElement || element instanceof SVGElement) {
+                      (element as any).style.cursor = '';
+                      (element as any).removeAttribute('style');
+                    }
+                  };
+                  
+                  // Nuke the entire container
+                  nukeContainer(container);
+                  
+                  // Remove from DOM
+                  if (container.parentNode) {
+                    container.parentNode.removeChild(container);
+                  }
+                } catch (error) {
+                  // Final nuclear option for feedback elements
+                  try {
+                    (container as any).innerHTML = '';
+                    if (container.parentNode) {
+                      container.parentNode.removeChild(container);
+                    }
+                  } catch (finalError) {
+                    // Element is beyond recovery
+                  }
+                }
+              }
+            }
+          });
+        });
+      } catch (error) {
+        // Ignore aggressive cleanup errors
+      }
+
+      // Expose emergency cleanup function for debugging (development only)
+      if (process.env.NODE_ENV === 'development') {
+        (window as any).emergencyCleanupDetachedElements = () => {
+          console.log('🧹 Emergency cleanup of detached elements...');
+          let cleanedCount = 0;
+          
+          try {
+            const allElements = document.querySelectorAll('*');
+            allElements.forEach(element => {
+              if (!document.contains(element.parentNode)) {
+                try {
+                  // Clear all React and event references
+                  (element as any).onpointerdown = null;
+                  (element as any).onclick = null;
+                  (element as any).__reactProps = null;
+                  (element as any).__reactInternalInstance = null;
+                  (element as any).__reactFiber = null;
+                  
+                  if (element.parentNode) {
+                    element.parentNode.removeChild(element);
+                    cleanedCount++;
+                  }
+                } catch (error) {
+                  // Ignore individual cleanup errors
+                }
+              }
+            });
+            
+            console.log(`🧹 Cleaned ${cleanedCount} detached elements`);
+          } catch (error) {
+            console.warn('Emergency cleanup error:', error);
+          }
+        };
+      }
     };
   }, []);
 

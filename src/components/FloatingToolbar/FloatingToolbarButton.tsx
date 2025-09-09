@@ -28,6 +28,19 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
   const [showInputField, setShowInputField] = useState(false);
   const [inputValue, setInputValue] = useState(action.input?.currentValue?.toString() || '');
   
+  // Cleanup effect to prevent memory leaks and detached elements
+  useEffect(() => {
+    return () => {
+      // Force close any open dropdowns/pickers to prevent detached elements
+      setShowDropdown(false);
+      setShowColorPicker(false);
+      setShowInputField(false);
+      
+      // Clear any pending state updates
+      setInputValue('');
+    };
+  }, []); // Empty dependency array - only runs on mount/unmount
+  
   // Check if this is a complex stroke action (has strokeOptions)
   const isComplexStroke = action.type === 'input' && (action as any).strokeOptions;
   
@@ -1706,12 +1719,29 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({
         // If no embedded opacity, convert to RGBA
         const parsed = parseColorWithOpacity(currentColor);
         if (parsed.color) {
-          // Convert to RGB values for RGBA format
-          const tempDiv = document.createElement('div');
-          tempDiv.style.color = parsed.color;
-          document.body.appendChild(tempDiv);
-          const computedColor = window.getComputedStyle(tempDiv).color;
-          document.body.removeChild(tempDiv);
+          // Convert to RGB values for RGBA format - using safer approach
+          let tempDiv: HTMLDivElement | null = null;
+          let computedColor = '';
+          try {
+            tempDiv = document.createElement('div');
+            tempDiv.style.color = parsed.color;
+            tempDiv.style.visibility = 'hidden';
+            tempDiv.style.position = 'absolute';
+            tempDiv.style.pointerEvents = 'none';
+            document.body.appendChild(tempDiv);
+            computedColor = window.getComputedStyle(tempDiv).color;
+          } catch (error) {
+            console.warn('[FloatingToolbarButton] Error computing color:', error);
+          } finally {
+            if (tempDiv && tempDiv.parentNode) {
+              try {
+                tempDiv.parentNode.removeChild(tempDiv);
+                tempDiv = null; // Clear reference to help GC
+              } catch (error) {
+                console.warn('[FloatingToolbarButton] Error removing tempDiv:', error);
+              }
+            }
+          }
           
           const rgbMatch = computedColor.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
           if (rgbMatch) {
