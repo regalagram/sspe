@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 import { FloatingToolbarButton } from './FloatingToolbarButton';
 import { ToolbarAction, ToolbarPosition } from '../../types/floatingToolbar';
@@ -6,52 +6,161 @@ import { FloatingToolbarManager } from '../../core/FloatingToolbar/FloatingToolb
 import { PositioningEngine } from '../../core/FloatingToolbar/PositioningEngine';
 import { useEditorStore } from '../../store/editorStore';
 import { useMobileDetection } from '../../hooks/useMobileDetection';
-import { useFloatingToolbarSingleton } from '../../hooks/useFloatingToolbarSingleton';
-import { forceCleanupAllToolbars } from '../../utils/toolbar-singleton-manager';
-import { forceCleanupAllButtons } from '../../utils/button-pool-manager';
-import { forceCleanupAllSelectionRects } from '../../utils/selection-rect-manager';
-import { FloatingToolbarErrorBoundary } from './FloatingToolbarErrorBoundary';
+import { useFloatingToolbar } from '../../hooks/useFloatingToolbar';
 
-// Hook to inject styles only once - prevents style element memory leaks
+// Debug component to monitor detached elements (only in development)
+const DetachedElementsMonitor = () => {
+  const [leakStats, setLeakStats] = useState({
+    detachedCount: 0,
+    toolbarCount: 0,
+    buttonContainerCount: 0,
+    suspiciousCount: 0,
+    lastCheck: Date.now()
+  });
+
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'development') return;
+
+    const checkDetachedElements = () => {
+      const allElements = document.querySelectorAll('*');
+      let detachedCount = 0;
+      let toolbarCount = 0;
+      let buttonContainerCount = 0;
+      let suspiciousCount = 0;
+
+      allElements.forEach(element => {
+        if (!document.contains(element)) {
+          detachedCount++;
+          
+          // Check toolbar elements
+          if (element.classList.contains('floating-toolbar-content') || 
+              element.closest('.floating-toolbar-content')) {
+            toolbarCount++;
+          }
+          
+          // Check button containers
+          const style = (element as HTMLElement).style;
+          if (element instanceof HTMLElement && element.tagName === 'DIV' && 
+              style.display === 'flex' && 
+              style.flexDirection === 'row' && 
+              style.alignItems === 'center') {
+            buttonContainerCount++;
+          }
+          
+          // Check suspicious elements
+          if (element instanceof HTMLElement) {
+            const style = element.style;
+            if ((style.position === 'absolute' || style.position === 'fixed') && 
+                (parseInt(style.zIndex || '0') > 30)) {
+              suspiciousCount++;
+            }
+          }
+        }
+      });
+
+      setLeakStats({
+        detachedCount,
+        toolbarCount,
+        buttonContainerCount,
+        suspiciousCount,
+        lastCheck: Date.now()
+      });
+
+      // Warn if we have significant detached elements
+      if (detachedCount > 5) {
+        console.warn(`🚨 [Detached Monitor] ${detachedCount} detached elements (${toolbarCount} toolbar, ${buttonContainerCount} containers, ${suspiciousCount} suspicious)`);
+        console.warn('💡 Consider running: window.emergencyCleanup() or window.diagnoseMemoryLeaks()');
+      }
+    };
+
+    // Check every 3 seconds in development (less frequent to avoid interference)
+    const interval = setInterval(checkDetachedElements, 3000);
+
+    // Initial check
+    checkDetachedElements();
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Only show in development and when there are significant issues
+  if (process.env.NODE_ENV !== 'development' || leakStats.detachedCount < 3) {
+    return null;
+  }
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: '10px',
+      right: '10px',
+      background: 'rgba(255, 0, 0, 0.9)',
+      color: 'white',
+      padding: '8px 12px',
+      borderRadius: '4px',
+      fontSize: '12px',
+      zIndex: 9999,
+      fontFamily: 'monospace',
+      maxWidth: '200px'
+    }}>
+      🚨 Memory Leaks Detected
+      <br />
+      Detached: {leakStats.detachedCount}
+      <br />
+      Toolbar: {leakStats.toolbarCount}
+      <br />
+      Containers: {leakStats.buttonContainerCount}
+      <br />
+      Suspicious: {leakStats.suspiciousCount}
+    </div>
+  );
+};
+
+// Global reference counter for style management
+let styleReferenceCount = 0;
+const STYLE_ELEMENT_ID = 'floating-toolbar-styles';
+
+// Hook to inject styles with proper reference counting - prevents memory leaks
 const useFloatingToolbarStyles = () => {
   useEffect(() => {
-    const styleId = 'floating-toolbar-styles';
+    styleReferenceCount++;
     
-    // Check if styles already exist
-    if (document.getElementById(styleId)) {
-      return;
+    // Create style element only if it doesn't exist
+    let styleElement = document.getElementById(STYLE_ELEMENT_ID) as HTMLStyleElement;
+    
+    if (!styleElement) {
+      styleElement = document.createElement('style');
+      styleElement.id = STYLE_ELEMENT_ID;
+      styleElement.textContent = `
+        @keyframes fadeInScale {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        
+        /* Ensure mobile transform is preserved */
+        @media (max-width: 768px) {
+          .floating-toolbar-content {
+            animation: none !important;
+          }
+        }
+      `;
+      
+      document.head.appendChild(styleElement);
     }
     
-    // Create style element only once
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = `
-      @keyframes fadeInScale {
-        from {
-          opacity: 0;
-          transform: scale(0.95);
-        }
-        to {
-          opacity: 1;
-          transform: scale(1);
-        }
-      }
-      
-      /* Ensure mobile transform is preserved */
-      @media (max-width: 768px) {
-        .floating-toolbar-content {
-          animation: none !important;
-        }
-      }
-    `;
-    
-    document.head.appendChild(style);
-    
-    // Cleanup function to remove styles when all toolbar instances are unmounted
+    // Cleanup function - only remove when reference count reaches zero
     return () => {
-      const existingStyle = document.getElementById(styleId);
-      if (existingStyle) {
-        existingStyle.remove();
+      styleReferenceCount--;
+      
+      if (styleReferenceCount === 0) {
+        const existingStyle = document.getElementById(STYLE_ELEMENT_ID);
+        if (existingStyle) {
+          existingStyle.remove();
+        }
       }
     };
   }, []);
@@ -78,8 +187,8 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
   const config = toolbarManager.getConfig();
   const currentConfig = isMobileDevice ? config.mobile : config.desktop;
 
-  // Use singleton toolbar hook
-  const hasSelection = (
+  // Memoize hasSelection to prevent unnecessary re-renders
+  const hasSelection = useMemo(() => (
     selection.selectedPaths.length > 0 ||
     selection.selectedSubPaths.length > 0 ||
     selection.selectedCommands.length > 0 ||
@@ -98,19 +207,15 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
     selection.selectedAnimations.length > 0 ||
     selection.selectedGradients.length > 0 ||
     selection.selectedGradientStops.length > 0
-  );
+  ), [selection]);
 
-  const isToolbarVisible = hasSelection && !isFloatingToolbarHidden && actions.length > 0 && !!position && !!portalContainer;
-  
-  const { renderPortal } = useFloatingToolbarSingleton({
-    isVisible: isToolbarVisible,
-    portalContainer,
-    position,
-    isMobile: isMobileDevice
-  });
+  // Memoize isToolbarVisible to prevent unnecessary re-renders
+  const isToolbarVisible = useMemo(() => (
+    hasSelection && !isFloatingToolbarHidden && actions.length > 0 && !!position && !!portalContainer
+  ), [hasSelection, isFloatingToolbarHidden, actions.length, position, portalContainer]);
 
-  // Handle submenu toggling - only one submenu can be open at a time
-  const handleSubmenuToggle = (actionId: string) => {
+  // Memoize handleSubmenuToggle to prevent unnecessary re-renders
+  const handleSubmenuToggle = useCallback((actionId: string) => {
     setActiveSubmenuId(prevActiveId => {
       if (prevActiveId === actionId) {
         return null;
@@ -118,17 +223,18 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
         return actionId;
       }
     });
-  };
+  }, []);
+
+  // Use singleton toolbar hook
+  const { renderPortal } = useFloatingToolbar({
+    isVisible: isToolbarVisible,
+    portalContainer,
+    position,
+    isMobile: isMobileDevice
+  });
 
   // Find the SVG container for the portal
   useEffect(() => {
-    console.log('[FloatingToolbar] Initializing with singleton system...');
-    
-    // Force cleanup of any existing detached toolbars and buttons
-    forceCleanupAllToolbars();
-    forceCleanupAllButtons();
-    // Note: Not cleaning selection rects here to avoid interference with singleton
-
     const svgContainer = document.querySelector('.svg-editor') as HTMLElement;
     if (svgContainer) {
       setPortalContainer(svgContainer);
@@ -137,7 +243,6 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
     }
 
     return () => {
-      console.log('[FloatingToolbar] Component unmounting');
       isMountedRef.current = false;
     };
   }, []);
@@ -173,7 +278,6 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
       }
     } else {
       // Clean up when no selection
-      forceCleanupAllButtons();
       // Note: Not cleaning selection rects here to avoid interference during drag selection
       
       setActions([]);
@@ -226,24 +330,25 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
   const hasOverflow = overflowActions.length > 0;
 
   // Render toolbar content using singleton portal
-  return renderPortal(
-    <div 
-      style={{
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: '0px',
-        width: 'fit-content'
-      }}
-      onPointerDown={(e) => {
-        const target = e.target as HTMLElement;
-        const isButton = target.tagName === 'BUTTON' || target.closest('button');
-        const isMultiTouch = e.pointerType === 'touch' && (e as any).touches?.length > 1;
-        
-        if (isButton && !isMultiTouch) {
-          e.stopPropagation();
-        }
-      }}
+  try {
+    return renderPortal(
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: '0px',
+          width: 'fit-content'
+        }}
+        onPointerDown={(e) => {
+          const target = e.target as HTMLElement;
+          const isButton = target.tagName === 'BUTTON' || target.closest('button');
+          const isMultiTouch = e.pointerType === 'touch' && (e as any).touches?.length > 1;
+
+          if (isButton && !isMultiTouch) {
+            e.stopPropagation();
+          }
+        }}
     >
       {visibleActions.map(action => (
         <FloatingToolbarButton
@@ -311,20 +416,16 @@ const FloatingToolbarRendererCore: React.FC<FloatingToolbarRendererProps> = () =
       )}
     </div>
   );
+  } catch (error) {
+    console.error('[FloatingToolbarRenderer] Error rendering toolbar:', error);
+    return null; // Return null to prevent component crash
+  }
 };
-
-// Memoized wrapper with error boundary protection
-const FloatingToolbarRendererMemoized = React.memo(FloatingToolbarRendererCore, (prevProps, nextProps) => {
-  // Since this component has no props, it should only re-render when Zustand state changes
-  // Let the component's internal useEditorStore handle state change detection
-  return false; // Always re-render, let internal memoization handle optimization
-});
-
-// Final export with error boundary
 export const FloatingToolbarRenderer: React.FC = () => {
   return (
-    <FloatingToolbarErrorBoundary>
-      <FloatingToolbarRendererMemoized />
-    </FloatingToolbarErrorBoundary>
+    <>
+      <DetachedElementsMonitor />
+      <FloatingToolbarRendererCore />
+    </>
   );
 };
