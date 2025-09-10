@@ -1,6 +1,6 @@
 /**
  * SELECTION RECTANGLE SINGLETON MANAGER
- * Prevents multiple selection rectangle instances and manages proper cleanup
+ * Prevents multiple selection rectangle instances
  */
 
 interface SelectionRectInstance {
@@ -29,9 +29,6 @@ class SelectionRectSingletonManager {
    * Get or create the single selection rectangle instance
    */
   getSelectionRect(container: SVGGElement): SVGRectElement {
-    // Force cleanup of any existing detached selection rects first
-    this.forceCleanupDetachedSelectionRects();
-    
     // Check if we have a valid existing rectangle
     const hasValidRect = this.selectionRect && 
                         this.selectionRect.element && 
@@ -173,15 +170,12 @@ class SelectionRectSingletonManager {
   hideSelectionRect() {
     if (!this.selectionRect) return;
     
-    console.log('[SelectionRectSingleton] Hiding and cleaning up selection rectangle immediately');
+    console.log('[SelectionRectSingleton] Hiding selection rectangle');
     this.selectionRect.isActive = false;
     this.selectionRect.currentRect = null;
     
     // Hide immediately
     this.selectionRect.element.style.display = 'none';
-    
-    // Clean up immediately instead of scheduling - prevents detached elements
-    this.cleanupInactiveSelectionRect();
   }
   
   /**
@@ -200,106 +194,13 @@ class SelectionRectSingletonManager {
     return this.selectionRect?.currentRect || null;
   }
   
-  /**
-   * Force cleanup of detached selection rectangles in the DOM
-   */
-  forceCleanupDetachedSelectionRects() {
-    // Find ALL selection rectangles, including singleton ones that might be detached
-    const allSelectionRects = document.querySelectorAll('rect[data-element-type="selection-rect"], rect[data-singleton-selection-rect="true"]');
-    console.log(`[SelectionRectSingleton] Found ${allSelectionRects.length} selection rectangles to evaluate`);
-    
-    let cleanedCount = 0;
-    
-    allSelectionRects.forEach(rect => {
-      // Keep only the one that is currently managed by this singleton
-      const isCurrentlyManaged = this.selectionRect && 
-                                 this.selectionRect.element === rect &&
-                                 this.selectionRect.isActive;
-      
-      if (!isCurrentlyManaged) {
-        try {
-          if (rect.parentNode) {
-            rect.parentNode.removeChild(rect);
-            cleanedCount++;
-          }
-        } catch (e) {
-          // Ignore removal errors
-        }
-      }
-    });
-    
-    console.log(`[SelectionRectSingleton] Cleaned up ${cleanedCount} detached selection rectangles`);
-    
-    // Also clean up any orphaned selection rectangles by visual characteristics
-    const orphanedRects = document.querySelectorAll('rect[fill*="rgba(0, 120, 204"], rect[stroke="#007acc"]');
-    orphanedRects.forEach(rect => {
-      // Check if it looks like a selection rectangle but isn't the currently managed one
-      const isCurrentlyManaged = this.selectionRect && this.selectionRect.element === rect;
-      const looksLikeSelection = rect.getAttribute('fill')?.includes('rgba(0, 120, 204)') ||
-                                rect.getAttribute('stroke') === '#007acc';
-      
-      if (looksLikeSelection && !isCurrentlyManaged) {
-        try {
-          if (rect.parentNode) {
-            rect.parentNode.removeChild(rect);
-            cleanedCount++;
-          }
-        } catch (e) {
-          // Ignore removal errors
-        }
-      }
-    });
-    
-    if (cleanedCount > 0) {
-      console.log(`[SelectionRectSingleton] Total cleaned up: ${cleanedCount} orphaned selection rectangles`);
-    }
-  }
+  
   
   /**
-   * Clean up inactive selection rectangle
+   * Clear current selection rectangle
    */
-  private cleanupInactiveSelectionRect() {
-    if (!this.selectionRect || this.selectionRect.isActive) return;
-    
-    console.log('[SelectionRectSingleton] Cleaning up inactive selection rectangle with aggressive cleanup');
-    
-    try {
-      const element = this.selectionRect.element;
-      
-      // Clear all attributes to break any references
-      element.removeAttribute('data-singleton-selection-rect');
-      element.removeAttribute('data-element-type');
-      element.removeAttribute('fill');
-      element.removeAttribute('stroke');
-      element.removeAttribute('stroke-width');
-      element.removeAttribute('vector-effect');
-      element.removeAttribute('x');
-      element.removeAttribute('y');
-      element.removeAttribute('width');
-      element.removeAttribute('height');
-      
-      // Clear all styles
-      element.removeAttribute('style');
-      
-      // Remove from DOM
-      if (element.parentNode) {
-        element.parentNode.removeChild(element);
-      }
-      
-      console.log('[SelectionRectSingleton] Element successfully removed from DOM');
-    } catch (e) {
-      console.error('[SelectionRectSingleton] Error removing selection rectangle:', e);
-    }
-    
-    this.selectionRect = null;
-    this.cleanupTimeoutId = null;
-  }
-  
-  /**
-   * Force immediate cleanup
-   */
-  forceCleanup() {
-    console.log('[SelectionRectSingleton] Force cleanup');
+  clear() {
+    console.log('[SelectionRectSingleton] Clearing selection rectangle');
     
     if (this.cleanupTimeoutId) {
       clearTimeout(this.cleanupTimeoutId);
@@ -316,9 +217,6 @@ class SelectionRectSingletonManager {
       }
       this.selectionRect = null;
     }
-    
-    // Clean up any remaining detached selection rectangles
-    this.forceCleanupDetachedSelectionRects();
   }
   
   /**
@@ -339,48 +237,12 @@ class SelectionRectSingletonManager {
 // Singleton instance
 export const selectionRectSingletonManager = SelectionRectSingletonManager.getInstance();
 
-// Global cleanup function
-export const forceCleanupAllSelectionRects = () => {
-  console.log('[SelectionRect Global] Starting comprehensive cleanup...');
-  
-  // First, use the singleton manager's cleanup
-  selectionRectSingletonManager.forceCleanup();
-  
-  // Then do an aggressive cleanup of ANY selection rectangles in the DOM
-  const allSelectionRects = document.querySelectorAll(
-    'rect[data-element-type="selection-rect"], ' +
-    'rect[data-singleton-selection-rect="true"], ' +
-    'rect[fill*="rgba(0, 120, 204"], ' +
-    'rect[stroke="#007acc"]'
-  );
-  
-  console.log(`[SelectionRect Global] Found ${allSelectionRects.length} total selection rectangles, cleaning up all`);
-  
-  let cleanedCount = 0;
-  allSelectionRects.forEach(rect => {
-    try {
-      if (rect.parentNode) {
-        rect.parentNode.removeChild(rect);
-        cleanedCount++;
-      }
-    } catch (e) {
-      // Ignore removal errors
-    }
-  });
-  
-  console.log(`[SelectionRect Global] Cleaned up ${cleanedCount} selection rectangles`);
-  
-  // Also reset the singleton manager state
-  selectionRectSingletonManager.forceCleanup();
-};
 
 // Make available globally for debugging
 if (typeof window !== 'undefined') {
   (window as any).selectionRectSingletonManager = selectionRectSingletonManager;
-  (window as any).forceCleanupAllSelectionRects = forceCleanupAllSelectionRects;
   
   console.log('[SelectionRectSingleton] Global functions available:');
   console.log('- selectionRectSingletonManager.getStatus()');
-  console.log('- selectionRectSingletonManager.forceCleanup()');
-  console.log('- forceCleanupAllSelectionRects()');
+  console.log('- selectionRectSingletonManager.clear()');
 }

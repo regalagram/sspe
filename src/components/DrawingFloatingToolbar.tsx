@@ -211,7 +211,7 @@ export const DrawingFloatingToolbar: React.FC<DrawingFloatingToolbarProps> = ({ 
   // Cleanup effect to prevent memory leaks when component unmounts
   useEffect(() => {
     return () => {
-      // Force close any open submenus to prevent detached elements
+      // Force close any open submenus
       setActiveSubmenuId(null);
       
       // Clear portal container reference

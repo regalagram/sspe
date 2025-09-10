@@ -1032,7 +1032,7 @@ const MultilineTextElementComponentCore: React.FC<{ text: any }> = ({ text }) =>
   );
 };
 
-// Memoized MultilineTextElementComponent to prevent detached path elements
+// Memoized MultilineTextElementComponent for performance
 const MultilineTextElementComponent = React.memo(MultilineTextElementComponentCore, (prevProps, nextProps) => {
   return (
     prevProps.text.id === nextProps.text.id &&
@@ -1416,71 +1416,6 @@ export const UnifiedRenderer: React.FC = () => {
         }
       });
 
-      // Additional aggressive cleanup for detached elements with event listeners
-      try {
-        const allPaths = document.querySelectorAll('path');
-        allPaths.forEach(path => {
-          if (!document.contains(path.parentNode)) {
-            // This is a detached element, force clean it
-            try {
-              // Clear React and event listener references
-              (path as any).onpointerdown = null;
-              (path as any).onclick = null;
-              (path as any).onpointerenter = null;
-              (path as any).onpointerleave = null;
-              (path as any).__reactProps = null;
-              (path as any).__reactInternalInstance = null;
-              (path as any).__reactFiber = null;
-              (path as any)._reactInternalFiber = null;
-              (path as any).style.cursor = '';
-              
-              if (path.parentNode) {
-                path.parentNode.removeChild(path);
-              }
-            } catch (error) {
-              // Ignore individual element cleanup errors
-            }
-          }
-        });
-      } catch (error) {
-        // Ignore cleanup errors
-      }
-
-
-      // Expose emergency cleanup function for debugging (development only)
-      if (process.env.NODE_ENV === 'development') {
-        (window as any).emergencyCleanupDetachedElements = () => {
-          console.log('🧹 Emergency cleanup of detached elements...');
-          let cleanedCount = 0;
-          
-          try {
-            const allElements = document.querySelectorAll('*');
-            allElements.forEach(element => {
-              if (!document.contains(element.parentNode)) {
-                try {
-                  // Clear all React and event references
-                  (element as any).onpointerdown = null;
-                  (element as any).onclick = null;
-                  (element as any).__reactProps = null;
-                  (element as any).__reactInternalInstance = null;
-                  (element as any).__reactFiber = null;
-                  
-                  if (element.parentNode) {
-                    element.parentNode.removeChild(element);
-                    cleanedCount++;
-                  }
-                } catch (error) {
-                  // Ignore individual cleanup errors
-                }
-              }
-            });
-            
-            console.log(`🧹 Cleaned ${cleanedCount} detached elements`);
-          } catch (error) {
-            console.warn('Emergency cleanup error:', error);
-          }
-        };
-      }
     };
   }, []);
 

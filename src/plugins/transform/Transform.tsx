@@ -6,7 +6,7 @@ import { TransformHandles } from './TransformHandles';
 import { DimensionsInfo } from './DimensionsInfo';
 import { handleManager } from '../handles/HandleManager';
 
-// Memoized transform status indicator to prevent detached SVG elements
+// Memoized transform status indicator for performance
 interface TransformStatusIndicatorProps {
   isTransforming: boolean;
   transformMode: string | null;
@@ -274,7 +274,7 @@ const TransformPluginCore: React.FC = () => {
   );
 };
 
-// Memoized wrapper to prevent unnecessary re-renders and detached SVG elements
+// Memoized wrapper to prevent unnecessary re-renders
 const TransformPlugin = React.memo(TransformPluginCore, () => {
   // Always re-render - let internal state management and memoized sub-components handle optimization
   return false;

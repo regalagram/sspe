@@ -28,18 +28,6 @@ export const FloatingToolbarButton: React.FC<FloatingToolbarButtonProps> = ({
   const [showInputField, setShowInputField] = useState(false);
   const [inputValue, setInputValue] = useState(action.input?.currentValue?.toString() || '');
   
-  // Cleanup effect to prevent memory leaks and detached elements
-  useEffect(() => {
-    return () => {
-      // Force close any open dropdowns/pickers to prevent detached elements
-      setShowDropdown(false);
-      setShowColorPicker(false);
-      setShowInputField(false);
-      
-      // Clear any pending state updates
-      setInputValue('');
-    };
-  }, []); // Empty dependency array - only runs on mount/unmount
   
   // Check if this is a complex stroke action (has strokeOptions)
   const isComplexStroke = action.type === 'input' && (action as any).strokeOptions;

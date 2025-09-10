@@ -4,7 +4,7 @@
  */
 
 import { useRef, useEffect, useState } from 'react';
-import { selectionRectSingletonManager, forceCleanupAllSelectionRects } from '../utils/selection-rect-manager';
+import { selectionRectSingletonManager } from '../utils/selection-rect-manager';
 
 interface UseSelectionRectSingletonOptions {
   isVisible: boolean;

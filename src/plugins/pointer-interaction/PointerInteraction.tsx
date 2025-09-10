@@ -1210,7 +1210,7 @@ class PointerInteractionManager {
       this.panZoomManager.updateStore(store);
     }
 
-    // Initialize cursor management with proper cleanup to avoid detached DOM references
+    // Initialize cursor management with proper cleanup
     this.initializeCursorManagement();
     
     // Keep legacy method temporarily for compatibility
@@ -1267,7 +1267,6 @@ class PointerInteractionManager {
 
   /**
    * Improved cursor management with debouncing and proper cleanup
-   * Reduces detached DOM element issues by avoiding stale NodeList references
    */
   private initializeCursorManagement(): void {
     let cursorTimeout: NodeJS.Timeout | null = null;
@@ -1279,7 +1278,7 @@ class PointerInteractionManager {
       }
       
       cursorTimeout = setTimeout(() => {
-        // Use live NodeList queries to avoid detached element references
+        // Use live NodeList queries for fresh element references
         this.updateSVGCursors();
         cursorTimeout = null;
       }, 150); // Slightly longer debounce to reduce frequency
@@ -1303,7 +1302,7 @@ class PointerInteractionManager {
       const svgElements = document.querySelectorAll('.svg-editor svg');
       
       svgElements.forEach(svg => {
-        // Check if element is still connected to DOM to avoid detached references
+        // Check if element is still connected to DOM
         if (!svg.isConnected) return;
         
         if (!this.state.isSpacePressed) {

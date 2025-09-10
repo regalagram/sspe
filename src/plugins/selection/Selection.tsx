@@ -368,7 +368,6 @@ export const useRectSelection = () => {
   };
 };
 
-import { forceCleanupAllSelectionRects } from '../../utils/selection-rect-manager';
 
 // Legacy cleanup function - now handled by singleton
 let currentSelectionRect: SVGRectElement | null = null;
@@ -383,7 +382,6 @@ export const SelectionRectRenderer: React.FC = () => {
   
   // Force cleanup of detached selection rectangles on mount (once) - but exclude our persistent one
   React.useEffect(() => {
-    // Note: Not calling forceCleanupAllSelectionRects() here as it interferes with our persistent element
     
     return () => {
       // Only cleanup on unmount, not on every render
@@ -410,7 +408,6 @@ export const SelectionRectRenderer: React.FC = () => {
       currentSelectionRect = null;
     }
     
-    // Note: Not calling forceCleanupAllSelectionRects here to avoid interference with singleton
   };
 
   // Function to check if selected commands are coincident (dual points) and should hide selection rect
