@@ -121,7 +121,7 @@ export const clearAllSelectionsExcept = (
     selectedSymbols: keep.selectedSymbols || [],
     selectedUses: keep.selectedUses || [],
     selectedAnimations: keep.selectedAnimations || [],
-    // Clear selectionBox to prevent detached rectangles
+    // Clear selectionBox
     selectionBox: undefined,
   };
 };

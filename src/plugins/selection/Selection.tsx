@@ -309,7 +309,7 @@ class RectSelectionManager {
         selectInBox(this.state.selectionRect);
       }
 
-      // Clear selectionBox in store to prevent detached rectangles
+      // Clear selectionBox in store
       this.editorStore.setState((state: EditorState) => ({
         selection: {
           ...state.selection,
@@ -380,7 +380,7 @@ export const SelectionRectRenderer: React.FC = () => {
   const containerRef = React.useRef<SVGGElement>(null);
   const rectElementRef = React.useRef<SVGRectElement | null>(null);
   
-  // Force cleanup of detached selection rectangles on mount (once) - but exclude our persistent one
+  // Cleanup on unmount
   React.useEffect(() => {
     
     return () => {
