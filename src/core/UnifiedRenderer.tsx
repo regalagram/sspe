@@ -50,8 +50,23 @@ interface PathWithAnimationsProps {
 }
 
 const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
-  const { viewport, enabledFeatures, selectSubPathMultiple, startCyclingDetection, checkMovementAndResolveCycling, finalizeCycling, grid } = useEditorStore();
+  const { viewport, enabledFeatures, selectSubPathMultiple, startCyclingDetection, checkMovementAndResolveCycling, finalizeCycling, grid, groups } = useEditorStore();
+  const currentMode = useEditorStore(state => state.mode);
   const animations = useAnimationsForElement(props.pathId);
+
+  // Determine if this path should have blocked pointer events
+  const shouldBlockPointerEvents = React.useMemo(() => {
+    if (currentMode?.current !== 'subpath-edit') {
+      return false;
+    }
+    // Check if this path is in a group
+    if (groups) {
+      return groups.some(group => 
+        group.children.some(child => child.type === 'path' && child.id === props.pathId)
+      );
+    }
+    return false;
+  }, [currentMode, groups, props.pathId]);
   
   // Force re-evaluation when sticky guidelines feature changes
   useEffect(() => {
@@ -481,7 +496,7 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
             data-element-id={props.pathId}
             style={{
               cursor: dragState.isDragging ? 'grabbing' : 'pointer',
-              pointerEvents: 'all',
+              pointerEvents: shouldBlockPointerEvents ? 'none' : 'all',
             }}
             onPointerDown={(e) => {
               // Only handle left pointer button
@@ -778,12 +793,16 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
 // Text Element Component
 const TextElementComponent: React.FC<{ text: any }> = ({ text }) => {
   const { viewport, enabledFeatures } = useEditorStore();
+  const currentMode = useEditorStore(state => state.mode);
   const animations = useAnimationsForElement(text.id);
   const { isTextBeingEdited, updateTextContent: updateTextContentLive, stopTextEdit } = useTextEditMode();
   
   const isWireframeMode = enabledFeatures.wireframeEnabled;
   const strokeWidth = 1 / viewport.zoom;
   const isBeingEdited = isTextBeingEdited(text.id);
+  
+  // Block pointer events in subpath-edit mode for texts (always blocked)
+  const shouldBlockPointerEvents = currentMode?.current === 'subpath-edit';
 
   // Handle content changes during editing (memoized to prevent TextEditOverlay remount)
   const handleContentChange = useCallback((content: string | string[]) => {
@@ -862,7 +881,7 @@ const TextElementComponent: React.FC<{ text: any }> = ({ text }) => {
         data-element-type="text"
         data-element-id={text.id}
         style={{
-          pointerEvents: text.locked ? 'none' : 'all',
+          pointerEvents: text.locked || shouldBlockPointerEvents ? 'none' : 'all',
           clipPath: text.style.clipPath,
           mask: text.style.mask,
           filter: text.style.filter,
@@ -891,12 +910,16 @@ const TextElementComponent: React.FC<{ text: any }> = ({ text }) => {
 // Multiline Text Element Component
 const MultilineTextElementComponentCore: React.FC<{ text: any }> = ({ text }) => {
   const { selection, viewport, enabledFeatures, updateTextSpan } = useEditorStore();
+  const currentMode = useEditorStore(state => state.mode);
   const animations = useAnimationsForElement(text.id);
   const { isTextBeingEdited, updateTextContent: updateTextContentLive, stopTextEdit } = useTextEditMode();
   
   const isSelected = selection.selectedTexts?.includes(text.id) ?? false;
   const isWireframeMode = enabledFeatures.wireframeEnabled;
   const isBeingEdited = isTextBeingEdited(text.id);
+  
+  // Block pointer events in subpath-edit mode for texts (always blocked)
+  const shouldBlockPointerEvents = currentMode?.current === 'subpath-edit';
   
   // Handle content changes during editing (memoized to prevent TextEditOverlay remount)
   const handleContentChange = useCallback((content: string | string[]) => {
@@ -954,7 +977,7 @@ const MultilineTextElementComponentCore: React.FC<{ text: any }> = ({ text }) =>
         mask={text.style.mask}
         style={{
           cursor: text.locked ? 'default' : (isBeingEdited ? 'text' : 'pointer'),
-          pointerEvents: text.locked ? 'none' : 'all',
+          pointerEvents: text.locked || shouldBlockPointerEvents ? 'none' : 'all',
           userSelect: isBeingEdited ? 'text' : 'none',
           opacity: isBeingEdited ? 0 : 1 // Completely hide during editing to prevent duplication
         }}
@@ -1015,7 +1038,7 @@ const MultilineTextElementComponentCore: React.FC<{ text: any }> = ({ text }) =>
                 strokeWidth={1.5 / viewport.zoom}
                 strokeDasharray={`${4 / viewport.zoom},${3 / viewport.zoom}`}
                 style={{
-                  pointerEvents: 'all',
+                  pointerEvents: shouldBlockPointerEvents ? 'none' : 'all',
                   cursor: 'pointer',
                 }}
                 data-element-type="multiline-text"
@@ -1056,10 +1079,14 @@ const MultilineTextElementComponent = React.memo(MultilineTextElementComponentCo
 // Image Element Component
 const ImageElementComponent: React.FC<{ image: any }> = ({ image }) => {
   const { viewport, enabledFeatures } = useEditorStore();
+  const currentMode = useEditorStore(state => state.mode);
   const animations = useAnimationsForElement(image.id);
   
   const isWireframeMode = enabledFeatures.wireframeEnabled;
   const wireframeStrokeWidth = 2 / viewport.zoom;
+  
+  // Block pointer events in subpath-edit mode for images (always blocked)
+  const shouldBlockPointerEvents = currentMode?.current === 'subpath-edit';
 
   return (
     <g key={image.id} data-image-id={image.id}>
@@ -1077,7 +1104,7 @@ const ImageElementComponent: React.FC<{ image: any }> = ({ image }) => {
             data-element-type="image"
             data-element-id={image.id}
             style={{ 
-              pointerEvents: 'all',
+              pointerEvents: shouldBlockPointerEvents ? 'none' : 'all',
               clipPath: image.style?.clipPath,
               mask: image.style?.mask,
               filter: image.style?.filter
@@ -1116,7 +1143,7 @@ const ImageElementComponent: React.FC<{ image: any }> = ({ image }) => {
             data-element-type="image"
             data-element-id={image.id}
             style={{ 
-              pointerEvents: 'all',
+              pointerEvents: shouldBlockPointerEvents ? 'none' : 'all',
               clipPath: image.style?.clipPath,
               mask: image.style?.mask,
               filter: image.style?.filter
@@ -1139,10 +1166,14 @@ const ImageElementComponent: React.FC<{ image: any }> = ({ image }) => {
 // Use Element Component
 const UseElementComponent: React.FC<{ useElement: any }> = ({ useElement }) => {
   const { symbols, selection, viewport, enabledFeatures } = useEditorStore();
+  const currentMode = useEditorStore(state => state.mode);
   const animations = useAnimationsForElement(useElement.id);
   
   const isSelected = selection.selectedUses?.includes(useElement.id) ?? false;
   const isWireframeMode = enabledFeatures.wireframeEnabled;
+  
+  // Block pointer events in subpath-edit mode for use elements (always blocked)
+  const shouldBlockPointerEvents = currentMode?.current === 'subpath-edit';
   const strokeWidth = 1 / viewport.zoom;
 
   // Helper function to convert gradient/pattern objects to URL references
@@ -1219,7 +1250,7 @@ const UseElementComponent: React.FC<{ useElement: any }> = ({ useElement }) => {
           width={useElement.width}
           height={useElement.height}
           transform={useElement.transform}
-          pointerEvents="all"
+          pointerEvents={shouldBlockPointerEvents ? "none" : "all"}
           data-element-type="use"
           data-element-id={useElement.id}
           style={{
@@ -1265,7 +1296,7 @@ const UseElementComponent: React.FC<{ useElement: any }> = ({ useElement }) => {
             strokeLinejoin: useElement.style?.strokeLinejoin || 'miter',
             cursor: 'pointer'
           }}
-          pointerEvents="all"
+          pointerEvents={shouldBlockPointerEvents ? "none" : "all"}
           data-element-type="use"
           data-element-id={useElement.id}
         />
@@ -1360,6 +1391,31 @@ export const UnifiedRenderer: React.FC = () => {
     shapesActive: false,
     textActive: false
   });
+
+  const { selection, viewport, enabledFeatures, ui, symbols, paths, groups } = useEditorStore();
+  const currentMode = useEditorStore(state => state.mode);
+
+  // Helper function to determine if an element should have blocked pointer events
+  const shouldBlockPointerEvents = useCallback((elementType: string, elementId: string): boolean => {
+    // Only block in subpath-edit mode
+    if (currentMode?.current !== 'subpath-edit') {
+      return false;
+    }
+
+    // Check if element is in a group
+    if (groups && elementType === 'path') {
+      return groups.some(group => 
+        group.children.some(child => child.type === 'path' && child.id === elementId)
+      );
+    }
+
+    // Block other element types that are not editable in subpath-edit mode
+    if (['text', 'image', 'use', 'group-frame'].includes(elementType)) {
+      return true;
+    }
+
+    return false;
+  }, [currentMode, groups]);
   
   useEffect(() => {
     // Listen to curves manager changes
@@ -1452,7 +1508,6 @@ export const UnifiedRenderer: React.FC = () => {
 
   // Check if we're in modes that need overlays
   const toolModeState = toolModeManager.getState();
-  const currentMode = useEditorStore(state => state.mode);
   const currentViewport = useEditorStore(state => state.viewport);
   
   const isPencilMode = toolModeState.activeMode === 'pencil' || 
@@ -1467,7 +1522,6 @@ export const UnifiedRenderer: React.FC = () => {
   
   // Any creation mode that needs overlay
   const needsOverlay = isPencilMode || isCurvesMode || isShapesMode || isTextMode;
-  const { selection, viewport, enabledFeatures, ui, symbols, paths, groups } = useEditorStore();
   
   // Helper function to render symbol child content (from SymbolRenderer)
   const renderChildContent = (childId: string, childType: string) => {
@@ -1635,6 +1689,24 @@ export const UnifiedRenderer: React.FC = () => {
           {item.element}
         </g>
       ))}
+
+      {/* Subpath-edit mode overlay - transparent overlay that captures events for blocked elements */}
+      {currentMode?.current === 'subpath-edit' && (
+        <rect
+          x={currentViewport.viewBox.x}
+          y={currentViewport.viewBox.y}
+          width={currentViewport.viewBox.width}
+          height={currentViewport.viewBox.height}
+          fill="transparent"
+          stroke="none"
+          style={{ 
+            pointerEvents: 'all', 
+            cursor: 'crosshair' 
+          }}
+          data-overlay-type="subpath-edit-background"
+          data-testid="subpath-edit-overlay"
+        />
+      )}
 
       {/* Creation mode overlay - renders on top of all content */}
       {needsOverlay && (
