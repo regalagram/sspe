@@ -13,6 +13,7 @@ import { ElementType, SelectionContext, isElementSelected, shouldPreserveSelecti
 import { applyFinalSnapToGrid } from '../../utils/final-snap-utils';
 import { isGestureBlocked } from '../gestures/Gestures';
 import { toolModeManager } from '../../core/ToolModeManager';
+import { isSubpathEditModeBlocked } from '../../utils/subpath-edit-blocking';
 
 // ================== TYPES & INTERFACES ==================
 
@@ -1730,6 +1731,11 @@ class PointerInteractionManager {
 
       const elementTypeTyped = elementType as ElementType;
 
+      // Block interactions in subpath-edit mode
+      if (isSubpathEditModeBlocked(e as PointerEvent, context)) {
+        return true; // Event consumed/blocked
+      }
+      
       // For double-clicks on text elements, let text-edit plugin handle them
       if (context.isDoubleClick && (elementTypeTyped === 'text' || elementTypeTyped === 'multiline-text')) {
         return false; // Don't handle, let text-edit plugin process it

@@ -2,6 +2,7 @@ import { Plugin, PointerEventContext } from '../../core/PluginSystem';
 import { textEditManager } from '../../core/TextEditManager';
 import { toolModeManager } from '../../core/ToolModeManager';
 import { PointerEvent } from 'react';
+import { isSubpathEditModeBlocked } from '../../utils/subpath-edit-blocking';
 
 /**
  * Text Edit Plugin - Handles double-click detection and text editing coordination
@@ -71,6 +72,11 @@ export const TextEditPlugin: Plugin = {
   
   pointerHandlers: {
     onPointerDown: (e: PointerEvent<SVGElement>, context: PointerEventContext): boolean => {
+      // Block all text editing in subpath-edit mode
+      if (isSubpathEditModeBlocked(e as PointerEvent, context)) {
+        return false; // Don't handle, already blocked by utility
+      }
+      
       const target = e.target as SVGElement;
       const isTextElement = target.tagName === 'text' || target.tagName === 'tspan' || 
                            target.tagName === 'textPath' || // Add textPath SVG element

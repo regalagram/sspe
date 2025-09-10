@@ -4,6 +4,7 @@ import { getSVGPoint } from '../utils/transform-utils';
 import type { EditorState } from '../types';
 import { FloatingActionDefinition } from '../types/floatingToolbar';
 import { FloatingToolbarManager } from './FloatingToolbar/FloatingToolbarManager';
+import { isSubpathEditModeBlocked } from '../utils/subpath-edit-blocking';
 
 export interface SVGPoint {
   x: number;
@@ -235,7 +236,12 @@ export class PluginManager {
       isDoubleClick = doubleClickInfo.isDoubleClick;
       clickCount = doubleClickInfo.clickCount;
       
-          }
+      // Early blocking for subpath-edit mode
+      if (isSubpathEditModeBlocked(e as any, { isDoubleClick })) {
+        console.log('[PluginSystem] Event blocked by subpath-edit mode');
+        return true; // Exit early, event was handled (blocked)
+      }
+    }
 
     const context: PointerEventContext = {
       svgPoint: this.getSVGPoint(e as PointerEvent<SVGElement>),

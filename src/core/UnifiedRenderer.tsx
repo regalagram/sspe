@@ -17,6 +17,7 @@ import { applyFinalSnapToGrid } from '../utils/final-snap-utils';
 import { toolModeManager } from './ToolModeManager';
 import { shapeManager } from '../plugins/shapes/ShapeManager';
 import { curvesManager } from '../plugins/curves/CurvesManager';
+import { isSubpathEditModeBlocked } from '../utils/subpath-edit-blocking';
 import { textManager } from './TextManager';
 
 export interface RenderItem {
@@ -486,6 +487,11 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
               // Only handle left pointer button
               if (e.button !== 0) return;
               
+              // Block interactions in subpath-edit mode
+              if (isSubpathEditModeBlocked(e as any)) {
+                return; // Event blocked
+              }
+              
               // Check if any format copy mode is active - if so, let plugin system handle it
               const currentStoreState = useEditorStore.getState();
               const isAnyFormatCopyActive = atomicFormatCopyCheck(currentStoreState);
@@ -672,10 +678,9 @@ const PathWithAnimations: React.FC<PathWithAnimationsProps> = (props) => {
                   return; // Don't consume the event, let it bubble up to plugin system
                 }
                 
-                // If we're in subpath-edit mode, don't change selection on tap
-                const isSubpathEditMode = currentStoreState.mode?.current === 'subpath-edit';
-                if (isSubpathEditMode) {
-                  return; // swallow selection change
+                // Block all interactions in subpath-edit mode
+                if (isSubpathEditModeBlocked(e as any)) {
+                  return; // Event blocked
                 }
                 
                 // Get the SVG element for deep selection check
@@ -1016,6 +1021,11 @@ const MultilineTextElementComponentCore: React.FC<{ text: any }> = ({ text }) =>
                 data-element-type="multiline-text"
                 data-element-id={text.id}
                 onPointerDown={(e) => {
+                  // Block interactions in subpath-edit mode
+                  if (isSubpathEditModeBlocked(e as any)) {
+                    return; // Event blocked
+                  }
+                  
                   // Check if text format copy mode is active - if so, let plugin system handle it
                   const currentState = useEditorStore.getState();
                   if (atomicFormatCopyCheck(currentState)) {
@@ -1072,6 +1082,13 @@ const ImageElementComponent: React.FC<{ image: any }> = ({ image }) => {
               mask: image.style?.mask,
               filter: image.style?.filter
             }}
+            onPointerDown={(e) => {
+              // Block interactions in subpath-edit mode
+              if (isSubpathEditModeBlocked(e as any)) {
+                return; // Event blocked
+              }
+              // Handle image selection/interaction here if needed
+            }}
           />
           <text
             x={image.x + image.width / 2}
@@ -1103,6 +1120,13 @@ const ImageElementComponent: React.FC<{ image: any }> = ({ image }) => {
               clipPath: image.style?.clipPath,
               mask: image.style?.mask,
               filter: image.style?.filter
+            }}
+            onPointerDown={(e) => {
+              // Block interactions in subpath-edit mode
+              if (isSubpathEditModeBlocked(e as any)) {
+                return; // Event blocked
+              }
+              // Handle image selection/interaction here if needed
             }}
           />
           {animations}
@@ -1207,6 +1231,13 @@ const UseElementComponent: React.FC<{ useElement: any }> = ({ useElement }) => {
             stroke: '#000000',
             strokeWidth: getDynamicStrokeWidth(),
             cursor: 'pointer'
+          }}
+          onPointerDown={(e) => {
+            // Block interactions in subpath-edit mode
+            if (isSubpathEditModeBlocked(e as any)) {
+              return; // Event blocked
+            }
+            // Handle use element selection/interaction here if needed
           }}
         />
       ) : (
