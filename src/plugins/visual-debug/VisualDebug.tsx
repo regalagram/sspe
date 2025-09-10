@@ -673,7 +673,7 @@ export const StickyVisualFeedback: React.FC = () => {
 // Command Points Renderer Component - Optimized with memoization
 const CommandPointsRendererCore: React.FC = React.memo(() => {
   // All hooks must be called before any early returns
-  const { paths, selection, viewport, enabledFeatures, renderVersion, visualDebugSizes, mode, enabledFeatures: storeEnabledFeatures, ui } = useEditorStore();
+  const { paths, selection, viewport, enabledFeatures, renderVersion, visualDebugSizes, mode, enabledFeatures: storeEnabledFeatures, ui, groups } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   
   // OPTIMIZATION: Cache drag state to avoid repeated transformManager calls
@@ -689,6 +689,13 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
     return state;
   }, [renderVersion]); // Only recalculate when renderVersion changes
   
+  // Helper function to check if a path belongs to a group
+  const isPathInGroup = React.useCallback((pathId: string): boolean => {
+    if (!groups) return false;
+    return groups.some(group => 
+      group.children.some(child => child.type === 'path' && child.id === pathId)
+    );
+  }, [groups]);
 
   // Cleanup temporary elements when drag ends with event listener cleanup
   React.useEffect(() => {
@@ -874,6 +881,11 @@ const CommandPointsRendererCore: React.FC = React.memo(() => {
         path.subPaths.map((subPath) => {
           // No mostrar puntos para subpaths bloqueados
           if (subPath.locked) return null;
+          
+          // NEVER show command points for subpaths in groups during subpath-edit mode
+          if (isSubpathEditMode && isPathInGroup(path.id)) {
+            return null;
+          }
           const isSubPathSelected = selection.selectedSubPaths.includes(subPath.id);
           // Si hidePointsInSelect está activo y el subpath está seleccionado, no mostrar puntos
           if (enabledFeatures.hidePointsInSelect && isSubPathSelected) return null;

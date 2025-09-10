@@ -257,9 +257,17 @@ const getHandleColors = (type: ControlPointType, isOptionPressed: boolean, isNex
 };
 
 const HandleRendererCore: React.FC = React.memo(() => {
-  const { paths, enabledFeatures, viewport, selection, visualDebugSizes, mode, ui } = useEditorStore();
+  const { paths, enabledFeatures, viewport, selection, visualDebugSizes, mode, ui, groups } = useEditorStore();
   const { isMobile, isTablet } = useMobileDetection();
   const [handleState, setHandleState] = React.useState(handleManager.getState());
+
+  // Helper function to check if a path belongs to a group
+  const isPathInGroup = React.useCallback((pathId: string): boolean => {
+    if (!groups) return false;
+    return groups.some(group => 
+      group.children.some(child => child.type === 'path' && child.id === pathId)
+    );
+  }, [groups]);
 
   // Subscribe to handle state changes - memoized callback to prevent re-subscription
   const handleStateChange = React.useCallback(() => {
@@ -511,6 +519,11 @@ const HandleRendererCore: React.FC = React.memo(() => {
         path.subPaths.map((subPath) => {
           // No mostrar puntos de control para subpaths bloqueados
           if (subPath.locked) return null;
+          
+          // NEVER show command/control points for subpaths in groups during subpath-edit mode
+          if (isSubpathEditMode && isPathInGroup(path.id)) {
+            return null;
+          }
           
           // If feature is disabled, only show control points for selected sub-paths
           const isSubPathSelected = selection.selectedSubPaths.includes(subPath.id);

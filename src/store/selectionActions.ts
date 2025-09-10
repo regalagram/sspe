@@ -786,6 +786,18 @@ export const createSelectionActions: StateCreator<
   selectInBox: (box) => {
   if (shouldBlockSelectionChange('selectInBox', { box })) return;
   const state = get();
+  
+    // Check if we're in subpath-edit mode
+    const isSubpathEditMode = state.mode?.current === 'subpath-edit';
+    
+    // Helper function to check if a path belongs to a group
+    const isPathInGroup = (pathId: string): boolean => {
+      if (!state.groups) return false;
+      return state.groups.some(group => 
+        group.children.some(child => child.type === 'path' && child.id === pathId)
+      );
+    };
+    
     const newSelection = {
       selectedPaths: [] as string[],
       selectedSubPaths: [] as string[],
@@ -804,52 +816,56 @@ export const createSelectionActions: StateCreator<
       selectedUses: [] as string[],
     };
 
-    // Check texts in box
-    state.texts.forEach(text => {
-      if (text.locked) return;
-      
-      // Use DOM-based bounds calculation to account for transforms
-      const textBounds = calculateTextBoundsDOM(text);
-      if (!textBounds) return;
-      
-      if (textBounds.x < box.x + box.width &&
-          textBounds.x + textBounds.width > box.x &&
-          textBounds.y < box.y + box.height &&
-          textBounds.y + textBounds.height > box.y) {
-        newSelection.selectedTexts.push(text.id);
-      }
-    });
-
-    // Check textPaths in box
-    state.textPaths.forEach(textPath => {
-      if (textPath.locked) return;
-      
-      // For textPaths, we need to check if they are near the path they follow
-      // This is a simplified check - in a real implementation you might want to
-      // calculate the actual position along the path
-      const referencedPath = state.paths.find(p => 
-        p.subPaths.some(sp => sp.id === textPath.pathRef)
-      );
-      
-      if (referencedPath) {
-        // Check if any part of the referenced path is in the box
-        let pathInBox = false;
-        referencedPath.subPaths.forEach(subPath => {
-          subPath.commands.forEach(command => {
-            if (command.x !== undefined && command.y !== undefined) {
-              if (command.x >= box.x && command.x <= box.x + box.width &&
-                  command.y >= box.y && command.y <= box.y + box.height) {
-                pathInBox = true;
-              }
-            }
-          });
-        });
+    // Check texts in box (blocked in subpath-edit mode)
+    if (!isSubpathEditMode) {
+      state.texts.forEach(text => {
+        if (text.locked) return;
         
-        if (pathInBox) {
-          newSelection.selectedTextPaths.push(textPath.id);
+        // Use DOM-based bounds calculation to account for transforms
+        const textBounds = calculateTextBoundsDOM(text);
+        if (!textBounds) return;
+        
+        if (textBounds.x < box.x + box.width &&
+            textBounds.x + textBounds.width > box.x &&
+            textBounds.y < box.y + box.height &&
+            textBounds.y + textBounds.height > box.y) {
+          newSelection.selectedTexts.push(text.id);
         }
-      }
-    });
+      });
+    }
+
+    // Check textPaths in box (blocked in subpath-edit mode)
+    if (!isSubpathEditMode) {
+      state.textPaths.forEach(textPath => {
+        if (textPath.locked) return;
+        
+        // For textPaths, we need to check if they are near the path they follow
+        // This is a simplified check - in a real implementation you might want to
+        // calculate the actual position along the path
+        const referencedPath = state.paths.find(p => 
+          p.subPaths.some(sp => sp.id === textPath.pathRef)
+        );
+        
+        if (referencedPath) {
+          // Check if any part of the referenced path is in the box
+          let pathInBox = false;
+          referencedPath.subPaths.forEach(subPath => {
+            subPath.commands.forEach(command => {
+              if (command.x !== undefined && command.y !== undefined) {
+                if (command.x >= box.x && command.x <= box.x + box.width &&
+                    command.y >= box.y && command.y <= box.y + box.height) {
+                  pathInBox = true;
+                }
+              }
+            });
+          });
+          
+          if (pathInBox) {
+            newSelection.selectedTextPaths.push(textPath.id);
+          }
+        }
+      });
+    }
 
     // Check subpaths and commands in box
     // First pass: analyze which sub-paths are fully vs partially in the box
@@ -864,6 +880,11 @@ export const createSelectionActions: StateCreator<
     state.paths.forEach(path => {
       path.subPaths.forEach(subPath => {
         if (subPath.locked) return;
+        
+        // NEVER allow selection of commands from subpaths in groups during subpath-edit mode
+        if (isSubpathEditMode && isPathInGroup(path.id)) {
+          return;
+        }
         
         const commandsInBox: string[] = [];
         const commandsOutOfBox: string[] = [];
@@ -954,34 +975,38 @@ export const createSelectionActions: StateCreator<
       }
     }
 
-    // Check images in box
-    state.images.forEach(image => {
-      if (image.locked) return;
-      
-      if (image.x < box.x + box.width &&
-          image.x + image.width > box.x &&
-          image.y < box.y + box.height &&
-          image.y + image.height > box.y) {
-        newSelection.selectedImages.push(image.id);
-      }
-    });
+    // Check images in box (blocked in subpath-edit mode)
+    if (!isSubpathEditMode) {
+      state.images.forEach(image => {
+        if (image.locked) return;
+        
+        if (image.x < box.x + box.width &&
+            image.x + image.width > box.x &&
+            image.y < box.y + box.height &&
+            image.y + image.height > box.y) {
+          newSelection.selectedImages.push(image.id);
+        }
+      });
+    }
 
-    // Check use elements in box
-    state.uses.forEach(use => {
-      if (use.locked) return;
-      
-      const x = use.x || 0;
-      const y = use.y || 0;
-      const width = use.width || 100;
-      const height = use.height || 100;
-      
-      if (x < box.x + box.width &&
-          x + width > box.x &&
-          y < box.y + box.height &&
-          y + height > box.y) {
-        newSelection.selectedUses.push(use.id);
-      }
-    });
+    // Check use elements in box (blocked in subpath-edit mode)
+    if (!isSubpathEditMode) {
+      state.uses.forEach(use => {
+        if (use.locked) return;
+        
+        const x = use.x || 0;
+        const y = use.y || 0;
+        const width = use.width || 100;
+        const height = use.height || 100;
+        
+        if (x < box.x + box.width &&
+            x + width > box.x &&
+            y < box.y + box.height &&
+            y + height > box.y) {
+          newSelection.selectedUses.push(use.id);
+        }
+      });
+    }
 
     set(state => {
       const tempSelection = {
@@ -989,8 +1014,10 @@ export const createSelectionActions: StateCreator<
         ...newSelection
       };
       
-      // Check for group promotion after box selection
-      const promotedSelection = checkAndPromoteToGroup({ ...state, selection: tempSelection });
+      // Check for group promotion after box selection (blocked in subpath-edit mode)
+      const promotedSelection = isSubpathEditMode 
+        ? tempSelection 
+        : checkAndPromoteToGroup({ ...state, selection: tempSelection });
       
       return {
         selection: promotedSelection
