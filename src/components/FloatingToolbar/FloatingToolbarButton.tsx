@@ -1414,6 +1414,150 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({
       width: 20, height: 17,
       content: '<polygon points="10,2 18,16 2,16" fill="none" stroke="#374151" stroke-width="1.5"/>',
       preview: '△△'
+    },
+    {
+      id: 'pattern-diamonds',
+      name: 'Diamonds',
+      type: 'pattern' as const,
+      width: 20, height: 20,
+      content: '<polygon points="10,2 18,10 10,18 2,10" fill="none" stroke="#374151" stroke-width="1"/>',
+      preview: '◇◇'
+    },
+    {
+      id: 'pattern-arrows',
+      name: 'Arrows',
+      type: 'pattern' as const,
+      width: 16, height: 16,
+      content: '<polygon points="8,2 12,8 8,8 8,14 8,8 4,8" fill="#374151"/>',
+      preview: '↑↑'
+    },
+    {
+      id: 'pattern-hearts',
+      name: 'Hearts',
+      type: 'pattern' as const,
+      width: 20, height: 18,
+      content: '<path d="M10,16 C10,16 3,11 3,7 C3,5 5,3 7,3 C8,3 10,4 10,6 C10,4 12,3 13,3 C15,3 17,5 17,7 C17,11 10,16 10,16 Z" fill="#374151"/>',
+      preview: '♥♥'
+    },
+    {
+      id: 'pattern-leaves',
+      name: 'Leaves',
+      type: 'pattern' as const,
+      width: 20, height: 20,
+      content: '<path d="M10,2 Q16,6 16,10 Q16,14 10,18 Q4,14 4,10 Q4,6 10,2 Z M10,2 L10,18" fill="none" stroke="#374151" stroke-width="1"/>',
+      preview: '🍃🍃'
+    },
+    {
+      id: 'pattern-spirals',
+      name: 'Spirals',
+      type: 'pattern' as const,
+      width: 20, height: 20,
+      content: '<path d="M10,2 Q18,6 14,10 Q6,14 10,10 Q14,6 10,8" fill="none" stroke="#374151" stroke-width="2"/>',
+      preview: '@@@'
+    },
+    {
+      id: 'pattern-chevrons',
+      name: 'Chevrons',
+      type: 'pattern' as const,
+      width: 20, height: 10,
+      content: '<path d="M0,8 L10,2 L20,8" stroke="#374151" stroke-width="2" fill="none"/>',
+      preview: '^^^'
+    },
+    {
+      id: 'pattern-herringbone',
+      name: 'Herringbone',
+      type: 'pattern' as const,
+      width: 20, height: 20,
+      content: '<path d="M0,0 L10,10 M10,0 L20,10 M0,10 L10,20 M10,10 L20,20" stroke="#374151" stroke-width="1"/>',
+      preview: '><><'
+    },
+    {
+      id: 'pattern-fish',
+      name: 'Fish Scale',
+      type: 'pattern' as const,
+      width: 24, height: 12,
+      content: '<path d="M12,0 Q18,6 12,12 Q6,6 12,0" fill="none" stroke="#374151" stroke-width="1"/>',
+      preview: '))))'
+    },
+    {
+      id: 'pattern-plaid',
+      name: 'Plaid',
+      type: 'pattern' as const,
+      width: 20, height: 20,
+      content: '<rect x="0" y="8" width="20" height="4" fill="#374151" opacity="0.3"/><rect x="8" y="0" width="4" height="20" fill="#374151" opacity="0.5"/>',
+      preview: '⚏⚏'
+    },
+    {
+      id: 'pattern-honeycomb',
+      name: 'Honeycomb',
+      type: 'pattern' as const,
+      width: 28, height: 16,
+      content: '<polygon points="7,0 14,0 17.5,6 14,12 7,12 3.5,6" fill="none" stroke="#374151" stroke-width="1"/><polygon points="21,0 28,0 31.5,6 28,12 21,12 17.5,6" fill="none" stroke="#374151" stroke-width="1"/>',
+      preview: '⬢⬢'
+    },
+    {
+      id: 'pattern-aztec',
+      name: 'Aztec',
+      type: 'pattern' as const,
+      width: 16, height: 16,
+      content: '<rect x="0" y="0" width="4" height="4" fill="#374151"/><rect x="8" y="0" width="4" height="4" fill="#374151"/><rect x="4" y="4" width="4" height="4" fill="#374151"/><rect x="12" y="4" width="4" height="4" fill="#374151"/><rect x="0" y="8" width="4" height="4" fill="#374151"/><rect x="8" y="8" width="4" height="4" fill="#374151"/><rect x="4" y="12" width="4" height="4" fill="#374151"/><rect x="12" y="12" width="4" height="4" fill="#374151"/>',
+      preview: '▣▣'
+    },
+    {
+      id: 'pattern-moroccan',
+      name: 'Moroccan',
+      type: 'pattern' as const,
+      width: 20, height: 20,
+      content: '<path d="M10,0 L15,5 L20,0 L20,10 L15,15 L20,20 L10,20 L5,15 L0,20 L0,10 L5,5 L0,0 L10,0 Z M10,5 L15,10 L10,15 L5,10 Z" fill="none" stroke="#374151" stroke-width="1"/>',
+      preview: '✦✦'
+    },
+    {
+      id: 'pattern-celtic',
+      name: 'Celtic',
+      type: 'pattern' as const,
+      width: 20, height: 20,
+      content: '<circle cx="5" cy="5" r="4" fill="none" stroke="#374151" stroke-width="1"/><circle cx="15" cy="5" r="4" fill="none" stroke="#374151" stroke-width="1"/><circle cx="5" cy="15" r="4" fill="none" stroke="#374151" stroke-width="1"/><circle cx="15" cy="15" r="4" fill="none" stroke="#374151" stroke-width="1"/><path d="M10,1 L10,19 M1,10 L19,10" stroke="#374151" stroke-width="1"/>',
+      preview: '⊕⊕'
+    },
+    {
+      id: 'pattern-paisley',
+      name: 'Paisley',
+      type: 'pattern' as const,
+      width: 24, height: 20,
+      content: '<path d="M6,2 Q12,2 15,8 Q15,14 9,18 Q3,14 6,8 Q6,5 6,2 Z" fill="none" stroke="#374151" stroke-width="1"/>',
+      preview: '🥭🥭'
+    },
+    {
+      id: 'pattern-optical',
+      name: 'Optical',
+      type: 'pattern' as const,
+      width: 20, height: 20,
+      content: '<circle cx="10" cy="10" r="2" fill="#374151"/><circle cx="10" cy="10" r="6" fill="none" stroke="#374151" stroke-width="1"/><circle cx="10" cy="10" r="9" fill="none" stroke="#374151" stroke-width="1"/>',
+      preview: '◎◎'
+    },
+    {
+      id: 'pattern-tribal',
+      name: 'Tribal',
+      type: 'pattern' as const,
+      width: 16, height: 16,
+      content: '<polygon points="8,0 12,4 16,0 16,8 12,12 16,16 8,16 4,12 0,16 0,8 4,4 0,0" fill="none" stroke="#374151" stroke-width="1"/>',
+      preview: '⧫⧫'
+    },
+    {
+      id: 'pattern-circles',
+      name: 'Circles',
+      type: 'pattern' as const,
+      width: 20, height: 20,
+      content: '<circle cx="10" cy="10" r="8" fill="none" stroke="#374151" stroke-width="2"/>',
+      preview: '○○'
+    },
+    {
+      id: 'pattern-bricks',
+      name: 'Bricks',
+      type: 'pattern' as const,
+      width: 40, height: 20,
+      content: '<rect x="0" y="0" width="20" height="10" fill="none" stroke="#374151" stroke-width="1"/><rect x="20" y="0" width="20" height="10" fill="none" stroke="#374151" stroke-width="1"/><rect x="-10" y="10" width="20" height="10" fill="none" stroke="#374151" stroke-width="1"/><rect x="10" y="10" width="20" height="10" fill="none" stroke="#374151" stroke-width="1"/><rect x="30" y="10" width="20" height="10" fill="none" stroke="#374151" stroke-width="1"/>',
+      preview: '🧱🧱'
     }
   ];
 
@@ -2053,26 +2197,23 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({
       {activeTab === 'patterns' && (
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(50px, 1fr))', 
-          gap: '3px'
+          gridTemplateColumns: 'repeat(6, 1fr)', 
+          gap: '2px'
         }}>
           {predefinedPatterns.map(pattern => (
             <button
               key={pattern.id}
               style={{
-                aspectRatio: '2/1',
+                aspectRatio: '1.5/1',
                 background: '#f8fafc',
                 border: isPatternSelected(pattern) ? '2px solid #000000' : '1px solid #e5e7eb',
                 borderRadius: '3px',
                 cursor: 'pointer',
                 transition: 'all 0.1s ease',
-                fontSize: '10px',
-                fontFamily: 'monospace',
-                color: '#374151',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                lineHeight: '0.8'
+                padding: '2px'
               }}
               onPointerDown={() => handlePatternSelect(pattern)}
               onPointerEnter={(e) => {
@@ -2087,7 +2228,31 @@ const ColorPickerContent: React.FC<ColorPickerContentProps> = ({
               }}
               title={pattern.name}
             >
-              {pattern.preview}
+              <svg 
+                width="100%" 
+                height="100%" 
+                viewBox={`0 0 ${pattern.width} ${pattern.height}`}
+                style={{ 
+                  pointerEvents: 'none'
+                }}
+              >
+                <defs>
+                  <pattern 
+                    id={`preview-${pattern.id}`} 
+                    x="0" y="0" 
+                    width={pattern.width} 
+                    height={pattern.height} 
+                    patternUnits="userSpaceOnUse"
+                  >
+                    <g dangerouslySetInnerHTML={{ __html: pattern.content }} />
+                  </pattern>
+                </defs>
+                <rect 
+                  width="100%" 
+                  height="100%" 
+                  fill={`url(#preview-${pattern.id})`}
+                />
+              </svg>
             </button>
           ))}
         </div>
