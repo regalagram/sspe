@@ -5,6 +5,8 @@
  * notch support, home indicator spacing, and landscape orientation.
  */
 
+import { viewBoxManager } from './ViewBoxManager';
+
 export interface SafeAreaInsets {
   top: number;
   right: number;
@@ -219,6 +221,9 @@ export class SafeAreaManager {
     // Delay detection to allow for orientation transition
     setTimeout(() => {
       this.detectSafeAreas();
+      
+      // Notify ViewBoxManager about orientation change
+      this.notifyViewBoxManager('orientation');
     }, 200);
   }
   
@@ -229,6 +234,9 @@ export class SafeAreaManager {
     // Debounce resize events
     setTimeout(() => {
       this.detectSafeAreas();
+      
+      // Notify ViewBoxManager about resize
+      this.notifyViewBoxManager('resize');
     }, 100);
   }
   
@@ -366,6 +374,21 @@ export class SafeAreaManager {
   updateConfig(newConfig: Partial<SafeAreaConfig>): void {
     this.config = { ...this.config, ...newConfig };
     this.detectSafeAreas();
+  }
+
+  /**
+   * Notify ViewBoxManager about layout changes
+   */
+  private notifyViewBoxManager(eventType: 'resize' | 'orientation'): void {
+    try {
+      if (eventType === 'resize') {
+        viewBoxManager.handleWindowResize();
+      } else if (eventType === 'orientation') {
+        viewBoxManager.handleOrientationChange();
+      }
+    } catch (error) {
+      console.warn('SafeAreaManager: Failed to notify ViewBoxManager:', error);
+    }
   }
   
   /**

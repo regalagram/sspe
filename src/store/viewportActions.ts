@@ -1,7 +1,8 @@
 import { StateCreator } from 'zustand';
-import { EditorState, Point, ViewportState } from '../types';
+import { EditorState, Point, ViewportState, BoundingBox } from '../types';
 import { getAllPathsBounds, getSelectedElementsBounds, getSelectedSubPathsBounds } from '../utils/path-utils';
 import { getTextBoundingBox } from '../utils/bbox-utils';
+import { viewBoxManager, ViewBoxOptions } from '../core/ViewBoxManager';
 
 export interface ViewportActions {
   setZoom: (zoom: number, center?: Point) => void;
@@ -14,6 +15,10 @@ export interface ViewportActions {
   setPan: (pan: Point) => void;
   resetView: () => void;
   resetViewportCompletely: () => void;
+  updateViewBox: (viewBox: BoundingBox, source?: string) => void;
+  updateViewBoxFromContent: (options?: ViewBoxOptions) => void;
+  updateViewBoxFromContainer: (options?: ViewBoxOptions) => void;
+  recalculateViewBox: (options?: ViewBoxOptions) => void;
 }
 
 const validateViewport = (viewport: ViewportState) => {
@@ -430,4 +435,77 @@ export const createViewportActions: StateCreator<
       };
       return newState;
     }),
+
+  updateViewBox: (viewBox, source = 'manual') =>
+    set((state) => {
+      if (!viewBox || 
+          !isFinite(viewBox.x) || !isFinite(viewBox.y) || 
+          !isFinite(viewBox.width) || !isFinite(viewBox.height) ||
+          viewBox.width <= 0 || viewBox.height <= 0) {
+        console.warn('Invalid viewBox:', viewBox);
+        return state;
+      }
+
+      const newViewport = validateViewport({
+        ...state.viewport,
+        viewBox: {
+          x: viewBox.x,
+          y: viewBox.y,
+          width: viewBox.width,
+          height: viewBox.height
+        }
+      });
+
+      console.log(`ViewBox updated from ${source}:`, newViewport.viewBox);
+
+      return {
+        viewport: newViewport,
+      };
+    }),
+
+  updateViewBoxFromContent: (options = {}) => {
+    const state = get();
+    const result = viewBoxManager.updateViewBoxFromContent(state, {
+      padding: 20,
+      minWidth: 200,
+      minHeight: 150,
+      maintainAspectRatio: true,
+      ...options
+    });
+
+    if (result && result.changed) {
+      get().updateViewBox(result.viewBox, result.source);
+    }
+  },
+
+  updateViewBoxFromContainer: (options = {}) => {
+    const result = viewBoxManager.updateViewBoxFromContainer({
+      padding: 20,
+      minWidth: 200,
+      minHeight: 150,
+      maintainAspectRatio: true,
+      ...options
+    });
+
+    if (result && result.changed) {
+      get().updateViewBox(result.viewBox, result.source);
+    }
+  },
+
+  recalculateViewBox: (options = {}) => {
+    const state = get();
+    const result = viewBoxManager.recalculateViewBox(state, {
+      padding: 20,
+      minWidth: 200,
+      minHeight: 150,
+      maintainAspectRatio: true,
+      useContentBounds: true,
+      useContainerBounds: true,
+      ...options
+    });
+
+    if (result && result.changed) {
+      get().updateViewBox(result.viewBox, result.source);
+    }
+  },
 });

@@ -7,12 +7,21 @@
 - **Components in `src/components/`** (never in plugins)
 - **Scale with zoom** (`size / viewport.zoom`)
 - **UnifiedRenderer** for all SVG content
+- **English only** (all code comments and user-facing text must be in English)
 
 ## Event Handling Standards
 - Use **pointer events exclusively**: `onPointerDown`, `onPointerMove`, `onPointerUp`
 - Never use mouse events (`onMouseDown`, `onClick`) or touch events (`onTouchStart`, `onTouchEnd`)
 - Pointer events provide unified handling for mouse, touch, and pen inputs
 - Always include `preventDefault()` and `stopPropagation()` when needed
+
+## Language Standards
+- **All code comments must be in English** (no Spanish, French, or other languages)
+- **All user-facing text must be in English** (UI labels, error messages, tooltips, instructions)
+- **Variable and function names should be in English** (descriptive and self-documenting)
+- **Console messages and logging should be in English**
+- **Documentation and README files must be in English**
+- **Commit messages should be in English**
 
 ## Plugin Template
 ```typescript

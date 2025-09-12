@@ -45,6 +45,8 @@ import { CommandFloatingActionsPlugin } from '../plugins/commandFloatingActions'
 import { UnifiedRendererPlugin } from '../plugins/unified-renderer';
 import { SpecialPointFloatingActionsPlugin } from '../plugins/specialPointFloatingActions';
 import { StructureTreePlugin } from '../plugins/structure-tree';
+import { ViewportDebugPlugin } from '../plugins/viewport-debug';
+import { ViewBoxSyncPlugin } from '../plugins/viewbox-sync';
 
 // Prevent multiple initializations
 let pluginsInitialized = false;
@@ -65,6 +67,9 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(PointerInteractionPlugin); // Required by pencil
   pluginManager.registerPlugin(SelectionPlugin); // Required by subpath-transform and point-transform
   
+  // Register ViewBoxSync early to handle viewport calculations
+  pluginManager.registerPlugin(ViewBoxSyncPlugin); // ViewBox synchronization and auto-updates
+  
   // Register Transform early so it can handle transform handles before PathRenderer
   pluginManager.registerPlugin(Transform);
   
@@ -80,6 +85,7 @@ export const initializePlugins = (): void => {
   pluginManager.registerPlugin(SymbolPlugin); // Symbol definitions and use instances
   pluginManager.registerPlugin(StickyGuidelinesPlugin);
   pluginManager.registerPlugin(VisualDebugPlugin);
+  pluginManager.registerPlugin(ViewportDebugPlugin); // Debug panel for viewport info
   pluginManager.registerPlugin(CommandPlugin);
   pluginManager.registerPlugin(CreationPlugin);
   pluginManager.registerPlugin(ZoomPlugin);
