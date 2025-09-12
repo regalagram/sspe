@@ -161,7 +161,9 @@ export class SubPathTransformManager {
 
     const len = (tmp as SVGPathElement).getTotalLength();
     if (!isFinite(len) || len === 0) {
-      svgElement.removeChild(tmp);
+      if (tmp.parentNode === svgElement) {
+        svgElement.removeChild(tmp);
+      }
       // Return fallback points
       const pts: Point[] = [];
       const fallbackPoint = { x: 0, y: 0 };
@@ -178,7 +180,9 @@ export class SubPathTransformManager {
       out.push({ x: Math.round(pt.x), y: Math.round(pt.y) });
     }
 
-    svgElement.removeChild(tmp);
+    if (tmp.parentNode === svgElement) {
+      svgElement.removeChild(tmp);
+    }
     return out;
   }
 
@@ -355,12 +359,16 @@ export class SubPathTransformManager {
       onComplete(smoothedCommands);
 
       try {
-        svgElement.removeChild(animPath);
+        if (animPath && animPath.parentNode === svgElement && document.contains(svgElement)) {
+          svgElement.removeChild(animPath);
+        }
       } catch (e) {
         // Element might already be removed
       }
 
-      svgElement.removeAttribute('data-transform-anim-running');
+      if (document.contains(svgElement)) {
+        svgElement.removeAttribute('data-transform-anim-running');
+      }
       this.animationId = null;
     };
 
@@ -491,12 +499,16 @@ export class SubPathTransformManager {
       onComplete(simplifiedCommands);
 
       try {
-        svgElement.removeChild(animPath);
+        if (animPath && animPath.parentNode === svgElement && document.contains(svgElement)) {
+          svgElement.removeChild(animPath);
+        }
       } catch (e) {
         // Element might already be removed
       }
 
-      svgElement.removeAttribute('data-transform-anim-running');
+      if (document.contains(svgElement)) {
+        svgElement.removeAttribute('data-transform-anim-running');
+      }
       this.animationId = null;
     };
 
