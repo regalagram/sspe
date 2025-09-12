@@ -205,7 +205,7 @@ export const GroupControls: React.FC = () => {
   const handleCreateGroup = () => {
     const groupId = createGroupFromSelection();
     if (groupId) {
-      console.log('Created group:', groupId);
+      // Group created successfully
     }
   };
 

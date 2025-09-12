@@ -41,6 +41,16 @@ export const SubPathTransformPlugin: Plugin = {
       },
     },
     {
+      key: 'O',
+      modifiers: ['ctrl', 'shift'],
+      description: 'Apply optimization to selected commands/subpaths',
+      action: () => {
+        // Trigger optimization
+        const event = new CustomEvent('path-optimization-trigger');
+        document.dispatchEvent(event);
+      },
+    },
+    {
       key: 'T',
       modifiers: ['ctrl', 'shift'],
       description: 'Focus translate input',

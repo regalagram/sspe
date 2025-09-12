@@ -216,11 +216,8 @@ export class ArrangeManager {
 
   // Alignment operations
   alignLeft() {
-    console.log('⬅️ ArrangeManager.alignLeft() called');
-    
     // Use unified element handling for all types including commands
     const elements = this.getSelectedElements();
-    console.log('⬅️ Selected elements:', elements.length);
     
     // Special handling for pure command selections - use unique positions
     if (this.isPureCommandSelection()) {
@@ -260,7 +257,6 @@ export class ArrangeManager {
     }
 
     if (elements.length < 2) {
-      console.log('⬅️ Less than 2 elements selected, returning');
       return;
     }
 

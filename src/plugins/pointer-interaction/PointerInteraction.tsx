@@ -1840,7 +1840,7 @@ class PointerInteractionManager {
       try {
         // Check via toolModeManager directly
         const activeMode = toolModeManager.getActiveMode();
-        isInCreationMode = ['creation', 'pencil', 'curves', 'shapes', 'text'].includes(activeMode);
+        isInCreationMode = ['creation', 'pencil', 'curves', 'shapes', 'text', 'smooth'].includes(activeMode);
         
         // Additional check for creation submode
         if (!isInCreationMode && activeMode === 'creation') {
@@ -1853,7 +1853,7 @@ class PointerInteractionManager {
           const editorState = this.editorStore;
           if (editorState && editorState.mode) {
             const mode = editorState.mode.current;
-            isInCreationMode = mode === 'create' || mode === 'curves' || mode === 'pencil';
+            isInCreationMode = mode === 'create' || mode === 'curves' || mode === 'pencil' || mode === 'smooth';
           }
         }
       } catch (error) {
@@ -1861,7 +1861,7 @@ class PointerInteractionManager {
         const editorState = this.editorStore;
         if (editorState && editorState.mode) {
           const mode = editorState.mode.current;
-          isInCreationMode = mode === 'create' || mode === 'curves' || mode === 'pencil';
+          isInCreationMode = mode === 'create' || mode === 'curves' || mode === 'pencil' || mode === 'smooth';
         }
       }
       

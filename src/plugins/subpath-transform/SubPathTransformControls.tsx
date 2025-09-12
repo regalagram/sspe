@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { PluginButton } from '../../components/PluginButton';
-import { Move, RotateCw, Maximize2, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Waves, Minimize2, FlipHorizontal, FlipVertical } from 'lucide-react';
+import { Move, RotateCw, Maximize2, RotateCcw, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Waves, Minimize2, FlipHorizontal, FlipVertical, Grid3x3 } from 'lucide-react';
 import { areCommandsInSameSubPath } from '../../utils/path-simplification-utils';
 import { subPathTransformManager } from './SubPathTransformManager';
 
@@ -58,10 +58,16 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
   const [mirrorExpanded, setMirrorExpanded] = useState(false);
   const [smoothingExpanded, setSmoothingExpanded] = useState(true);
   const [simplificationExpanded, setSimplificationExpanded] = useState(true);
+  const [optimizationExpanded, setOptimizationExpanded] = useState(true);
+  const [densifyExpanded, setDensifyExpanded] = useState(true);
   
   // Smoothing and Simplification settings with localStorage persistence
   const [simplifyTolerance, setSimplifyTolerance] = usePersistentState('pathSimplification.tolerance', 0.1);
   const [simplifyDistance, setSimplifyDistance] = usePersistentState('pathSimplification.distance', 10);
+
+  // Optimization settings with localStorage persistence
+  const [optimizeTolerance, setOptimizeTolerance] = usePersistentState('pathOptimization.tolerance', 0.1);
+  const [optimizeDistance, setOptimizeDistance] = usePersistentState('pathOptimization.distance', 1);
 
   const hasSelectedSubPaths = selection.selectedSubPaths.length > 0;
 
@@ -127,6 +133,8 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
     setTranslateY(0);
     setSimplifyTolerance(0.1);
     setSimplifyDistance(10);
+    setOptimizeTolerance(0.1);
+    setOptimizeDistance(1);
   };
 
   // Smoothing functionality with animation
@@ -368,6 +376,141 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
     }
   };
 
+  // Optimization functionality - implements Douglas-Peucker algorithm + Bézier fitting
+  const handleOptimize = () => {
+    const { selectedCommands, selectedSubPaths } = selection;
+    
+    // Determine what to optimize: selected commands OR selected subpaths
+    let targetSubPath: any = null;
+    let targetSubPaths: any[] = [];
+    let targetCommands: any[] = [];
+    let startIndex: number | undefined;
+    let endIndex: number | undefined;
+    let canOptimize = false;
+    let isMultiSubPath = false;
+    
+    if (selectedCommands.length >= 2) {
+      // Use selected commands approach
+      const analysisResult = areCommandsInSameSubPath(selectedCommands, paths);
+      const result = analysisResult;
+      if (result.sameSubPath && result.subPath && result.commands && result.commands.length >= 2) {
+        targetSubPath = result.subPath;
+        targetCommands = result.commands;
+        startIndex = result.startIndex;
+        endIndex = result.endIndex;
+        canOptimize = true;
+      }
+    } else if (selectedSubPaths.length >= 1) {
+      // Use selected subpath(s) approach - optimize entire subpath(s)
+      if (selectedSubPaths.length === 1) {
+        // Single subpath
+        const subPathId = selectedSubPaths[0];
+        for (const path of paths) {
+          const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
+          if (subPath && subPath.commands.length >= 2) {
+            targetSubPath = subPath;
+            targetCommands = subPath.commands;
+            startIndex = 0;
+            endIndex = subPath.commands.length - 1;
+            canOptimize = true;
+            break;
+          }
+        }
+      } else {
+        // Multiple subpaths
+        for (const subPathId of selectedSubPaths) {
+          for (const path of paths) {
+            const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
+            if (subPath && subPath.commands.length >= 2) {
+              targetSubPaths.push(subPath);
+            }
+          }
+        }
+        if (targetSubPaths.length > 0) {
+          isMultiSubPath = true;
+          canOptimize = true;
+        }
+      }
+    }
+    
+    if (!canOptimize) {
+      console.warn('Cannot optimize: no valid subpaths or commands selected');
+      return;
+    }
+    
+    pushToHistory();
+    
+    if (isMultiSubPath && targetSubPaths.length > 0) {
+      // Handle multiple subpaths with animation
+      targetSubPaths.forEach((subPath, index) => {
+        const delay = index * 100; // Stagger animations
+        const segmentToOptimize = [...subPath.commands];
+        
+        setTimeout(() => {
+          subPathTransformManager.optimizeWithAnimation(segmentToOptimize, optimizeTolerance, optimizeDistance, (optimizedCommands) => {
+            // Ensure the subpath ALWAYS starts with M
+            if (optimizedCommands.length > 0 && optimizedCommands[0].command !== 'M') {
+              const firstCmd = optimizedCommands[0];
+              if ('x' in firstCmd && 'y' in firstCmd) {
+                optimizedCommands[0] = {
+                  ...firstCmd,
+                  command: 'M'
+                };
+              }
+            }
+            
+            // Replace all commands in this subpath
+            replaceSubPathCommands(subPath.id, optimizedCommands);
+          });
+        }, delay);
+      });
+    } else if (!isMultiSubPath && targetSubPath && targetCommands && startIndex !== undefined && endIndex !== undefined) {
+      // Handle single subpath or selected commands with animation
+      const segmentToOptimize = [...targetCommands];
+      
+      subPathTransformManager.optimizeWithAnimation(segmentToOptimize, optimizeTolerance, optimizeDistance, (optimizedCommands) => {
+        // Create the new commands array for the entire subpath
+        let newSubPathCommands = [...targetSubPath.commands];
+        
+        // Replace the segment range with the new optimized commands
+        const actualStartIndex = Math.max(0, startIndex!);
+        const actualEndIndex = Math.min(targetSubPath.commands.length - 1, endIndex!);
+        const replaceLength = actualEndIndex - actualStartIndex + 1;
+        
+        newSubPathCommands.splice(actualStartIndex, replaceLength, ...optimizedCommands);
+        
+        // Ensure the subpath ALWAYS starts with M
+        if (newSubPathCommands.length > 0 && newSubPathCommands[0].command !== 'M') {
+          const firstCmd = newSubPathCommands[0];
+          if ('x' in firstCmd && 'y' in firstCmd) {
+            newSubPathCommands[0] = {
+              ...firstCmd,
+              command: 'M'
+            };
+          }
+        }
+        
+        // Replace all commands in the subpath
+        replaceSubPathCommands(targetSubPath.id, newSubPathCommands);
+      });
+    }
+  };
+
+  // Handle densify operation
+  const handleDensify = () => {
+    const { selectedSubPaths } = selection;
+    
+    if (selectedSubPaths.length === 0) {
+      console.warn('No subpaths selected for densification');
+      return;
+    }
+
+    // Apply densification to each selected subpath
+    selectedSubPaths.forEach(subPathId => {
+      subPathTransformManager.densifySubPath(subPathId);
+    });
+  };
+
   // Check if smoothing/simplification can be applied
   const canApplySmoothing = () => {
     const { selectedCommands, selectedSubPaths } = selection;
@@ -390,6 +533,24 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
   };
 
   const canApplySimplification = canApplySmoothing; // Same logic
+  const canApplyOptimization = canApplySmoothing; // Same logic
+  const canApplyDensify = () => {
+    const { selectedSubPaths } = selection;
+    
+    // Densify only works with selected subpaths (not individual commands)
+    if (selectedSubPaths.length >= 1) {
+      return selectedSubPaths.some(subPathId => {
+        for (const path of paths) {
+          const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
+          if (subPath && subPath.commands.length >= 2) {
+            return true;
+          }
+        }
+        return false;
+      });
+    }
+    return false;
+  };
 
   // Check if there are values that can be reset
   const hasValuesToReset = () => {
@@ -399,7 +560,9 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
            translateX !== 0 || 
            translateY !== 0 || 
            simplifyTolerance !== 0.1 || 
-           simplifyDistance !== 10;
+           simplifyDistance !== 10 ||
+           optimizeTolerance !== 0.1 ||
+           optimizeDistance !== 1;
   };
 
   // Event listeners for keyboard shortcuts
@@ -408,19 +571,25 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
     const handleMirrorVerticalEvent = () => handleMirrorVertical();
     const handleSmoothEvent = () => handleSmooth();
     const handleSimplifyEvent = () => handleSimplify();
+    const handleOptimizeEvent = () => handleOptimize();
+    const handleDensifyEvent = () => handleDensify();
     
     document.addEventListener('mirror-horizontal-trigger', handleMirrorHorizontalEvent);
     document.addEventListener('mirror-vertical-trigger', handleMirrorVerticalEvent);
     document.addEventListener('path-smoothing-trigger', handleSmoothEvent);
     document.addEventListener('path-simplification-trigger', handleSimplifyEvent);
+    document.addEventListener('path-optimization-trigger', handleOptimizeEvent);
+    document.addEventListener('path-densify-trigger', handleDensifyEvent);
     
     return () => {
       document.removeEventListener('mirror-horizontal-trigger', handleMirrorHorizontalEvent);
       document.removeEventListener('mirror-vertical-trigger', handleMirrorVerticalEvent);
       document.removeEventListener('path-smoothing-trigger', handleSmoothEvent);
       document.removeEventListener('path-simplification-trigger', handleSimplifyEvent);
+      document.removeEventListener('path-optimization-trigger', handleOptimizeEvent);
+      document.removeEventListener('path-densify-trigger', handleDensifyEvent);
     };
-  }, [handleMirrorHorizontal, handleMirrorVertical, handleSmooth, handleSimplify]);
+  }, [handleMirrorHorizontal, handleMirrorVertical, handleSmooth, handleSimplify, handleOptimize, handleDensify]);
 
   return (
     <div>
@@ -539,12 +708,136 @@ export const SubPathTransformControls: React.FC<SubPathTransformControlsProps> =
                   
                   <PluginButton
                     icon={<Minimize2 size={14} />}
-                    text="Simplificate"
+                    text="Simplify"
                     color="#007acc"
                     active={false}
                     disabled={!canApplySimplification()}
                     onPointerDown={handleSimplify}
                   />
+                </>
+              )}
+            </div>
+
+            {/* Optimization Section */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div 
+                style={{ 
+                  fontSize: '12px', 
+                  color: '#666', 
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                onPointerDown={() => setOptimizationExpanded(!optimizationExpanded)}
+              >
+                <span style={{ transform: optimizationExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
+                Optimization
+              </div>
+              
+              {optimizationExpanded && (
+                <>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Tolerance</div>
+                      <input
+                        type="number"
+                        value={optimizeTolerance}
+                        onChange={(e) => setOptimizeTolerance(parseFloat(e.target.value) || 0.1)}
+                        min="0.01"
+                        max="1"
+                        step="0.01"
+                        style={{ 
+                          width: '100%', 
+                          padding: '4px', 
+                          fontSize: '12px',
+                          border: '1px solid #ddd',
+                          borderRadius: '3px'
+                        }}
+                      />
+                    </div>
+                    
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '10px', color: '#666', marginBottom: '2px' }}>Distance</div>
+                      <input
+                        type="number"
+                        value={optimizeDistance}
+                        onChange={(e) => setOptimizeDistance(parseInt(e.target.value) || 1)}
+                        min="1"
+                        max="20"
+                        step="1"
+                        style={{ 
+                          width: '100%', 
+                          padding: '4px', 
+                          fontSize: '12px',
+                          border: '1px solid #ddd',
+                          borderRadius: '3px'
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  <PluginButton
+                    icon={<Maximize2 size={14} />}
+                    text="Optimize"
+                    color="#007acc"
+                    active={false}
+                    disabled={!canApplyOptimization()}
+                    onPointerDown={handleOptimize}
+                  />
+                  
+                  <div style={{ 
+                    fontSize: '10px', 
+                    color: '#666', 
+                    lineHeight: '1.2',
+                    marginTop: '4px'
+                  }}>
+                    Applies Douglas-Peucker simplification + Bézier fitting to optimize strokes while maintaining visual shape.
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Densify Section */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div 
+                style={{ 
+                  fontSize: '12px', 
+                  color: '#666', 
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                onPointerDown={() => setDensifyExpanded(!densifyExpanded)}
+              >
+                <span style={{ transform: densifyExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</span>
+                Densify
+              </div>
+              
+              {densifyExpanded && (
+                <>
+                  <PluginButton
+                    icon={<Grid3x3 size={14} />}
+                    text="Densify"
+                    color="#007acc"
+                    active={false}
+                    disabled={!canApplyDensify()}
+                    onPointerDown={handleDensify}
+                  />
+                  
+                  <div style={{ 
+                    fontSize: '10px', 
+                    color: '#666', 
+                    lineHeight: '1.2',
+                    marginTop: '4px'
+                  }}>
+                    Converts Bézier curves into a dense sequence of straight lines for maximum compatibility.
+                  </div>
                 </>
               )}
             </div>

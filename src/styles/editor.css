@@ -939,6 +939,10 @@ html,body {
   cursor: crosshair !important;
 }
 
+.creation-mode-overlay.smooth-mode {
+  cursor: crosshair !important;
+}
+
 .creation-mode-overlay.text-mode {
   cursor: text !important;
 }

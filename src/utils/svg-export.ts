@@ -841,11 +841,6 @@ export const generateSVGCode = (editorState: any): string => {
   
   groups.forEach(checkGroupChildren);
 
-  // Debug logging to understand gradient detection
-  console.log('🎨 Gradient Export Debug:');
-  console.log('Available gradients:', gradients.map((g: any) => g.id));
-  console.log('Detected used gradient IDs:', Array.from(usedGradientIds));
-  
   // Check for symbol references in use elements
   uses.forEach((use: any) => {
     const symbolId = use.href.replace('#', '');

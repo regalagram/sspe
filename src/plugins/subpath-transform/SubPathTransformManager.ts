@@ -1,8 +1,9 @@
 import { useEditorStore } from '../../store/editorStore';
 import { generateId } from '../../utils/id-utils';
-import { simplifySegmentWithPointsOnPath } from '../../utils/path-simplification-utils';
+import { simplifySegmentWithPointsOnPath, generateSubpathString } from '../../utils/path-simplification-utils';
 import { pluginManager } from '../../core/PluginSystem';
 import type { Point, SVGCommand } from '../../types';
+import { pointsOnPath } from 'points-on-path';
 
 export class SubPathTransformManager {
   private animationId: number | null = null;
@@ -658,19 +659,19 @@ export class SubPathTransformManager {
         lastCmd.x !== undefined && lastCmd.y !== undefined &&
         firstCmd.x !== undefined && firstCmd.y !== undefined) {
 
-        const distanciaX = Math.abs(lastCmd.x - firstCmd.x);
-        const distanciaY = Math.abs(lastCmd.y - firstCmd.y);
+        const distanceX = Math.abs(lastCmd.x - firstCmd.x);
+        const distanceY = Math.abs(lastCmd.y - firstCmd.y);
         const epsilon = 1e-6;
 
-        if (distanciaX > epsilon || distanciaY > epsilon) {
+        if (distanceX > epsilon || distanceY > epsilon) {
           // Add an explicit line to close the path
-          const comandoCierre: SVGCommand = {
+          const closingCommand: SVGCommand = {
             id: generateId(),
             command: 'L',
             x: firstCmd.x,
             y: firstCmd.y,
           };
-          smoothedCommands.push(comandoCierre);
+          smoothedCommands.push(closingCommand);
         }
       }
 
@@ -720,6 +721,457 @@ export class SubPathTransformManager {
 
     // Use the path simplification utility with configurable parameters
     return simplifySegmentWithPointsOnPath(commands, tolerance, distance, gridSize);
+  }
+
+  // Optimization with animation - combines Douglas-Peucker simplification with Bézier curve fitting
+  optimizeWithAnimation(
+    commands: SVGCommand[], 
+    tolerance: number, 
+    distance: number, 
+    onComplete: (optimizedCommands: SVGCommand[]) => void
+  ): void {
+    if (commands.length < 2) {
+      onComplete(commands);
+      return;
+    }
+
+    try {
+      // Step 1: Convert commands to dense points for processing
+      const densePoints = this.commandsToDensePoints(commands);
+      
+      // Step 2: Apply Douglas-Peucker simplification
+      const simplifiedPoints = this.douglasPeucker(densePoints, tolerance, distance);
+      
+      // Step 3: Apply Bézier curve fitting to get optimized commands
+      const optimizedCommands = this.pointsToOptimizedCommands(simplifiedPoints, tolerance);
+      
+      // For now, apply immediately (we can add animation later if needed)
+      onComplete(optimizedCommands);
+      
+    } catch (error) {
+      console.error('Error in optimization:', error);
+      onComplete(commands); // Return original commands on error
+    }
+  }
+
+  // Convert commands to dense points for optimization
+  private commandsToDensePoints(commands: SVGCommand[], resolution: number = 1): Point[] {
+    const points: Point[] = [];
+    let currentPoint: Point | null = null;
+
+    for (const cmd of commands) {
+      if (cmd.command === 'M') {
+        currentPoint = { x: cmd.x!, y: cmd.y! };
+        points.push(currentPoint);
+      } else if (cmd.command === 'L') {
+        const endPoint = { x: cmd.x!, y: cmd.y! };
+        if (currentPoint) {
+          // Linear interpolation to create dense points
+          const distance = Math.hypot(endPoint.x - currentPoint.x, endPoint.y - currentPoint.y);
+          const steps = Math.max(1, Math.ceil(distance / resolution));
+          
+          for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            points.push({
+              x: currentPoint.x + (endPoint.x - currentPoint.x) * t,
+              y: currentPoint.y + (endPoint.y - currentPoint.y) * t
+            });
+          }
+        }
+        currentPoint = endPoint;
+      } else if (cmd.command === 'C') {
+        const cp1 = { x: cmd.x1!, y: cmd.y1! };
+        const cp2 = { x: cmd.x2!, y: cmd.y2! };
+        const endPoint = { x: cmd.x!, y: cmd.y! };
+        
+        if (currentPoint) {
+          // Bézier curve interpolation to create dense points
+          const distance = Math.hypot(endPoint.x - currentPoint.x, endPoint.y - currentPoint.y);
+          const steps = Math.max(2, Math.ceil(distance / resolution));
+          
+          for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            const bezierPoint = this.evaluateBezier(currentPoint, cp1, cp2, endPoint, t);
+            points.push(bezierPoint);
+          }
+        }
+        currentPoint = endPoint;
+      } else if (cmd.command === 'Z') {
+        // Close path - connect back to first point if needed
+        if (points.length > 0 && currentPoint) {
+          const firstPoint = points[0];
+          const distance = Math.hypot(firstPoint.x - currentPoint.x, firstPoint.y - currentPoint.y);
+          if (distance > resolution) {
+            const steps = Math.max(1, Math.ceil(distance / resolution));
+            for (let i = 1; i <= steps; i++) {
+              const t = i / steps;
+              points.push({
+                x: currentPoint.x + (firstPoint.x - currentPoint.x) * t,
+                y: currentPoint.y + (firstPoint.y - currentPoint.y) * t
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return points;
+  }
+
+  // Evaluate point on cubic Bézier curve
+  private evaluateBezier(p0: Point, cp1: Point, cp2: Point, p3: Point, t: number): Point {
+    const mt = 1 - t;
+    const mt2 = mt * mt;
+    const mt3 = mt2 * mt;
+    const t2 = t * t;
+    const t3 = t2 * t;
+    
+    return {
+      x: mt3 * p0.x + 3 * mt2 * t * cp1.x + 3 * mt * t2 * cp2.x + t3 * p3.x,
+      y: mt3 * p0.y + 3 * mt2 * t * cp1.y + 3 * mt * t2 * cp2.y + t3 * p3.y
+    };
+  }
+
+  // Douglas-Peucker algorithm with distance filtering
+  private douglasPeucker(points: Point[], tolerance: number, minDistance: number): Point[] {
+    if (points.length <= 2) return points;
+    
+    // First, reduce density by minimum distance
+    const distanceFiltered = this.filterByDistance(points, minDistance);
+    
+    // Then apply Douglas-Peucker simplification
+    return this.douglasPeuckerRecursive(distanceFiltered, tolerance);
+  }
+
+  // Filter points by minimum distance
+  private filterByDistance(points: Point[], minDistance: number): Point[] {
+    if (points.length <= 2) return points;
+    
+    const filtered = [points[0]]; // Always include first point
+    
+    for (let i = 1; i < points.length - 1; i++) {
+      const lastPoint = filtered[filtered.length - 1];
+      const currentPoint = points[i];
+      const distance = Math.hypot(currentPoint.x - lastPoint.x, currentPoint.y - lastPoint.y);
+      
+      if (distance >= minDistance) {
+        filtered.push(currentPoint);
+      }
+    }
+    
+    filtered.push(points[points.length - 1]); // Always include last point
+    return filtered;
+  }
+
+  // Recursive Douglas-Peucker implementation
+  private douglasPeuckerRecursive(points: Point[], tolerance: number): Point[] {
+    if (points.length <= 2) return points;
+    
+    let maxDist = 0;
+    let maxIndex = 0;
+    const start = points[0];
+    const end = points[points.length - 1];
+    
+    // Find the point with maximum distance from line start-end
+    for (let i = 1; i < points.length - 1; i++) {
+      const dist = this.distanceToLine(points[i], start, end);
+      if (dist > maxDist) {
+        maxDist = dist;
+        maxIndex = i;
+      }
+    }
+    
+    // If max distance is greater than tolerance, recursively simplify
+    if (maxDist > tolerance) {
+      const left = this.douglasPeuckerRecursive(points.slice(0, maxIndex + 1), tolerance);
+      const right = this.douglasPeuckerRecursive(points.slice(maxIndex), tolerance);
+      
+      // Combine results (remove duplicate point)
+      return left.slice(0, -1).concat(right);
+    } else {
+      // All points are within tolerance, return only start and end
+      return [start, end];
+    }
+  }
+
+  // Distance from point to line
+  private distanceToLine(point: Point, lineStart: Point, lineEnd: Point): number {
+    const A = point.x - lineStart.x;
+    const B = point.y - lineStart.y;
+    const C = lineEnd.x - lineStart.x;
+    const D = lineEnd.y - lineStart.y;
+    
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    
+    if (lenSq === 0) return Math.hypot(A, B);
+    
+    const param = Math.max(0, Math.min(1, dot / lenSq));
+    const xx = lineStart.x + param * C;
+    const yy = lineStart.y + param * D;
+    
+    const dx = point.x - xx;
+    const dy = point.y - yy;
+    return Math.hypot(dx, dy);
+  }
+
+  // Convert optimized points back to SVG commands with Bézier fitting
+  private pointsToOptimizedCommands(points: Point[], tolerance: number): SVGCommand[] {
+    if (points.length === 0) return [];
+
+    const commands: SVGCommand[] = [];
+    
+    // First command is always M
+    commands.push({
+      id: generateId(),
+      command: 'M',
+      x: Math.round(points[0].x),
+      y: Math.round(points[0].y)
+    });
+
+    if (points.length === 1) return commands;
+
+    // Fit Bézier curves to the remaining points
+    const curves = this.fitBezierCurvesOptimized(points, tolerance);
+    commands.push(...curves);
+
+    return commands;
+  }
+
+  // Optimized Bézier fitting that tries longer segments first
+  private fitBezierCurvesOptimized(points: Point[], tolerance: number): SVGCommand[] {
+    if (points.length < 2) return [];
+    
+    const curves: SVGCommand[] = [];
+    let i = 0;
+
+    while (i < points.length - 1) {
+      let bestFit: any = null;
+      let bestJ = i + 1;
+      
+      // Try longer segments first (up to 8 points)
+      const maxSegmentSize = Math.min(i + 8, points.length - 1);
+      
+      for (let j = maxSegmentSize; j > i + 1; j--) {
+        const segment = points.slice(i, j + 1);
+        const fit = this.fitCubicBezier(segment, tolerance);
+        
+        if (fit) {
+          bestFit = fit;
+          bestJ = j;
+          break; // Take the first (longest) valid segment
+        }
+      }
+
+      if (bestFit && bestJ > i + 1) {
+        // Use Bézier curve
+        curves.push({
+          id: generateId(),
+          command: 'C',
+          x1: Math.round(bestFit.cp1.x),
+          y1: Math.round(bestFit.cp1.y),
+          x2: Math.round(bestFit.cp2.x),
+          y2: Math.round(bestFit.cp2.y),
+          x: Math.round(bestFit.end.x),
+          y: Math.round(bestFit.end.y)
+        });
+        i = bestJ;
+      } else {
+        // Use straight line
+        curves.push({
+          id: generateId(),
+          command: 'L',
+          x: Math.round(points[i + 1].x),
+          y: Math.round(points[i + 1].y)
+        });
+        i++;
+      }
+    }
+
+    return curves;
+  }
+
+  // Fit cubic Bézier curve to a set of points
+  private fitCubicBezier(points: Point[], tolerance: number): any {
+    if (points.length < 3) return null;
+
+    const start = points[0];
+    const end = points[points.length - 1];
+    
+    // Estimate tangents
+    const t1 = this.normalize({ 
+      x: points[1].x - start.x, 
+      y: points[1].y - start.y 
+    });
+    const t2 = this.normalize({ 
+      x: end.x - points[points.length - 2].x, 
+      y: end.y - points[points.length - 2].y 
+    });
+    
+    // Estimate control point distances
+    const chordLen = Math.hypot(end.x - start.x, end.y - start.y);
+    const alpha1 = chordLen / 3;
+    const alpha2 = chordLen / 3;
+    
+    const cp1 = {
+      x: start.x + t1.x * alpha1,
+      y: start.y + t1.y * alpha1
+    };
+    const cp2 = {
+      x: end.x - t2.x * alpha2,
+      y: end.y - t2.y * alpha2
+    };
+    
+    // Check if curve fits within tolerance
+    const maxError = this.calculateBezierError(points, start, cp1, cp2, end);
+    
+    if (maxError <= tolerance) {
+      return { cp1, cp2, end };
+    }
+    
+    return null;
+  }
+
+  // Normalize vector
+  private normalize(vector: Point): Point {
+    const length = Math.hypot(vector.x, vector.y) || 1;
+    return { x: vector.x / length, y: vector.y / length };
+  }
+
+  // Calculate maximum error of Bézier fit
+  private calculateBezierError(points: Point[], p0: Point, cp1: Point, cp2: Point, p3: Point): number {
+    let maxError = 0;
+    
+    for (let i = 1; i < points.length - 1; i++) {
+      const t = i / (points.length - 1);
+      const bezierPoint = this.evaluateBezier(p0, cp1, cp2, p3, t);
+      const error = Math.hypot(points[i].x - bezierPoint.x, points[i].y - bezierPoint.y);
+      maxError = Math.max(maxError, error);
+    }
+    
+    return maxError;
+  }
+
+  /**
+   * Densify: Convert subpath to dense points using points-on-path
+   * Transforms curves and lines into a dense array of line segments
+   */
+  public densifySubPath(subPathId: string): void {
+    const store = useEditorStore.getState();
+    
+    // Find the subpath
+    let targetSubPath: any = null;
+    for (const path of store.paths) {
+      const subPath = path.subPaths.find((sp: any) => sp.id === subPathId);
+      if (subPath) {
+        targetSubPath = subPath;
+        break;
+      }
+    }
+    
+    if (!targetSubPath || targetSubPath.commands.length < 2) {
+      console.warn('SubPath not found or insufficient commands for densification');
+      return;
+    }
+
+    try {
+      // Store original Z command state
+      const originalEndsWithZ = targetSubPath.commands[targetSubPath.commands.length - 1]?.command === 'Z';
+      
+      // Prepare commands for processing - remove Z if present
+      let workingCommands = [...targetSubPath.commands];
+      if (originalEndsWithZ) {
+        workingCommands = workingCommands.slice(0, -1);
+      }
+
+      if (workingCommands.length < 2) {
+        console.warn('Insufficient commands after Z removal');
+        return;
+      }
+
+      // Ensure first command is M
+      if (workingCommands[0].command !== 'M') {
+        if ('x' in workingCommands[0] && 'y' in workingCommands[0]) {
+          workingCommands[0] = {
+            ...workingCommands[0],
+            command: 'M'
+          };
+        } else {
+          console.warn('Cannot convert first command to M - missing coordinates');
+          return;
+        }
+      }
+
+      // Generate path string for points-on-path processing
+      const pathString = generateSubpathString(workingCommands);
+      if (!pathString) {
+        console.warn('Could not generate valid path string for densification');
+        return;
+      }
+
+      // Use pointsOnPath without tolerance and distance to get ALL points
+      const densePointsArrays = pointsOnPath(pathString);
+      
+      if (!densePointsArrays || densePointsArrays.length === 0) {
+        console.warn('pointsOnPath returned no results');
+        return;
+      }
+
+      // Convert points arrays to commands
+      const newCommands: SVGCommand[] = [];
+      let isFirstPoint = true;
+
+      for (let i = 0; i < densePointsArrays.length; i++) {
+        const pointsArray = densePointsArrays[i];
+        
+        if (!pointsArray || pointsArray.length === 0) continue;
+
+        for (let j = 0; j < pointsArray.length; j++) {
+          const point = pointsArray[j]; // point is [x, y] array
+          
+          if (isFirstPoint) {
+            // First point is always M (Move)
+            newCommands.push({
+              id: generateId(),
+              command: 'M',
+              x: Math.round(point[0]),
+              y: Math.round(point[1])
+            });
+            isFirstPoint = false;
+          } else {
+            // All other points are L (Line)
+            newCommands.push({
+              id: generateId(),
+              command: 'L',
+              x: Math.round(point[0]),
+              y: Math.round(point[1])
+            });
+          }
+        }
+      }
+
+      // Add Z command back if original had it
+      if (originalEndsWithZ && newCommands.length > 0) {
+        newCommands.push({
+          id: generateId(),
+          command: 'Z'
+        });
+      }
+
+      if (newCommands.length === 0) {
+        console.warn('No commands generated from dense points');
+        return;
+      }
+
+      // Push to history before applying changes
+      store.pushToHistory();
+
+      // Replace the subpath commands with densified version
+      store.replaceSubPathCommands(subPathId, newCommands);
+
+    } catch (error) {
+      console.error('❌ DENSIFY: Error during densification:', error);
+    }
   }
 }
 

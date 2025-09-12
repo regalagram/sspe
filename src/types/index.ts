@@ -264,7 +264,7 @@ export interface ToolSettings {
 export interface EditorMode {
   // Added 'subpath-edit' for the new specialized editing mode where subpaths are
   // editable but should not be selected by pointer taps.
-  current: 'select' | 'create' | 'edit' | 'pan' | 'zoom' | 'curves' | 'subpath-edit';
+  current: 'select' | 'create' | 'edit' | 'pan' | 'zoom' | 'curves' | 'subpath-edit' | 'smooth';
   createMode?: {
     commandType: EditorCommandType;
     isDrawing: boolean;

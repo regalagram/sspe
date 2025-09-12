@@ -1,7 +1,7 @@
 import { useEditorStore } from '../store/editorStore';
 import { EditorCommandType } from '../types';
 
-export type ToolMode = 'select' | 'pencil' | 'curves' | 'shapes' | 'text' | 'text-edit' | 'creation' | 'subpath-edit';
+export type ToolMode = 'select' | 'pencil' | 'curves' | 'shapes' | 'text' | 'text-edit' | 'creation' | 'subpath-edit' | 'smooth';
 
 export interface ToolModeState {
   activeMode: ToolMode;
@@ -44,6 +44,7 @@ export class ToolModeManager {
   private textManager: any = null;
   private textEditManager: any = null;
   private creationManager: any = null;
+  private smoothManager: any = null;
 
   constructor() {
   }
@@ -73,6 +74,10 @@ export class ToolModeManager {
 
   setCreationManager(manager: any) {
     this.creationManager = manager;
+  }
+
+  setSmoothManager(manager: any) {
+    this.smoothManager = manager;
   }
 
   /**
@@ -199,6 +204,12 @@ export class ToolModeManager {
         useEditorStore.getState().setMode('select');
         break;
 
+      case 'smooth':
+        if (this.smoothManager) {
+          this.smoothManager.deactivateExternally();
+        }
+        break;
+
       case 'select':
         // Select mode no necesita desactivación especial
         break;
@@ -289,6 +300,18 @@ export class ToolModeManager {
 
       case 'subpath-edit':
         useEditorStore.getState().setMode('subpath-edit');
+        break;
+
+      case 'smooth':
+        // Clear selection when entering smooth mode
+        useEditorStore.getState().clearSelection();
+        
+        if (this.smoothManager) {
+          this.smoothManager.activateExternally();
+        } else {
+          // Fallback si no hay manager
+          useEditorStore.getState().setMode('smooth');
+        }
         break;
 
       case 'select':

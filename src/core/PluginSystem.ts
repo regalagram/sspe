@@ -238,7 +238,6 @@ export class PluginManager {
       
       // Early blocking for subpath-edit mode
       if (isSubpathEditModeBlocked(e as any, { isDoubleClick })) {
-        console.log('[PluginSystem] Event blocked by subpath-edit mode');
         return true; // Exit early, event was handled (blocked)
       }
     }

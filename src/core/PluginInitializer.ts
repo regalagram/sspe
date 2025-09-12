@@ -15,6 +15,7 @@ import { VisualDebugPlugin } from '../plugins/visual-debug/VisualDebug';
 import { SubPathTransformPlugin } from '../plugins/subpath-transform/SubPathTransform';
 import { PointTransformPlugin } from '../plugins/point-transform/PointTransform';
 import { PencilPlugin } from '../plugins/pencil';
+import { SmoothPlugin } from '../plugins/smooth';
 import { ShapesPlugin } from '../plugins/shapes/Shapes';
 import { Transform } from '../plugins/transform/Transform';
 import { ArrangePlugin } from '../plugins/arrange/Arrange';
@@ -97,6 +98,7 @@ export const initializePlugins = (): void => {
   
   // Register plugins that depend on others
   pluginManager.registerPlugin(PencilPlugin); // Depends on mouse-interaction
+  pluginManager.registerPlugin(SmoothPlugin); // Depends on pointer-interaction
   pluginManager.registerPlugin(CurvesPlugin); // Depends on mouse-interaction
   pluginManager.registerPlugin(SubPathTransformPlugin); // Depends on selection
   pluginManager.registerPlugin(PointTransformPlugin); // Depends on selection

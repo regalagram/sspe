@@ -29,7 +29,6 @@ export const ImagePlugin: Plugin = {
           const file = (event.target as HTMLInputElement).files?.[0];
           if (file) {
             // This will be handled by the ImageControls component
-            console.log('Image file selected via shortcut:', file.name);
           }
         };
         input.click();

@@ -138,7 +138,7 @@ function convertShapesToPathsExcludingDefs(svgElement: Element, debugMode = fals
   });
 
   if (debugMode) {
-    console.log(`🔄 Converting ${shapes.length} shapes to paths (excluding ${allShapes.length - shapes.length} shapes in defs)`);
+    // Converting shapes to paths
   }
 
   shapes.forEach((shape, index) => {

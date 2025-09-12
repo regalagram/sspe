@@ -84,7 +84,6 @@ export const isSubpathEditModeBlocked = (
     if (elementType === 'text' || 
         elementType === 'multiline-text' || 
         elementType === 'textPath') {
-      console.log('[SubpathEdit] Blocked double-click on text element:', elementType, target);
       preventEvent();
       return true; // Block this event
     }
@@ -93,7 +92,6 @@ export const isSubpathEditModeBlocked = (
   // ❌ GENERAL BLOCKING: Any element with data-element-type
   const elementType = target.getAttribute('data-element-type');
   if (elementType) {
-    console.log('[SubpathEdit] Blocked interaction with element type:', elementType);
     preventEvent();
     return true; // Block this event
   }
@@ -102,7 +100,6 @@ export const isSubpathEditModeBlocked = (
   const elementParent = target.closest('[data-element-type]');
   if (elementParent) {
     const parentElementType = elementParent.getAttribute('data-element-type');
-    console.log('[SubpathEdit] Blocked interaction with child of element type:', parentElementType);
     preventEvent();
     return true; // Block this event
   }

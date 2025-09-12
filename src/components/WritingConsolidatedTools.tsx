@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit3, Spline, Minus, X, CornerUpRight, LogOut, MousePointerClick } from 'lucide-react';
+import { Plus, Edit3, Spline, Minus, X, CornerUpRight, LogOut, MousePointerClick, Waves } from 'lucide-react';
 import { ToolbarSection } from './ToolbarButton';
 import { ToolbarSubmenu, SubmenuItem } from './ToolbarSubmenu';
 import { useEditorStore } from '../store/editorStore';
 import { toolModeManager } from '../core/ToolModeManager';
 import { curvesManager } from '../plugins/curves/CurvesManager';
 import { creationManager } from '../plugins/creation/CreationManager';
+import { smoothManager } from '../plugins/smooth/SmoothManager';
 import { useMobileDetection } from '../hooks/useMobileDetection';
 import { SVGCommandType, EditorCommandType } from '../types';
 import { CONFIG } from '../config/constants';
@@ -32,6 +33,7 @@ export const WritingConsolidatedTools: React.FC = () => {
   const isPencilActive = toolModeState.activeMode === 'pencil' || 
                         (mode.current === 'create' && mode.createMode?.commandType === 'PENCIL');
   const isCurveActive = mode.current === 'curves';
+  const isSmoothActive = toolModeState.activeMode === 'smooth' || mode.current === 'smooth';
   const isCreateMode = mode.current === 'create' && mode.createMode?.commandType !== 'PENCIL';
   
   // Subpath-edit mode state (moved up to avoid reference errors)
@@ -41,6 +43,7 @@ export const WritingConsolidatedTools: React.FC = () => {
   const getCurrentIcon = () => {
     // If subpath-edit mode is active, show the mouse-pointer icon to indicate mode
     if (isSubpathEditMode) return <MousePointerClick size={iconSize} strokeWidth={strokeWidth} />;
+    if (isSmoothActive) return <Waves size={iconSize} strokeWidth={strokeWidth} />;
     if (isPencilActive) return <Edit3 size={iconSize} strokeWidth={strokeWidth} />;
     if (isCurveActive) return <Spline size={iconSize} strokeWidth={strokeWidth} />;
     if (isCreateMode) {
@@ -65,7 +68,7 @@ export const WritingConsolidatedTools: React.FC = () => {
     return <Plus size={iconSize} strokeWidth={strokeWidth} />; // Default creation tools icon
   };
 
-  const isAnyToolActive = isPencilActive || isCurveActive || isCreateMode;
+  const isAnyToolActive = isPencilActive || isCurveActive || isSmoothActive || isCreateMode;
 
   const { enabledFeatures, toggleFeature } = useEditorStore();
 
@@ -133,6 +136,14 @@ export const WritingConsolidatedTools: React.FC = () => {
       toolModeManager.setMode('select');
     } else {
       toolModeManager.setMode('pencil');
+    }
+  };
+
+  const handleSmoothToggle = () => {
+    if (isSmoothActive) {
+      toolModeManager.setMode('select');
+    } else {
+      toolModeManager.setMode('smooth');
     }
   };
 
@@ -281,6 +292,18 @@ export const WritingConsolidatedTools: React.FC = () => {
             />
           </>
         )}
+        
+        {/* Smooth Tool */}
+        <SubmenuItem
+          icon={<Waves size={iconSize} strokeWidth={strokeWidth} />}
+          label={isSmoothActive ? "Exit Smooth Mode" : "Smooth Tool"}
+          onClick={() => {
+            handleSmoothToggle();
+            setIsSubmenuOpen(false);
+          }}
+          active={isSmoothActive}
+        />
+        
         {/* Subpath-edit option inside the Drawing Tools submenu */}
         <div style={{ height: '1px', background: '#e5e7eb', margin: '6px 0' }} />
         {!isSubpathEditMode ? (

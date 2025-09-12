@@ -22,9 +22,9 @@ const groupSelected = () => {
     const groupId = store.createGroupFromSelection();
     
     if (groupId) {
-      // console.log(`✅ Created group with ID: ${groupId}`);
+      // Group created successfully
     } else {
-      console.log('❌ Failed to create group');
+      // Failed to create group
     }
   }
 };
