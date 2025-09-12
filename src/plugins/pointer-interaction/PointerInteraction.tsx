@@ -1216,7 +1216,7 @@ class PointerInteractionManager {
     
     // Keep legacy method temporarily for compatibility
     setTimeout(() => {
-      const svgElements = document.querySelectorAll('.svg-editor svg');
+      const svgElements = document.querySelectorAll('.svg-editor > svg');
       svgElements.forEach(svg => {
         if (!this.state.isSpacePressed) {
           (svg as HTMLElement).style.cursor = 'crosshair';
@@ -1300,7 +1300,7 @@ class PointerInteractionManager {
   private updateSVGCursors(): void {
     // Use try-catch to handle cases where DOM elements are being modified
     try {
-      const svgElements = document.querySelectorAll('.svg-editor svg');
+      const svgElements = document.querySelectorAll('.svg-editor > svg');
       
       svgElements.forEach(svg => {
         // Check if element is still connected to DOM
